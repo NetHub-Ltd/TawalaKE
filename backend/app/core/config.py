@@ -28,6 +28,15 @@ class Settings(BaseSettings):
 
     resource_server: str
 
+    allowed_origins: str
+
+    @property
+    def cors_origins(self) -> list:
+        if not self.allowed_origins:
+            return []
+        # Split by comma, strip whitespace, and filter out empty strings or "*"
+        return [f.strip() for f in self.allowed_origins.split(",") if f.strip() and f.strip() != "*"]
+
     @property
     def async_db_url(self) -> str:
         return f"postgresql+asyncpg://{self.DATABASE_USER}:{self.DATABASE_PASSWORD}@{self.DATABASE_HOST}:{self.DATABASE_PORT}/{self.DATABASE_NAME}"

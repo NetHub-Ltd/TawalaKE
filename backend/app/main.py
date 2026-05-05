@@ -34,18 +34,8 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.api_router import api_router
 from app.core.config import settings
 from app.core.session import engine
-#
-# from sqlmodel.ext.asyncio.session import AsyncSession
-# from starlette.middleware.cors import CORSMiddleware
-# from starlette.responses import JSONResponse
 
-#
-# from app.core.config import settings
-# from app.db.session import engine
 from app.utils.logging import logger
-# from loguru import logger
-#
-# # setup_logging()
 
 
 @asynccontextmanager
@@ -83,11 +73,11 @@ def create_application() -> FastAPI:
         # docs_url="/docs" if settings.environment != "production" else None,
         redoc_url=None,
     )
-    logger.info(f"Allowe Origins: {['*']}")
+    logger.info(f"Allowed Origins: {settings.cors_origins}")
     # 1. Middleware
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # In production, specify allowed origins
+        allow_origins=settings.cors_origins,  # In production, specify allowed origins
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
