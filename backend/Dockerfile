@@ -31,14 +31,14 @@ COPY app/ ./app
 # COPY fastapi ./fastapi
 # COPY realms ./realms
 # COPY scripts ./scripts
-#COPY entrypoint.sh ./entrypoint.sh
+COPY entrypoint.sh ./entrypoint.sh
 COPY alembic.ini ./alembic.ini
 COPY alembic ./alembic
 
 # 6. Final touches
-#RUN #chmod +x entrypoint.sh
+RUN #chmod +x entrypoint.sh
 EXPOSE 8000
 
 # Using dots for the module path, not slashes!
-CMD ["gunicorn", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8000"]
-#ENTRYPOINT ["./entrypoint.sh"]
+#CMD ["gunicorn", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8000"]
+ENTRYPOINT ["./entrypoint.sh"]
