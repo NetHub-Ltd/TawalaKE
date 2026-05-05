@@ -30,7 +30,7 @@ export function BusinessGrid() {
           onEdit={(id) => toast.info(`Editing terminal ${id}`)}
           onDelete={(id) => {
             if (confirm("Decommission this terminal node?")) {
-              deleteBusiness(id);
+              // deleteBusiness(id);
               toast.error("Terminal deleted");
             }
           }}

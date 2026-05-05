@@ -18,22 +18,9 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useBusinessContext, BusinessContext } from "@/features/business/hooks/useBusiness";
 
-// 1. Create the Context
-const BusinessContext = createContext<{
-  businessId: string | string[] | undefined;
-  businessName: string | undefined;
-} | null>(null);
 
-export const useBusinessContext = () => {
-  const context = useContext(BusinessContext);
-  if (!context) {
-    throw new Error(
-      "useBusinessContext must be used within a BusinessProvider",
-    );
-  }
-  return context;
-};
 
 export default function TerminalLayout({
   children,

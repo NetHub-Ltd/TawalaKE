@@ -18,8 +18,9 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import { useProducts } from "@/features/business/hooks/useProducts";
-import { useBusinessContext } from "../layout";
+// import { useBusinessContext } from "../layout";
 import { cn } from "@/lib/utils";
+import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
 /**
  * REVENUE BLUEPRINT: Transactional

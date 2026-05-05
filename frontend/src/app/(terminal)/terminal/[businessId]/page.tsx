@@ -10,7 +10,9 @@ import { CartSidebar } from "@/features/sales/components/CartSideBar";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { useProducts } from "@/features/business/hooks/useProducts";
 import Link from "next/link";
-import { useBusinessContext } from "./layout";
+// import { useBusinessContext } from "./layout";
+import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+
 
 // --- CONSTANTS ---
 const CATEGORIES = ["All", "Beverages", "Food", "Services", "Retail"];
