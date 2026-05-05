@@ -36,7 +36,7 @@ COPY alembic.ini ./alembic.ini
 COPY alembic ./alembic
 
 # 6. Final touches
-RUN #chmod +x entrypoint.sh
+RUN chmod +x entrypoint.sh
 EXPOSE 8000
 
 # Using dots for the module path, not slashes!
