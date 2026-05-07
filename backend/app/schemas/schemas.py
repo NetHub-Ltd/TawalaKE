@@ -95,7 +95,6 @@ class ProductUpdate(BaseModel):
     price: Optional[float] = None
     stock: Optional[int] = None
     attributes: Optional[Dict[str, Any]] = None
-    # category_id: Optional[UUID] = None
 
 
 class ProductResponse(BaseResponseSchema):

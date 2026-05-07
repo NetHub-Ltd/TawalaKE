@@ -3,10 +3,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette import status
 
 from app.api.deps import get_session, SessionDep
 from app.crud.product import product_crud
-from app.schemas.schemas import CategoryCreate, CategoryResponse, ProductResponse, ProductCreate, ApiResponse
+from app.schemas.schemas import CategoryCreate, CategoryResponse, ProductResponse, ProductCreate, ApiResponse, \
+    ProductUpdate
 from app.utils.logging import logger
 
 # from app.core.database import get_session
@@ -314,7 +316,7 @@ async def create_product(db: SessionDep, payload: ProductCreate,):
 
 
 @router.patch("/{product_id}")
-async def update_product(product_id: int, session: AsyncSession = Depends(get_session)):
+async def update_product(product_id: int, db: SessionDep, payload: ProductUpdate):
     """
     PATCH /products/{product_id}
 
@@ -356,11 +358,15 @@ async def update_product(product_id: int, session: AsyncSession = Depends(get_se
     - Partial updates allowed
     - No behavior logic executed
     """
-    pass
+    prod = product_crud.get(db, product_id)
+    if not prod:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+
 
 
 @router.delete("/{product_id}")
-async def delete_product(product_id: int, session: AsyncSession = Depends(get_session)):
+async def delete_product(product_id: UUID, db: SessionDep):
     """
     DELETE /products/{product_id}
 
@@ -383,5 +389,9 @@ async def delete_product(product_id: int, session: AsyncSession = Depends(get_se
     - Consider soft delete in production systems
     - Must handle related records safely (e.g., transactions)
     """
-    pass
+    prod =  await product_crud.delete_product(product_id, db)
+    if not prod:
+        raise HTTPException(status_code=500, detail="an error occurred, please try again later")
+    return ApiResponse(status_code=status.HTTP_204_NO_CONTENT, status=True, message="Product deleted successfully")
+
 

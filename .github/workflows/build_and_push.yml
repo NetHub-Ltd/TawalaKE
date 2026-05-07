@@ -1,0 +1,22 @@
+name: Build & Push Backend to GHCR
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+    paths:
+      - "backend/**"
+  pull_request:
+    paths:
+      - "backend/**"
+
+jobs:
+  build-backend:
+    uses: daviekaranja/workflows/.github/workflows/build_and_push_v2.yaml@main
+    with:
+      image_name: pos-mvp-backend
+      registry: ghcr.io
+      context: backend # ← Important
+      push: ${{ github.event_name != 'pull_request' }}
+      platforms: "linux/amd64,linux/arm64"
+    secrets: inherit

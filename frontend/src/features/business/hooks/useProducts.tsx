@@ -67,7 +67,7 @@ export function useProducts(businessId: string) {
   // --- DELETE PRODUCT ---
   const deleteProduct = useMutation({
     mutationFn: async (productId: string) => {
-      const { data } = await axios.delete("/api/v1/products", {
+      const { data } = await axios.delete(`/api/v1/products`, {
         data: { product_id: productId },
       });
       return data;

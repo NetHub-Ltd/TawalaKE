@@ -18,7 +18,7 @@ export function TerminalSidebar({ businessId }: { businessId: string }) {
     { icon: Building2, label: "Dashboard", href: `/terminal/${businessId}` },
     {
       icon: ShoppingCart,
-      label: "Register",
+      label: "Cart",
       href: `/terminal/${businessId}/cart`,
     },
     {

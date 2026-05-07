@@ -104,19 +104,20 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await request.json();
+  console.log("Delete request body:", body.product_id); // Debug log
   if (!body || !body.product_id) {
     return NextResponse.json(
       { error: "Invalid request body" },
       { status: 400 },
     );
   }
-  const res = await fetch(`${API_BASE}/products/delete`, {
+  const res = await fetch(`${API_BASE}/products/${body.product_id}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.accessToken}`,
     },
-    body: JSON.stringify(body),
+    body: null, // DELETE typically doesn't have a body, but if your backend expects it, you can include it
   });
   const data = await res.json();
   if (!data.status) {

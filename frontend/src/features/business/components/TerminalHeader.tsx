@@ -1,65 +1,110 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Bell, User, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  User,
+  Search,
+  LayoutGrid,
+  ChevronDown,
+} from "lucide-react";
 
 interface TerminalHeaderProps {
   businessName: string;
 }
 
+/**
+ * @Scribe_Audit
+ * UI/UX: Softened aesthetics using 2xl/3xl radii and subtle backgrounds.
+ * Navigation: Added explicit 'Switch Workspace' trigger for context switching.
+ * Performance: Minimal client-side logic; purely functional triggers.
+ */
+
 export function TerminalHeader({ businessName }: TerminalHeaderProps) {
   const router = useRouter();
 
   return (
-    <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md flex items-center justify-between px-6 z-[60] shrink-0">
-      <div className="flex items-center gap-6">
+    <header className="h-20 border-b border-border/40 bg-card/60 backdrop-blur-xl flex items-center justify-between px-8 z-[60] shrink-0 mb-1">
+      <div className="flex items-center gap-8">
+        {/* Workspace Switcher Button */}
         <button
-          onClick={() => router.back()}
-          className="p-2 rounded-xl hover:bg-muted text-secondary hover:text-foreground transition-all group"
-          aria-label="Go back"
+          onClick={() => router.push("/terminal")}
+          className="flex items-center gap-3 px-4 py-2.5 bg-muted/40 hover:bg-muted rounded-2xl transition-all group border border-border/20 shadow-sm"
+          aria-label="Switch business context"
         >
-          <ArrowLeft
-            size={20}
-            className="group-hover:-translate-x-1 transition-transform"
-          />
+          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+            <LayoutGrid size={16} />
+          </div>
+          <div className="text-left">
+            <p className="text-[10px] font-black uppercase tracking-widest text-secondary leading-none mb-1">
+              Workspace
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-foreground">Switch</span>
+              <ChevronDown size={12} className="text-secondary opacity-50" />
+            </div>
+          </div>
         </button>
 
-        <div className="flex flex-col">
-          <h1 className="text-[10px] font-black uppercase tracking-[0.4em] text-secondary leading-none mb-1">
-            {businessName}
-          </h1>
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[9px] font-bold text-primary uppercase tracking-tighter">
-              Terminal_01 // Online
-            </span>
+        <div className="h-8 w-px bg-border/40" />
+
+        {/* Business Identity */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.back()}
+            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-background border border-border/30 hover:border-primary/30 text-secondary hover:text-primary transition-all shadow-sm group"
+            aria-label="Go back"
+          >
+            <ArrowLeft
+              size={18}
+              className="group-hover:-translate-x-0.5 transition-transform"
+            />
+          </button>
+
+          <div className="flex flex-col">
+            <h1 className="text-xs font-black uppercase tracking-[0.2em] text-foreground leading-none mb-1.5">
+              {businessName}
+            </h1>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+              <span className="text-[10px] font-bold text-secondary/70 uppercase tracking-tighter">
+                Terminal_01 <span className="mx-1 opacity-30">//</span> Online
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="hidden md:flex items-center bg-muted/50 rounded-2xl px-4 py-2 gap-3 mr-2 border border-transparent focus-within:border-primary/20 transition-all">
-          <Search size={14} className="text-secondary" />
+      <div className="flex items-center gap-4">
+        {/* Soft Search Bar */}
+        <div className="hidden lg:flex items-center bg-muted/30 rounded-2xl px-5 py-2.5 gap-3 border border-border/10 focus-within:border-primary/20 focus-within:bg-muted/50 transition-all w-72 shadow-inner">
+          <Search size={14} className="text-secondary/60" />
           <input
             type="text"
-            placeholder="Search orders..."
-            className="bg-transparent border-none outline-none text-[11px] font-medium w-40 placeholder:text-secondary/50"
+            placeholder="Search orders, SKU..."
+            className="bg-transparent border-none outline-none text-xs font-medium w-full placeholder:text-secondary/40"
           />
         </div>
 
-        <button className="p-3 rounded-2xl hover:bg-muted text-secondary relative transition-colors">
-          <Bell size={20} />
-          <span className="absolute top-3 right-3 h-2 w-2 bg-primary rounded-full border-2 border-card" />
+        {/* Notification Bell */}
+        <button className="h-11 w-11 flex items-center justify-center rounded-2xl bg-muted/40 hover:bg-muted text-secondary relative transition-all border border-transparent hover:border-border/40">
+          <Bell size={20} strokeWidth={2} />
+          <span className="absolute top-3 right-3 h-2.5 w-2.5 bg-primary rounded-full border-2 border-card" />
         </button>
 
-        <div className="h-8 w-px bg-border mx-1" />
+        <div className="h-8 w-px bg-border/40 mx-1" />
 
-        <button className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl hover:bg-muted transition-colors">
-          <span className="text-[10px] font-black uppercase tracking-widest hidden lg:block text-secondary">
-            Operator
-          </span>
-          <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-            <User size={18} />
+        {/* Operator Profile */}
+        <button className="flex items-center gap-4 p-1.5 pr-4 rounded-2xl bg-muted/20 hover:bg-muted/40 border border-border/10 transition-all group">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-sm group-hover:scale-105 transition-transform">
+            <User size={20} />
+          </div>
+          <div className="text-left hidden sm:block">
+            <p className="text-[10px] font-black uppercase tracking-widest text-secondary leading-none mb-1">
+              Operator
+            </p>
+            <p className="text-xs font-bold text-foreground">D. Karanja</p>
           </div>
         </button>
       </div>
