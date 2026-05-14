@@ -1,5 +1,6 @@
 import { Metadata } from "next";
-import { AssetComposer } from "@/features/inventory/AssetComposer";
+// import { AssetComposer } from "@/features/inventory/AssetComposer";
+import { AssetCreator } from "@/features/inventory/AssetComposer";
 
 /**
  * @Scribe_Audit
@@ -47,7 +48,8 @@ export default async function Page({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <AssetComposer productId={productId} businessId={businessId} />
+      {/* <AssetComposer productId={productId} businessId={businessId} /> */}
+      <AssetCreator businessId={businessId} />
     </>
   );
 }

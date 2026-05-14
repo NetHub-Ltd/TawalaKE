@@ -3,17 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
-    "build": "next build --webpack",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "generate:api": "openapi-zod-client http://localhost:8000/openapi.json --output src/lib/sharedtypes/generated.ts"
   },
   "dependencies": {
-    "@ducanh2912/next-pwa": "^10.2.9",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.100.9",
     "axios": "^1.15.2",
+    "babel-plugin-react-compiler": "^1.0.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",

@@ -30,28 +30,25 @@
 
 // export default nextConfig;
 
-// next.config.ts
-import withPWAInit from "@ducanh2912/next-pwa";
 import type { NextConfig } from "next";
 
-const withPWA = withPWAInit({
-  dest: "public",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
-  // swMinify: true,
-  disable: process.env.NODE_ENV === "development",
-});
-
 const nextConfig: NextConfig = {
+  // Move reactCompiler out of experimental
+  reactCompiler: true,
+
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "**" }],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+    formats: ["image/avif", "image/webp"],
   },
-  // This empty object is the key to silencing the Turbopack error
-  // while allowing the PWA Webpack logic to run.
-  // experimental: {
-  //   turbopack: {},
+
+  // eslint: {
+  //   ignoreDuringBuilds: false,
   // },
 };
 
-export default withPWA(nextConfig);
+export default nextConfig;

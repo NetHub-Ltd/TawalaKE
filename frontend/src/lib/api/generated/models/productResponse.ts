@@ -15,3 +15,9 @@ export interface ProductResponse {
   active: boolean;
   attributes: BaseAttributes;
 }
+
+// export interface BaseAttributes {
+//   unit_of_measure?: BaseAttributesUnitOfMeasure;
+//   buying_price?: BaseAttributesBuyingPrice;
+//   sku?: BaseAttributesSku;
+// }
