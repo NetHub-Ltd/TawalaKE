@@ -60,9 +60,10 @@ class ProductCrud(BaseCRUD[Product, ProductCreate, ProductUpdate]):
     #     return categories
 
 
-    async def fetch_business_products(self, business_id: UUID, db: AsyncSession) -> List[Product]:
+    async def fetch_business_products(self, business_id: UUID, db: AsyncSession, limit: int = 50) -> List[Product]:
         results = await db.exec(select(self.model).where(self.model.business_id == business_id))
-        return list(results.all())
+        db_objs = results.all()
+        return db_objs
 
 
 product_crud = ProductCrud(Product)
