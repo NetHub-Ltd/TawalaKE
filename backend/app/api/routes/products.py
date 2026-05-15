@@ -14,7 +14,7 @@ from app.utils.logging import logger
 router = APIRouter()
 
 
-@router.get("/multi/{business_id}", response_model=ApiResponse[List[ProductResponse]], operation_id="getBusinessProducts")
+@router.get("/multi/{business_id}", operation_id="getBusinessProducts")
 async def get_products(db: SessionDep, business_id:UUID):
     """
     GET /products
@@ -64,7 +64,8 @@ async def get_products(db: SessionDep, business_id:UUID):
     if not business_id:
         raise HTTPException(status_code=400, detail="Business ID is required")
     db_objs = await product_crud.fetch_business_products(business_id, db)
-    return ApiResponse(status=True, status_code=200, message="Success", data=db_objs)
+    logger.info("Returned prods: {db_objs}")
+    return db_objs
 
 
 
