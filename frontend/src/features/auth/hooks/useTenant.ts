@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { fetchUser } from "../../../lib/actions/fetchUser";
 
+
 /**
  * HOOK: useTenantProfile
  * Logic: Fetches authenticated user profile from the server.
