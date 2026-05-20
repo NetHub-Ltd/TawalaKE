@@ -4,7 +4,6 @@ import { TerminalHeader } from "@/features/business/components/TerminalHeader";
 import { TerminalSidebar } from "@/features/business/components/TerminalSidebar";
 import { BusinessProvider } from "@/features/business/components/BusinessProvider";
 import { cn } from "@/lib/utils";
-import { Redirect } from "next";
 
 /**
  * @Scribe_Audit
