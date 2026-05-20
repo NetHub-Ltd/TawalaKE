@@ -2,7 +2,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 
-const API_BASE = process.env.BACKEND_URL;// Replace with actual business ID if needed
+const API_BASE = process.env.BACKEND_URL;
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -128,6 +128,6 @@ export async function DELETE(request: Request) {
   }
   return NextResponse.json(
     { message: "Product deleted successfully" },
-    { status: res.status },
+    { status: 200 },
   );
 }

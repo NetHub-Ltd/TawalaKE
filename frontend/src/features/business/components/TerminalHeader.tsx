@@ -46,34 +46,6 @@ export function TerminalHeader({ businessName }: TerminalHeaderProps) {
             </div>
           </div>
         </button>
-
-        <div className="h-8 w-px bg-border/40" />
-
-        {/* Business Identity */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="h-10 w-10 flex items-center justify-center rounded-2xl bg-background border border-border/30 hover:border-primary/30 text-secondary hover:text-primary transition-all shadow-sm group"
-            aria-label="Go back"
-          >
-            <ArrowLeft
-              size={18}
-              className="group-hover:-translate-x-0.5 transition-transform"
-            />
-          </button>
-
-          <div className="flex flex-col">
-            <h1 className="text-xs font-black uppercase tracking-[0.2em] text-foreground leading-none mb-1.5">
-              {businessName}
-            </h1>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
-              <span className="text-[10px] font-bold text-secondary/70 uppercase tracking-tighter">
-                Terminal_01 <span className="mx-1 opacity-30">//</span> Online
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -97,14 +69,14 @@ export function TerminalHeader({ businessName }: TerminalHeaderProps) {
 
         {/* Operator Profile */}
         <button className="flex items-center gap-4 p-1.5 pr-4 rounded-2xl bg-muted/20 hover:bg-muted/40 border border-border/10 transition-all group">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-sm group-hover:scale-105 transition-transform">
+          <div className="h-10 w-10 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-sm group-hover:scale-105 transition-transform">
             <User size={20} />
           </div>
           <div className="text-left hidden sm:block">
             <p className="text-[10px] font-black uppercase tracking-widest text-secondary leading-none mb-1">
               Operator
             </p>
-            <p className="text-xs font-bold text-foreground">D. Karanja</p>
+            <p className="text-xs font-bold text-foreground">User</p>
           </div>
         </button>
       </div>

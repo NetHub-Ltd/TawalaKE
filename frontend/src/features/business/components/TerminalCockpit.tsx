@@ -6,6 +6,7 @@ import { CartSidebar } from "@/features/sales/components/CartSideBar";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { ProductCard } from "./product-card";
+import { useBusinessContext } from "../hooks/useBusiness";
 
 
 /**
@@ -20,6 +21,7 @@ interface TerminalCockpitProps {
 }
 
 export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
+  const {businessName} = useBusinessContext()
   const { addToCart } = useCartStore();
   const { products = [], isLoading } = useProducts(businessId);
 
@@ -89,7 +91,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
       </main>
 
       {/* Persistence: Side-Pinned Cart */}
-      <div className="w-[420px] h-full shrink-0 border-l border-border/60 bg-card/30 backdrop-blur-sm">
+      <div className="max-w-[420px] h-full shrink-0 border-l border-border/60 bg-card/30 backdrop-blur-sm">
         <CartSidebar businessId={businessId} />
       </div>
     </div>
