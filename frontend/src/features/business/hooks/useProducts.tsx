@@ -4,23 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner"; // Optional: for feedback
 import { ProductResponse } from "@/lib/api/generated/models";
-
-// 1. Define Types based on your Schema
-// export interface BaseAttributes {
-//   unit_of_measure: string;
-//   category: string;
-//   unit_price: number;
-// }
-
-// export interface Product {
-//   id: string;
-//   business_id: string;
-//   name: string;
-//   price: number;
-//   stock: number;
-//   active: boolean;
-//   attributes: BaseAttributes;
-// }
+import {ProductCreate} from "@/lib/api/generated/models"
 
 export function useProducts(businessId: string) {
   const queryClient = useQueryClient();
@@ -39,7 +23,7 @@ export function useProducts(businessId: string) {
 
   // --- CREATE PRODUCT ---
   const createProduct = useMutation({
-    mutationFn: async (newProduct: Partial<ProductResponse>) => {
+    mutationFn: async (newProduct: Partial<ProductCreate>) => {
       const { data } = await axios.post("/api/v1/products", newProduct);
       return data;
     },
@@ -72,6 +56,7 @@ export function useProducts(businessId: string) {
       const { data } = await axios.delete(`/api/v1/products`, {
         data: { product_id: productId },
       });
+      console.log("data", data)
       return data;
     },
     onSuccess: () => {
