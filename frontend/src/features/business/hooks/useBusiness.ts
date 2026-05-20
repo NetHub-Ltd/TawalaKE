@@ -6,7 +6,7 @@ import { businessService } from "@/features/business/services/businessService";
 import { Business } from "@/features/business/types/business";
 import { createContext, useContext } from "react";
 
-export function useBusiness() {
+export function useBusiness(tenantId?: string) {
   const queryClient = useQueryClient();
 
   // Query logic: Fetch and cache the business list
@@ -16,8 +16,8 @@ export function useBusiness() {
     isError,
     error,
   } = useQuery<Business[]>({
-    queryKey: ["businesses"],
-    queryFn: businessService.getBusinesses,
+    queryKey: ["businesses", tenantId],
+    queryFn: () => businessService.getBusinesses(),
     staleTime: 1000 * 60 * 5, // 5 mins: prevents excessive refetching during session
   });
 
@@ -26,7 +26,7 @@ export function useBusiness() {
     mutationFn: businessService.createBusiness,
     onSuccess: () => {
       // Logic: Invalidate the "businesses" key to trigger an immediate refetch
-      queryClient.invalidateQueries({ queryKey: ["businesses"] });
+      queryClient.invalidateQueries({ queryKey: ["businesses", tenantId] });
     },
   });
 
