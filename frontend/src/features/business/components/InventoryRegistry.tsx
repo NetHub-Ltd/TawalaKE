@@ -362,7 +362,7 @@ export function InventoryRegistry() {
               className="h-10 w-64 bg-muted/50 border border-border rounded-md px-10 text-[11px] font-bold uppercase tracking-widest focus:ring-2 focus:ring-primary/10 outline-none transition-all"
             />
           </div>
-          <Link href={`/terminal/${businessId}/inventory/manage`}>
+          <Link href={`/terminal/${businessId}/inventory/new`}>
             <button className="h-10 px-5 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-md font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
               <Plus size={14} strokeWidth={3} /> Register Asset
             </button>
