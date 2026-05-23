@@ -6,7 +6,7 @@ from app.utils.logging import logger
 
 router = APIRouter()
 
-@router.post("/create-sale")
+@router.post("/new-sale")
 async def create_sale(request: Request):
     """
     POST /sales

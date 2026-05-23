@@ -114,6 +114,7 @@ class ProductResponse(BaseResponseSchema):
     track_stock: bool
     stock: int
     active: bool
+    category: str
     attributes: BaseAttributes
 
     # Optional lightweight embed (avoid deep nesting)
