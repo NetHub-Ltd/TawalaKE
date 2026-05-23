@@ -1,12 +1,9 @@
 "use client";
 
-import React from "react";
+import React from "react"; // Removed useEffect from imports
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
-import { ProductCreate } from "@/lib/api/generated/models";
 import { 
   Plus, 
-  ArrowLeft, 
   Layers, 
   DollarSign, 
   Tag, 
@@ -15,14 +12,9 @@ import {
   Loader2,
   ChevronDown
 } from "lucide-react";
-import { useProducts } from "@/features/business/hooks/useProducts";
 import { cn } from "@/lib/utils";
 
-interface AssetCreatorProps {
-  businessId: string;
-}
-
-// B2B/Retail Industry standard preset values
+// Industry standard domain presets
 const CATEGORY_PRESETS = [
   "General",
   "Apparel & Clothing",
@@ -46,77 +38,98 @@ const UNIT_PRESETS = [
   { value: "mtrs", label: "Meters (MTRS)" }
 ];
 
-export function AssetCreator({ businessId }: AssetCreatorProps) {
-  const router = useRouter();
-  const { createProduct } = useProducts(businessId);
+export interface AssetFormValues {
+  label: string;
+  selling_price: number;
+  stock: number;
+  category: string;
+  attributes: {
+    unit_of_measure: string;
+    buying_price: number;
+    sku: string;
+  };
+}
 
+interface AssetComposerProps {
+  initialData?: AssetFormValues;
+  onSubmit: (data: AssetFormValues) => void;
+  onCancel: () => void;
+  isPending?: boolean;
+  submitButtonText?: string;
+}
+
+const defaultValues: AssetFormValues = {
+  label: "",
+  selling_price: 0,
+  stock: 0,
+  category: "General",
+  attributes: {
+    unit_of_measure: "pcs",
+    buying_price: 0,
+    sku: "",
+  },
+};
+
+export function AssetComposer({ 
+  initialData, 
+  onSubmit, 
+  onCancel, 
+  isPending = false,
+  submitButtonText = "Save Product"
+}: AssetComposerProps) {
+  
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ProductCreate>({
-    defaultValues: {
-      business_id: businessId,
-      label: "",
-      selling_price: 0,
-      stock: 0,
-      category: "General",
-      attributes: {
-        unit_of_measure: "pcs",
-        buying_price: 0,
-        sku: "",
-      },
-    },
+  } = useForm<AssetFormValues>({
+    defaultValues: defaultValues,
+    // ✨ FIX: This forces react-hook-form to stay deeply reactive to asynchronous data modifications,
+    // bypassing cache locks and ensuring modified keystrokes are registered upon submission.
+    values: initialData, 
   });
 
-  const onSubmit = (data: ProductCreate) => {
-    createProduct.mutate(data, {
-      onSuccess: () => router.push(`/terminal/${businessId}/inventory`),
-    });
+  const handleFormSubmit = (data: AssetFormValues) => {
+    const processedData = {
+      ...data,
+      attributes: {
+        ...data.attributes,
+        sku: data.attributes.sku?.trim() !== "" 
+          ? data.attributes.sku.trim() 
+          : `TW-AUTO-${Date.now().toString().slice(-6)}`
+      }
+    };
+    console.log("processed AssetComposer submit values", processedData);
+    onSubmit(processedData);
   };
 
   return (
-    <main className="flex-1 max-w-4xl mx-auto w-full px-4 py-8 md:px-8 md:py-12 animate-in fade-in slide-in-from-bottom-4 duration-300">
-      {/* Navigation & Context Header */}
-      <header className="mb-10 space-y-3">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="group inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-        >
-          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-          Back to Inventory Registry
-        </button>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-            Create System Asset
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Initialize a physical or logistical product record inside inventory business cluster <code className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs">{businessId.split('-')[0]}...</code>
-          </p>
-        </div>
-      </header>
-
-      {/* Unified Registration-Style Form Frame */}
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-        {/* Section 1: Core Definitions */}
-        <div className="p-6 md:p-8 space-y-6">
-          <div className="flex items-center gap-2 pb-2 border-b border-border">
+    <form 
+      onSubmit={handleSubmit(handleFormSubmit)} 
+      className="w-full bg-card border border-border rounded-2xl shadow-soft overflow-hidden flex flex-col h-full"
+    >
+      {/* Scroll-contained Desktop Double Columns */}
+      <div className="flex-1 overflow-y-auto p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-0">
+        
+        {/* LEFT COLUMN: Identity & Inventory Mechanics */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
             <Package size={18} className="text-primary" />
-            <h2 className="text-lg font-bold text-foreground">Core Identification</h2>
+            <h2 className="text-base font-bold text-foreground uppercase tracking-tight">Identity & Parameters</h2>
           </div>
 
+          {/* Product Title Field */}
           <div className="space-y-2">
-            <label htmlFor="label" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              Product Label <span className="text-destructive">*</span>
+            <label htmlFor="label" className="block text-xs font-bold uppercase tracking-wider text-secondary">
+              Product Label / Title <span className="text-destructive">*</span>
             </label>
             <input
               id="label"
               type="text"
-              {...register("label", { required: "Product label is mandatory" })}
+              {...register("label", { required: "Product identifier is mandatory" })}
               placeholder="e.g., Premium Roasted Arabica Coffee (Dark Blend)"
               className={cn(
-                "w-full bg-background border border-input rounded-lg h-12 px-4 text-base font-medium focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all",
+                "w-full bg-background/50 border border-border rounded-xl h-12 px-4 text-sm font-medium focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all hover:border-secondary/40",
                 errors.label && "border-destructive focus:border-destructive focus:ring-destructive"
               )}
             />
@@ -125,157 +138,164 @@ export function AssetCreator({ businessId }: AssetCreatorProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Category Placement Select input */}
             <div className="space-y-2">
-              <label htmlFor="category" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="category" className="block text-xs font-bold uppercase tracking-wider text-secondary">
                 Category Placement
               </label>
               <div className="relative">
-                <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary" size={16} />
                 <select
                   id="category"
                   {...register("category")}
-                  className="w-full bg-background border border-input rounded-lg h-12 pl-10 pr-10 text-base font-medium appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer"
+                  className="w-full bg-background/50 border border-border rounded-xl h-12 pl-10 pr-10 text-sm font-medium appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer hover:border-secondary/40"
                 >
                   {CATEGORY_PRESETS.map((cat) => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" size={16} />
               </div>
             </div>
 
+            {/* Current Stock Count Input */}
             <div className="space-y-2">
-              <label htmlFor="stock" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Initial Stock Unit Count
+              <label htmlFor="stock" className="block text-xs font-bold uppercase tracking-wider text-secondary">
+                Current On-Hand Stock
               </label>
               <div className="relative">
-                <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary" size={16} />
                 <input
                   id="stock"
                   type="number"
                   min="0"
                   {...register("stock", { valueAsNumber: true, required: true })}
-                  className="w-full bg-background border border-input rounded-lg h-12 pl-10 pr-4 text-base font-medium tabular-nums focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                  className="w-full bg-background/50 border border-border rounded-xl h-12 pl-10 pr-4 text-sm font-medium tabular-nums focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all hover:border-secondary/40"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Operational Pricing Metrics */}
-        <div className="p-6 md:p-8 bg-muted/30 border-t border-border space-y-6">
-          <div className="flex items-center gap-2 pb-2 border-b border-border">
+        {/* RIGHT COLUMN: Financial Metrics & Logistical Identifiers */}
+        <div className="space-y-6 lg:border-l lg:border-border lg:pl-8">
+          <div className="flex items-center gap-2 pb-3 border-b border-border">
             <DollarSign size={18} className="text-primary" />
-            <h2 className="text-lg font-bold text-foreground">Financial Parameters</h2>
+            <h2 className="text-base font-bold text-foreground uppercase tracking-tight">Financial & Logistics</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Buying Price Input */}
             <div className="space-y-2">
-              <label htmlFor="buying_price" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="buying_price" className="block text-xs font-bold uppercase tracking-wider text-secondary">
                 Unit Cost Price (Buying)
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">$</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">KSH</span>
                 <input
                   id="buying_price"
                   type="number"
                   step="0.01"
                   min="0"
                   {...register("attributes.buying_price", { valueAsNumber: true })}
-                  className="w-full bg-background border border-input rounded-lg h-12 pl-8 pr-4 text-base font-medium tabular-nums focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                  className="w-full bg-background/50 border border-border rounded-xl h-12 pl-12 pr-4 text-sm font-medium tabular-nums focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all hover:border-secondary/40"
                 />
               </div>
             </div>
 
+            {/* Retail Selling Price Input */}
             <div className="space-y-2">
-              <label htmlFor="selling_price" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Unit Base Retail Price (Selling) <span className="text-destructive">*</span>
+              <label htmlFor="selling_price" className="block text-xs font-bold uppercase tracking-wider text-secondary">
+                Unit Retail Price (Selling) <span className="text-destructive">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">$</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary">KSH</span>
                 <input
                   id="selling_price"
                   type="number"
                   step="0.01"
                   min="0"
-                  {...register("selling_price", { valueAsNumber: true, required: true })}
-                  className="w-full bg-background border border-input rounded-lg h-12 pl-8 pr-4 text-base font-medium tabular-nums focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                  {...register("selling_price", { valueAsNumber: true, required: "Selling price configuration needed" })}
+                  className={cn(
+                    "w-full bg-background/50 border border-border rounded-xl h-12 pl-12 pr-4 text-sm font-medium tabular-nums focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all hover:border-secondary/40",
+                    errors.selling_price && "border-destructive focus:border-destructive focus:ring-destructive"
+                  )}
                 />
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Section 3: Logistics Logistics & Metadata */}
-        <div className="p-6 md:p-8 border-t border-border space-y-6">
-          <div className="flex items-center gap-2 pb-2 border-b border-border">
-            <Barcode size={18} className="text-primary" />
-            <h2 className="text-lg font-bold text-foreground">Logistical Tracking</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* SKU Input Field */}
             <div className="space-y-2">
-              <label htmlFor="sku" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="sku" className="block text-xs font-bold uppercase tracking-wider text-secondary">
                 SKU / Barcode Identifier
               </label>
-              <input
-                id="sku"
-                type="text"
-                {...register("attributes.sku")}
-                placeholder="Leave blank to auto-generate tracking token"
-                className="w-full bg-background border border-input rounded-lg h-12 px-4 text-base font-medium focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-              />
+              <div className="relative">
+                <Barcode className="absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary" size={16} />
+                <input
+                  id="sku"
+                  type="text"
+                  {...register("attributes.sku")}
+                  placeholder="Auto-generated if empty"
+                  className="w-full bg-background/50 border border-border rounded-xl h-12 pl-10 pr-4 text-sm font-medium placeholder:text-secondary/60 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all hover:border-secondary/40"
+                />
+              </div>
             </div>
 
+            {/* Unit of Measure Select Input */}
             <div className="space-y-2">
-              <label htmlFor="unit_of_measure" className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <label htmlFor="unit_of_measure" className="block text-xs font-bold uppercase tracking-wider text-secondary">
                 Unit of Measure (UoM)
               </label>
               <div className="relative">
                 <select
                   id="unit_of_measure"
                   {...register("attributes.unit_of_measure")}
-                  className="w-full bg-background border border-input rounded-lg h-12 pl-4 pr-10 text-base font-medium appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer"
+                  className="w-full bg-background/50 border border-border rounded-xl h-12 pl-4 pr-10 text-sm font-medium appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer hover:border-secondary/40"
                 >
                   {UNIT_PRESETS.map((unit) => (
                     <option key={unit.value} value={unit.value}>{unit.label}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" size={16} />
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" size={16} />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Global Structural Form Actions bar */}
-        <div className="px-6 py-4 md:px-8 bg-muted/50 border-t border-border flex items-center justify-end gap-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="h-11 px-5 rounded-lg text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={createProduct.isPending}
-            className="h-11 px-6 bg-primary text-primary-foreground rounded-lg text-sm font-bold shadow hover:bg-primary/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-98"
-          >
-            {createProduct.isPending ? (
-              <>
-                <Loader2 className="animate-spin" size={16} />
-                <span>Initializing Record...</span>
-              </>
-            ) : (
-              <>
-                <Plus size={16} />
-                <span>Confirm & Create Product</span>
-              </>
-            )}
-          </button>
-        </div>
-      </form>
-    </main>
+      </div>
+
+      {/* FIXED FOOTER CONTROLS ACTION BAR */}
+      <div className="px-6 py-4 lg:px-8 bg-background/60 backdrop-blur-sm border-t border-border flex items-center justify-end gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={isPending}
+          className="h-11 px-5 rounded-xl text-sm font-semibold text-secondary hover:text-foreground hover:bg-background transition-all focus-visible:outline-none cursor-pointer"
+        >
+          Cancel
+        </button>
+        
+        <button
+          type="submit"
+          disabled={isPending}
+          className="h-11 px-6 bg-primary text-white font-bold rounded-xl text-sm shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-2 focus-visible:outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="animate-spin" size={16} />
+              <span>Processing...</span>
+            </>
+          ) : (
+            <>
+              <Plus size={16} />
+              <span>{submitButtonText}</span>
+            </>
+          )}
+        </button>
+      </div>
+    </form>
   );
 }

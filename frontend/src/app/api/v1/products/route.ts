@@ -13,33 +13,32 @@ export async function GET(request: NextRequest) {
     // get busines id from query params
     const { searchParams } = new URL(request.url);
     const business_id = searchParams.get("business_id");
+    const product_id = searchParams.get("product_id")
     if (!business_id) {
       return NextResponse.json({ error: "Business ID not provided" }, { status: 400 });
     }
-  const res = await fetch(`${API_BASE}/products/multi/${business_id}`, {
+
+
+      // Determine targeted downstream service URL dynamically
+  const targetUrl = product_id 
+    ? `${API_BASE}/products/${product_id}`
+    : `${API_BASE}/products/multi/${business_id}`;
+
+
+  const res = await fetch(targetUrl, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.accessToken}`,
     },
   });
   const data = await res.json();
+  console.log("Fetched product data:", data); // Debug log
   if (!data.status) {
     return NextResponse.json({ error: data.message }, { status: res.status });
   }
   return NextResponse.json(data.data, { status: res.status });
 }
 
-// const Mock_product_json = {
-//   business_id: "3cc882d4-2f71-4f65-a2c5-79e29e1dc3ee",
-//   name: "Printing Canvas",
-//   price: 120,
-//   stock: 100,
-//   attributes: {
-//     unit_of_measure: "Meter",
-//     category: "Printing",
-//     unit_price: 100,
-//   },
-// };
 
 export async function POST(request: NextRequest) {
   const session = await auth();
