@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import Column, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, DateTime
 
 from app.models.base import BaseMixin
 from app.utils.helpers import utc_now
@@ -242,7 +242,10 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     __tablename__ = "sale_analytics_summaries"
 
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
-    date_dimension: datetime = Field(index=True)
+    # date_dimension: datetime = Field(index=True)
+    date_dimension: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), index=True)
+    )
     
     gross_sales_volume: float = Field(default=0.0)
     total_tax_collected: float = Field(default=0.0)

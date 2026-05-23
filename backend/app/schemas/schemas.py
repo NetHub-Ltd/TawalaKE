@@ -19,6 +19,14 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from app.schemas.enums import CategoryType, SaleStatus, PaymentMethod
+from pydantic import BaseModel, EmailStr
+from uuid import UUID
+from app.models.models import StaffRole
+from pydantic import BaseModel
+from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
+from app.models.models import PaymentMethod
 
 
 class UserRead(BaseModel):
@@ -244,3 +252,58 @@ class ApiResponse(BaseModel, Generic[T]):
 ProductResponse.model_rebuild()
 SaleResponse.model_rebuild()
 
+# ------------------------ SALES --------------------
+
+
+class MetaIn(BaseModel):
+    business_id: UUID
+    cashier_id: UUID  # Changed from string to UUID to match the explicit Staff ID link
+    currency: str
+    payment_method: PaymentMethod
+    timestamp: datetime
+
+class FinancialsIn(BaseModel):
+    subtotal: float
+    tax_rate: float
+    tax_amount: float
+    discount_applied: float
+    grand_total: float
+
+class LineItemIn(BaseModel):
+    product_id: UUID
+    sku: str
+    name: str
+    unit_price: float
+    quantity: int
+    subtotal: float
+
+class CheckoutPayloadIn(BaseModel):
+    meta: MetaIn
+    financials: FinancialsIn
+    line_items: List[LineItemIn]
+
+
+
+
+class StaffCreateIn(BaseModel):
+    tenant_id: UUID
+    email: EmailStr
+    full_name: str
+    password: str  # Plaintext password from front-end to be hashed on server
+    role: StaffRole = StaffRole.CASHIER
+
+
+from pydantic import BaseModel
+from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
+
+class DateRangeQuery(BaseModel):
+    start_date: datetime
+    end_date: datetime
+
+class RefundRequestIn(BaseModel):
+    sale_id: UUID
+    product_id: UUID
+    quantity_to_refund: int
+    notes: Optional[str] = "Customer return processed via POS terminal supervisor."
