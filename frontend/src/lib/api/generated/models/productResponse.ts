@@ -11,6 +11,7 @@ export interface ProductResponse {
   label: string;
   selling_price: number;
   track_stock: boolean;
+  category?: string;
   stock: number;
   active: boolean;
   attributes: BaseAttributes;

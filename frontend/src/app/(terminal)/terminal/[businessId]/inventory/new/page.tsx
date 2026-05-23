@@ -1,55 +1,101 @@
-import { Metadata } from "next";
-// import { AssetComposer } from "@/features/inventory/AssetComposer";
-import { AssetCreator } from "@/features/inventory/AssetComposer";
+// "use client";
 
-/**
- * @Scribe_Audit
- * Fix: Updated Props to use Promise for params, resolving Next.js 15+ Type error 37:29.
- * Architecture: Server Component awaits params before passing ID to the Client Composer.
- * SEO: Dynamic metadata titles for CRUD situational awareness.
- */
+// import { useProducts } from "@/features/business/hooks/useProducts";
+// import { AssetComposer, AssetFormValues } from "@/features/inventory/AssetComposer";
+// import { useRouter } from "next/navigation";
 
-interface Props {
+// export default function NewProductPage({ params }: { params: { businessId: string } }) {
+//   const router = useRouter();
+//   const { createProduct } = useProducts(params.businessId);
+
+//   const handleCreate = (values: AssetFormValues) => {
+//     // Parent handles custom auto-generation strategy if SKU is blank
+//     const computedSku = values.attributes.sku?.trim() !== "" 
+//       ? values.attributes.sku 
+//       : `TWL-${Date.now().toString().slice(-6)}`;
+
+//     const payload = {
+//       ...values,
+//       business_id: params.businessId,
+//       attributes: {
+//         ...values.attributes,
+//         sku: computedSku,
+//       }
+//     };
+
+//     createProduct.mutate(payload, {
+//       onSuccess: (newProduct) => {
+//         router.push(`/terminal/${params.businessId}/inventory/${newProduct.id}`);
+//       }
+//     });
+//   };
+
+//   return (
+//     <div className="p-8 max-w-4xl mx-auto">
+//       <h1 className="text-2xl font-black mb-6">Register New Asset</h1>
+//       <AssetComposer 
+//         onSubmit={handleCreate} 
+//         onCancel={() => router.back()}
+//         isPending={createProduct.isPending}
+//         submitButtonText="Confirm & Create Product"
+//       />
+//     </div>
+//   );
+// }
+
+"use client";
+
+import React from "react"; // 1. Import React to get access to use()
+import { useProducts } from "@/features/business/hooks/useProducts";
+import { AssetComposer, AssetFormValues } from "@/features/inventory/AssetComposer";
+import { useRouter } from "next/navigation";
+
+interface PageProps {
   params: Promise<{
     businessId: string;
-    id?: string[];
   }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const isEdit = !!id?.[0];
+export default function NewProductPage({ params }: PageProps) {
+  const router = useRouter();
 
-  return {
-    title: isEdit
-      ? "Edit Asset | Inventory Management"
-      : "Create New Asset | Inventory Management",
-    description:
-      "Configure product specifications, pricing, and stock levels in the central registry.",
-  };
-}
+  // 2. Safely unwrap the asynchronous params promise using React.use()
+  const resolvedParams = React.use(params);
+  const businessId = resolvedParams.businessId;
 
-export default async function Page({ params }: Props) {
-  // Awaiting params is mandatory in the latest Next.js APIs
-  const { businessId, id } = await params;
-  const productId = id?.[0];
+  // 3. Inject the cleanly extracted businessId parameter into your hook context
+  const { createProduct } = useProducts(businessId);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name: productId ? "Asset Editor" : "Asset Creator",
-    description: "Interface for modifying business inventory data.",
-    breadcrumb: `Inventory > ${productId ? "Edit" : "Create"}`,
+  const handleCreate = (values: AssetFormValues) => {
+    const computedSku = values.attributes.sku?.trim() !== "" 
+      ? values.attributes.sku 
+      : `TWL-${Date.now().toString().slice(-6)}`;
+
+    const payload = {
+      ...values,
+      business_id: businessId,
+      attributes: {
+        ...values.attributes,
+        sku: computedSku,
+      }
+    };
+
+    createProduct.mutate(payload, {
+      onSuccess: (newProduct) => {
+        router.push(`/terminal/${businessId}/inventory`);
+      }
+    });
   };
 
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-black mb-6">Register New Asset</h1>
+      <AssetComposer 
+        onSubmit={handleCreate} 
+        onCancel={() => router.back()}
+        isPending={createProduct.isPending}
+        submitButtonText="Confirm & Create Product"
       />
-      {/* <AssetComposer productId={productId} businessId={businessId} /> */}
-      <AssetCreator businessId={businessId} />
-    </>
+    </div>
   );
 }
