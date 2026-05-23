@@ -286,7 +286,7 @@
 #         raise HTTPException(status_code=500, detail=f"Refund transaction failed and rolled back. Logs: {str(error)}")
 
 from datetime import datetime, timedelta
-from enum import strEnum
+from enum import StrEnum
 from typing import List, Optional
 from uuid import UUID
 
@@ -310,7 +310,7 @@ from app.schemas.schemas import CheckoutPayloadIn, RefundRequestIn
 
 
 # Explicit Enum to restrict valid analytical trend intervals
-class AnalyticsPeriod(str, strEnum):
+class AnalyticsPeriod(StrEnum):
     DAILY = "DAILY"
     WEEKLY = "WEEKLY"
     MONTHLY = "MONTHLY"
