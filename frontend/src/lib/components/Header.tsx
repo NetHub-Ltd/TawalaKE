@@ -39,8 +39,8 @@ export default function Header() {
               </Link>
             </li>
             <li>
-              <Link href="#demo" className="hover:text-foreground transition-colors outline-none focus-visible:text-primary">
-                Book Demo
+              <Link href="/support" className="hover:text-foreground transition-colors outline-none focus-visible:text-primary">
+                Support
               </Link>
             </li>
           </ul>

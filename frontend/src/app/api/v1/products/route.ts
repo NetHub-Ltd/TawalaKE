@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
     },
   });
   const data = await res.json();
-  console.log("Fetched product data:", data); // Debug log
   if (!data.status) {
     return NextResponse.json({ error: data.message }, { status: res.status });
   }
@@ -76,7 +75,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await request.json();
-  console.log("Update request body:", body); // Debug log
   if (!body) {
     return NextResponse.json(
       { error: "Invalid request body" },
