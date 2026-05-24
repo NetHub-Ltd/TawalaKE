@@ -38,10 +38,11 @@ class EventType(str, Enum):
 
 
 class SubscriptionTier(str, Enum):
-    FREE = "FREE"
+    # FREE = "FREE"
     BRONZE = "BRONZE"
     SILVER = "SILVER"
     GOLD = "GOLD"
+    TRIAL = "TRIAL"
 
 
 class StaffRole(str, Enum):
@@ -49,6 +50,17 @@ class StaffRole(str, Enum):
     MANAGER = "MANAGER"        # Multi-branch or specific branch manager
     CASHIER = "CASHIER"        # Point of sale terminal clerk
     KITCHEN_STAFF = "KITCHEN"  # Back-office fulfillment role
+
+
+class Tenant(BaseMixin, table=True):
+    __tablename__ = "tenants"
+    name: str
+    email: str = Field(index=True, unique=True)
+    active: bool = Field(index=True, default=True)
+    plan: SubscriptionTier = Field(
+        sa_column=Column(SAEnum(SubscriptionTier, name="tenant_tier_enum")),
+        default=SubscriptionTier.TRIAL
+    )
 
 
 # =========================================================
@@ -61,10 +73,10 @@ class Subscription(BaseMixin, table=True):
     """
     __tablename__ = "subscriptions"
 
-    tenant_id: UUID = Field(index=True, unique=True)
+    tenant_id: UUID = Field(foreign_key="tenants.id", index=True, ondelete="CASCADE")
     tier: SubscriptionTier = Field(
         sa_column=Column(SAEnum(SubscriptionTier, name="subscription_tier_enum")),
-        default=SubscriptionTier.FREE
+        default=SubscriptionTier.TRIAL
     )
     active: bool = Field(index=True, default=True)
     start_date: datetime = Field(default_factory=utc_now)
@@ -163,8 +175,8 @@ class Sale(BaseMixin, table=True):
     currency: str = Field(default="KES", max_length=5)
     
     status: SaleStatus = Field(
-        sa_column=Column(SAEnum(SaleStatus, name="sale_status_enum")),
-        default=SaleStatus.COMPLETED
+        sa_column=Column(SAEnum(SaleStatus, name="business_sale_status_enum")),
+        default=SaleStatus.PENDING_PAYMENT
     )
 
     # Consolidated Financial Aggregations
