@@ -8,4 +8,4 @@ echo "Starting Gunicorn..."
 # main:app is correct because main.py is in the WORKDIR (/app)
 # app.lib imports will work because the 'app' folder is also in /app
 # exec gunicorn -w 2 -k uvicorn.workers.UvicornWorker app.main:app --bind 0.0.0.0:8000 --timeout 120
-exec fastapi run --workers 4 --host 0.0.0.0 --port 8000
+exec fastapi run --workers 1 --host 0.0.0.0 --port 8000
