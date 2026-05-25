@@ -1,88 +1,129 @@
 @import "tailwindcss";
 
+/* =========================================================
+   1. Design Tokens & Variables
+========================================================= */
 :root {
-  /* Core Brand Palette */
-  --brand-blue: #2563eb; /* Primary Action (Cobalt) */
-  --brand-blue-light: #eff6ff;
-  --brand-navy: #0f172a; /* Deep Text/Heading */
-  --brand-slate: #f8fafc; /* Background App Layer */
-
-  /* Semantic Tokens (Light Mode) */
-  --background: var(--brand-slate);
-  --foreground: var(--brand-navy);
-  --card: #ffffff;
-  --primary: var(--brand-blue);
-  --secondary: #64748b; /* Slate-500 for subtle UI elements */
+  /* Light Mode - Base Layer (Surface) & Upper Layer (Background/Card) */
+  --background: #ffffff; 
+  --foreground: #141136;
+  --card: #f8fafc;
+  --surface: #f1f5f9; 
   --border: #e2e8f0;
-  --ring: rgba(37, 99, 235, 0.1);
+  --muted: #64748b;
+
+  /* Brand Functional Colors */
+  --brand-primary: #4f46e5;
+  --brand-secondary: #3b82f6;
+  --brand-accent: #10b981;
+
+  /* Fluid Typography Scale (Automated Breakpoints) */
+  --text-h1: clamp(2.25rem, 6vw, 4.5rem);
+  --text-h2: clamp(1.75rem, 4vw, 3rem);
+  --text-h3: clamp(1.35rem, 2.5vw, 2rem);
+  --text-base: clamp(1rem, 0.5vw + 0.8rem, 1.125rem);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode Overrides (OLED optimized) */
-    --background: #020617; /* Slate-950 */
-    --foreground: #f1f5f9; /* Slate-100 */
-    --card: #0f172a; /* Slate-900 */
-    --secondary: #94a3b8; /* Slate-400 */
-    --border: #1e293b; /* Slate-800 */
-    --ring: rgba(37, 99, 235, 0.3);
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --card: #1e293b;
+    --surface: #020617;
+    --border: #1e293b;
+    --muted: #94a3b8;
+
+    --brand-primary: #818cf8;
+    --brand-secondary: #60a5fa;
   }
 }
 
-@theme inline {
+/* =========================================================
+   2. Tailwind v4 Theme Mapping
+========================================================= */
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
+  --color-surface: var(--surface);
   --color-border: var(--border);
+  --color-muted: var(--muted);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-accent: var(--brand-accent);
 
-  /* Fluid Typography (Responsive by default) */
-  --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
-  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
-  --text-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
-  --text-3xl: clamp(2rem, 1.75rem + 1.5vw, 3.5rem); /* Increased for impact */
+  --shadow-glow: 0 0 25px rgba(79, 70, 229, 0.15);
+  --shadow-lift: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+
+  /* Tailwind v4 CSS-Native Animation Injection */
+  --animate-gradient: gradient 5s ease infinite;
+
+  @keyframes gradient {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
 }
 
+/* =========================================================
+   3. Base Layer (Global Native Overrides)
+========================================================= */
 @layer base {
   body {
-    background-color: var(--background);
+    background-color: var(--surface);
     color: var(--foreground);
-    font-family: var(--font-sans);
-    @apply antialiased tracking-tight;
-  }
-
-  /* Refined Global Headings */
-  h1,
-  .h1 {
-    @apply text-3xl font-extrabold tracking-tighter text-foreground;
-    line-height: 1.05;
-  }
-
-  h2,
-  .h2 {
-    @apply text-2xl font-bold tracking-tight text-foreground;
-  }
-
-  /* Interactive Elements */
-  button,
-  .btn {
-    @apply transition-all duration-200 active:scale-[0.98] disabled:opacity-50;
+    font-family: "Inter", sans-serif;
+    font-size: var(--text-base);
+    @apply antialiased selection:bg-brand-primary/20;
   }
 }
 
+/* =========================================================
+   4. Components Layer (Semantic Core Classes)
+========================================================= */
+@layer components {
+  .text-h1 {
+    font-size: var(--text-h1);
+    @apply font-black tracking-tighter text-foreground block;
+    line-height: 1.1;
+  }
+
+  .text-h2 {
+    font-size: var(--text-h2);
+    @apply font-bold tracking-tight text-foreground block;
+    line-height: 1.2;
+  }
+
+  .text-h3 {
+    font-size: var(--text-h3);
+    @apply font-bold tracking-tight text-foreground block;
+    line-height: 1.3;
+  }
+
+  .card-layered {
+    @apply bg-background border border-border/40 rounded-[2rem] transition-all duration-500 ease-out;
+    background-image: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    box-shadow: var(--shadow-lift);
+  }
+
+  .card-layered:hover {
+    @apply -translate-y-1.5 border-brand-primary/30 shadow-glow;
+  }
+
+  .section-padding {
+    @apply py-16 md:py-28 px-6;
+  }
+}
+
+/* =========================================================
+   5. Utilities Layer (Atomic Modifiers)
+========================================================= */
 @layer utilities {
-  .glass {
-    @apply bg-card/80 backdrop-blur-md border border-border;
-  }
-
-  .pos-grid {
-    @apply grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 p-4;
-  }
-
-  .shadow-soft {
-    box-shadow: 0 4px 20px -2px var(--ring);
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-linear-to-r from-brand-primary via-brand-secondary to-brand-primary bg-[length:200%_auto];
   }
 }
