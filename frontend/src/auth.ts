@@ -32,16 +32,48 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const backendUser = await response.json();
           const parsed_data = zUserRead.parse(backendUser);
 
+          // hit another onboarding request to the backend, 
+          // this will later remove the need for calling the resource server
+
+          
+
           if (!parsed_data.is_active) {
             throw new Error("User account is inactive");
           }
+          const onboarding_payload = {
+            full_name: parsed_data.full_name,
+            email: parsed_data.email,
+            active: parsed_data.is_active,
+            tenant_id: parsed_data.tenant_id,
+          };
+
+         const res = await fetch(`${process.env.BACKEND_URL}/tenants/onboarding`, {
+          method: "POST",
+          headers: { 
+            Authorization: `Bearer ${account.access_token}`,
+            // ⚡ FIX: Tells FastAPI to parse the incoming stringified body as JSON
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify(onboarding_payload),
+        });
+
+        console.debug("Onboarding response status:", res.status); // Log status directly
+
+        const res_data = await res.json();
+        if (!res.ok) {
+          // If your FastAPI custom validation error payload uses a field other than .message (like .detail), fallback safely
+          throw new Error(res_data.message || res_data.detail || "Onboarding configuration failed");
+        }
+
           return {
             accessToken: account.access_token,
             refreshToken: account.refresh_token,
             idToken: account.id_token, // Saved for federated logout
             expiresAt: (account.expires_at ?? 0) * 1000,
             user: {
-              id: parsed_data.id,
+              id: res_data?.id,
+              fullName: res_data?.full_name,
               // email: parsed_data.email,
               isActive: parsed_data.is_active,
               // tenantId: parsed_data.tenant_id,
