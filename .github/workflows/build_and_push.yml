@@ -14,7 +14,7 @@ jobs:
   build-backend:
     uses: daviekaranja/workflows/.github/workflows/build_and_push_v2.yaml@master
     with:
-      image_name: tawala-backend
+      image_name: tawala-api
       registry: ghcr.io
       context: backend # ← Important
       push: ${{ github.event_name != 'pull_request' }}

@@ -3,11 +3,12 @@ from json import JSONDecodeError
 from fastapi import APIRouter, Request, HTTPException
 
 from app.utils.logging import logger
+from app.schemas.schemas import CheckoutPayloadIn
 
 router = APIRouter()
 
-@router.post("/create-sale")
-async def create_sale(request: Request):
+@router.post("/new-sale")
+async def create_sale(request: Request, db_obj: CheckoutPayloadIn):
     """
     POST /sales
 
@@ -64,8 +65,8 @@ async def create_sale(request: Request):
     - MUST NOT trust client pricing
     """
     try:
-        data = await request.json()
-        logger.info(f"Received Payload: {data}")
+        
+        logger.info(f"Received Payload: {db_obj}")
     
     except JSONDecodeError as e:
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
