@@ -18,10 +18,10 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from app.schemas.enums import CategoryType, SaleStatus, PaymentMethod
+from app.schemas.enums import CategoryType,PaymentMethod
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
-from app.models.models import StaffRole
+from app.models.models import StaffRole, SaleStatus, PaymentMethod
 from pydantic import BaseModel
 from typing import List, Optional
 from uuid import UUID
@@ -283,14 +283,21 @@ class CheckoutPayloadIn(BaseModel):
     line_items: List[LineItemIn]
 
 
-
-
 class StaffCreateIn(BaseModel):
     tenant_id: UUID
     email: EmailStr
     full_name: str
     password: str  # Plaintext password from front-end to be hashed on server
     role: StaffRole = StaffRole.CASHIER
+
+
+class StaffResponse(BaseModel):
+    id: UUID
+    tenant_id: UUID
+    email: EmailStr
+    full_name: str
+    role: StaffRole
+    active: bool
 
 
 from pydantic import BaseModel
@@ -307,3 +314,41 @@ class RefundRequestIn(BaseModel):
     product_id: UUID
     quantity_to_refund: int
     notes: Optional[str] = "Customer return processed via POS terminal supervisor."
+
+
+# sales
+class SaleCreate(BaseModel):
+    business_id: UUID
+    cashier_id: UUID
+    currency: str = "KES"
+    status: SaleStatus = SaleStatus.PENDING_PAYMENT
+    subtotal: float
+    tax_rate: float
+    tax_amount: float
+    discount_applied: float
+    total_amount: float 
+
+class SaleItem(BaseModel):
+    product_id: UUID
+    sku: str
+    name: str
+    unit_price: float
+    quantity: int
+    subtotal: float
+
+class SalePayload(SaleCreate):
+    sale_items: List[SaleItem]
+
+class SaleResponse(BaseModel):
+    id: UUID
+    business_id: UUID
+    cashier_id: UUID
+    currency: str
+    status: SaleStatus
+    subtotal: float
+
+class SaleUpdate(BaseModel):
+    status: Optional[SaleStatus] = None
+
+
+

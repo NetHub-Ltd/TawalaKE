@@ -19,7 +19,8 @@ from app.models.models import (
     SaleLedgerEvent,
     SaleStatus,
 )
-from app.schemas.schemas import CheckoutPayloadIn, RefundRequestIn
+from app.schemas.schemas import CheckoutPayloadIn, RefundRequestIn, SalePayload
+from app.crud.checkout import sale_crud
 
 
 # Explicit Enum to restrict valid analytical trend intervals
@@ -30,6 +31,13 @@ class AnalyticsPeriod(StrEnum):
 
 
 router = APIRouter()
+
+
+@router.post("/new-sale", status_code=status.HTTP_201_CREATED)
+async def process_terminal_checkout(payload: SalePayload, db: SessionDep):
+    sale = await sale_crud.new_sale(payload=payload, db=db)
+    return sale
+
 
 
 # =========================================================

@@ -193,6 +193,8 @@ class Sale(BaseMixin, table=True):
     items: List["SaleItem"] = Relationship(back_populates="sale")
     ledger_events: List["SaleLedgerEvent"] = Relationship(back_populates="sale")
 
+ # Serves as grand_total payable amount
+
 
 # =========================================================
 # 3. SOLD ITEM LINE ENTRIES
