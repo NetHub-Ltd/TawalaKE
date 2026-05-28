@@ -1,4 +1,4 @@
-from app.models.models import Tenant
+from app.models.models import Tenant, Organization, Business
 from app.schemas.schemas import TenantCreate, TenantUpdate
 from app.crud.base import BaseCRUD
 from typing import Type
@@ -9,23 +9,23 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException as HttpException
 from uuid import UUID
 
-class TenantCrud(BaseCRUD[Tenant, TenantCreate, TenantUpdate]):
-    def __init__(self, model: Type[Tenant]):
+class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
+    def __init__(self, model: Type[Organization]):
         super().__init__(model)
     
-    async def onboard_tenant(self, payload: TenantCreate, db: AsyncSession) -> Tenant:
+    async def onboard_tenant(self, payload: TenantCreate, db: AsyncSession) -> Organization:
         try:
             # check if the tenant already exists
-            stmt = select(Tenant).where(Tenant.email == payload.email)
+            stmt = select(self.model).where(self.model.email == payload.email)
             existing_tenant = (await db.exec(stmt)).first()
 
             if existing_tenant:
                 logger.info(f"Tenant with email {payload.email} already exists. Returning existing tenant.")
                 return existing_tenant
             # we need to slugify the name of the tenancy and append "workspace" to it to ensure uniqueness and avoid conflicts with reserved keywords
-            tenancy_name = f"{payload.name.lower().replace(' ', '-')}-workspace"
-            tenant = Tenant(
-                name=tenancy_name,
+            workspace_name = f"{payload.name.lower().replace(' ', '-')}-workspace"
+            tenant = Organization(
+                name=workspace_name,
                 email=payload.email,
                 id=payload.tenant_id,
                 active=payload.active
@@ -65,15 +65,15 @@ class TenantCrud(BaseCRUD[Tenant, TenantCreate, TenantUpdate]):
             await db.rollback()
             raise HttpException(status_code=500, detail="An unexpected error occurred.")
 
-    async def get_tenant_by_email(self, email: str, db: AsyncSession) -> Tenant:
-        stmt = select(Tenant).where(Tenant.email == email)
+    async def get_tenant_by_email(self, email: str, db: AsyncSession) -> Organization:
+        stmt = select(self.model).where(self.model.email == email)
         tenant = (await db.exec(stmt)).first()
         if not tenant:
             raise HttpException(status_code=404, detail="Tenant not found")
         return tenant
 
-    async def get_tenant_by_id(self, tenant_id: str, db: AsyncSession) -> Tenant:
-        stmt = select(Tenant).where(Tenant.id == tenant_id)
+    async def get_tenant_by_id(self, tenant_id: str, db: AsyncSession) -> Organization:
+        stmt = select(self.model).where(self.model.id == tenant_id)
         tenant = (await db.exec(stmt)).first()
         if not tenant:
             raise HttpException(status_code=404, detail="Tenant not found")
@@ -121,4 +121,4 @@ class TenantCrud(BaseCRUD[Tenant, TenantCreate, TenantUpdate]):
         await db.refresh(staff)
         return staff
 
-tenant_crud = TenantCrud(Tenant)
+organization_crud = OrganizationCrud(Organization)

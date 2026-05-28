@@ -22,11 +22,13 @@ class CRUDCheckout(BaseCRUD[Sale, SaleCreate, SaleUpdate]):
             discount_applied=payload.discount_applied,
             total_amount=payload.total_amount
         )
-        sale_obj = await self.create(db=db, obj_in=sale)
+        # sale_obj = await self.create(db=db, obj_in=sale)
+        db.add(sale)
+        await db.flush()  # Flush to get the sale ID before adding items
         # now loop over the items and create SaleItem records before commiting
         for item in payload.sale_items:
             sale_item = SaleItem(
-                sale_id=sale_obj.id,
+                sale_id=sale.id,
                 product_id=item.product_id,
                 sku=item.sku,
                 name=item.name,
@@ -37,8 +39,8 @@ class CRUDCheckout(BaseCRUD[Sale, SaleCreate, SaleUpdate]):
             db.add(sale_item)
 
         await db.commit()
-        await db.refresh(sale_obj)
-        return sale_obj
+        await db.refresh(sale)
+        return sale
 
 
 

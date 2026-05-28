@@ -294,7 +294,7 @@ class StaffCreateIn(BaseModel):
 class StaffResponse(BaseModel):
     id: UUID
     tenant_id: UUID
-    email: EmailStr
+    email: str
     full_name: str
     role: StaffRole
     active: bool
