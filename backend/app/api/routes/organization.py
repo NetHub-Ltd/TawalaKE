@@ -29,7 +29,7 @@ async def create_tenant(db: SessionDep, user: AuthUser):
     )
     
 @router.get("/multi", response_model=ApiResponse[List[TenantResponse]])
-async def list_tenants(db: SessionDep, user: AuthUser):
+async def list_tenants(db: SessionDep):
     stmt = select(Tenant)
     tenants = (await db.exec(stmt)).all()
     return ApiResponse(
