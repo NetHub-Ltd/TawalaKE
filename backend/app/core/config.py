@@ -26,8 +26,16 @@ class Settings(BaseSettings):
     DATABASE_PORT: int
     DATABASE_PASSWORD: str
 
-    resource_server: str
+    # security
+    secret_key: str
+    algorithm: str = "HS256"
+    issuer: str
+    audience: str
+    access_token_expire_minutes: int
+    refresh_token_expire_days: int
+    pin_token_expire_hours: int
 
+    resource_server: str
     allowed_origins: str
 
     @property

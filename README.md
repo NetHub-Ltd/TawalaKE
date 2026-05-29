@@ -1,86 +1,143 @@
-OmniPOS is a high-performance, functional-first Point of Sale (POS) system built as a Progressive Web App (PWA). It is designed to scale from a single-store MVP into a comprehensive multi-tenant ecosystem that bridges the gap between retail operations and supply chain logistics.
+**Here's the updated and fully rewritten `README.md` for Tawala:**
 
-## 🚀 The Vision
+---
 
-OmniPOS aims to be more than just a cash register. It is a **Unified Commerce Engine** featuring:
+```markdown
+# Tawala
 
-- **Multi-Tenant Architecture:** Securely manage multiple business branches or diverse industries from a single dashboard.
-- **B2B Marketplace:** A dedicated space for wholesalers to offer competitive pricing to business owners.
-- **Supply Chain Integration:** Targeted wholesale advertising based on real-time inventory needs.
-- **Global & Local Payments:** Integrated support for M-Pesa, Credit/Debit Cards, and PayPal.
+**Tawala biashara yako.**  
+*Take control of your business.*
+
+---
+
+## About Tawala
+
+Tawala is a modern **Business Management System** designed for Kenyan SMEs. It helps shop owners, minimarts, pharmacies, hardware stores, salons, restaurants, and other small businesses move from manual record-keeping (exercise books, calculators, and WhatsApp) to organized, efficient, and profitable operations.
+
+Tawala is **more than a POS** — it is a complete business management platform that brings clarity, control, and accountability to your biashara.
+
+---
+
+## 🚀 Vision
+
+To become the go-to business operating system for Kenyan SMEs by providing simple, powerful, and affordable tools that deliver real control over:
+
+- Sales & Transactions
+- Inventory & Stock
+- Staff Accountability
+- Invoicing & Receipts
+- Business Insights
+
+**From hustle to structure.**
+
+---
+
+## Core Features
+
+- **Multi-Business Support** — One organization can manage multiple shops or branches
+- **Staff Management** — Secure 4-digit PIN login for daily operations + role-based access
+- **Sales & POS** — Fast, reliable point of sale built for speed at the counter
+- **Invoicing & Receipts** — Professional invoices and printable receipts
+- **Inventory Management** — Real-time stock tracking with low-stock alerts
+- **Customer Management** — Store customers and track credit balances
+- **Reports & Analytics** — Clear sales, profit, and performance reports
+- **Expense Tracking** — Monitor business expenses
+
+---
+
+## Pricing Plans
+
+| Plan          | Monthly Price     | Best For                          |
+|---------------|-------------------|-----------------------------------|
+| **Basic**     | KSh 1,490        | Single small shops                |
+| **Ndovu**     | **KSh 3,990**    | Growing businesses (Recommended)  |
+| **Enterprise**| KSh 9,990+       | Complex & multi-branch operations |
+
+**14-day free trial** on the Ndovu plan.
+
+---
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** [Next.js](https://nextjs.org/) (App Router)
-- **State Management:** [Zustand](https://github.com/pmndrs/zustand) (Offline-first cart logic)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **PWA:** [@ducanh2912/next-pwa](https://github.com/ducanh2912/next-pwa)
-- **Backend (Future):** [FastAPI](https://fastapi.tiangolo.com/) (Python)
-- **Database (Future):** PostgreSQL with Row-Level Security (RLS) for multi-tenancy.
+- **Backend**: FastAPI (Python)
+- **Database**: PostgreSQL with strong multi-tenancy
+- **Authentication**: Hybrid (Email/Password + 4-digit PIN)
+- **Frontend**: Next.js (App Router) + Tailwind CSS
+- **Architecture**: Multi-tenant, API-first, scalable
 
-## 📱 Features (MVP)
+---
 
-- **Optimized Selection Grid:** High-speed product selection designed for tablets and desktops.
-- **Streamlined Checkout:** Focused payment flow supporting Cash and Mobile Pay.
-- **PWA Ready:** Installable on any device with offline resilience.
-- **Functional-First UI:** A minimalist, high-contrast theme focused on reducing operator fatigue.
+## 📱 Key Design Principles
+
+- Simplicity first — built for non-technical users
+- Fast and reliable (even with unstable networks)
+- Strong focus on staff accountability
+- Calm, clear, and professional user interface
+- Mobile-friendly
+
+---
 
 ## 🏗️ Project Structure
 
 ```text
-├── app/                # Next.js App Router (UI & Routing)
-├── components/         # Reusable UI components (Grid, Cart, Modals)
-├── store/              # Zustand state stores (Cart, Auth, Inventory)
-├── public/             # Static assets & PWA manifest
-├── middleware.ts       # Route protection & Auth logic
-└── next.config.mjs     # PWA & Build configuration
+tawala/
+├── backend/                  # FastAPI Application
+│   ├── app/
+│   │   ├── core/             # security, config, dependencies
+│   │   ├── api/              # routers (auth, sales, billing, etc.)
+│   │   ├── models/           # SQLAlchemy models
+│   │   ├── schemas/          # Pydantic schemas
+│   │   └── utils/            # helpers
+│   └── main.py
+├── frontend/                 # Next.js frontend
+├── docs/                     # Documentation
+│   ├── tawala.md
+│   ├── billing.md
+│   ├── marketing.md
+│   └── README.md
+└── .env.example
 ```
+
+---
 
 ## 🚦 Getting Started
 
-### Prerequisites
+### Backend Setup
 
-- Node.js 18.x or later
-- npm / yarn / pnpm
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate    # Windows: venv\Scripts\activate
+pip install -r requirements.txt
 
-### Installation
+# Copy environment variables
+cp .env.example .env
+```
 
-1. Clone the repository:
+### Frontend Setup (Coming Soon)
 
-   ```bash
-   git clone [https://github.com/your-username/omnipos.git](https://github.com/your-username/omnipos.git)
-   cd omnipos
-   ```
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-2. Install dependencies:
+---
 
-   ```bash
-   npm install
-   ```
+## 📄 Documentation
 
-3. Run the development server:
+- [`docs/tawala.md`](./docs/tawala.md) — Product Specification
+- [`docs/billing.md`](./docs/billing.md) — Pricing & Feature Limits
+- [`docs/marketing.md`](./docs/marketing.md) — Marketing Messages
 
-   ```bash
-   npm run dev
-   ```
+---
 
-4. Open [http://localhost:3000](http://localhost:3000) to see the application.
+## Mission
 
-## 🗺️ Roadmap
+To empower Kenyan businesses with simple, reliable technology so they can run their biashara with confidence and control.
 
-- [x] UI/UX Wireframes & High-Fidelity Design
-- [ ] Implement Zustand Cart Logic
-- [ ] Configure PWA for offline support
-- [ ] Build FastAPI Multi-tenant Backend
-- [ ] Integrate M-Pesa Daraja API
-- [ ] Launch B2B Wholesale Marketplace
+**Tawala biashara yako.**
 
-## 📄 License
+---
 
-Internal Project - All Rights Reserved.
-
-## 🙏 Acknowledgments
-
-- Inspired by the need for a modern, scalable POS solution in emerging markets.
-- Built with love using the Next.js ecosystem and the vibrant open-source community.
-- Special thanks to [ducanh2912](https://github.com/ducanh2912) for the Next.js PWA template.
+**Built with focus on real Kenyan business needs.**

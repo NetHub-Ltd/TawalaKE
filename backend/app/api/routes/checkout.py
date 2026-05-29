@@ -2,6 +2,8 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import List, Optional
 from uuid import UUID
+from app.utils.logging import logger
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import select, func
@@ -19,7 +21,8 @@ from app.models.models import (
     SaleLedgerEvent,
     SaleStatus,
 )
-from app.schemas.schemas import CheckoutPayloadIn, RefundRequestIn
+from app.schemas.schemas import CheckoutPayloadIn, RefundRequestIn, SalePayload
+from app.crud.checkout import sale_crud
 
 
 # Explicit Enum to restrict valid analytical trend intervals
@@ -32,10 +35,18 @@ class AnalyticsPeriod(StrEnum):
 router = APIRouter()
 
 
+@router.post("/new-sale", status_code=status.HTTP_201_CREATED)
+async def process_terminal_checkout(payload: SalePayload, db: SessionDep):
+    logger.info(f"Received new sale payload: {payload.model_dump()} with {len(payload.sale_items)} items.")
+    sale = await sale_crud.new_sale(payload=payload, db=db)
+    return sale
+
+
+
 # =========================================================
 # 1. POS TERMINAL CHECKOUT PIPELINE (HARDENED & ENHANCED)
 # =========================================================
-@router.post("/checkout", status_code=status.HTTP_201_CREATED)
+@router.post("/pay", status_code=status.HTTP_201_CREATED)
 async def process_terminal_checkout(payload: CheckoutPayloadIn, db: SessionDep):
     """
     Unified point-of-sale checkout processing pipeline wrapper for AsyncSession.
