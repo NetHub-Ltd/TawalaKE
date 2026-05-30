@@ -12,13 +12,14 @@ from typing import List
 router = APIRouter()
 
 @router.post("/onboarding", response_model=ApiResponse[TenantResponse])
-async def create_tenant(db: SessionDep, user: AuthUser):
+async def create_tenant(db: SessionDep, user: AuthUser, data: TenantCreate):
+
     # only allow onboarding if the user is not associated with any tenant
     payload = TenantCreate(
-        name=user.full_name,
-        email=user.email,
-        tenant_id=user.tenant_id,
-        active=user.is_active
+        name=data.full_name,
+        email=data.email,
+        tenant_id=data.tenant_id,
+        active=data.is_active
     )
     new_tenant = await organization_crud.onboard_organization(payload, db)
     return ApiResponse(

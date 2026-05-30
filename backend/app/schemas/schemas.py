@@ -27,6 +27,10 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 from app.models.models import PaymentMethod
+from pydantic import BaseModel
+from typing import List, Optional
+from uuid import UUID
+from datetime import datetime
 
 
 class UserRead(BaseModel):
@@ -34,7 +38,7 @@ class UserRead(BaseModel):
     email: str
     full_name: str
     is_active: bool
-    tenant_id: UUID
+    organization_id: UUID
 
 class BaseAttributes(BaseModel):
     """
@@ -287,23 +291,20 @@ class StaffCreateIn(BaseModel):
     tenant_id: UUID
     email: EmailStr
     full_name: str
-    password: str  # Plaintext password from front-end to be hashed on server
+    password: Optional[str] = None  # Plaintext password from front-end to be hashed on server
     role: StaffRole = StaffRole.CASHIER
 
 
 class StaffResponse(BaseModel):
     id: UUID
     tenant_id: UUID
-    email: str
+    organization_id: Optional[UUID] = None
+    business_id: Optional[UUID] = None
+    email: EmailStr
     full_name: str
     role: StaffRole
     active: bool
 
-
-from pydantic import BaseModel
-from typing import List, Optional
-from uuid import UUID
-from datetime import datetime
 
 class DateRangeQuery(BaseModel):
     start_date: datetime

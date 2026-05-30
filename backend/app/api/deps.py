@@ -89,6 +89,5 @@ async def get_current_staff(
 # ------------------------------------------------------------------
 # Type Annotations for easy use
 # ------------------------------------------------------------------
-
 AuthUser = Annotated[TokenData, Depends(get_current_user)]
 CurrentStaff = Annotated[TokenData, Depends(get_current_staff)]

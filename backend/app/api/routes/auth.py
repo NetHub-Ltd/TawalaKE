@@ -1,11 +1,10 @@
 # auth.py
-from urllib import response
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import Optional
 from pydantic import BaseModel
+from app.schemas.schemas import StaffResponse
 
 from app.core.security import (
     verify_password,
@@ -39,7 +38,7 @@ class RefreshTokenRequest(BaseModel):
 # ========================= ENDPOINTS =========================
 
 @router.post("/login", response_model=TokenResponse)
-async def login_with_email(db: SessionDep,
+async def login_with_email(db: SessionDep,request: Response,
     form_data: OAuth2PasswordRequestForm = Depends()   # ← This makes Swagger show the form
     
 ):
@@ -64,12 +63,12 @@ async def login_with_email(db: SessionDep,
         "role": staff.role.value,
     }
 
-    access_token, refresh_token, id_token = create_tokens(user_data)
+    token = create_tokens(user_data)
 
     # 2. Set the long-lived refresh token in a highly secure cookie
-    response.set_cookie(
+    request.set_cookie(
         key="refresh_token",
-        value=refresh_token,
+        value=token.refresh_token,
         httponly=True,       # ⚡ CRITICAL: Prevents JS reading the cookie (XSS protection)
         secure=True,         # ⚡ CRITICAL: Forces HTTPS only (Turn off ONLY in local dev)
         samesite="lax",      # Protects against CSRF attacks
@@ -78,9 +77,9 @@ async def login_with_email(db: SessionDep,
     )
 
     return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        id_token=id_token
+        access_token=token.access_token,
+        refresh_token=token.refresh_token,
+        id_token=token.id_token
     )
 
 # ========================= OTHER ENDPOINTS =========================
@@ -93,10 +92,7 @@ async def refresh_token(request: RefreshTokenRequest):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
 
-@router.get("/me")
+@router.get("/me", response_model=StaffResponse)
 async def get_current_user_info(current_user: CurrentStaff):
     return current_user
 
-
-
-# Add this schema (used by /login/pin)

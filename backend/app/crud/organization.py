@@ -8,12 +8,13 @@ from sqlmodel import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException as HttpException
 from uuid import UUID
+from app.core.security import hash_password
 
 class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
     def __init__(self, model: Type[Organization]):
         super().__init__(model)
     
-    async def onboard_tenant(self, payload: TenantCreate, db: AsyncSession) -> Organization:
+    async def onboard_tenant(self, payload: TenantCreate, db: AsyncSession, password: str = None) -> Organization:
         try:
             # check if the tenant already exists
             stmt = select(self.model).where(self.model.email == payload.email)
@@ -44,11 +45,12 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             if not owner:
                 logger.info(f"Owner with email {tenant.email} does not exist. Creating new owner.")
                 owner = Staff(
+                    organization_id=tenant.id,
                     full_name=tenant.name,
                     email=tenant.email,
                     tenant_id=tenant.id,
                     role=StaffRole.OWNER,
-                    hashed_password="TEMP_DISABLED"  # to be updated later
+                    hashed_password=hash_password(password)  # to be updated later
                 )
                 db.add(owner)
 
@@ -107,14 +109,15 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
         stmt = select(Business).where(Business.tenant_id == tenant_id, Business.active == active)
         return (await db.exec(stmt)).all()
     
-    async def register_staff(self, tenant_id: str, staff_data: TenantCreate, db: AsyncSession):
+    async def register_staff(self, tenant_id: str, staff_data: TenantCreate, db: AsyncSession, password: str = None):
         from app.models.models import Staff, StaffRole
         staff = Staff(
             full_name=staff_data.name,
             email=staff_data.email,
+            organization_id=tenant_id,
             tenant_id=tenant_id,
-            role=StaffRole.STAFF,
-            hashed_password="TEMP_DISABLED"  # to be updated later
+            role=StaffRole.CASHIER,  # default role for new staff, can be updated later
+            hashed_password=hash_password(password) if password else "TEMP_DISABLED"
         )
         db.add(staff)
         await db.commit()
