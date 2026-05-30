@@ -46,7 +46,6 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-
       {/* Screen-bounded viewport layout container relying natively on global base variables */}
       <main className="h-screen w-full bg-surface text-foreground overflow-hidden relative flex flex-col p-4 lg:p-8 selection:bg-brand-primary/20">
         
@@ -113,7 +112,9 @@ export default function LandingPage() {
 
             {/* Button Layout Group utilizing refactored design token parameters */}
             <div className="flex flex-col sm:flex-row gap-4 pt-1">
-              <Link href="/terminal" passHref legacyBehavior>
+              <Link href="/terminal">
+                {/* @next-codemod-error This Link previously used the now removed `legacyBehavior` prop, and has a child that might not be an anchor. The codemod bailed out of lifting the child props to the Link. Check that the child component does not render an anchor, and potentially move the props manually to Link. */
+                }
                 <Button 
                   variant="primary" 
                   size="lg"
@@ -124,7 +125,9 @@ export default function LandingPage() {
                 </Button>
               </Link>
               
-              <Link href="/features" passHref legacyBehavior>
+              <Link href="/features">
+                {/* @next-codemod-error This Link previously used the now removed `legacyBehavior` prop, and has a child that might not be an anchor. The codemod bailed out of lifting the child props to the Link. Check that the child component does not render an anchor, and potentially move the props manually to Link. */
+                }
                 <Button 
                   variant="outline" 
                   size="lg"
@@ -205,7 +208,9 @@ export default function LandingPage() {
                       <p className="text-[9px] text-muted uppercase font-bold tracking-wider leading-none">Total Sales Tracked (Today)</p>
                       <p className="text-base font-bold text-background font-mono tracking-tight leading-none">KES 48,250.00</p>
                     </div>
-                    <Link href="/billing" passHref legacyBehavior>
+                    <Link href="/billing">
+                      {/* @next-codemod-error This Link previously used the now removed `legacyBehavior` prop, and has a child that might not be an anchor. The codemod bailed out of lifting the child props to the Link. Check that the child component does not render an anchor, and potentially move the props manually to Link. */
+                      }
                       <Button 
                         variant="secondary" 
                         size="sm"
