@@ -94,5 +94,11 @@ async def refresh_token(request: RefreshTokenRequest):
 
 @router.get("/me", response_model=StaffResponse)
 async def get_current_user_info(current_user: CurrentStaff):
+    # This endpoint is protected by the CurrentStaff dependency, which verifies the access token and retrieves the user info
+    """
+    Get the current logged-in user's information. Requires a valid access token in the Authorization header.
+     - The CurrentStaff dependency will handle token verification and user retrieval.
+     - If the token is valid, it returns the user's information as defined in StaffResponse.
+     - If the token is invalid or expired, it will raise an HTTP 401 error.
+    """
     return current_user
-
