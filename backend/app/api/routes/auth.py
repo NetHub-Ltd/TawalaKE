@@ -1,4 +1,6 @@
 # auth.py
+from urllib import response
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -62,42 +64,24 @@ async def login_with_email(db: SessionDep,
         "role": staff.role.value,
     }
 
-    return create_tokens(user_data)
+    access_token, refresh_token, id_token = create_tokens(user_data)
 
-
-@router.post("/login/pin", response_model=TokenResponse)
-async def login_with_pin(db: SessionDep,
-    request: PinLoginRequest        # Keep as JSON for PIN (staff use)
-    
-):
-    """Staff quick login using 4-digit PIN"""
-    stmt = select(Staff).where(
-        Staff.tenant_id == request.organization_id,
-        Staff.active == True
+    # 2. Set the long-lived refresh token in a highly secure cookie
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,       # ⚡ CRITICAL: Prevents JS reading the cookie (XSS protection)
+        secure=True,         # ⚡ CRITICAL: Forces HTTPS only (Turn off ONLY in local dev)
+        samesite="lax",      # Protects against CSRF attacks
+        max_age=7 * 24 * 60 * 60, # 7 days in seconds
+        path="/api/v1/auth/refresh", # ⚡ Optimization: Cookie only sent on refresh endpoint
     )
-    staff = (await db.exec(stmt)).first()
 
-    if not staff or not staff.pin_hash or not staff.pin_salt:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="PIN not set"
-        )
-
-    if not verify_pin(request.pin, staff.pin_hash, staff.pin_salt):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid PIN"
-        )
-
-    user_data = {
-        "sub": str(staff.id),
-        "organization_id": str(staff.tenant_id),
-        "business_id": request.business_id,
-        "role": staff.role.value,
-    }
-
-    return create_pin_token(user_data)
-
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        id_token=id_token
+    )
 
 # ========================= OTHER ENDPOINTS =========================
 
@@ -113,26 +97,6 @@ async def refresh_token(request: RefreshTokenRequest):
 async def get_current_user_info(current_user: CurrentStaff):
     return current_user
 
-
-@router.post("/pin/setup")
-async def setup_pin(
-    pin: str,
-    current_user: CurrentStaff,
-    db: SessionDep
-):
-    if not pin.isdigit() or len(pin) != 4:
-        raise HTTPException(400, detail="PIN must be 4 digits")
-
-    staff = db.query(Staff).filter(Staff.id == current_user.sub).first()
-    if not staff:
-        raise HTTPException(404, detail="Staff not found")
-
-    salt = generate_pin_salt()
-    staff.pin_hash = hash_pin(pin, salt)
-    staff.pin_salt = salt
-    db.commit()
-
-    return {"message": "PIN set successfully"}
 
 
 # Add this schema (used by /login/pin)
