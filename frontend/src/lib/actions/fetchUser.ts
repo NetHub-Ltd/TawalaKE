@@ -5,14 +5,14 @@ import { auth } from "@/auth";
 
 export async function fetchUser() {
   const session = await auth();
-  const baseUrl = process.env.RESOURCE_SERVER_URL;
+  const baseUrl = process.env.BACKEND_URL;
 
   if (!session?.accessToken) {
     throw new Error("Unauthorized: No token provided");
   }
   console.log("session", session.user?.id);
   try {
-    const res = await fetch(`${baseUrl}/users/me`, {
+    const res = await fetch(`${baseUrl}/auth/me`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -27,13 +27,13 @@ export async function fetchUser() {
     }
 
     const json = await res.json();
-    const parsed = zUserRead.safeParse(json);
+    // const parsed = zUserRead.safeParse(json);
 
-    if (!parsed.success) {
-      throw new Error("data_integrity_error");
-    }
+    // if (!parsed.success) {
+    //   throw new Error("data_integrity_error");
+    // }
 
-    return parsed.data;
+    return json;
   } catch (error) {
     console.error("Internal Server Fetch Error:", error);
     throw new Error("failed_to_retrieve_user");

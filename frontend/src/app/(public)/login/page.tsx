@@ -34,13 +34,11 @@ export default function LoginPage() {
       redirect: false,
       email: data.email,
       password: data.password,
-      organization_id: data.organization_id,
+      // organization_id: data.organization_id,
     });
 
     if (result?.error) {
       alert("Login failed: " + result.error);
-    } else {
-      window.location.href = "/dashboard";
     }
 
     setIsLoading(false);

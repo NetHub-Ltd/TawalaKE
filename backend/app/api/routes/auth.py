@@ -5,6 +5,9 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from pydantic import BaseModel
 from app.schemas.schemas import StaffResponse
+import datetime
+from app.utils.helpers import utc_now
+from app.core.config import settings
 
 from app.core.security import (
     verify_password,
@@ -25,6 +28,7 @@ class TokenResponse(BaseModel):
     refresh_token: Optional[str] = None
     id_token: Optional[str] = None
     token_type: str = "bearer"
+    expires_at: datetime.datetime
 
 
 class PinLoginRequest(BaseModel):
@@ -79,7 +83,8 @@ async def login_with_email(db: SessionDep,request: Response,
     return TokenResponse(
         access_token=token.access_token,
         refresh_token=token.refresh_token,
-        id_token=token.id_token
+        id_token=token.id_token,
+        expires_at=utc_now() + datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)  # Access token expires in 15 minutes
     )
 
 # ========================= OTHER ENDPOINTS =========================
@@ -102,3 +107,15 @@ async def get_current_user_info(current_user: CurrentStaff):
      - If the token is invalid or expired, it will raise an HTTP 401 error.
     """
     return current_user
+
+
+@router.get('/logout', status_code=204)
+async def logout(response: Response):
+    """Logs out the current user by clearing the refresh token cookie. The access token will naturally expire soon.
+     - This endpoint simply deletes the refresh token cookie, effectively logging the user out.
+     - The access token will still be valid until it expires, but without a refresh token, the user won't be able to get new access tokens.
+     - This is a common and secure way to handle logout in JWT-based authentication systems.
+    """
+    # To log out, we simply clear the refresh token cookie. The access token will naturally expire soon.
+    response.delete_cookie(key="refresh_token", path="/api/v1/auth/refresh")
+    return Response(status_code=204)
