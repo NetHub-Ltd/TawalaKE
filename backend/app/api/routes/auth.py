@@ -84,7 +84,7 @@ async def login_with_email(db: SessionDep,request: Response,
         access_token=token.access_token,
         refresh_token=token.refresh_token,
         id_token=token.id_token,
-        expires_at=utc_now() + datetime.timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)  # Access token expires in 15 minutes
+        expires_at=utc_now() + datetime.timedelta(minutes=settings.access_token_expire_minutes)  # Access token expires in 15 minutes
     )
 
 # ========================= OTHER ENDPOINTS =========================

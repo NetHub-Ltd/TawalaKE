@@ -14,17 +14,6 @@ from app.utils.helpers import utc_now, utc_today, validate_and_format_kenyan_pho
 from app.utils.logging import logger
 
 # ========================= CONFIG (from env) =========================
-SECRET_KEY = settings.secret_key
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable is required")
-
-ALGORITHM = settings.algorithm
-ISSUER  = settings.issuer
-AUDIENCE = settings.audience
-
-ACCESS_TOKEN_EXPIRE_MINUTES = int(settings.access_token_expire_minutes)
-REFRESH_TOKEN_EXPIRE_DAYS = int(settings.refresh_token_expire_days)
-PIN_TOKEN_EXPIRE_HOURS = int(settings.pin_token_expire_hours)
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 # oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
