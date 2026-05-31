@@ -92,13 +92,13 @@ def _create_token(data: Dict[str, Any], expires_delta: timedelta, token_type: st
     to_encode.update({
         "exp": expire,
         "iat": now,
-        "iss": ISSUER,
-        "aud": AUDIENCE,
+        "iss": settings.issuer,
+        "aud": settings.audience,
         "type": token_type,
         "jti": str(uuid.uuid4()),
         "scopes": scopes
     })
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
 
 def create_tokens(user_data: Dict[str, Any]) -> Token:
@@ -109,9 +109,9 @@ def create_tokens(user_data: Dict[str, Any]) -> Token:
         "role": user_data["role"],
     }
     
-    access = _create_token(base, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), "access")
-    refresh = _create_token(base, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS), "refresh")
-    id_token = _create_token(base, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES), "id")
+    access = _create_token(base, timedelta(minutes=settings.access_token_expire_minutes), "access")
+    refresh = _create_token(base, timedelta(days=settings.refresh_token_expire_days), "refresh")
+    id_token = _create_token(base, timedelta(minutes=settings.access_token_expire_minutes), "id")
 
     return Token(access_token=access, refresh_token=refresh, id_token=id_token)
 
@@ -123,7 +123,7 @@ def create_pin_token(user_data: Dict[str, Any]) -> Token:
         "business_id": user_data.get("business_id"),
         "role": user_data["role"],
     }
-    access = _create_token(base, timedelta(hours=PIN_TOKEN_EXPIRE_HOURS), "access")
+    access = _create_token(base, timedelta(hours=settings.pin_token_expire_hours), "access")
     return Token(access_token=access, token_type="pin")
 
 
@@ -132,10 +132,10 @@ def verify_token(token: str, expected_type: str = "access") -> TokenData:
     try:
         payload = jwt.decode(
             token, 
-            SECRET_KEY, 
-            algorithms=[ALGORITHM], 
-            audience=AUDIENCE,
-            issuer=ISSUER,
+            settings.secret_key, 
+            algorithms=[settings.algorithm], 
+            audience=settings.audience,
+            issuer=settings.issuer,
             options={"verify_signature": True}
         )
 
