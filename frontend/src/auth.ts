@@ -220,40 +220,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (tokenHasExpired) {
         return await refreshAccessToken(token);
       }
-      console.log("token: ", token);
       return token;
     },
 
-    // Callback 4: The Session Presentation Layer
-    // async session({ session, token }) {
-    //   console.log("token at jwt callback", {session, token})
-    //   if (token && session.user) {
-      
-    //     const encryptedToken = token as unknown as JWTTokenStructure;
-    //     const profile = encryptedToken.user;
-
-    //     // Map authorization credentials and operational error signals down to the thread surface
-    //     session.accessToken = encryptedToken.accessToken;
-    //     session.refreshToken = encryptedToken.refreshToken;
-    //     session.error = encryptedToken.error;
-        
-    //     // if (encryptedToken.expiresAt) {
-    //     //   session.expiresAt = new Date(encryptedToken.expiresAt).toISOString();
-    //     // }
-    //     session.expiresAt = new Date(encryptedToken.expiresAt).toISOString();
-    //     // Flatten user profile parameters
-    //     session.user.id = profile.id;
-    //     session.user.role = profile.role || "OWNER";  
-    //     session.user.tenant_id = profile.tenant_id;
-    //     session.user.organization_id = profile.organization_id;
-    //     session.user.business_id = profile.business_id;
-    //     session.user.active = profile.active;
-    //     session.user.name = profile.name;
-    //     session.user.email = profile.email;
-    //   }
-      
-    //   return session;
-    // },
     async session({ session, token }: { session: any; token: any }) {
       if (token && session.user) {
         // Map authorization credentials and operational error signals down to the thread

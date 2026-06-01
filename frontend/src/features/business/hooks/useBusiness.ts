@@ -51,6 +51,7 @@ export function useBusiness(tenantId?: string) {
 
 // 1. Create the Context
 export const BusinessContext = createContext<{
+  organizationId: string | string[] | undefined;
   businessId: string | string[] | undefined;
   businessName: string | undefined;
 } | null>(null);

@@ -1,7 +1,5 @@
 import React from "react";
 import { Metadata } from "next";
-import { TerminalHeader } from "@/features/business/components/TerminalHeader";
-import { TerminalSidebar } from "@/features/business/components/TerminalSidebar";
 import { BusinessProvider } from "@/features/business/components/BusinessProvider";
 
 export const metadata: Metadata = {
@@ -12,14 +10,14 @@ export const metadata: Metadata = {
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: Promise<{ businessId: string }>;
+  params: Promise<{ businessId: string; organizationId: string }>;
 }
 
 export default async function TerminalLayout({
   children,
   params,
 }: LayoutProps) {
-  const { businessId } = await params;
+  const { organizationId, businessId } = await params;
 
   if (!businessId) {
     return null;
@@ -28,15 +26,15 @@ export default async function TerminalLayout({
   const businessName = "Terminal Node";
 
   return (
-    <BusinessProvider businessId={businessId} businessName={businessName}>
+    <BusinessProvider businessId={businessId} businessName={businessName} organizationId={organizationId}>
       {/* MAIN APP SHELL: 
         - h-dvh (Dynamic Viewport Height) completely locks the container to the screen size.
         - overflow-hidden strips the main body of any scrolling capabilities.
       */}
-      <div className="h-dvh w-screen flex flex-col bg-background overflow-hidden select-none text-foreground">
+      <div className="h-dvh w-full flex flex-col bg-background overflow-hidden select-none text-foreground">
         
         {/* FIXED HEADER: Stays clamped to the top */}
-        <TerminalHeader businessName={businessName} />
+        {/* <TerminalHeader businessName={businessName} /> */}
 
         {/* BODY CONTAINER: 
           - flex-1 + min-h-0 prevents inner elements from expanding this container beyond the screen boundaries.
@@ -44,7 +42,7 @@ export default async function TerminalLayout({
         <div className="flex flex-1 min-h-0 w-full overflow-hidden">
           
           {/* FIXED SIDE NAVIGATION: Frozen layout sidebar element */}
-          <TerminalSidebar businessId={businessId} />
+          {/* <TerminalSidebar businessId={businessId} /> */}
 
           {/* INTERNAL VIEWPORT:
             - overflow-hidden forces containment.

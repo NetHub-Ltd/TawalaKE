@@ -28,28 +28,10 @@ export default function TerminalSwitchboard() {
   return (
     <section className="h-screen w-full flex flex-col bg-[#fafbfc] text-[#2d3142] overflow-hidden relative selection:bg-primary/20">
       
-      {/* Soft conversational ambient brand glows */}
-      <div className="absolute top-[-5%] right-[-5%] w-[500px] h-[500px] bg-[#f0f4ff] rounded-full blur-[120px] pointer-events-none" aria-hidden="true" />
-      <div className="absolute bottom-[-5%] left-[-5%] w-[400px] h-[400px] bg-[#fff0f2] rounded-full blur-[100px] pointer-events-none" aria-hidden="true" />
-
-      <main className="flex-1 w-full mx-auto flex flex-col pt-10 pb-6 px-8 overflow-hidden max-w-[1600px] relative z-10">
+      <main className="flex-1 w-full mx-auto flex flex-col pt-10 pb-6 px-8 overflow-hidden relative z-10">
         
         {/* --- HUMAN-CENTRIC WELCOME & LIVE METRIC STRIP --- */}
         <div className="mb-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100 shrink-0">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1 rounded-full">
-              <Sparkles size={13} className="text-primary animate-pulse" aria-hidden="true" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-primary">
-                Your Control Center
-              </span>
-            </div>
-            <h1 className="text-3xl font-black tracking-tight text-[#1e2229]">
-              Welcome back, {isLoadingProfile ? "Business Partner" : user?.full_name.split(" ")[0]}!
-            </h1>
-            <p className="text-[#5c6479] text-xs md:text-sm font-medium max-w-2xl leading-relaxed">
-              Tawala biashara yako with ease. Select an active storefront setup below to open your registers, review live counter numbers, or track incoming stock items.
-            </p>
-          </div>
 
           {/* Real-time Humanized Branch/Tenant Metrics Tracker */}
           <div className="flex items-center gap-5 bg-white border border-slate-100 p-3 rounded-2xl shadow-soft self-start lg:self-center">
@@ -132,20 +114,6 @@ export default function TerminalSwitchboard() {
             </div>
           )}
         </div>
-
-        {/* --- SYSTEM ASSURANCE BAR --- */}
-        <div className="mt-auto pt-4 border-t border-slate-100 shrink-0 flex items-center justify-between text-[#7d859a] font-medium text-[11px]">
-          <div className="flex items-center gap-1.5">
-            <Heart size={12} className="text-rose-400 fill-rose-400/20" />
-            <span>Tawala Technology &copy; {new Date().getFullYear()}. Protecting your daily margins safely.</span>
-          </div>
-          <div className="flex items-center gap-4 font-bold text-slate-600">
-            <span className="hover:text-primary transition-colors cursor-pointer flex items-center gap-1">
-              <Smile size={12} /> Local Support Open
-            </span>
-          </div>
-        </div>
-
       </main>
     </section>
   );

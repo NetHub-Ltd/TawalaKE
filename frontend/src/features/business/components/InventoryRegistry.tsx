@@ -41,7 +41,7 @@ const TableHeaderCell = ({
 );
 
 export function InventoryRegistry() {
-  const { businessId } = useBusinessContext();
+  const { businessId, organizationId } = useBusinessContext();
   const { products, isLoading, deleteProduct } = useProducts(
     businessId as string,
   );
@@ -69,7 +69,7 @@ export function InventoryRegistry() {
   // Hooking the presentation layer edit callbacks to mutation parameters
   const handleEditRedirect = (id: string) => {
     // Navigates directly to the structural edit router canvas
-    window.location.href = `/terminal/${businessId}/inventory/${id}`;
+    window.location.href = `/org/${organizationId}/terminal/${businessId}/inventory/${id}`;
   };
 
   const handleDelete = (id: string) => {
@@ -85,23 +85,9 @@ export function InventoryRegistry() {
     <main className="flex-1 flex flex-col min-h-0 bg-background font-sans overflow-hidden">
       {/* Visual Context Header */}
       <header className="border-b border-border/80 bg-card/95 px-8 py-6 flex items-center justify-between shrink-0 z-20 backdrop-blur-sm">
-        <div className="flex items-center gap-6">
-          <div className="h-12 w-12 bg-primary/5 rounded-xl flex items-center justify-center text-primary border border-primary/10">
-            <PackageSearch size={24} strokeWidth={1.5} />
-          </div>
-          <div className="space-y-0.5">
-            <h1 className="text-3xl font-extrabold tracking-tighter text-foreground leading-none">
-              Inventory <span className="text-primary">Registry</span>
-            </h1>
-          </div>
-        </div>
 
         <div className="flex items-center gap-4">
           <div className="relative group">
-            <Search
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors"
-              size={16}
-            />
             <input
               type="text"
               placeholder="Search by Label or SKU identifier..."
@@ -113,9 +99,9 @@ export function InventoryRegistry() {
               className="h-11 w-80 bg-card border border-input rounded-lg pl-10 pr-4 text-sm font-medium focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all"
             />
           </div>
-          <Link href={`/terminal/${businessId}/inventory/new`}>
+          <Link href={`/org/${organizationId}/terminal/${businessId}/inventory/new`}>
             <button className="h-10 px-5 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-md font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
-              <Plus size={14} strokeWidth={3} /> Register Asset
+              <Plus size={14} strokeWidth={3} /> Add Product
             </button>
           </Link>
         </div>

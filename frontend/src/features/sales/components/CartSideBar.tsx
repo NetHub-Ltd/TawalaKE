@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
+import {useBusinessContext} from "@/features/business/hooks/useBusiness"
 
 /**
  * @Scribe_Audit
@@ -25,6 +26,7 @@ import { useCartStore } from "@/features/sales/stores/useCartStore";
 export const CartSidebar = ({ businessId }: { businessId?: string }) => {
   const router = useRouter();
   const { cart, updateQty, clearCart, getFinancials, discount, setDiscount } = useCartStore();
+  const {organizationId} = useBusinessContext()
 
   const [mounted, setMounted] = useState(false);
   const [isAddingDiscount, setIsAddingDiscount] = useState(false);
@@ -44,13 +46,13 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
 
   const handleExpand = () => {
     if (businessId) {
-      router.push(`/terminal/${businessId}/cart`);
+      router.push(`/org/${organizationId}/terminal/${businessId}/cart`);
     }
   };
 
   const handleCheckoutRedirect = () => {
     if (cart.length > 0) {
-      router.push(`/terminal/${businessId}/checkout`);
+      router.push(`/org/${organizationId}/terminal/${businessId}/checkout`);
     }
   };
 
