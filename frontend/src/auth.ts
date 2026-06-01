@@ -1,12 +1,91 @@
-// auth.tsimport NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { jwtDecode } from "jwt-decode"; // Recommended: npm install jwt-decode
 import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { jwtDecode } from "jwt-decode";
+
+interface JWTTokenStructure {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  error: string | null;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    tenant_id: string;
+    organization_id: string;
+    business_id: string;
+    active: boolean;
+  };
+}
+
+/**
+ * Connects with your FastAPI backend node to swap a stale or expiring
+ * access token for a fresh cryptographic key pair.
+ */
+async function refreshAccessToken(token: any): Promise<any> {
+  try {
+    console.warn(`Initiating token rotation sequence for user: ${token.user?.email}`);
+
+    if (!token.refreshToken) {
+      throw new Error("Refresh token missing from cookie storage snapshot");
+    }
+
+    const response = await fetch(`${process.env.BACKEND_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        refresh_token: token.refreshToken,
+      }),
+    });
+
+    if (!response.ok) {
+      const logDetails = await response.text().catch(() => "No response body");
+      throw new Error(`FastAPI rejected token rotation. Status: ${response.status}. Reason: ${logDetails}`);
+    }
+
+    const newTokens = await response.json();
+    
+    if (!newTokens.access_token) {
+      throw new Error("FastAPI response payload is missing 'access_token'");
+    }
+
+    // Safely parse expiration from the new token's internal payload
+    const decoded: any = jwtDecode(newTokens.access_token);
+    const expiresAt = decoded.exp * 1000;
+
+    console.log(`[auth] Token rotation successful. Next expiration window: ${new Date(expiresAt).toISOString()}`);
+
+    return {
+      ...token,
+      accessToken: newTokens.access_token,
+      // Fallback to existing refresh token if FastAPI doesn't cycle it out
+      refreshToken: newTokens.refresh_token ?? token.refreshToken,
+      expiresAt: expiresAt,
+      error: null, 
+    };
+  } catch (error: any) {
+    console.error("[auth] Critical session rotation failure:", error.message);
+    
+    return {
+      ...token,
+      // Flag session corruption to trigger automated purging down inside proxy.ts
+      error: "RefreshTokenError",
+    };
+  }
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   debug: process.env.NODE_ENV === "development",
-  session: { strategy: "jwt" },
-
+  session: { 
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days absolute lifecycle ceiling
+  },
+  pages: {
+    signIn: "/login",
+  },
   providers: [
     Credentials({
       id: "credentials",
@@ -18,84 +97,109 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Missing email or password");
+          throw new Error("Credentials mapping parameters are incomplete");
         }
 
-        try {
-          // 1. Authenticate with FastAPI
-          const response = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: new URLSearchParams({
-              grant_type: "password",
-              username: credentials.email as string,
-              password: credentials.password as string,
-            }),
-          });
+        // 1. Authenticate with your FastAPI login endpoint
+        const response = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            grant_type: "password",
+            username: credentials.email as string,
+            password: credentials.password as string,
+          }),
+        });
 
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || "Invalid email or password");
-          }
+        if (!response.ok) {
+          const errorPayload = await response.json().catch(() => ({}));
+          throw new Error(errorPayload.detail || "Invalid access credentials supplied");
+        }
 
-          const tokens = await response.json();
+        const tokens = await response.json();
+        console.log("Token Response Captured:", tokens);
 
-          // 2. Fetch User Profile Data
-          const userDataResp = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${tokens.access_token}`,
-            },
-          });
+        // 2. Extract profile details via the Bearer token context
+        const profileResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${tokens.access_token}`,
+          },
+        });
 
-          if (!userDataResp.ok) throw new Error("Failed to fetch user profile data");
-          const profile = await userDataResp.ok ? await userDataResp.json() : null;
+        if (!profileResponse.ok) {
+          throw new Error("Unable to retrieve operational profile identity metadata");
+        }
+        
+        const profile = await profileResponse.json();
 
-          console.debug("userdata", profile);
+        // 🔥 CRITICAL PRODUCTION FIX: Parse FastAPI's ISO String format into precise Unix milliseconds
+        const expiresAt = Date.parse(tokens.expires_at);
 
-          // Decode JWT to get the exact database expiration timestamp
+        if (isNaN(expiresAt)) {
+          console.error("[auth] Warning: FastAPI returned an invalid date format. Falling back to JWT decode.");
           const decoded: any = jwtDecode(tokens.access_token);
-          const expiresAt = decoded.exp * 1000; // Convert seconds to milliseconds
-
-          // ⚡ PRODUCTION FIX: Return a clean, flattened object matching the User footprint
-          return {
-            id: profile.id,
-            email: profile.email,
-            name: profile.full_name,
-            role: profile.role,
-            tenant_id: profile.tenant_id,
-            organization_id: profile.organization_id,
-            business_id: profile.business_id,
-            active: profile.active,
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token,
-            idToken: tokens.id_token,
-            expiresAt: expiresAt,
-          };
-        } catch (error: any) {
-          console.error("Credentials Auth Critical Error:", error.message);
-          return null;
+          return { ...profile, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: decoded.exp * 1000 };
         }
+
+        return {
+          id: profile.id,
+          email: profile.email,
+          name: profile.full_name,
+          role: "OWNER", // Temporally overide for testing
+          // role: profile.role || "OWNER",
+          tenant_id: profile.tenant_id,
+          organization_id: profile.organization_id,
+          business_id: profile.business_id,
+          active: profile.active,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt: expiresAt,
+        };
       },
     }),
   ],
 
   callbacks: {
-    // Triggered on login, and on subsequent requests checking session validation status
+    // Callback 1: The Gatekeeper (Security verification on initial login)
+    async signIn({ user }) {
+      const u = user as any;
+      if (u) {
+        if (u.active === false) {
+          console.warn(`[auth] Blocked entry for deactivated account profile: ${u.email}`);
+          return "/login?error=AccountDeactivated";
+        }
+        if (!u.tenant_id && u.role) {
+          console.error(`[auth] Owner login rejected due to missing organizational bounds: ${u.email}`);
+          return "/login?error=MissingOrganization";
+        }
+      }
+      return true;
+    },
+
+    // Callback 2: The Redirection Shield (Prevents Open Redirection Vulnerabilities)
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      else if (new URL(url).origin === baseUrl) return url;
+      return `${baseUrl}/org`;
+    },
+
+    // Callback 3: The Cryptographic JWT State Processor
     async jwt({ token, user, account }) {
-      // Run exclusively on initial sign in
+      // Execute exclusively during the initial sign-in phase
       if (user && account?.provider === "credentials") {
         const u = user as any;
+        console.log(`[auth] Building session cookie tokens for worker identifier: ${u.email}`);
+        
         return {
           ...token,
           accessToken: u.accessToken,
           refreshToken: u.refreshToken,
-          idToken: u.idToken,
           expiresAt: u.expiresAt,
-          // Propagate your database profile down safely into the JWT token payload
-          userProfile: {
+          error: null,
+          user: {
             id: u.id,
             email: u.email,
             name: u.name,
@@ -104,43 +208,72 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             organization_id: u.organization_id,
             business_id: u.business_id,
             active: u.active,
-          }
+          },
         };
       }
 
-      // Production Check: Silently refresh tokens if current time has passed expiration limits
-      if (Date.now() > (token.expiresAt as number)) {
-        console.warn("Access token expired! Triggering background rotation...");
-        // TODO: Implement your token rotation fetch handler here using token.refreshToken
-      }
+      // Proactive Check: Evaluate expiration using our safety buffer window
+      // TODO
+      const bufferWindowMs = 60 * 1000; 
+      const tokenHasExpired = Date.now() + bufferWindowMs > (token.expiresAt as number);
 
+      if (tokenHasExpired) {
+        return await refreshAccessToken(token);
+      }
+      console.log("token: ", token);
       return token;
     },
 
-    // Triggered when exposing session details down to client hooks or Server Component 'auth()'
-    async session({ session, token }) {
-      if (token && session.user) {
-        // ⚡ PRODUCTION FIX: Flatten variables directly onto session context
-        session.accessToken = token.accessToken as string;
-        session.idToken = token.idToken as string;
+    // Callback 4: The Session Presentation Layer
+    // async session({ session, token }) {
+    //   console.log("token at jwt callback", {session, token})
+    //   if (token && session.user) {
+      
+    //     const encryptedToken = token as unknown as JWTTokenStructure;
+    //     const profile = encryptedToken.user;
+
+    //     // Map authorization credentials and operational error signals down to the thread surface
+    //     session.accessToken = encryptedToken.accessToken;
+    //     session.refreshToken = encryptedToken.refreshToken;
+    //     session.error = encryptedToken.error;
         
-        // Inject every specific structural key safely under user context block
-        const profile = token.userProfile as any;
-        session.user.id = profile.id;
-        // session.user.role = profile.role;
-        session.user.role = "OWNER"; // TEMPORARY OVERRIDE FOR TESTING
-        session.user.tenant_id = profile.tenant_id;
-        session.user.organization_id = profile.organization_id;
-        session.user.business_id = profile.business_id;
-        session.user.active = profile.active;
-        session.user.name = profile.name;
-        session.user.email = profile.email;
+    //     // if (encryptedToken.expiresAt) {
+    //     //   session.expiresAt = new Date(encryptedToken.expiresAt).toISOString();
+    //     // }
+    //     session.expiresAt = new Date(encryptedToken.expiresAt).toISOString();
+    //     // Flatten user profile parameters
+    //     session.user.id = profile.id;
+    //     session.user.role = profile.role || "OWNER";  
+    //     session.user.tenant_id = profile.tenant_id;
+    //     session.user.organization_id = profile.organization_id;
+    //     session.user.business_id = profile.business_id;
+    //     session.user.active = profile.active;
+    //     session.user.name = profile.name;
+    //     session.user.email = profile.email;
+    //   }
+      
+    //   return session;
+    // },
+    async session({ session, token }: { session: any; token: any }) {
+      if (token && session.user) {
+        // Map authorization credentials and operational error signals down to the thread
+        (session as any).accessToken = token.accessToken;
+        (session as any).refreshToken = token.refreshToken;
+        (session as any).error = token.error;
+
+        if (token.user) {
+          session.user.id = token.user.id;
+          session.user.role = token.user.role;  
+          session.user.tenant_id = token.user.tenant_id;
+          session.user.organization_id = token.user.organization_id;
+          session.user.business_id = token.user.business_id;
+          session.user.active = token.user.active;
+          session.user.name = token.user.name;
+          session.user.email = token.user.email;
+        }
       }
+      
       return session;
     },
-  },
-
-  pages: {
-    signIn: "/login",
   },
 });

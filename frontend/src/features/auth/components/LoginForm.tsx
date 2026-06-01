@@ -12,9 +12,9 @@ import { z } from 'zod';
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  acceptTerms: z.boolean().refine((val) => val === true, {
-    message: 'You must agree to the Terms & Conditions to proceed',
-  }),
+  // acceptTerms: z.boolean().refine((val) => val === true, {
+  //   message: 'You must agree to the Terms & Conditions to proceed',
+  // }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -34,7 +34,7 @@ export function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
-      acceptTerms: false,
+      // acceptTerms: false,
     }
   });
 
@@ -103,7 +103,7 @@ export function LoginForm() {
       {/* Password Input Field */}
       <div>
         <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-2">
-          Access Password
+          Password
         </label>
         <div className="relative">
           <Lock className="absolute left-4 top-3.5 text-muted/60" size={18} />
@@ -112,7 +112,7 @@ export function LoginForm() {
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             className="w-full pl-11 pr-12 py-3 bg-surface/40 dark:bg-surface/10 border border-border/60 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary placeholder:text-muted/50 text-foreground transition-all"
-            placeholder="••••••••"
+            placeholder="password"
           />
           <button
             type="button"
@@ -131,7 +131,7 @@ export function LoginForm() {
       </div>
 
       {/* Terms & Conditions Enforcement Row */}
-      <div className="pt-2">
+      {/* <div className="pt-2">
         <div className="flex items-start gap-3">
           <div className="flex h-5 items-center">
             <input
@@ -162,7 +162,7 @@ export function LoginForm() {
             {errors.acceptTerms.message}
           </p>
         )}
-      </div>
+      </div> */}
 
       {/* Primary Submit Action Trigger */}
       <button
@@ -173,7 +173,7 @@ export function LoginForm() {
         {isLoading ? (
           <>
             <Loader2 className="animate-spin" size={18} />
-            <span>Synchronizing Secure Connection...</span>
+            <span>Logging You In...</span>
           </>
         ) : (
           <span>Secure Sign In</span>

@@ -80,7 +80,7 @@ export default function TerminalSwitchboard() {
               {businesses.map((biz) => (
                 <Link
                   key={biz.id}
-                  href={biz.active ? `/terminal/${biz.id}` : "#"}
+                  href={biz.active ? `/org/${biz.tenant_id}/terminal/${biz.id}` : "#"}
                   className={cn(
                     "group relative flex flex-col p-6 rounded-[2rem] transition-all duration-300 bg-white border border-slate-100 shadow-soft hover:border-primary/30 hover:shadow-md",
                     !biz.active && "opacity-45 grayscale cursor-not-allowed hover:border-slate-100 hover:shadow-soft"
