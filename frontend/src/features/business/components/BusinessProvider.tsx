@@ -13,15 +13,17 @@ interface BusinessProviderProps {
   children: React.ReactNode;
   businessId: string;
   businessName: string;
+  organizationId: string;
 }
 
 export function BusinessProvider({
   children,
   businessId,
   businessName,
+  organizationId
 }: BusinessProviderProps) {
   return (
-    <BusinessContext.Provider value={{ businessId, businessName }}>
+    <BusinessContext.Provider value={{ businessId, businessName, organizationId }}>
       {children}
     </BusinessContext.Provider>
   );

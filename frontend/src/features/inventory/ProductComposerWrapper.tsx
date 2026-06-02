@@ -41,8 +41,8 @@ export function ProductComposerWrapper({ businessId, productId }: ProductCompose
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-black text-foreground">Modify System Asset</h1>
+    <div className="p-8 w-full mx-auto space-y-6">
+      <h1 className="text-2xl font-black text-foreground">Update Product Data</h1>
       <AssetComposer
         initialData={formInitialValues}
         onSubmit={handleUpdate}

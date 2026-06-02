@@ -21,7 +21,7 @@ interface TerminalCockpitProps {
 }
 
 export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
-  const {businessName} = useBusinessContext()
+  const {businessName, organizationId} = useBusinessContext()
   const { addToCart } = useCartStore();
   const { products = [], isLoading } = useProducts(businessId);
 

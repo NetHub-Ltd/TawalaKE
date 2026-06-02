@@ -1,15 +1,15 @@
 "use client";
 
 import React from "react";
-import { Package, Barcode, Tag, Plus } from "lucide-react";
+import { Package, Barcode, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductResponse } from "@/lib/api/generated/models";
 
 /**
  * @Scribe_Audit
- * Aesthetic: "Soft-Native" refactor. Reduced border weight, enhanced shadow depth.
- * Interaction: Scale-down active state and hover lift for tactile feedback.
- * Typography: Fluid sizing for price to ensure visibility on high-res displays.
+ * Aesthetic: High-density layout optimize. Compresses padding and structural margins.
+ * Grid Optimization: Fits 4 clean units in the core viewport without horizontal overflow.
+ * Typography: Scales price and label elements cleanly to prevent wrapping clipping.
  */
 
 interface ProductCardProps {
@@ -35,23 +35,23 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
       disabled={isOutOfStock || !product.active}
       aria-label={`Add ${product.label} to cart.`}
       className={cn(
-        "group relative flex flex-col text-left bg-card rounded-[2.5rem] p-6 transition-all duration-500",
-        "w-full h-full min-w-[220px] shadow-soft hover:shadow-xl border border-transparent hover:border-primary/10",
-        "hover:-translate-y-2 active:scale-[0.97]",
+        "group relative flex flex-col text-left bg-card rounded-2xl p-4 transition-all duration-300",
+        "w-full h-full shadow-soft hover:shadow-lg border border-transparent hover:border-primary/10",
+        "hover:-translate-y-1 active:scale-[0.98]",
         (isOutOfStock || !product.active) &&
           "opacity-50 grayscale cursor-not-allowed shadow-none hover:translate-y-0",
       )}
     >
       {/* Visual Identity Area */}
-      <div className="flex justify-between items-start mb-6 shrink-0">
-        <div className="h-14 w-14 rounded-[1.25rem] bg-background flex items-center justify-center text-secondary/40 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-300 shadow-inner">
-          <Package size={24} strokeWidth={1.5} />
+      <div className="flex justify-between items-start mb-3 shrink-0 w-full">
+        <div className="h-10 w-10 rounded-xl bg-background flex items-center justify-center text-secondary/40 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-300 shadow-inner">
+          <Package size={18} strokeWidth={1.5} />
         </div>
 
-        <div className="flex flex-col items-end gap-1.5">
+        <div className="flex flex-col items-end">
           <div
             className={cn(
-              "text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest transition-colors",
+              "text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider transition-colors",
               isOutOfStock
                 ? "bg-red-500 text-white"
                 : "bg-muted text-secondary/60 group-hover:bg-primary group-hover:text-white",
@@ -63,21 +63,21 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
       </div>
 
       {/* Info Cluster */}
-      <div className="flex flex-col gap-1.5 flex-1">
-        <h3 className="font-bold text-foreground leading-tight uppercase tracking-tight group-hover:text-primary transition-colors text-base">
+      <div className="flex flex-col gap-1 flex-1 w-full min-w-0">
+        <h3 className="font-bold text-foreground leading-snug uppercase tracking-tight group-hover:text-primary transition-colors text-sm truncate w-full">
           {product.label}
         </h3>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 w-full">
           {category && (
-            <span className="text-[10px] font-bold uppercase tracking-widest text-secondary/40 flex items-center gap-1">
-              <Tag size={10} strokeWidth={3} /> {category}
+            <span className="text-[9px] font-bold uppercase tracking-wider text-secondary/40 flex items-center gap-0.5 truncate max-w-[50%]">
+              <Tag size={8} strokeWidth={3} /> {category}
             </span>
           )}
           {sku && (
-            <div className="flex items-center gap-1 text-secondary/30">
-              <Barcode size={12} />
-              <span className="text-[10px] font-mono tracking-tighter uppercase">
+            <div className="flex items-center gap-0.5 text-secondary/30 truncate max-w-[50%]">
+              <Barcode size={10} />
+              <span className="text-[9px] font-mono tracking-tighter uppercase truncate">
                 {sku}
               </span>
             </div>
@@ -86,29 +86,24 @@ export function ProductCard({ product, onAdd }: ProductCardProps) {
       </div>
 
       {/* Pricing Footer */}
-      <div className="mt-6 pt-5 border-t border-color-border/5 flex items-center justify-between">
-        <div className="flex items-baseline gap-1">
-          <span className="text-[10px] font-black text-secondary/30 uppercase tracking-tighter">
+      <div className="mt-4 pt-3 border-t border-color-border/5 flex items-center justify-between w-full shrink-0">
+        <div className="flex items-baseline gap-0.5 flex-wrap min-w-0">
+          <span className="text-[9px] font-black text-secondary/30 uppercase tracking-tighter mr-0.5">
             Ksh
           </span>
-          <span className="text-2xl font-black tracking-tighter leading-none text-foreground">
+          <span className="text-xl font-black tracking-tighter leading-none text-foreground break-all">
             {formattedPrice}
           </span>
           {unit_of_measure && (
-            <span className="text-[10px] font-bold text-secondary/30 lowercase not-italic">
+            <span className="text-[9px] font-bold text-secondary/30 lowercase not-italic ml-0.5">
               /{unit_of_measure}
             </span>
           )}
         </div>
-
-        {/* Rapid-Add Indicator */}
-        {/* <div className="h-8 w-8 rounded-full bg-primary/0 group-hover:bg-primary group-hover:text-white flex items-center justify-center transition-all duration-300">
-          <Plus size={16} strokeWidth={3} />
-        </div> */}
       </div>
 
       {/* Interactive Surface Glow */}
-      <div className="absolute inset-0 rounded-[2.5rem] ring-1 ring-inset ring-foreground/[0.03] group-hover:ring-primary/20 transition-all pointer-events-none" />
+      <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-foreground/[0.03] group-hover:ring-primary/20 transition-all pointer-events-none" />
     </button>
   );
 }

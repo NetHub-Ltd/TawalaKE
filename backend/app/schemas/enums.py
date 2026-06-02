@@ -15,11 +15,11 @@ class CategoryType(str, Enum):
 # =========================================================
 # SALE STATUS (FINANCIAL STATE MACHINE)
 # =========================================================
-class SaleStatus(str, Enum):
-    PENDING = "pending"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-    REFUNDED = "refunded"
+# class SaleStatus(str, Enum):
+#     PENDING = "pending"
+#     COMPLETED = "completed"
+#     CANCELLED = "cancelled"
+#     REFUNDED = "refunded"
 
 
 # =========================================================
