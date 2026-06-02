@@ -89,3 +89,14 @@ async def get_staff_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser, b
         message="Staff retrieved successfully",
         data=staff
     )
+
+
+# @router.post("/staff/new", response_model=ApiResponse[StaffResponse])
+# async def add_staff_to_tenant(data: StaffResponse, db: SessionDep, user: AuthUser):
+#     new_staff = await organization_crud.add_staff_to_tenant(data, db)
+#     return ApiResponse(
+#         status=True,
+#         status_code=201,
+#         message="Staff added successfully",
+#         data=new_staff
+#     )
