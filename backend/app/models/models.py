@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from uuid import UUID
@@ -71,7 +71,6 @@ class Tenant(BaseMixin, table=True):
 
 class Organization(BaseMixin, table=True):
     __tablename__ = "organizations"
-
     name: str
     email: str = Field(index=True, unique=True)
     phone: Optional[str] = Field(default=None)
@@ -105,11 +104,11 @@ class Subscription(BaseMixin, table=True):
 # =========================================================
 # STAFF - Enhanced with PIN & Organization
 # =========================================================
-class StaffBusinessAssignment(SQLModel, table=True):
+class StaffBusinessAssignment(BaseMixin, table=True):
     __tablename__ = "staff_business_assignments"
     staff_id: UUID = Field(foreign_key="staff.id", primary_key=True, ondelete="CASCADE")
     business_id: UUID = Field(foreign_key="businesses.id", primary_key=True, ondelete="CASCADE")
-    assigned_at: datetime = Field(default_factory=utc_now)
+    # assigned_at: datetime = Field(default_factory=utc_now)
 
 
 class Staff(BaseMixin, table=True):
@@ -321,6 +320,8 @@ class SaleItem(BaseMixin, table=True):
     tax_rate: float = Field(default=0.16, nullable=True)
     quantity_refunded: float = Field(default=0.0, nullable=True)
     subtotal: float
+    stock_batch_id: Optional[UUID] = Field(default=None, foreign_key="stock_batches.id")
+    cost_price_at_sale: Optional[float] = Field(default=None)   # For profit calculation
 
     sale: Sale = Relationship(back_populates="items")
 
@@ -368,3 +369,88 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     total_completed_orders_count: int = Field(default=0)
 
     business: Business = Relationship(back_populates="analytics_summaries")
+
+
+# =========================================================
+# STOCK TAKE - Full Structure (Option 2)
+# =========================================================
+class StockTakeStatus(str, Enum):
+    DRAFT = "DRAFT"
+    COMPLETED = "COMPLETED"
+    APPROVED = "APPROVED"
+    CANCELLED = "CANCELLED"
+
+
+class StockTake(BaseMixin, table=True):
+    __tablename__ = "stock_takes"
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True)
+    performed_by: UUID = Field(foreign_key="staff.id", index=True)
+    
+    status: StockTakeStatus = Field(
+        sa_column=Column(SAEnum(StockTakeStatus, name="stock_take_status_enum")),
+        default=StockTakeStatus.DRAFT
+    )
+    
+    notes: Optional[str] = Field(default=None)
+    total_items_counted: int = Field(default=0)
+
+    # Relationships
+    business: "Business" = Relationship()
+    items: List["StockTakeItem"] = Relationship(back_populates="stock_take")
+
+
+class StockTakeItem(BaseMixin, table=True):
+    __tablename__ = "stock_take_items"
+
+    stock_take_id: UUID = Field(foreign_key="stock_takes.id", index=True)
+    product_id: UUID = Field(foreign_key="products.id", index=True)
+    
+    system_stock: float
+    counted_stock: float
+    difference: float                     # counted - system
+
+    notes: Optional[str] = Field(default=None)
+
+    # Relationships
+    stock_take: StockTake = Relationship(back_populates="items")
+    product: "Product" = Relationship()
+
+
+# =========================================================
+# STOCK BATCH - For proper intake, pricing & FIFO
+# =========================================================
+class StockBatch(BaseMixin, table=True):
+    __tablename__ = "stock_batches"
+
+    product_id: UUID = Field(foreign_key="products.id", index=True)
+    business_id: UUID = Field(foreign_key="businesses.id", index=True)
+
+    # Quantity tracking
+    quantity_received: float
+    quantity_remaining: float           # This decreases as items are sold
+
+    # Pricing snapshot at time of intake
+    purchase_cost_price: float          # What we paid per unit
+    selling_price: float                # Selling price set at intake
+
+    # Optional metadata
+    supplier_name: Optional[str] = Field(default=None)
+    batch_reference: Optional[str] = Field(default=None)   # Delivery note / Invoice #
+    # expiry_date: Optional[datetime] = Field(default=None)
+
+    expiry_date: Optional[datetime] = Field(
+        default=None, 
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+
+    received_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    )
+
+    # received_at: datetime = Field(default_factory=utc_now)
+    received_by: UUID = Field(foreign_key="staff.id")
+
+    # Relationships
+    product: "Product" = Relationship()
+    business: "Business" = Relationship()

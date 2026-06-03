@@ -8,6 +8,7 @@ from app.schemas.tenants import TenantCreate, TenantResponse
 from app.crud.organization import organization_crud
 from app.schemas.schemas import ApiResponse, BusinessResponse, StaffResponse
 from typing import List
+from pydantic import EmailStr
 
 router = APIRouter()
 
@@ -28,17 +29,43 @@ async def create_tenant(db: SessionDep, user: AuthUser, data: TenantCreate):
         message="Tenant onboarded successfully",
         data=new_tenant
     )
-    
-@router.get("/multi", response_model=ApiResponse[List[TenantResponse]])
-async def list_tenants(db: SessionDep):
-    stmt = select(Tenant)
-    tenants = (await db.exec(stmt)).all()
+
+@router.post("/migrate")
+async def migrate_tenant(db: SessionDep, email: EmailStr):
+    # Implementation for migrating tenant
+    stmt = select(Tenant).where(Tenant.email == email)
+    result = (await db.exec(stmt)).first()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Tenant not found for migration")
+
+    payload = TenantCreate(
+        name=result.name,
+        email=result.email,
+        tenant_id=result.id,
+        active=result.active
+    )
+
+    new_org = await organization_crud.onboard_tenant(payload=payload, db=db, password="")
     return ApiResponse(
         status=True,
-        status_code=200,
-        message="Tenants retrieved successfully",
-        data=tenants
+        status_code=201,
+        message="Tenant onboarded successfully",
+        data=new_org
     )
+
+
+
+# @router.get("/multi", response_model=ApiResponse[List[TenantResponse]])
+# async def list_tenants(db: SessionDep):
+#     stmt = select(Tenant)
+#     tenants = (await db.exec(stmt)).all()
+#     return ApiResponse(
+#         status=True,
+#         status_code=200,
+#         message="Tenants retrieved successfully",
+#         data=tenants
+#     )
 
 
 @router.get("/{tenant_id}", response_model=ApiResponse[TenantResponse])
@@ -54,21 +81,21 @@ async def get_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
         data=tenant
     )
 
-@router.delete("/{tenant_id}", response_model=ApiResponse[None])
-async def delete_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    tenant = (await db.exec(stmt)).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
+# @router.delete("/{tenant_id}", response_model=ApiResponse[None])
+# async def delete_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
+#     stmt = select(Tenant).where(Tenant.id == tenant_id)
+#     tenant = (await db.exec(stmt)).first()
+#     if not tenant:
+#         raise HTTPException(status_code=404, detail="Tenant not found")
     
-    await db.delete(tenant)
-    await db.commit()
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Tenant deleted successfully",
-        data=None
-    )
+#     await db.delete(tenant)
+#     await db.commit()
+#     return ApiResponse(
+#         status=True,
+#         status_code=200,
+#         message="Tenant deleted successfully",
+#         data=None
+#     )
 
 @router.get('/businesses/{tenant_id}', response_model=ApiResponse[List[BusinessResponse]])
 async def get_businesses_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
