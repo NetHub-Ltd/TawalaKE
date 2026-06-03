@@ -97,7 +97,7 @@ async def get_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
 #         data=None
 #     )
 
-@router.get('/businesses/{tenant_id}', response_model=ApiResponse[List[BusinessResponse]])
+@router.get('/stores/{tenant_id}', response_model=ApiResponse[List[BusinessResponse]])
 async def get_businesses_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
     businesses = await organization_crud.get_business_by_tenant(tenant_id, db, active=active)
     return ApiResponse(

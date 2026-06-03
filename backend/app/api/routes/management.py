@@ -7,6 +7,7 @@ from app.schemas.schemas import TenantResponse
 from sqlmodel import select
 from app.core.security import hash_password
 from pydantic import EmailStr
+from app.models.models import Product
 
 router = APIRouter()
 
@@ -35,3 +36,12 @@ async def override_staff_password(db: SessionDep, user: AuthUser, staff_email: E
     await db.commit()
     
     return {"message": "Password overridden successfully."}
+
+
+@router.get("/all-products")
+async def get_all_products(db: SessionDep, user: AuthUser):
+    # This is a placeholder implementation. You would replace this with your actual logic to fetch products.
+    # For example, you might have a Product model and you would query the database for all products.
+    stmt = select(Product)  # Assuming you have a Product model defined
+    products = (await db.exec(stmt)).all()
+    return products
