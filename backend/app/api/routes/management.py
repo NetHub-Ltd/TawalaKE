@@ -30,7 +30,7 @@ async def override_staff_password(db: SessionDep, user: AuthUser, staff_email: E
     if not staff_member:
         raise HTTPException(status_code=404, detail="Staff member not found.")
     
-    staff_member.password = hash_password(new_password)  # In a real application, ensure to hash the password
+    staff_member.hashed_password = hash_password(new_password)  # In a real application, ensure to hash the password
     db.add(staff_member)
     await db.commit()
     
