@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.api.deps import SessionDep, AuthUser
-from app.models.models import Tenant, Staff, StaffRole
+from app.models.models import Organization, Tenant, Staff, StaffRole
 from uuid import UUID
 from sqlmodel import select
 from app.schemas.tenants import TenantCreate, TenantResponse
@@ -11,7 +11,6 @@ from typing import List
 from pydantic import EmailStr
 
 router = APIRouter()
-
 
 
 @router.post("/onboarding", response_model=ApiResponse[TenantResponse])
@@ -56,23 +55,23 @@ async def migrate_tenant(db: SessionDep, email: EmailStr):
     )
 
 
-@router.get("/{tenant_id}", response_model=ApiResponse[TenantResponse])
-async def get_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    tenant = (await db.exec(stmt)).first()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found")
+@router.get("/{organization_id}")
+async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
+    stmt = select(Organization).where(Organization.id == organization_id)
+    organization = (await db.exec(stmt)).first()
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organization not found")
     return ApiResponse(
         status=True,
         status_code=200,
-        message="Tenant retrieved successfully",
-        data=tenant
+        message="Organization retrieved successfully",
+        data=organization
     )
 
 
-@router.get('/stores/{tenant_id}', response_model=ApiResponse[List[BusinessResponse]])
-async def get_businesses_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
-    businesses = await organization_crud.get_business_by_tenant(tenant_id, db, active=active)
+@router.get('/stores/{organization_id}', response_model=ApiResponse[List[BusinessResponse]])
+async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
+    businesses = await organization_crud.get_business_by_tenant(organization_id, db, active=active)
     return ApiResponse(
         status=True,
         status_code=200,
@@ -80,9 +79,9 @@ async def get_businesses_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUs
         data=businesses
     )
 
-@router.get('/staff/{tenant_id}', response_model=ApiResponse[List[StaffResponse]])
-async def get_staff_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None):
-    staff = await organization_crud.tenant_staff(tenant_id, db, business_id=business_id)
+@router.get('/staff/{organization_id}', response_model=ApiResponse[List[StaffResponse]])
+async def get_staff_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None):
+    staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
     return ApiResponse(
         status=True,
         status_code=200,
@@ -90,13 +89,3 @@ async def get_staff_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser, b
         data=staff
     )
 
-
-# @router.post("/staff/new", response_model=ApiResponse[StaffResponse])
-# async def add_staff_to_tenant(data: StaffResponse, db: SessionDep, user: AuthUser):
-#     new_staff = await organization_crud.add_staff_to_tenant(data, db)
-#     return ApiResponse(
-#         status=True,
-#         status_code=201,
-#         message="Staff added successfully",
-#         data=new_staff
-#     )

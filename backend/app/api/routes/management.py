@@ -34,20 +34,37 @@ async def get_stores(db: SessionDep):
     return stores
 
 
-@router.patch("/patch-business-org-id")
-async def patch_business_org_id(db: SessionDep, business_id: UUID, new_org_id: UUID):
-    stmt = select(Business).where(Business.id == business_id)
-    business = (await db.exec(stmt)).first()
+@router.patch("/migrate-org")
+async def patch_business_org_id(db: SessionDep, tenant_id: UUID, new_org_id: UUID):
+    stmt = select(Tenant).where(Tenant.id == tenant_id)
+    tenant = (await db.exec(stmt)).first()
     
-    if not business:
-        raise HTTPException(status_code=404, detail="Business not found.")
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found.")
     
-    # Update the organization ID
-    business.organization_id = new_org_id
-    db.add(business)
+    
+    org_stmt = select(Organization).where(Organization.email == tenant.email)
+    org = (await db.exec(org_stmt)).first()
+    
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found.")
+    org_data = Organization(
+        id=tenant.id,
+        name=org.name,
+        email=org.email
+    )
+    db.add(org_data)
+    await db.flush()
+
+    # find busineses with that tenant id and update the org id
+    business_stmt = select(Business).where(Business.tenant_id == tenant_id)
+    businesses = (await db.exec(business_stmt)).all()
+    for business in businesses:
+        business.organization_id = tenant_id
+        db.add(business)
     await db.commit()
     
-    return business
+    return tenant
 
 
 @router.patch("/patch-staff-password")
