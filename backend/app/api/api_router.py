@@ -2,9 +2,11 @@ from fastapi import APIRouter
 from app.api.routes import organization, products, sales, payments, checkout,staff, auth, management, stores
 from app.core.config import settings
 api_router = APIRouter(prefix='/api/v1')
+from app.utils.logging import logger
 
 
 if settings.admin_route:
+    logger.info("Admin route is enabled. Including management routes.")
     api_router.include_router(management.router, prefix="/management", tags=["Management"])
 
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
