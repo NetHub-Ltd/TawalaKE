@@ -1,6 +1,7 @@
 from typing import List
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
+from app.models.models import StockMovementType
 
 class StaffRequest(BaseModel):
     staff_id: UUID
@@ -49,3 +50,16 @@ class StockTakeCreate(BaseModel):
     notes: str = ""
     # Optional metadata
     reference_number: Optional[str] = None   # Delivery note, invoice number, etc.
+
+
+class StockTakeRequest(BaseModel):
+    product_id: UUID
+    business_id: UUID
+    performed_by: UUID
+    movement_type: StockMovementType
+    
+    quantity: float
+    previous_stock: float
+    new_stock: float
+    buying_price: Optional[float] = None
+    selling_price: Optional[float] = None

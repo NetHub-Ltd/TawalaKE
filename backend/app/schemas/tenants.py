@@ -2,12 +2,13 @@ import datetime
 from pydantic import BaseModel
 from uuid import UUID
 from app.models.models import SubscriptionTier
+from typing import Optional
 
 class TenantCreate(BaseModel):
     name: str
     email: str
     active: bool = True
-    tenant_id: UUID
+    # tenant_id: Optional[UUID] = None
 
 class TenantResponse(BaseModel):
     id: UUID

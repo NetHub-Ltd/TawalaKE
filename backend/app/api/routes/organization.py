@@ -13,16 +13,16 @@ from pydantic import EmailStr
 router = APIRouter()
 
 @router.post("/onboarding", response_model=ApiResponse[TenantResponse])
-async def create_tenant(db: SessionDep, user: AuthUser, data: TenantCreate):
+async def create_tenant(db: SessionDep, data: TenantCreate):
 
     # only allow onboarding if the user is not associated with any tenant
     payload = TenantCreate(
-        name=data.full_name,
+        name=data.name,
         email=data.email,
-        tenant_id=data.tenant_id,
-        active=data.is_active
-    )
-    new_tenant = await organization_crud.onboard_organization(payload, db)
+        # tenant_id=data.tenant_id,
+        active=data.active
+    ) 
+    new_tenant = await organization_crud.onboard_tenant(payload, db)
     return ApiResponse(
         status=True,
         status_code=201,

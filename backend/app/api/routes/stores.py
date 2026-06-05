@@ -8,7 +8,7 @@ from app.crud.business import business_crud
 from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
     BusinessUpdate, BusinessBase
 from app.schemas.business import StaffRequest
-from app.schemas.business import StockTakeCreate
+from app.schemas.business import StockTakeRequest
 from app.utils.logging import logger
 
 router = APIRouter()
@@ -151,6 +151,6 @@ async def assign_staff_to_business(db: SessionDep, request: StaffRequest):
 
 
 @router.post("/stock-take")
-async def perform_stock_take(payload: StockTakeCreate, db: SessionDep, user: AuthUser): # or whatever your service class is
+async def perform_stock_take(payload: StockTakeRequest, db: SessionDep, user: AuthUser): # or whatever your service class is
     logger.info(f"user: {user.id}")
-    return await business_crud.stock_intake(db=db, payload=payload, current_user=user)
+    return await business_crud.stocking(db=db, payload=payload, current_user=user)

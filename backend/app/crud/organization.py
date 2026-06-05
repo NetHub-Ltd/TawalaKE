@@ -14,7 +14,7 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
     def __init__(self, model: Type[Organization]):
         super().__init__(model)
     
-    async def onboard_tenant(self, payload: TenantCreate, db: AsyncSession, password: str = None) -> Organization:
+    async def onboard_tenant(self, payload: TenantCreate, db: AsyncSession, password: str = "") -> Organization:
         try:
             # check if the tenant already exists
             stmt = select(self.model).where(self.model.email == payload.email)
@@ -28,7 +28,7 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             tenant = Organization(
                 name=workspace_name,
                 email=payload.email,
-                id=payload.tenant_id,
+                # id=payload.tenant_id,
                 active=payload.active
             )
             db.add(tenant)
