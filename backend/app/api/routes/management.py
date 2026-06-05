@@ -35,7 +35,7 @@ async def get_stores(db: SessionDep):
 
 
 @router.get("/staff")
-asynce def get_all_staff(db: SessionDep):
+async def get_all_staff(db: SessionDep):
     stmt = select(Staff)
     staff_members = (await db.exec(stmt)).all()
     return staff_members
