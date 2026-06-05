@@ -34,6 +34,12 @@ async def get_stores(db: SessionDep):
     return stores
 
 
+@router.get("/staff")
+asynce def get_all_staff(db: SessionDep):
+    stmt = select(Staff)
+    staff_members = (await db.exec(stmt)).all()
+    return staff_members
+
 @router.patch("/migrate-org")
 async def patch_business_org_id(db: SessionDep, tenant_id: UUID, new_org_id: UUID):
     stmt = select(Tenant).where(Tenant.id == tenant_id)
