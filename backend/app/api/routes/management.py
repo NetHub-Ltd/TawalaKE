@@ -14,14 +14,14 @@ router = APIRouter()
 # route for Tawala admins and sysetm monitoring and management route
 
 @router.get("/org")
-async def get_organizations(db: SessionDep, user: AuthUser):
+async def get_organizations(db: SessionDep):
     stmt = select(Organization)
     orgs = (await db.exec(stmt)).all()
     return orgs
 
 
 @router.patch("/patch-staff-password")
-async def override_staff_password(db: SessionDep, user: AuthUser, staff_email: EmailStr, new_password: str):
+async def override_staff_password(db: SessionDep,staff_email: EmailStr, new_password: str):
     # if user.role != StaffRole.ADMIN:
     #     raise HTTPException(status_code=403, detail="Only admins can override passwords.")
     
@@ -39,7 +39,7 @@ async def override_staff_password(db: SessionDep, user: AuthUser, staff_email: E
 
 
 @router.get("/all-products")
-async def get_all_products(db: SessionDep, user: AuthUser):
+async def get_all_products(db: SessionDep):
     # This is a placeholder implementation. You would replace this with your actual logic to fetch products.
     # For example, you might have a Product model and you would query the database for all products.
     stmt = select(Product)  # Assuming you have a Product model defined
