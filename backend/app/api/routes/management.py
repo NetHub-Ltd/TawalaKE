@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.get("/org")
 async def get_organizations(db: SessionDep):
-    stmt = select(Organization)
+    stmt = select(Tenant)
     orgs = (await db.exec(stmt)).all()
     return orgs
 
