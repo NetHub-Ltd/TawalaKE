@@ -7,7 +7,8 @@ from app.schemas.schemas import TenantResponse
 from sqlmodel import select
 from app.core.security import hash_password
 from pydantic import EmailStr
-from app.models.models import Product
+from app.models.models import Product, Business
+from uuid import UUID
 
 router = APIRouter()
 
@@ -15,9 +16,38 @@ router = APIRouter()
 
 @router.get("/org")
 async def get_organizations(db: SessionDep):
-    stmt = select(Tenant)
+    stmt = select(Organization)
     orgs = (await db.exec(stmt)).all()
     return orgs
+
+
+@router.get("/tenants")
+async def get_tenants(db: SessionDep):
+    stmt = select(Tenant)
+    tenants = (await db.exec(stmt)).all()
+    return tenants
+
+@router.get('/stores')
+async def get_stores(db: SessionDep):
+    stmt = select(Business)
+    stores = (await db.exec(stmt)).all()
+    return stores
+
+
+@router.patch("/patch-business-org-id")
+async def patch_business_org_id(db: SessionDep, business_id: UUID, new_org_id: UUID):
+    stmt = select(Business).where(Business.id == business_id)
+    business = (await db.exec(stmt)).first()
+    
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found.")
+    
+    # Update the organization ID
+    business.organization_id = new_org_id
+    db.add(business)
+    await db.commit()
+    
+    return business
 
 
 @router.patch("/patch-staff-password")

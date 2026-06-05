@@ -12,9 +12,10 @@ from pydantic import EmailStr
 
 router = APIRouter()
 
+
+
 @router.post("/onboarding", response_model=ApiResponse[TenantResponse])
 async def create_tenant(db: SessionDep, data: TenantCreate):
-
     # only allow onboarding if the user is not associated with any tenant
     payload = TenantCreate(
         name=data.name,
@@ -55,19 +56,6 @@ async def migrate_tenant(db: SessionDep, email: EmailStr):
     )
 
 
-
-# @router.get("/multi", response_model=ApiResponse[List[TenantResponse]])
-# async def list_tenants(db: SessionDep):
-#     stmt = select(Tenant)
-#     tenants = (await db.exec(stmt)).all()
-#     return ApiResponse(
-#         status=True,
-#         status_code=200,
-#         message="Tenants retrieved successfully",
-#         data=tenants
-#     )
-
-
 @router.get("/{tenant_id}", response_model=ApiResponse[TenantResponse])
 async def get_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
     stmt = select(Tenant).where(Tenant.id == tenant_id)
@@ -81,21 +69,6 @@ async def get_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
         data=tenant
     )
 
-# @router.delete("/{tenant_id}", response_model=ApiResponse[None])
-# async def delete_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser):
-#     stmt = select(Tenant).where(Tenant.id == tenant_id)
-#     tenant = (await db.exec(stmt)).first()
-#     if not tenant:
-#         raise HTTPException(status_code=404, detail="Tenant not found")
-    
-#     await db.delete(tenant)
-#     await db.commit()
-#     return ApiResponse(
-#         status=True,
-#         status_code=200,
-#         message="Tenant deleted successfully",
-#         data=None
-#     )
 
 @router.get('/stores/{tenant_id}', response_model=ApiResponse[List[BusinessResponse]])
 async def get_businesses_by_tenant(tenant_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
