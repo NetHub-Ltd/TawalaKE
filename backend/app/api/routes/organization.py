@@ -9,6 +9,7 @@ from app.crud.organization import organization_crud
 from app.schemas.schemas import ApiResponse, BusinessResponse, StaffResponse
 from typing import List
 from pydantic import EmailStr
+from app.crud.business import business_crud
 
 router = APIRouter()
 
@@ -71,7 +72,7 @@ async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: Au
 
 @router.get('/stores/{organization_id}', response_model=ApiResponse[List[BusinessResponse]])
 async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
-    businesses = await organization_crud.get_business_by_tenant(organization_id, db, active=active)
+    businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
     return ApiResponse(
         status=True,
         status_code=200,
