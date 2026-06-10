@@ -6,7 +6,7 @@ export const businessService = {
    * Logic: Points to our internal API route which handles token injection.
    */
   getBusinesses: async (): Promise<Business[]> => {
-    const response = await fetch("/api/v1/business", {
+    const response = await fetch(`/api/v1/org/stores`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
       cache: "no-store", // Ensures switchboard always shows current business list

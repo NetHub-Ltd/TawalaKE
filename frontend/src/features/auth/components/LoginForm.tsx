@@ -12,9 +12,6 @@ import { z } from 'zod';
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  // acceptTerms: z.boolean().refine((val) => val === true, {
-  //   message: 'You must agree to the Terms & Conditions to proceed',
-  // }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -34,7 +31,6 @@ export function LoginForm() {
     defaultValues: {
       email: '',
       password: '',
-      // acceptTerms: false,
     }
   });
 
@@ -129,40 +125,6 @@ export function LoginForm() {
           </p>
         )}
       </div>
-
-      {/* Terms & Conditions Enforcement Row */}
-      {/* <div className="pt-2">
-        <div className="flex items-start gap-3">
-          <div className="flex h-5 items-center">
-            <input
-              {...register("acceptTerms")}
-              id="acceptTerms"
-              type="checkbox"
-              className="h-4 w-4 rounded border-border/60 text-brand-primary focus:ring-brand-primary/40 focus:ring-offset-background"
-            />
-          </div>
-          <div className="text-xs leading-tight">
-            <label htmlFor="acceptTerms" className="font-semibold text-foreground cursor-pointer select-none">
-              Agree to Platform Operational Safeguards
-            </label>
-            <p className="text-muted mt-0.5">
-              By checking this box, you confirm adherence to enterprise data policies, secure terminal operations, and our external{' '}
-              <button 
-                type="button" 
-                onClick={() => alert("Display Terms and Conditions Modal/Link Framework")} 
-                className="text-brand-primary font-bold hover:underline inline-flex items-center gap-0.5"
-              >
-                Terms & Conditions <Link2 size={10} className="inline" />
-              </button>.
-            </p>
-          </div>
-        </div>
-        {errors.acceptTerms && (
-          <p className="text-destructive text-xs font-medium mt-2 pl-1">
-            {errors.acceptTerms.message}
-          </p>
-        )}
-      </div> */}
 
       {/* Primary Submit Action Trigger */}
       <button

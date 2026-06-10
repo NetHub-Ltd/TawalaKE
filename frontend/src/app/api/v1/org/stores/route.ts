@@ -4,18 +4,13 @@ import { auth } from "@/auth";
 // fetch staff using organization id
 export async function GET(request: NextRequest) {
     const session = await auth();
+    const organizationId = session?.user.tenant_id
     if (!session?.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // grab the organization_id from the params
-    const { searchParams } = new URL(request.url);
-    const organization_id = searchParams.get("organization_id");
-    if (!organization_id) {
-        return NextResponse.json({ error: "Organization ID not provided" }, { status: 400 });
-    }
 
-    const res = await fetch(`${process.env.BACKEND_URL}/organizations/staff/${organization_id}`, {
+    const res = await fetch(`${process.env.BACKEND_URL}/organizations/stores/${organizationId}`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
