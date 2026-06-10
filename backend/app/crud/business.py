@@ -21,6 +21,7 @@ from app.models.models import ( Product,
     InventoryTransaction, StockMovementType, StockTakeStatus
 )
 from app.schemas.business import StockTakeRequest
+from app.utils.logging import logger
 
 class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
@@ -33,19 +34,15 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         It performs a database query to fetch all business records that match the given tenant ID and returns the results as a list. 
         If no businesses are found for the tenant, it returns an empty list.
         """
-        new_stmt = select(self.model).where(self.model.organization_id == tenant_id)
+        new_stmt = select(self.model).where(self.model.tenant_id == tenant_id)
         result = (await db.exec(new_stmt)).all()
-        if result is None:
-            # check if the business is migrated to the new organization
-            new_stmt = select(self.model).where(self.model.tenant_id == tenant_id)
-            result = (await db.exec(new_stmt)).all()
-            # if we find businesses with the old tenant id, we need to update them to the new organization id
-            if result:
-                for biz in result:
-                    biz.organization_id = tenant_id
-                    db.add(biz)
-                await db.commit()
-                return result
+        if result.organization_id is None:
+            logger.info(f"Assigning tenant_id {tenant_id} to businesses without an organization_id")
+            for biz in result:
+                biz.organization_id = tenant_id
+                db.add(biz)
+            await db.commit()
+            return result
         return result
 
     async def register_business(self, db_obj: BusinessCreate, db: AsyncSession)-> Business:
