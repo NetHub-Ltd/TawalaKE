@@ -20,7 +20,6 @@ async def get_organizations(db: SessionDep):
     orgs = (await db.exec(stmt)).all()
     return orgs
 
-
 @router.get("/tenants")
 async def get_tenants(db: SessionDep):
     stmt = select(Tenant)

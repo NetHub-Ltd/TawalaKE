@@ -61,7 +61,7 @@ async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase)
         the details of the newly created business if successful.
     :rtype: ApiResponse[BusinessResponse]
     """
-    data = BusinessCreate(name=payload.name,tenant_id=user.tenant_id, active=True)
+    data = BusinessCreate(name=payload.name,tenant_id=user.tenant_id, active=True, organization_id=user.tenant_id)
     db_obj = await business_crud.register_business(data, db=db)
 
     return ApiResponse(

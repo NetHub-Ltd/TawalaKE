@@ -28,9 +28,25 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
 
     async def get_tenant_businesses(self, db: AsyncSession, tenant_id: UUID):
-        stmt = select(self.model).where(self.model.tenant_id == tenant_id)
-        result = await db.exec(stmt)
-        return result.all()
+        """
+        This function retrieves the list of businesses associated with a specified tenant ID. 
+        It performs a database query to fetch all business records that match the given tenant ID and returns the results as a list. 
+        If no businesses are found for the tenant, it returns an empty list.
+        """
+        new_stmt = select(self.model).where(self.model.organization_id == tenant_id)
+        result = (await db.exec(new_stmt)).all()
+        if result is None:
+            # check if the business is migrated to the new organization
+            new_stmt = select(self.model).where(self.model.tenant_id == tenant_id)
+            result = (await db.exec(new_stmt)).all()
+            # if we find businesses with the old tenant id, we need to update them to the new organization id
+            if result:
+                for biz in result:
+                    biz.organization_id = tenant_id
+                    db.add(biz)
+                await db.commit()
+                return result
+        return result
 
     async def register_business(self, db_obj: BusinessCreate, db: AsyncSession)-> Business:
         new = await self.create(db, obj_in=db_obj)

@@ -229,6 +229,7 @@ class BusinessBase(BaseModel):
 class BusinessCreate(BusinessBase):
     name: str
     tenant_id: UUID
+    organization_id: Optional[UUID] = None
     active: bool = True
 
 
@@ -238,6 +239,7 @@ class BusinessUpdate(BaseModel):
 class BusinessResponse(BusinessBase):
     id: UUID
     tenant_id: UUID
+    organization_id: Optional[UUID] = None
     active: bool
     created_at: datetime
 

@@ -2,17 +2,14 @@ from typing import List
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 from app.models.models import StockMovementType
-
-class StaffRequest(BaseModel):
-    staff_id: UUID
-    business_id: UUID
-
-
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 
+class StaffRequest(BaseModel):
+    staff_id: UUID
+    business_id: UUID
 
 class StockTakeItemBase(BaseModel):
     product_id: UUID

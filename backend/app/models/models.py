@@ -232,29 +232,121 @@ class Product(BaseMixin, table=True):
 
 
 class InventoryTransaction(BaseMixin, table=True):
-    """Single source of truth for ALL stock movements and changes"""
+    """
+    The Single Source of Truth (SSOT) for all historical stock movements, 
+    balancing audits, and financial snapshots within a business tenant.
+    """
     __tablename__ = "inventory_transactions"
 
-    product_id: UUID = Field(foreign_key="products.id", index=True, ondelete="CASCADE")
-    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
-    performed_by: Optional[UUID] = Field(foreign_key="staff.id", index=True, ondelete="CASCADE")
-
-    movement_type: StockMovementType = Field(
-        sa_column=Column(SAEnum(StockMovementType, name="stock_movement_type_enum"))
+    product_id: UUID = Field(
+        foreign_key="products.id", 
+        index=True, 
+        ondelete="CASCADE",
+        description="The target product impacted by this specific stock ledger update."
+    )
+    
+    business_id: UUID = Field(
+        foreign_key="businesses.id", 
+        index=True, 
+        ondelete="CASCADE",
+        description="The organizational business entity running this transactional context."
+    )
+    
+    performed_by: Optional[UUID] = Field(
+        default=None,
+        foreign_key="staff.id", 
+        index=True, 
+        ondelete="SET NULL",
+        description="The staff identity or system worker who committed or authorized the inventory event."
     )
 
-    quantity: float = Field(default=0.0)                   # Positive = IN, Negative = OUT
-    previous_stock: Optional[float] = Field(default=None)
-    new_stock: float = Field(default=0.0)
+    movement_type: StockMovementType = Field(
+        sa_column=Column(
+            SAEnum(StockMovementType, name="stock_movement_type_enum", create_type=True),
+            nullable=False,
+            index=True
+        ),
+        description="Categorizes the operational flow: SALE, RESTOCK, RECONCILIATION, WASTAGE, or RETURN."
+    )
 
-    buying_price: Optional[float] = Field(default=None)
-    selling_price: Optional[float] = Field(default=None)
+    quantity: float = Field(
+        default=0.0,
+        description="The delta shift amount. Numeric positive weights signify incoming items, negatives represent outbound flows."
+    )
+    
+    previous_stock: Optional[float] = Field(
+        default=None,
+        description="Historical snapshot state of product stock immediately before committing this transaction."
+    )
+    
+    new_stock: float = Field(
+        default=0.0,
+        description="Calculated balance snapshot state immediately matching historical application confirmation (previous_stock + quantity)."
+    )
 
-    reference_id: Optional[UUID] = Field(default=None, index=True)
-    reference_type: Optional[str] = Field(default=None)
+    buying_price: Optional[float] = Field(
+        default=None,
+        description="Historical COGS purchase valuation capture at block time. Vital for FIFO/LIFO financial profit metrics."
+    )
+    
+    selling_price: Optional[float] = Field(
+        default=None,
+        description="Historical gross price capturing the exact point-of-sale layout, ignoring future price fluctuations."
+    )
 
+    reference_id: Optional[UUID] = Field(
+        default=None, 
+        index=True,
+        description="Nullable foreign pointer linking directly to underlying operational objects like SaleInvoiceID or PurchaseOrderID."
+    )
+    
+    reference_type: Optional[str] = Field(
+        default=None,
+        index=True,
+        description="Polymorphic discriminator string tracking the structural target domain (e.g., 'INVOICE', 'PURCHASE_ORDER', 'MANUAL_AUDIT')."
+    )
 
+    # --- New Recommended Operational Fields ---
+    
+    reason_code: Optional[str] = Field(
+        default=None,
+        index=True,
+        description="Standardized classification tag explaining anomalies or discrepancies (e.g., 'DAMAGED_IN_TRANSIT', 'THEFT', 'DATA_ENTRY_ERROR')."
+    )
+
+    notes: Optional[str] = Field(
+        default=None,
+        description="Unstructured human text entry highlighting physical audit specific observations or operational notes."
+    )
+
+    # --- Database Relationships ---
+    
     product: "Product" = Relationship(back_populates="transactions")
+
+# class InventoryTransaction(BaseMixin, table=True):
+#     """Single source of truth for ALL stock movements and changes"""
+#     __tablename__ = "inventory_transactions"
+
+#     product_id: UUID = Field(foreign_key="products.id", index=True, ondelete="CASCADE")
+#     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+#     performed_by: Optional[UUID] = Field(foreign_key="staff.id", index=True, ondelete="CASCADE")
+
+#     movement_type: StockMovementType = Field(
+#         sa_column=Column(SAEnum(StockMovementType, name="stock_movement_type_enum"))
+#     )
+
+#     quantity: float = Field(default=0.0)                   # Positive = IN, Negative = OUT
+#     previous_stock: Optional[float] = Field(default=None)
+#     new_stock: float = Field(default=0.0)
+
+#     buying_price: Optional[float] = Field(default=None)
+#     selling_price: Optional[float] = Field(default=None)
+
+#     reference_id: Optional[UUID] = Field(default=None, index=True)
+#     reference_type: Optional[str] = Field(default=None)
+
+
+#     product: "Product" = Relationship(back_populates="transactions")
 
 
 # =========================================================
