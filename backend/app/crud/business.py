@@ -16,7 +16,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy import select
+from sqlmodel import select
 from app.models.models import ( Product,
     InventoryTransaction, StockMovementType, StockTakeStatus
 )
@@ -31,32 +31,28 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     async def get_tenant_businesses(self, db: AsyncSession, tenant_id: UUID):
         """
         Retrieves all businesses associated with a specified tenant ID.
-        
-        If any retrieved business lacks an organization_id, this function fills
-        it with the tenant_id in a single, high-performance batch transaction.
         """
-        # 1. Fetch all records matching the tenant criteria
+        # Using pure SQLModel select() ensures db.exec().all() returns clean model instances,
+        # not raw database row-tuples.
         stmt = select(self.model).where(self.model.tenant_id == tenant_id)
-        result = (await db.exec(stmt)).all()
+        result = (await db.exec(stmt)).all() 
         
         if not result:
             return []
 
         needs_commit = False
 
-        # 2. Mutate state cleanly in-memory without blocking the I/O loop
+        # Because of SQLModel's design, 'biz' here is cleanly inferred as a Business instance.
+        # No weird tuple unpacking like 'for (biz,) in result:' needed!
         for biz in result:
             if not biz.organization_id:
-                logger.info(f"Staging organization_id update to {tenant_id} for business: {getattr(biz, 'id', 'Unknown')}")
+                logger.info(f"Staging organization_id update to {tenant_id}")
                 biz.organization_id = tenant_id
                 db.add(biz)
                 needs_commit = True
 
-        # 3. Commit exactly ONCE if structural modifications occurred
         if needs_commit:
             await db.commit()
-            # Refreshing records in bulk or individually depends on downstream usage.
-            # For an MVP, committing flushes changes safely back to the result pool object.
             for biz in result:
                 await db.refresh(biz)
 
