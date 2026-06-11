@@ -32,7 +32,7 @@ export async function fetchUser() {
     // if (!parsed.success) {
     //   throw new Error("data_integrity_error");
     // }
-
+    console.log("user data", json)
     return json;
   } catch (error) {
     console.error("Internal Server Fetch Error:", error);

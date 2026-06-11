@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
+
 
 /**
  * UTILITY: Internal Fetch Wrapper
@@ -9,7 +10,10 @@ async function backendFetch(endpoint: string, options: RequestInit = {}) {
   const session = await auth();
   const token = session?.accessToken;
 
-  if (!token) return null;
+  if (!token) {
+    // throw a 401 error if no token is found, as all backend calls require authentication
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const baseUrl = process.env.BACKEND_URL;
   const url = `${baseUrl}${endpoint}`;
@@ -29,9 +33,17 @@ async function backendFetch(endpoint: string, options: RequestInit = {}) {
 }
 
 // GET: Fetch user businesses
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // extract organizationId from params if needed for endpoint construction, e.g. /organizations/{organizationId}/stor
+  const { searchParams } = new URL(request.url);
+  const organizationId = searchParams.get("organizationId");
+
+  if(!organizationId){
+    return NextResponse.json({ error: "Organization ID is required" }, { status: 400 });
+  }
+  console.debug("fetching stores for", organizationId)
   try {
-    const response = await backendFetch("/business/multi", {
+    const response = await backendFetch(`/organizations/stores/${organizationId}`, {
       method: "GET",
       // Next.js 16: Ensure this request is fresh for the terminal switchboard
       cache: "no-store",

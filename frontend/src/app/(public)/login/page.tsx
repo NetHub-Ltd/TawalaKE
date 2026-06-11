@@ -1,36 +1,45 @@
+// src/app/login/page.tsx
 import React from 'react';
 import { Metadata } from 'next';
-// import { LoginForm } from './components/LoginForm';
 import {LoginForm} from "@/features/auth/components/LoginForm";
 
 export const metadata: Metadata = {
-  title: 'Tawala | Identity Access Engine',
-  description: 'Enterprise access checkpoint for authorized personnel configuration sessions.',
+  title: 'Sign In | Operations & Inventory Management Console',
+  description: 'Log into your centralized corporate operations vault to run business analytics, product stock metrics, and billing workflows.',
+  alternates: { canonical: 'https://tawala.nethub.co.ke/login' }
 };
 
-export default async function LoginPage() {
+export default function LoginPage() {
   return (
-    <div className="min-h-screen bg-surface px-4 flex flex-col items-center justify-center transition-colors duration-300 dark:bg-surface">
-      <div className="w-full max-w-md animate-fade-in">
+    <main id="main-content" className="min-h-screen flex bg-surface/20">
+      {/* Structural Column 1: Clean Form Module Layout */}
+      <section 
+        aria-label="User Authorization Form"
+        className="w-full md:w-[50%] flex items-center justify-center p-6 sm:p-12 bg-white dark:bg-slate-950 shadow-xl z-10"
+      >
+        <LoginForm />
+      </section>
+
+      {/* Structural Column 2: Brand/Conversion Billboard Accent (Hidden on Mobile for speed/LCP optimization) */}
+      <section 
+        aria-hidden="true"
+        className="hidden md:flex md:w-[50%] bg-gradient-to-br from-brand-primary to-slate-900 relative items-center justify-center p-12 text-white overflow-hidden"
+      >
+        {/* Subtle decorative mesh network effect elements background overlay */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
         
-        {/* Simplified Premium Brand Title Signature Section */}
-        <header className="mb-6 text-center">
-          <p className="mt-1.5 text-xs text-muted leading-relaxed">
-            Enterprise Management Platform Suite
+        <div className="max-w-md space-y-4 relative z-10">
+          <div className="inline-flex items-center justify-center p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 mb-2">
+            <span className="font-mono text-xs font-black uppercase tracking-widest text-white/90">Platform Gateway</span>
+          </div>
+          <h2 className="text-3xl font-black tracking-tight leading-tight">
+            Unified Merchant Stock Operations
+          </h2>
+          <p className="text-sm text-white/70 leading-relaxed">
+            Monitor transaction variations, balance inventory discrepancies through physical audit cards, and evaluate historical vendor snapshots natively.
           </p>
-        </header>
-
-        {/* Dynamic Card Layer Enclosure housing Client Input Elements */}
-        <div className="card-layered bg-background p-6 md:p-8">
-          <LoginForm />
         </div>
-
-        {/* Reassuring Production System Footprint Subtext */}
-        <footer className="text-center text-[10px] font-mono text-muted tracking-wider uppercase mt-8">
-          Built for Business • Simple, Secure & Reliable
-        </footer>
-        
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

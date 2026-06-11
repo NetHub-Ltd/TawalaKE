@@ -33,7 +33,7 @@ export function useTenantProfile() {
       status === "authenticated" &&
       !!session?.user?.id &&
       !!session?.accessToken,
-    staleTime: 1000 * 60 * 5, // 5 Minutes
+    staleTime: 1000 * 60 * 10, // 5 Minutes
     retry: 1, // Minimize unnecessary retries on 401s
   });
 }
