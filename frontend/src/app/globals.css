@@ -1,3 +1,4 @@
+/* src/app/globals.css */
 @import "tailwindcss";
 
 /* =========================================================
@@ -66,64 +67,58 @@
 }
 
 /* =========================================================
-   3. Base Layer (Global Native Overrides)
+   3. Base Layer Overrides
 ========================================================= */
-@layer base {
-  body {
-    background-color: var(--surface);
-    color: var(--foreground);
-    font-family: "Inter", sans-serif;
-    font-size: var(--text-base);
-    @apply antialiased selection:bg-brand-primary/20;
-  }
+body {
+  background-color: var(--surface);
+  color: var(--foreground);
+  font-family: "Inter", sans-serif;
+  font-size: var(--text-base);
+  @apply antialiased selection:bg-brand-primary/20;
 }
 
 /* =========================================================
-   4. Components Layer (Semantic Core Classes)
+   4. Semantic Component Classes
 ========================================================= */
-@layer components {
-  .text-h1 {
-    font-size: var(--text-h1);
-    @apply font-black tracking-tighter text-foreground block;
-    line-height: 1.1;
-  }
+.text-h1 {
+  font-size: var(--text-h1);
+  @apply font-black tracking-tighter text-foreground block;
+  line-height: 1.1;
+}
 
-  .text-h2 {
-    font-size: var(--text-h2);
-    @apply font-bold tracking-tight text-foreground block;
-    line-height: 1.2;
-  }
+.text-h2 {
+  font-size: var(--text-h2);
+  @apply font-bold tracking-tight text-foreground block;
+  line-height: 1.2;
+}
 
-  .text-h3 {
-    font-size: var(--text-h3);
-    @apply font-bold tracking-tight text-foreground block;
-    line-height: 1.3;
-  }
+.text-h3 {
+  font-size: var(--text-h3);
+  @apply font-bold tracking-tight text-foreground block;
+  line-height: 1.3;
+}
 
-  .card-layered {
-    @apply bg-background border border-border/40 rounded-[2rem] transition-all duration-500 ease-out;
-    background-image: linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.03) 0%,
-      rgba(255, 255, 255, 0) 100%
-    );
-    box-shadow: var(--shadow-lift);
-  }
+.card-layered {
+  @apply bg-background border border-border/40 rounded-[2rem] transition-all duration-500 ease-out;
+  background-image: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  box-shadow: var(--shadow-lift);
+}
 
-  .card-layered:hover {
-    @apply -translate-y-1.5 border-brand-primary/30 shadow-glow;
-  }
+.card-layered:hover {
+  @apply -translate-y-1.5 border-brand-primary/30 shadow-glow;
+}
 
-  .section-padding {
-    @apply py-16 md:py-28 px-6;
-  }
+.section-padding {
+  @apply py-16 md:py-28 px-6;
 }
 
 /* =========================================================
-   5. Utilities Layer (Atomic Modifiers)
+   5. Custom Utilities (Tailwind v4 syntax)
 ========================================================= */
-@layer utilities {
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-linear-to-r from-brand-primary via-brand-secondary to-brand-primary bg-[length:200%_auto];
-  }
+@utility text-gradient {
+  @apply bg-clip-text text-transparent bg-linear-to-r from-brand-primary via-brand-secondary to-brand-primary bg-[length:200%_auto];
 }

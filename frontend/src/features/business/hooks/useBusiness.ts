@@ -16,7 +16,16 @@ export function useBusiness(tenantId?: string) {
     error,
   } = useQuery<Business[]>({
     queryKey: ["businesses", tenantId],
-    queryFn: () => businessService.getBusinesses(),
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/business?organizationId=${tenantId}`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch businesses");
+      }
+      return res.json();
+      // if (!tenantId) throw new Error("Tenant ID is required to fetch businesses.");
+      // return await businessService.getBusinesses(tenantId);
+    },
+    enabled: !!tenantId,
     
     // ⚡ AGGRESSIVE POS/DESKTOP CACHING STRATEGY:
     staleTime: 1000 * 60 * 60 * 4,       // 4 Hours: Consider this data fresh for a long time

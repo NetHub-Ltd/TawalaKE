@@ -128,7 +128,7 @@ def verify_token(token: str, expected_type: str = "access") -> TokenData:
             options={"verify_signature": True}
         )
 
-        logger.info(f"decoded token: {payload}")
+        # logger.info(f"decoded token: {payload}")
         
         if payload.get("type") != expected_type:
             raise HTTPException(status_code=401, detail="Invalid token type")

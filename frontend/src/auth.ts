@@ -34,9 +34,9 @@ async function refreshAccessToken(token: any): Promise<any> {
     const response = await fetch(`${process.env.BACKEND_URL}/auth/refresh`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
+      body: JSON.stringify({
         refresh_token: token.refreshToken,
       }),
     });

@@ -7,6 +7,9 @@ from app.api.deps import SessionDep, AuthUser
 from app.crud.business import business_crud
 from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
     BusinessUpdate, BusinessBase
+from app.schemas.business import StaffRequest
+from app.schemas.business import StockTakeRequest
+from app.utils.logging import logger
 
 router = APIRouter()
 
@@ -58,7 +61,7 @@ async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase)
         the details of the newly created business if successful.
     :rtype: ApiResponse[BusinessResponse]
     """
-    data = BusinessCreate(name=payload.name,tenant_id=user.tenant_id, active=True)
+    data = BusinessCreate(name=payload.name,tenant_id=user.tenant_id, active=True, organization_id=user.tenant_id)
     db_obj = await business_crud.register_business(data, db=db)
 
     return ApiResponse(
@@ -123,3 +126,31 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID):
         status_code=200,
         message="Success",
     )
+
+
+@router.post('/assign-staff')
+async def assign_staff_to_business(db: SessionDep, request: StaffRequest):
+    """
+    Assigns a staff member to a business entity based on the provided request data.
+    This function processes the staff assignment by validating the existence of the
+    target business and ensuring that the staff member is associated with the same
+    tenant. It then creates an assignment record linking the staff member to the
+    specified business.
+
+    :param user:
+    :param db: Database session dependency for database operations.
+    :param request: Data object containing staff and business identifiers for assignment.
+    :return: An API response indicating the success or failure of the staff assignment operation.
+    :rtype: ApiResponse
+    """
+    assignment = await business_crud.assign_staff_to_business(db, request)
+    if not assignment:
+        raise HTTPException(status_code=400, detail="Failed to assign staff to business")
+    return assignment
+
+
+
+@router.post("/stock-take")
+async def perform_stock_take(payload: StockTakeRequest, db: SessionDep, user: AuthUser): # or whatever your service class is
+    logger.info(f"user: {user.id}")
+    return await business_crud.stocking(db=db, payload=payload, current_user=user)

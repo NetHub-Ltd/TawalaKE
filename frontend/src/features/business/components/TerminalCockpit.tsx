@@ -6,7 +6,6 @@ import { CartSidebar } from "@/features/sales/components/CartSideBar";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { ProductCard } from "./product-card";
-import { useBusinessContext } from "../hooks/useBusiness";
 
 
 /**
@@ -21,7 +20,6 @@ interface TerminalCockpitProps {
 }
 
 export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
-  const {businessName, organizationId} = useBusinessContext()
   const { addToCart } = useCartStore();
   const { products = [], isLoading } = useProducts(businessId);
 

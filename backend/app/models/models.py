@@ -1,5 +1,4 @@
-import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, List, Dict, Any
 from uuid import UUID
@@ -13,8 +12,9 @@ from app.utils.helpers import utc_now
 
 
 # =========================================================
-# SYSTEM ENUMS - UPDATED
+# SYSTEM ENUMS
 # =========================================================
+
 class PaymentMethod(str, Enum):
     CASH = "CASH"
     MPESA = "MPESA"
@@ -53,12 +53,33 @@ class StaffRole(str, Enum):
     KITCHEN_STAFF = "KITCHEN"
 
 
+class StockMovementType(str, Enum):
+    PURCHASE = "PURCHASE"
+    SALE = "SALE"
+    RETURN = "RETURN"
+    ADJUSTMENT = "ADJUSTMENT"
+    STOCK_TAKE = "STOCK_TAKE"
+
+
+class StockTakeStatus(str, Enum):
+    DRAFT = "DRAFT"
+    COMPLETED = "COMPLETED"
+    APPROVED = "APPROVED"
+    CANCELLED = "CANCELLED"
+
+
 # =========================================================
-# 0. ORGANIZATION (Previously Tenant) - Enhanced
+# REDUNDANT / DEPRECATED ITEMS (For backward compatibility)
+# =========================================================
+# These are kept for existing data but should be phased out gradually
+
+
+# =========================================================
+# 1. ORGANIZATION & TENANCY
 # =========================================================
 
 class Tenant(BaseMixin, table=True):
-    # keeoing this for backward compatibility, but it will be deprecated in favor of Organization for better clarity and future multi-tenant support
+    """Legacy tenant table - kept for backward compatibility"""
     __tablename__ = "tenants"
     name: str
     email: str = Field(index=True, unique=True)
@@ -70,8 +91,8 @@ class Tenant(BaseMixin, table=True):
 
 
 class Organization(BaseMixin, table=True):
+    """Main organization entity - represents a company/account"""
     __tablename__ = "organizations"
-
     name: str
     email: str = Field(index=True, unique=True)
     phone: Optional[str] = Field(default=None)
@@ -80,50 +101,66 @@ class Organization(BaseMixin, table=True):
     logo_url: Optional[str] = Field(default=None)
     active: bool = Field(index=True, default=True)
 
-    # New nullable field for future clean separation
-    organization_id: Optional[UUID] = Field(default=None, index=True)
-
 
 # =========================================================
-# SUBSCRIPTION - Updated Tiers
+# 2. SUBSCRIPTION & BILLING
 # =========================================================
+
 class Subscription(BaseMixin, table=True):
+    """Subscription plan for an organization/tenant"""
     __tablename__ = "subscriptions"
 
     tenant_id: UUID = Field(foreign_key="tenants.id", index=True, ondelete="CASCADE")
-    organization_id: Optional[UUID] = Field(default=None, index=True)  # New, nullable for backward compatibility
+    organization_id: Optional[UUID] = Field(default=None, index=True)
+
     tier: SubscriptionTier = Field(
         sa_column=Column(SAEnum(SubscriptionTier, name="subscription_tier_enum")),
         default=SubscriptionTier.TRIAL
     )
     active: bool = Field(index=True, default=True)
-    start_date: datetime = Field(default_factory=utc_now)
-    end_date: Optional[datetime] = Field(default=None, index=True)
-    max_businesses: int = Field(default=1)          # More meaningful than max_registers
+    # start_date: datetime = Field(default_factory=utc_now)
+    # end_date: Optional[datetime] = Field(default=None, index=True)
+    start_date: datetime = Field(
+        default_factory=utc_now,
+        sa_column=Column(DateTime(timezone=True))
+    )
+    
+    end_date: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    max_businesses: int = Field(default=1)
 
 
 # =========================================================
-# STAFF - Enhanced with PIN & Organization
+# 3. STAFF & ACCESS CONTROL
 # =========================================================
-class StaffBusinessAssignment(SQLModel, table=True):
+
+class StaffBusinessAssignment(BaseMixin, table=True):
+    """Junction table linking staff to businesses they can access"""
     __tablename__ = "staff_business_assignments"
     staff_id: UUID = Field(foreign_key="staff.id", primary_key=True, ondelete="CASCADE")
     business_id: UUID = Field(foreign_key="businesses.id", primary_key=True, ondelete="CASCADE")
-    assigned_at: datetime = Field(default_factory=utc_now)
+
+    # role: StaffRole = Field(                                      # ← Moved here
+    #     sa_column=Column(SAEnum(StaffRole, name="staff_role_enum")),
+    #     default=StaffRole.CASHIER
+    # )
 
 
 class Staff(BaseMixin, table=True):
+    """Staff members / users under an organization"""
     __tablename__ = "staff"
 
-    tenant_id: UUID = Field(index=True)                    # Kept for backward compatibility
-    organization_id: Optional[UUID] = Field(default=None, index=True)  # New, nullable
+    tenant_id: UUID = Field(index=True)
+    organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
 
     email: str = Field(index=True, unique=True)
     full_name: str = Field(max_length=100)
     hashed_password: str
-    pin_hash: Optional[str] = Field(default=None)         # New
-    pin_salt: Optional[str] = Field(default=None)         # New
-    phone: Optional[str] = Field(default=None)            # New
+    pin_hash: Optional[str] = Field(default=None)
+    pin_salt: Optional[str] = Field(default=None)
+    phone: Optional[str] = Field(default=None)
 
     active: bool = Field(index=True, default=True)
     role: StaffRole = Field(
@@ -131,7 +168,6 @@ class Staff(BaseMixin, table=True):
         default=StaffRole.CASHIER
     )
 
-    # Relationships
     assigned_businesses: List["Business"] = Relationship(
         back_populates="assigned_staff", 
         link_model=StaffBusinessAssignment
@@ -140,13 +176,15 @@ class Staff(BaseMixin, table=True):
 
 
 # =========================================================
-# BUSINESS
+# 4. BUSINESS LOCATIONS
 # =========================================================
+
 class Business(BaseMixin, table=True):
+    """Individual business location / branch under an organization"""
     __tablename__ = "businesses"
 
     tenant_id: UUID = Field(index=True)
-    organization_id: Optional[UUID] = Field(default=None, index=True)   # New, nullable
+    organization_id: Optional[UUID] = Field(default=None, index=True)
 
     name: str = Field(index=True)
     address: Optional[str] = Field(default=None)
@@ -163,23 +201,25 @@ class Business(BaseMixin, table=True):
 
 
 # =========================================================
-# PRODUCT - Enhanced for Stock Management
+# 5. PRODUCTS & INVENTORY
 # =========================================================
+
 class Product(BaseMixin, table=True):
+    """Master product catalog - current state"""
     __tablename__ = "products"
 
-    tenant_id: Optional[UUID] = Field(default=None, index=True)      # New, nullable
-    organization_id: Optional[UUID] = Field(default=None, index=True) # New, nullable
-    business_id: UUID = Field(foreign_key="businesses.id", index=True)
+    tenant_id: Optional[UUID] = Field(default=None, index=True)
+    organization_id: Optional[UUID] = Field(default=None, index=True)
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
 
     label: str = Field(index=True)
     selling_price: float = Field(default=0.0)
-    cost_price: Optional[float] = Field(default=None)               # New
+    cost_price: Optional[float] = Field(default=None)
 
     track_stock: bool = Field(index=True, default=True)
     stock: float = Field(default=0.0)
-    min_stock_level: float = Field(default=10.0, nullable=True)                    # New
-    last_stock_take: Optional[datetime] = Field(default=None)       # New
+    min_stock_level: float = Field(default=10.0, nullable=True)
+    last_stock_take: Optional[datetime] = Field(default=None)
 
     active: bool = Field(index=True, default=True)
     category: str = Field(index=True, default="General")
@@ -188,41 +228,157 @@ class Product(BaseMixin, table=True):
         default_factory=dict
     )
 
-    # New relationship for stock history
     transactions: List["InventoryTransaction"] = Relationship(back_populates="product")
 
 
+class InventoryTransaction(BaseMixin, table=True):
+    """
+    The Single Source of Truth (SSOT) for all historical stock movements, 
+    balancing audits, and financial snapshots within a business tenant.
+    """
+    __tablename__ = "inventory_transactions"
+
+    product_id: UUID = Field(
+        foreign_key="products.id", 
+        index=True, 
+        ondelete="CASCADE",
+        description="The target product impacted by this specific stock ledger update."
+    )
+    
+    business_id: UUID = Field(
+        foreign_key="businesses.id", 
+        index=True, 
+        ondelete="CASCADE",
+        description="The organizational business entity running this transactional context."
+    )
+    
+    performed_by: Optional[UUID] = Field(
+        default=None,
+        foreign_key="staff.id", 
+        index=True, 
+        ondelete="SET NULL",
+        description="The staff identity or system worker who committed or authorized the inventory event."
+    )
+
+    movement_type: StockMovementType = Field(
+        sa_column=Column(
+            SAEnum(StockMovementType, name="stock_movement_type_enum", create_type=True),
+            nullable=False,
+            index=True
+        ),
+        description="Categorizes the operational flow: SALE, RESTOCK, RECONCILIATION, WASTAGE, or RETURN."
+    )
+
+    quantity: float = Field(
+        default=0.0,
+        description="The delta shift amount. Numeric positive weights signify incoming items, negatives represent outbound flows."
+    )
+    
+    previous_stock: Optional[float] = Field(
+        default=None,
+        description="Historical snapshot state of product stock immediately before committing this transaction."
+    )
+    
+    new_stock: float = Field(
+        default=0.0,
+        description="Calculated balance snapshot state immediately matching historical application confirmation (previous_stock + quantity)."
+    )
+
+    buying_price: Optional[float] = Field(
+        default=None,
+        description="Historical COGS purchase valuation capture at block time. Vital for FIFO/LIFO financial profit metrics."
+    )
+    
+    selling_price: Optional[float] = Field(
+        default=None,
+        description="Historical gross price capturing the exact point-of-sale layout, ignoring future price fluctuations."
+    )
+
+    reference_id: Optional[UUID] = Field(
+        default=None, 
+        index=True,
+        description="Nullable foreign pointer linking directly to underlying operational objects like SaleInvoiceID or PurchaseOrderID."
+    )
+    
+    reference_type: Optional[str] = Field(
+        default=None,
+        index=True,
+        description="Polymorphic discriminator string tracking the structural target domain (e.g., 'INVOICE', 'PURCHASE_ORDER', 'MANUAL_AUDIT')."
+    )
+
+    # --- New Recommended Operational Fields ---
+    
+    reason_code: Optional[str] = Field(
+        default=None,
+        index=True,
+        description="Standardized classification tag explaining anomalies or discrepancies (e.g., 'DAMAGED_IN_TRANSIT', 'THEFT', 'DATA_ENTRY_ERROR')."
+    )
+
+    notes: Optional[str] = Field(
+        default=None,
+        description="Unstructured human text entry highlighting physical audit specific observations or operational notes."
+    )
+
+    # --- Database Relationships ---
+    
+    product: "Product" = Relationship(back_populates="transactions")
+
+# class InventoryTransaction(BaseMixin, table=True):
+#     """Single source of truth for ALL stock movements and changes"""
+#     __tablename__ = "inventory_transactions"
+
+#     product_id: UUID = Field(foreign_key="products.id", index=True, ondelete="CASCADE")
+#     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+#     performed_by: Optional[UUID] = Field(foreign_key="staff.id", index=True, ondelete="CASCADE")
+
+#     movement_type: StockMovementType = Field(
+#         sa_column=Column(SAEnum(StockMovementType, name="stock_movement_type_enum"))
+#     )
+
+#     quantity: float = Field(default=0.0)                   # Positive = IN, Negative = OUT
+#     previous_stock: Optional[float] = Field(default=None)
+#     new_stock: float = Field(default=0.0)
+
+#     buying_price: Optional[float] = Field(default=None)
+#     selling_price: Optional[float] = Field(default=None)
+
+#     reference_id: Optional[UUID] = Field(default=None, index=True)
+#     reference_type: Optional[str] = Field(default=None)
+
+
+#     product: "Product" = Relationship(back_populates="transactions")
+
+
 # =========================================================
-# CUSTOMER - New
+# 6. CUSTOMERS
 # =========================================================
+
 class Customer(BaseMixin, table=True):
+    """Customer records"""
     __tablename__ = "customers"
 
     tenant_id: Optional[UUID] = Field(default=None, index=True)
-    organization_id: Optional[UUID] = Field(default=None, index=True)
-    business_id: UUID = Field(foreign_key="businesses.id", index=True)
+    organization_id: UUID = Field(foreign_key="organizations.id", index=True)
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
 
     name: str
     phone: Optional[str] = Field(default=None, index=True)
     email: Optional[str] = Field(default=None)
-    address: Optional[str] = Field(default=None)
-    balance: float = Field(default=0.0)          # Credit balance
 
-    active: bool = Field(default=True)
-
-    # relationships
     sales: List["Sale"] = Relationship(back_populates="customer")
 
 
 # =========================================================
-# SALE (Slightly Enhanced)
+# 7. SALES & TRANSACTIONS
 # =========================================================
+
 class Sale(BaseMixin, table=True):
+    """Main sales transaction"""
     __tablename__ = "sales"
 
-    business_id: UUID = Field(foreign_key="businesses.id", index=True)
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
     cashier_id: UUID = Field(foreign_key="staff.id", index=True)
-    customer_id: Optional[UUID] = Field(default=None, foreign_key="customers.id")  # New
+    customer_id: Optional[UUID] = Field(default=None, foreign_key="customers.id")
 
     currency: str = Field(default="KES", max_length=5)
     status: SaleStatus = Field(
@@ -230,12 +386,14 @@ class Sale(BaseMixin, table=True):
         default=SaleStatus.PENDING_PAYMENT
     )
 
-    subtotal: float
-    tax_rate: float = Field(default=0.16)
-    tax_amount: float
+    subtotal: float = Field(default=0.0)
+    discount: float = Field(default=0.0)
+    tax_rate: float = Field(default=0.0)
+    tax_amount: float = Field(default=0.0)
     discount_applied: float = Field(default=0.0)
-    total_amount: float
+    total_amount: float = Field(default=0.0)
 
+    # relationships
     business: Business = Relationship(back_populates="sales")
     cashier: Staff = Relationship(back_populates="sales_processed")
     customer: Optional[Customer] = Relationship()
@@ -243,48 +401,44 @@ class Sale(BaseMixin, table=True):
     items: List["SaleItem"] = Relationship(back_populates="sale")
     ledger_events: List["SaleLedgerEvent"] = Relationship(back_populates="sale")
 
-    # relationships for potential future features like returns, disputes, etc. can be added here as needed
-    customer: Optional[Customer] = Relationship(back_populates="sales")
 
-
-# =========================================================
-# INVENTORY & STOCK MANAGEMENT - New
-# =========================================================
-class StockMovementType(str, Enum):
-    PURCHASE = "PURCHASE"
-    SALE = "SALE"
-    ADJUSTMENT_IN = "ADJUSTMENT_IN"
-    ADJUSTMENT_OUT = "ADJUSTMENT_OUT"
-    STOCK_TAKE = "STOCK_TAKE"
-    RETURN = "RETURN"
-
-
-class InventoryTransaction(BaseMixin, table=True):
-    __tablename__ = "inventory_transactions"
-
-    product_id: UUID = Field(foreign_key="products.id", index=True)
-    business_id: UUID = Field(foreign_key="businesses.id", index=True)
-    performed_by: Optional[UUID] = Field(default=None, foreign_key="staff.id")
-
-    movement_type: StockMovementType = Field(
-        sa_column=Column(SAEnum(StockMovementType, name="stock_movement_type_enum"))
-    )
-
+class SaleItem(BaseMixin, table=True):
+    """Individual items in a sale"""
+    __tablename__ = "sale_items"
+    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    product_id: UUID = Field(index=True)
+    sku: str = Field(max_length=50, index=True)
+    name: str = Field(max_length=150)
+    unit_price: float
     quantity: float
-    previous_stock: float
-    new_stock: float
+    tax_rate: float = Field(default=0.16, nullable=True)
+    quantity_refunded: float = Field(default=0.0, nullable=True)
+    subtotal: float
+    # stock_batch_id: Optional[UUID] = Field(default=None, foreign_key="stock_batches.id")
+    cost_price_at_sale: Optional[float] = Field(default=None)
 
-    reference_id: Optional[UUID] = Field(default=None, index=True)
-    reference_type: Optional[str] = Field(default=None)
-    notes: Optional[str] = Field(default=None)
-
-    # Relationships
-    product: "Product" = Relationship(back_populates="transactions")
+    sale: Sale = Relationship(back_populates="items")
 
 
 # =========================================================
-# MPESA - New
+# 8. PAYMENTS & EXTERNAL INTEGRATIONS
 # =========================================================
+
+class Payment(BaseMixin, table=True):
+    __tablename__ = "payments"
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    amount: float
+    
+    method: PaymentMethod = Field(
+        sa_column=Column(SAEnum(PaymentMethod, name="payment_method_enum"))
+    )
+    reference: Optional[str] = Field(default=None, index=True)
+
+    sale: Sale = Relationship(back_populates="payments")
+    mpesa_payload: Optional["MpesaPayload"] = Relationship(back_populates="payment")
+
+
 class MpesaPayload(BaseMixin, table=True):
     __tablename__ = "mpesa_payloads"
 
@@ -303,44 +457,15 @@ class MpesaPayload(BaseMixin, table=True):
     is_reconciled: bool = Field(default=False)
     reconciled_at: Optional[datetime] = Field(default=None)
 
-    # relationships
-    payment: Optional["Payment"] = Relationship(back_populates="mpesa_payload")
+    payment: Optional[Payment] = Relationship(back_populates="mpesa_payload")
 
 
 # =========================================================
-# Existing models (kept mostly unchanged)
+# 9. AUDIT & ANALYTICS
 # =========================================================
-class SaleItem(BaseMixin, table=True):
-    __tablename__ = "sale_items"
-    sale_id: UUID = Field(foreign_key="sales.id", index=True)
-    product_id: UUID = Field(index=True)
-    sku: str = Field(max_length=50, index=True)
-    name: str = Field(max_length=150)
-    unit_price: float
-    quantity: float
-    tax_rate: float = Field(default=0.16, nullable=True)
-    quantity_refunded: float = Field(default=0.0, nullable=True)
-    subtotal: float
-
-    sale: Sale = Relationship(back_populates="items")
-
-
-class Payment(BaseMixin, table=True):
-    __tablename__ = "payments"
-    business_id: UUID = Field(foreign_key="businesses.id", index=True)
-    sale_id: UUID = Field(foreign_key="sales.id", index=True)
-    amount: float
-    
-    method: PaymentMethod = Field(
-        sa_column=Column(SAEnum(PaymentMethod, name="payment_method_enum"))
-    )
-    reference: Optional[str] = Field(default=None, index=True)
-
-    sale: Sale = Relationship(back_populates="payments")
-    mpesa_payload: Optional[MpesaPayload] = Relationship(back_populates="payment")
-
 
 class SaleLedgerEvent(BaseMixin, table=True):
+    """Immutable audit log for sales events"""
     __tablename__ = "sale_ledger_events"
     sale_id: UUID = Field(foreign_key="sales.id", index=True)
     event_type: EventType = Field(
@@ -354,6 +479,7 @@ class SaleLedgerEvent(BaseMixin, table=True):
 
 
 class SaleAnalyticsSummary(BaseMixin, table=True):
+    """Pre-aggregated analytics for performance"""
     __tablename__ = "sale_analytics_summaries"
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     date_dimension: datetime = Field(
@@ -368,3 +494,4 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     total_completed_orders_count: int = Field(default=0)
 
     business: Business = Relationship(back_populates="analytics_summaries")
+

@@ -20,7 +20,7 @@ import CreateWorkspaceModal from "@/features/business/components/CreateWorkspace
 
 export default function TerminalSwitchboard() {
   const { data: user, isLoading: isLoadingProfile } = useTenantProfile();
-  const { businesses, isLoading: isLoadingBusinesses } = useBusiness();
+  const { businesses, isLoading: isLoadingBusinesses } = useBusiness(user?.organization_id);
 
   // Dynamically compute open/active stores
   const activeCount = businesses.filter(b => b.active).length;

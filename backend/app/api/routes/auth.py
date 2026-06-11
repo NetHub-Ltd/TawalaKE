@@ -28,7 +28,7 @@ class TokenResponse(BaseModel):
     refresh_token: Optional[str] = None
     id_token: Optional[str] = None
     token_type: str = "bearer"
-    expires_at: datetime.datetime
+    expires_at: Optional[datetime.datetime] = None
 
 
 class PinLoginRequest(BaseModel):

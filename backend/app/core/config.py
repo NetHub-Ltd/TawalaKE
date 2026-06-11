@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int
     pin_token_expire_hours: int
 
+    # Management
+    admin_route: bool = False
+
     resource_server: str
     allowed_origins: str
 
