@@ -42,9 +42,30 @@ async def get_all_staff(db: SessionDep):
     return staff_members
 
 @router.patch("/migrate-org")
-async def patch_business_org_id(db: SessionDep, tenant_id: UUID):
+async def patch_org_id(db: SessionDep, tenant_id: UUID):
     migration = await organization_crud.migrate_single_tenant_to_organization(db, tenant_id)
     return migration
+
+
+@router.patch("/migrate-stores")
+async def patch_business_org_id(db: SessionDep, tenant_id: UUID):
+    org = await organization_crud.get_organization_by_id(tenant_id, db)
+    if not org:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    
+    # find busineses with that tenant id and update the org id
+    business_stmt = select(Business).where(Business.tenant_id == org.id)
+    businesses = (await db.exec(business_stmt)).all()
+
+    if not businesses:
+        raise HTTPException(status_code=404, detail="Businesses not found")
+
+    # only update the org id if its not the same as the tenant if
+    for business in businesses:
+        business.organization_id = org.id
+        db.add(business)
+    await db.commit()
+    return businesses
 
 
 @router.patch("/patch-staff-password")

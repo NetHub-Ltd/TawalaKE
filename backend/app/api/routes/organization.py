@@ -31,37 +31,19 @@ async def create_tenant(db: SessionDep, data: TenantCreate):
         data=new_tenant
     )
 
-@router.post("/migrate")
-async def migrate_tenant(db: SessionDep, email: EmailStr):
-    # Implementation for migrating tenant
-    stmt = select(Tenant).where(Tenant.email == email)
-    result = (await db.exec(stmt)).first()
-
-    if not result:
-        raise HTTPException(status_code=404, detail="Tenant not found for migration")
-
-    payload = TenantCreate(
-        name=result.name,
-        email=result.email,
-        tenant_id=result.id,
-        active=result.active
-    )
-
-    new_org = await organization_crud.onboard_tenant(payload=payload, db=db, password="")
-    return ApiResponse(
-        status=True,
-        status_code=201,
-        message="Tenant onboarded successfully",
-        data=new_org
-    )
-
 
 @router.get("/{organization_id}")
 async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
     stmt = select(Organization).where(Organization.id == organization_id)
     organization = (await db.exec(stmt)).first()
+
+    # ensure the user is only fetching their own organization, this would prevent sniffing
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
+    
+    if organization.id != user.organization_id:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
     return ApiResponse(
         status=True,
         status_code=200,
