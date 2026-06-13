@@ -129,9 +129,12 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
 
     async def migrate_single_tenant_to_organization(self, db: AsyncSession, tenant_id: UUID) -> Organization:
         """
-        Migrates a production Tenant record to the Organizations table while cleanly 
-        preserving its primary key (ID) to maintain foreign key integrity across 
-        stores, products, and downstream dependencies.
+        Migrates a production Tenant record to the Organizations table.
+        
+        Handles two critical production scenarios:
+        1. Clean Migration: No matching organization exists. Creates a new one keeping the Tenant ID.
+        2. Partial Migration Collision: An organization exists with the correct email but a different
+        auto-generated ID. It updates/corrects that organization's ID to preserve downstream foreign keys.
         """
         try:
             # 1. Fetch the legacy tenant record
@@ -141,41 +144,72 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             
             if not tenant:
                 logger.error(f"Migration aborted: Tenant with ID {tenant_id} not found in database.")
-                raise HttpException(status_code=404, detail="Tenant not found")
-            
+                raise HTTPException(status_code=404, detail="Tenant not found")
 
-            # 2. Idempotency Check: Verify if this ID has already been migrated
-            org_stmt = select(Organization).where(Organization.id == tenant_id)
-            org_result = await db.exec(org_stmt)
-            existing_org = org_result.one_or_none()
+            # 2. Idempotency Check Scenario A: Perfect matching ID already exists
+            org_id_stmt = select(Organization).where(Organization.id == tenant_id)
+            org_id_result = await db.exec(org_id_stmt)
+            existing_org_by_id = org_id_result.one_or_none()
             
-            if existing_org and existing_org.id == tenant_id:
-                logger.warning(f"Idempotency notice: Organization with ID {tenant_id} already exists. Skipping write step.")
-                return existing_org
+            if existing_org_by_id:
+                logger.info(f"Idempotency match: Organization with ID {tenant_id} already exists.")
+                return existing_org_by_id
 
-            # 3. Structural mapping and preservation of ID
-            # Overriding 'id' directly forces SQLModel to bypass default_factory/server_default hooks!
+            # 3. Collision Check Scenario B: Organization exists with matching email but WRONG ID
+            org_email_stmt = select(Organization).where(Organization.email == tenant.email)
+            org_email_result = await db.exec(org_email_stmt)
+            existing_org_by_email = org_email_result.one_or_none()
+
+            if existing_org_by_email:
+                logger.warning(
+                    f"Partial migration detected for email '{tenant.email}'. "
+                    f"Existing wrong ID: {existing_org_by_email.id} will be corrected to Tenant ID: {tenant_id}"
+                )
+                
+                # To change a primary key seamlessly without SQLAlchemy state-tracking conflicts,
+                # we execute an atomic update statement directly against the database engine.
+                update_stmt = (
+                    update(Organization)
+                    .where(Organization.id == existing_org_by_email.id)
+                    .values(
+                        id=tenant_id,
+                        name=tenant.name,
+                        active=tenant.active,
+                        updated_at=tenant.updated_at
+                    )
+                )
+                await db.execute(update_stmt)
+                
+                # Fetch the updated record back into the session tracking layer
+                refetched_stmt = select(Organization).where(Organization.id == tenant_id)
+                refetched_result = await db.exec(refetched_stmt)
+                updated_org = refetched_result.one()
+                
+                await db.commit()
+                logger.info(f"Successfully resolved partial migration loop for ID: {tenant_id}")
+                return updated_org
+
+            # 4. Clean Migration Scenario: Complete greenfield mapping
+            logger.info(f"Executing clean migration path for Tenant ID: {tenant_id}")
             new_org = Organization(
-                id=tenant.id,            # Crucial: Keeps your foreign keys alive
+                id=tenant.id,
                 name=tenant.name,
                 email=tenant.email,
                 active=tenant.active,
-                created_at=tenant.created_at,  # Keeps historical creation timelines intact
+                created_at=tenant.created_at,
                 updated_at=tenant.updated_at,
                 deleted_at=tenant.deleted_at,
-                # Optional fields default to None naturally or can be populated downstream
                 phone=None,
                 address=None,
                 tax_number=None,
                 logo_url=None
             )
 
-            # 4. Save and flush atomic transaction block
             db.add(new_org)
             await db.commit()
             await db.refresh(new_org)
             
-            logger.info(f"Successfully migrated Tenant '{tenant.name}' to Organization with identical ID: {tenant.id}")
+            logger.info(f"Successfully executed clean migration for Tenant '{tenant.name}'")
             return new_org
 
         except Exception as e:
