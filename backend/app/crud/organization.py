@@ -9,6 +9,8 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException as HttpException
 from uuid import UUID
 from app.core.security import hash_password
+from fastapi import HTTPException
+
 
 class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
     def __init__(self, model: Type[Organization]):
@@ -123,5 +125,62 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
         await db.commit()
         await db.refresh(staff)
         return staff
+
+
+    async def migrate_single_tenant_to_organization(self, db: AsyncSession, tenant_id: UUID) -> Organization:
+        """
+        Migrates a production Tenant record to the Organizations table while cleanly 
+        preserving its primary key (ID) to maintain foreign key integrity across 
+        stores, products, and downstream dependencies.
+        """
+        try:
+            # 1. Fetch the legacy tenant record
+            tenant_stmt = select(Tenant).where(Tenant.id == tenant_id)
+            tenant_result = await db.exec(tenant_stmt)
+            tenant = tenant_result.one_or_none()
+            
+            if not tenant:
+                logger.error(f"Migration aborted: Tenant with ID {tenant_id} not found in database.")
+                raise HttpException(status_code=404, detail="Tenant not found")
+            
+
+            # 2. Idempotency Check: Verify if this ID has already been migrated
+            org_stmt = select(Organization).where(Organization.id == tenant_id)
+            org_result = await db.exec(org_stmt)
+            existing_org = org_result.one_or_none()
+            
+            if existing_org and existing_org.id == tenant_id:
+                logger.warning(f"Idempotency notice: Organization with ID {tenant_id} already exists. Skipping write step.")
+                return existing_org
+
+            # 3. Structural mapping and preservation of ID
+            # Overriding 'id' directly forces SQLModel to bypass default_factory/server_default hooks!
+            new_org = Organization(
+                id=tenant.id,            # Crucial: Keeps your foreign keys alive
+                name=tenant.name,
+                email=tenant.email,
+                active=tenant.active,
+                created_at=tenant.created_at,  # Keeps historical creation timelines intact
+                updated_at=tenant.updated_at,
+                deleted_at=tenant.deleted_at,
+                # Optional fields default to None naturally or can be populated downstream
+                phone=None,
+                address=None,
+                tax_number=None,
+                logo_url=None
+            )
+
+            # 4. Save and flush atomic transaction block
+            db.add(new_org)
+            await db.commit()
+            await db.refresh(new_org)
+            
+            logger.info(f"Successfully migrated Tenant '{tenant.name}' to Organization with identical ID: {tenant.id}")
+            return new_org
+
+        except Exception as e:
+            await db.rollback()
+            logger.error(f"Critical transaction failure during migration of tenant {tenant_id}: {str(e)}")
+            raise e
 
 organization_crud = OrganizationCrud(Organization)

@@ -9,6 +9,8 @@ from app.core.security import hash_password
 from pydantic import EmailStr
 from app.models.models import Product, Business
 from uuid import UUID
+from app.crud.organization import organization_crud
+
 
 router = APIRouter()
 
@@ -40,36 +42,9 @@ async def get_all_staff(db: SessionDep):
     return staff_members
 
 @router.patch("/migrate-org")
-async def patch_business_org_id(db: SessionDep, tenant_id: UUID, new_org_id: UUID):
-    stmt = select(Tenant).where(Tenant.id == tenant_id)
-    tenant = (await db.exec(stmt)).first()
-    
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Tenant not found.")
-    
-    
-    org_stmt = select(Organization).where(Organization.email == tenant.email)
-    org = (await db.exec(org_stmt)).first()
-    
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found.")
-    org_data = Organization(
-        id=tenant.id,
-        name=org.name,
-        email=org.email
-    )
-    db.add(org_data)
-    await db.flush()
-
-    # find busineses with that tenant id and update the org id
-    business_stmt = select(Business).where(Business.tenant_id == tenant_id)
-    businesses = (await db.exec(business_stmt)).all()
-    for business in businesses:
-        business.organization_id = tenant_id
-        db.add(business)
-    await db.commit()
-    
-    return tenant
+async def patch_business_org_id(db: SessionDep, tenant_id: UUID):
+    migration = await organization_crud.migrate_single_tenant_to_organization(db, tenant_id)
+    return migration
 
 
 @router.patch("/patch-staff-password")
@@ -97,3 +72,5 @@ async def get_all_products(db: SessionDep):
     stmt = select(Product)  # Assuming you have a Product model defined
     products = (await db.exec(stmt)).all()
     return products
+
+
