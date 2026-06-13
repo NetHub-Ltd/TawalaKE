@@ -4,7 +4,7 @@ from app.crud.base import BaseCRUD
 from typing import Type
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.utils.logging import logger
-from sqlmodel import select
+from sqlmodel import select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException as HttpException
 from uuid import UUID

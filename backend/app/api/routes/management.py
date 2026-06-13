@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-
+from pydantic import EmailStr
 from app.api.deps import SessionDep, AuthUser
-from app.models.models import Tenant, Staff, StaffRole, Organization
+from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant
 from app.api.deps import SessionDep, AuthUser
-from app.schemas.schemas import TenantResponse
+from app.schemas.schemas import TenantResponse, TenantCreate
 from sqlmodel import select
 from app.core.security import hash_password
 from pydantic import EmailStr
@@ -73,4 +73,13 @@ async def get_all_products(db: SessionDep):
     products = (await db.exec(stmt)).all()
     return products
 
-
+# register a new tenant for testing migration endpoint
+@router.post('/new-tenant')
+async def register_tenant(db: SessionDep, name: str, email: EmailStr):
+    new = Tenant(
+        name=name,
+        email=email
+    )
+    db.add(new)
+    await db.commit()
+    return new
