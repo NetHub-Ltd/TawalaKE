@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-// import TerminalCockpit from "@/features/terminal/components/TerminalCockpit";
 import { Suspense } from "react";
 import TerminalCockpit from "@/features/business/components/TerminalCockpit";
 
@@ -41,7 +40,7 @@ function TerminalLoadingSkeleton() {
           />
         ))}
       </div>
-      <div className="w-[420px] border-l border-border bg-card/50 animate-pulse" />
+      <div className="w-105 border-l border-border bg-card/50 animate-pulse" />
     </div>
   );
 }
