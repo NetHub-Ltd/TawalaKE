@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import select
 from app.models.models import ( Product,
-    InventoryTransaction, StockMovementType, StockTakeStatus
+    StockMovementType, StockTakeStatus
 )
 from app.schemas.business import StockTakeRequest
 from app.utils.logging import logger
