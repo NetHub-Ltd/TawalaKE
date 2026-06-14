@@ -9,6 +9,7 @@ from sqlmodel import Field, Relationship, SQLModel, DateTime
 
 from app.models.base import BaseMixin
 from app.utils.helpers import utc_now
+import sqlalchemy as sa
 
 
 # =========================================================
@@ -59,6 +60,7 @@ class StockMovementType(str, Enum):
     RETURN = "RETURN"
     ADJUSTMENT = "ADJUSTMENT"
     STOCK_TAKE = "STOCK_TAKE"
+
 
 
 class StockTakeStatus(str, Enum):
@@ -219,7 +221,15 @@ class Product(BaseMixin, table=True):
     track_stock: bool = Field(index=True, default=True)
     stock: float = Field(default=0.0)
     min_stock_level: float = Field(default=10.0, nullable=True)
-    last_stock_take: Optional[datetime] = Field(default=None)
+    # last_stock_take: Optional[datetime] = Field(default=None)
+    last_stock_take: Optional[datetime] = Field(
+        sa_column=sa.Column(
+            sa.DateTime(timezone=True), 
+            nullable=True,
+            default=None
+        ),
+        description="Tracks the last time a physical stock take audit verified this product variant."
+    )
 
     active: bool = Field(index=True, default=True)
     category: str = Field(index=True, default="General")
@@ -228,15 +238,15 @@ class Product(BaseMixin, table=True):
         default_factory=dict
     )
 
-    transactions: List["InventoryTransaction"] = Relationship(back_populates="product")
+    transactions: List["StockHistory"] = Relationship(back_populates="product")
 
 
-class InventoryTransaction(BaseMixin, table=True):
+class StockHistory(BaseMixin, table=True):
     """
     The Single Source of Truth (SSOT) for all historical stock movements, 
     balancing audits, and financial snapshots within a business tenant.
     """
-    __tablename__ = "inventory_transactions"
+    __tablename__ = "stock_history"
 
     product_id: UUID = Field(
         foreign_key="products.id", 
@@ -262,7 +272,7 @@ class InventoryTransaction(BaseMixin, table=True):
 
     movement_type: StockMovementType = Field(
         sa_column=Column(
-            SAEnum(StockMovementType, name="stock_movement_type_enum", create_type=True),
+            SAEnum(StockMovementType, name="stock_history_type_enum", create_type=True),
             nullable=False,
             index=True
         ),
@@ -322,32 +332,6 @@ class InventoryTransaction(BaseMixin, table=True):
     # --- Database Relationships ---
     
     product: "Product" = Relationship(back_populates="transactions")
-
-# class InventoryTransaction(BaseMixin, table=True):
-#     """Single source of truth for ALL stock movements and changes"""
-#     __tablename__ = "inventory_transactions"
-
-#     product_id: UUID = Field(foreign_key="products.id", index=True, ondelete="CASCADE")
-#     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
-#     performed_by: Optional[UUID] = Field(foreign_key="staff.id", index=True, ondelete="CASCADE")
-
-#     movement_type: StockMovementType = Field(
-#         sa_column=Column(SAEnum(StockMovementType, name="stock_movement_type_enum"))
-#     )
-
-#     quantity: float = Field(default=0.0)                   # Positive = IN, Negative = OUT
-#     previous_stock: Optional[float] = Field(default=None)
-#     new_stock: float = Field(default=0.0)
-
-#     buying_price: Optional[float] = Field(default=None)
-#     selling_price: Optional[float] = Field(default=None)
-
-#     reference_id: Optional[UUID] = Field(default=None, index=True)
-#     reference_type: Optional[str] = Field(default=None)
-
-
-#     product: "Product" = Relationship(back_populates="transactions")
-
 
 # =========================================================
 # 6. CUSTOMERS

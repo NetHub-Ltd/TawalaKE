@@ -7,9 +7,9 @@ from app.api.deps import SessionDep, AuthUser
 from app.crud.business import business_crud
 from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
     BusinessUpdate, BusinessBase
-from app.schemas.business import StaffRequest
-from app.schemas.business import StockTakeRequest
+from app.schemas.business import RestockRequest, ProductAuditRequest, StaffRequest, ProductRestockRequest
 from app.utils.logging import logger
+from app.crud.store import store_crud
 
 router = APIRouter()
 
@@ -149,8 +149,26 @@ async def assign_staff_to_business(db: SessionDep, request: StaffRequest):
     return assignment
 
 
+@router.post("/restock")
+async def restock_product(
+    payload: ProductRestockRequest,
+    db: SessionDep,
+    current_staff: AuthUser # Injected authenticated user metadata
+):
+    """
+    Increments product inventory based on an incoming supply.
+    Maintains an atomic history snapshot balance.
+    """
+    return await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
 
-@router.post("/stock-take")
-async def perform_stock_take(payload: StockTakeRequest, db: SessionDep, user: AuthUser): # or whatever your service class is
-    logger.info(f"user: {user.id}")
-    return await business_crud.stocking(db=db, payload=payload, current_user=user)
+@router.post("/stock-audit", status_code=200)
+async def audit_product_stock(
+    payload: ProductAuditRequest,
+    db: SessionDep,
+    user: AuthUser
+):
+    """
+    Reconciles physical counter reality audits with system database balances.
+    Calculates the inventory variance delta and tracks loss anomalies.
+    """
+    return await store_crud.audit_stock(db=db, payload=payload, current_user=user)
