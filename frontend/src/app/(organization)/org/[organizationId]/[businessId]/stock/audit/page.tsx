@@ -1,4 +1,3 @@
-// Path: app/org/[organizationId]/terminal/[businessId]/stock/audit/page.tsx
 import { Metadata } from "next";
 import { AuditWorkspace } from "@/features/inventory/AuditWorkspace";
 

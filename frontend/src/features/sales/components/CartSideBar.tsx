@@ -46,13 +46,13 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
 
   const handleExpand = () => {
     if (businessId) {
-      router.push(`/org/${organizationId}/terminal/${businessId}/cart`);
+      router.push(`/org/${organizationId}/${businessId}/cart`);
     }
   };
 
   const handleCheckoutRedirect = () => {
     if (cart.length > 0) {
-      router.push(`/org/${organizationId}/terminal/${businessId}/checkout`);
+      router.push(`/org/${organizationId}/${businessId}/checkout`);
     }
   };
 

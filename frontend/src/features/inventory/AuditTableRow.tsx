@@ -1,56 +1,62 @@
+// src/features/inventory/AuditTableRow.tsx
+"use client";
+
 import React, { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Check, AlertTriangle, Loader2, Save } from "lucide-react";
+import { ProductResponse } from "@/lib/api/generated/models";
 
-// 1. Define component properties
 interface AuditTableRowProps {
-  productId: string;
+  product: ProductResponse;
   businessId: string;
-  label: string;
-  category: string;
-  sku: string;
-  unitOfMeasure: string;
-  bookStock: number;
-  costPrice: number;
-  sellingPrice: number;
   onSaveSuccess: (payload: any) => Promise<void>;
 }
 
-// 2. Define internal form structure based on backend expectations
-const schema = z.object({
-  quantity: z.union([z.number(), z.string()]).transform((val) => Number(val)),
+
+// const auditFormSchema = z.object({
+//   quantity: z
+//     .union([z.string(), z.number(), z.undefined(), z.null()])
+//     .transform((val) => {
+//       if (val == null || val === "") return 0;
+//       const num = Number(val);
+//       return isNaN(num) ? 0 : num;
+//     })
+//     .pipe(z.number().min(0, "Physical stock cannot fall below zero")),
+
+//   reason_code: z.string().default(""),
+//   notes: z.string().default(""),
+// });
+
+const auditFormSchema = z.object({
+  quantity: z.number().min(0, "Physical stock cannot fall below zero"),
   reason_code: z.string().default(""),
   notes: z.string().default(""),
 });
 
-type FormData = z.infer<typeof schema>;
+type AuditFormData = z.infer<typeof auditFormSchema>;
 
 export const AuditTableRow: React.FC<AuditTableRowProps> = ({
-  productId,
+  product,
   businessId,
-  label,
-  category,
-  sku,
-  unitOfMeasure,
-  bookStock,
   onSaveSuccess,
 }) => {
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // 3. Initialize React Hook Form for local row state isolating
+  const bookStock = product.stock ?? 0;
+
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors, isDirty },
     reset,
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  } = useForm<AuditFormData>({
+    resolver: zodResolver(auditFormSchema),
     defaultValues: {
-      quantity: bookStock,
+      quantity: product.stock ?? 0,
       reason_code: "",
       notes: "",
     },
@@ -61,11 +67,10 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
   const variance = physicalCount - bookStock;
   const hasVariance = variance !== 0;
 
-  // 4. Submit payload to backend service layer
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: AuditFormData) => {
     if (hasVariance && (!data.reason_code || data.notes.trim().length < 5)) {
       setStatus("error");
-      setErrorMessage("Variance detected. Reason code and notes (min 5 chars) are compulsory.");
+      setErrorMessage("Variance detected. Reason code and notes (min 5 characters) are required.");
       return;
     }
 
@@ -74,139 +79,134 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
       setErrorMessage("");
 
       const finalPayload = {
-        product_id: productId,
+        product_id: product.id,
         business_id: businessId,
         quantity: data.quantity,
         reason_code: hasVariance ? data.reason_code : "SYSTEM_MATCH",
-        notes: hasVariance ? data.notes : "Physical count matched system balance.",
+        notes: hasVariance 
+          ? data.notes 
+          : "Physical count matched system balance perfectly.",
       };
 
       await onSaveSuccess(finalPayload);
-      setStatus("success");
       
-      // Reset form state to current database baseline state
+      setStatus("success");
       reset({ quantity: data.quantity, reason_code: "", notes: "" });
     } catch (err: any) {
       setStatus("error");
-      setErrorMessage(err?.message || "Failed to commit audit adjustments.");
+      setErrorMessage(err?.message || "Failed to save inventory adjustment.");
     }
   };
 
-  // 5. Compute contextual row feedback colors
-  const getRowBgColor = () => {
-    if (status === "success" && !hasVariance) return "bg-emerald-50/60 border-emerald-200";
-    if (hasVariance) return "bg-amber-50/40 border-amber-200";
-    return "bg-white border-slate-100 hover:bg-slate-50/50";
+  const getRowStyles = () => {
+    if (status === "success" && !hasVariance) return "bg-emerald-50 border-emerald-200";
+    if (hasVariance) return "bg-amber-50 border-amber-200";
+    return "hover:bg-gray-50 border-gray-100";
   };
 
   return (
     <form 
       onSubmit={handleSubmit(onSubmit)} 
-      className={`border-b transition-all duration-200 ${getRowBgColor()}`}
+      className={`border-b transition-colors duration-200 ${getRowStyles()}`}
     >
-      {/* Upper Layout: Primary Interactive Spreadsheet Row */}
       <div className="flex flex-col md:flex-row md:items-center px-4 py-3 gap-4">
         
-        {/* Item Core Identification Panel */}
         <div className="flex-1 min-w-[250px]">
-          <h4 className="font-semibold text-slate-800 text-sm">{label}</h4>
-          <p className="text-xs text-slate-500 font-medium mt-0.5">
-            {sku} &bull; <span className="text-slate-400">{category}</span> &bull; {unitOfMeasure}
+          <h4 className="font-bold text-foreground">{product.label}</h4>
+          <p className="text-xs text-muted font-bold uppercase tracking-wider mt-1">
+            SKU: {product.attributes?.sku || "NO_SKU"} • {product.category || "General"}
           </p>
         </div>
 
-        {/* Database Book Balance Baseline */}
         <div className="w-28 flex flex-col justify-center">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block md:hidden">Book Stock</span>
-          <span className="text-sm font-mono font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded w-fit">
+          <span className="text-[10px] font-black text-muted uppercase tracking-widest block md:hidden mb-0.5">Book Stock</span>
+          <span className="text-sm font-mono font-black text-muted bg-white border border-gray-200 px-2.5 py-1 rounded w-fit">
             {bookStock.toFixed(2)}
           </span>
         </div>
 
-        {/* Physical Stock Counting Field */}
         <div className="w-32">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block md:hidden mb-1">Physical Count</span>
+          <span className="text-[10px] font-black text-muted uppercase tracking-widest block md:hidden mb-1">Physical Count</span>
           <input
             type="number"
             step="any"
-            onFocus={(e) => e.target.select()}
-            disabled={status === "saving"}
             {...register("quantity")}
-            className="w-full text-sm font-mono font-semibold px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-50 disabled:text-slate-400 transition-shadow shadow-sm"
+            className="w-full text-sm font-mono font-bold px-3 py-1.5 border border-gray-300 rounded focus:outline-none focus:border-emerald-500"
+            disabled={status === "saving"}
           />
           {errors.quantity && (
-            <p className="text-[11px] text-rose-500 font-medium mt-1">{errors.quantity.message}</p>
+            <p className="text-[11px] text-red-600 font-medium mt-1">
+              {errors.quantity.message}
+            </p>
           )}
         </div>
 
-        {/* Dynamic Variance Badges */}
         <div className="w-36 flex items-center">
           {variance === 0 ? (
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-100/70 px-2 py-0.5 rounded-full">
-              <Check className="w-3 h-3 stroke-[3]" /> Match
+            <span className="inline-flex items-center gap-1 text-xs font-black text-emerald-600 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+              <Check className="w-3 h-3" /> Match
             </span>
           ) : (
-            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${
-              variance > 0 ? "text-blue-600 bg-blue-100/70" : "text-amber-700 bg-amber-100"
+            <span className={`inline-flex items-center gap-1 text-xs font-black px-2.5 py-0.5 rounded-full border ${
+              variance > 0 
+                ? "text-amber-600 border-amber-200 bg-amber-50" 
+                : "text-red-600 border-red-200 bg-red-50"
             }`}>
               <AlertTriangle className="w-3 h-3" />
-              {variance > 0 ? `+${variance.toFixed(2)} Surplus` : `${variance.toFixed(2)} Shrink`}
+              {variance > 0 ? `+${variance.toFixed(2)}` : variance.toFixed(2)}
             </span>
           )}
         </div>
 
-        {/* Action Button Strip */}
         <div className="w-24 flex items-center justify-end">
           {status === "saving" ? (
-            <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+            <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
           ) : (
             <button
               type="submit"
               disabled={!isDirty && status !== "error"}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded shadow-sm transition-all focus:outline-none focus:ring-2 ${
+              className={`inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold uppercase tracking-wider rounded border transition-all ${
                 isDirty 
-                  ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 cursor-pointer" 
-                  : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                  ? "bg-emerald-600 text-white border-transparent hover:bg-emerald-700" 
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
-              <Save className="w-3.5 h-3.5" /> Save
+              <Save className="w-4 h-4" /> Save
             </button>
           )}
         </div>
       </div>
 
-      {/* Expandable Lower Shelf Layer for Shrinkage & Loss Accountability Tracking */}
       {hasVariance && (
-        <div className="px-4 pb-4 pt-1 border-t border-dashed border-slate-200/60 bg-slate-50/50 flex flex-col md:flex-row gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="px-4 pb-4 pt-2 border-t border-dashed border-gray-200 bg-gray-50 flex flex-col md:flex-row gap-4">
           <div className="flex-1 max-w-xs">
-            <label className="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Reason Code *</label>
+            <label className="block text-xs font-bold text-gray-600 mb-1">Reason Code *</label>
             <select
               {...register("reason_code")}
-              className="w-full text-xs font-semibold px-2 py-1.5 bg-white border border-slate-200 rounded text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-emerald-500"
             >
-              <option value="">-- Choose Audit Classification --</option>
-              <option value="THEFT_SHOPLIFTING">Theft or Shoplifting</option>
-              <option value="DAMAGED_IN_STORE">Damaged / Broken Shelf Inventory</option>
-              <option value="EXPIRED_STOCK">Expired Stock Tracking</option>
-              <option value="DATA_ENTRY_ERROR">Historical Data Entry Mistake</option>
+              <option value="">Select reason...</option>
+              <option value="THEFT_SHOPLIFTING">Theft / Shoplifting</option>
+              <option value="DAMAGED_IN_STORE">Damaged in Store</option>
+              <option value="EXPIRED_STOCK">Expired Stock</option>
+              <option value="DATA_ENTRY_ERROR">Data Entry Error</option>
+              <option value="OTHER">Other</option>
             </select>
           </div>
 
           <div className="flex-1">
-            <label className="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wider">Accountability Notes *</label>
+            <label className="block text-xs font-bold text-gray-600 mb-1">Notes *</label>
             <input
-              type="text"
-              placeholder="Provide context explaining this variance discrepancy..."
               {...register("notes")}
-              className="w-full text-xs px-3 py-1.5 bg-white border border-slate-200 rounded text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Explain the variance..."
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:border-emerald-500"
             />
           </div>
         </div>
       )}
 
-      {/* Global Row Alert Strip */}
       {status === "error" && errorMessage && (
-        <div className="bg-rose-50 border-t border-rose-100 px-4 py-1.5 text-xs font-medium text-rose-600">
+        <div className="px-4 py-2 text-sm text-red-600 bg-red-50 border-t border-red-200">
           {errorMessage}
         </div>
       )}

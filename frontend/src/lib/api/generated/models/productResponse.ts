@@ -6,6 +6,13 @@
  */
 import type { BaseAttributes } from "./baseAttributes";
 
+
+// export interface BaseAttributes {
+//   unit_of_measure?: BaseAttributesUnitOfMeasure;
+//   buying_price?: BaseAttributesBuyingPrice;
+//   sku?: BaseAttributesSku;
+// }
+
 export interface ProductResponse {
   id: string;
   label: string;
