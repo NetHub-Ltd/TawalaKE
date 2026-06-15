@@ -10,7 +10,6 @@ export async function fetchUser() {
   if (!session?.accessToken) {
     throw new Error("Unauthorized: No token provided");
   }
-  console.log("session", session.user?.id);
   try {
     const res = await fetch(`${baseUrl}/auth/me`, {
       method: "GET",

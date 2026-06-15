@@ -5,14 +5,12 @@ import Link from "next/link";
 import { ProductSmartRow } from "@/features/inventory/ProductSmartRow";
 import {
   Plus,
-  Search,
   PackageSearch,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
-import { ProductResponse } from "@/lib/api/generated/models";
 import { cn } from "@/lib/utils";
 
 /**
@@ -69,7 +67,7 @@ export function InventoryRegistry() {
   // Hooking the presentation layer edit callbacks to mutation parameters
   const handleEditRedirect = (id: string) => {
     // Navigates directly to the structural edit router canvas
-    window.location.href = `/org/${organizationId}/terminal/${businessId}/inventory/${id}`;
+    window.location.href = `/org/${organizationId}/${businessId}/inventory/${id}`;
   };
 
   const handleDelete = (id: string) => {
@@ -99,9 +97,15 @@ export function InventoryRegistry() {
               className="h-11 w-80 bg-card border border-input rounded-lg pl-10 pr-4 text-sm font-medium focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all"
             />
           </div>
-          <Link href={`/org/${organizationId}/terminal/${businessId}/inventory/new`}>
+          <Link href={`/org/${organizationId}/${businessId}/stock/audit`}>
             <button className="h-10 px-5 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-md font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
-              <Plus size={14} strokeWidth={3} /> Add Product
+              <Plus size={14} strokeWidth={3} /> Audit Stock
+            </button>
+          </Link>
+
+          <Link href={`/org/${organizationId}/${businessId}/stock/restock`}>
+            <button className="h-10 px-5 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-md font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
+              <Plus size={14} strokeWidth={3} /> New Stock
             </button>
           </Link>
         </div>

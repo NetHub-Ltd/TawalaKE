@@ -1,18 +1,14 @@
-import react from 'react';
 import RestockForm from '@/features/stock/RestockForm';
-
-// app/products/[id]/restock/page.tsx
-import React from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-// import RestockForm from '../../../components/inventory/RestockForm';
 
 export const metadata: Metadata = {
   title: 'Receive New Stock | Inventory System',
   description: 'Log and append inbound items from purchase orders and vendors to track historical cost snapshots.',
-  alternates: { canonical: 'https://yourdomain.com/products/restock' }
+  alternates: { canonical: 'https://tawala.nethub.co.ke/products/restock' }
 };
+
 
 interface PageProps {
   params: Promise<{ id: string }>;
