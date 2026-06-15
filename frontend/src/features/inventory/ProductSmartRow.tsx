@@ -125,6 +125,8 @@ export function ProductSmartRow({ product, onEdit, onDelete }: ProductSmartRowPr
           >
             <Edit2 size={14} />
           </button>
+
+          
           
           <button
             onClick={() => onDelete(id)}

@@ -23,6 +23,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
   const { addToCart } = useCartStore();
   const { products = [], isLoading } = useProducts(businessId);
 
+
   if (!businessId && !isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300">

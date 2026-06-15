@@ -95,96 +95,180 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
 
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Credentials mapping parameters are incomplete");
-        }
+      // async authorize(credentials) {
+      //   if (!credentials?.email || !credentials?.password) {
+      //     throw new Error("Credentials mapping parameters are incomplete");
+      //   }
 
-        // 1. Authenticate with your FastAPI login endpoint
-        const response = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            grant_type: "password",
-            username: credentials.email as string,
-            password: credentials.password as string,
-          }),
-        });
+      //   // 1. Authenticate with your FastAPI login endpoint
+      //   const response = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/x-www-form-urlencoded",
+      //     },
+      //     body: new URLSearchParams({
+      //       grant_type: "password",
+      //       username: credentials.email as string,
+      //       password: credentials.password as string,
+      //     }),
+      //   });
 
-        if (!response.ok) {
-          const errorPayload = await response.json().catch(() => ({}));
-          throw new Error(errorPayload.detail || "Invalid access credentials supplied");
-        }
+      //   if (!response.ok) {
+      //     const errorPayload = await response.json().catch(() => ({}));
+      //     throw new Error(errorPayload.detail || "Invalid access credentials supplied");
+      //   }
 
-        const tokens = await response.json();
-        console.log("Token Response Captured:", tokens);
+      //   const tokens = await response.json();
+      //   console.log("Token Response Captured:", tokens);
 
-        // 2. Extract profile details via the Bearer token context
-        const profileResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${tokens.access_token}`,
-          },
-        });
+      //   // 2. Extract profile details via the Bearer token context
+      //   const profileResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //       Authorization: `Bearer ${tokens.access_token}`,
+      //     },
+      //   });
 
-        if (!profileResponse.ok) {
-          throw new Error("Unable to retrieve operational profile identity metadata");
-        }
+      //   if (!profileResponse.ok) {
+      //     throw new Error("Unable to retrieve operational profile identity metadata");
+      //   }
         
-        const profile = await profileResponse.json();
+      //   const profile = await profileResponse.json();
+      //   console.log("user profile", profile)
 
-        // 🔥 CRITICAL PRODUCTION FIX: Parse FastAPI's ISO String format into precise Unix milliseconds
-        const expiresAt = Date.parse(tokens.expires_at);
+      //   // 🔥 CRITICAL PRODUCTION FIX: Parse FastAPI's ISO String format into precise Unix milliseconds
+      //   const expiresAt = Date.parse(tokens.expires_at);
 
-        if (isNaN(expiresAt)) {
-          console.error("[auth] Warning: FastAPI returned an invalid date format. Falling back to JWT decode.");
-          const decoded: any = jwtDecode(tokens.access_token);
-          return { ...profile, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: decoded.exp * 1000 };
-        }
+      //   if (isNaN(expiresAt)) {
+      //     console.error("[auth] Warning: FastAPI returned an invalid date format. Falling back to JWT decode.");
+      //     const decoded: any = jwtDecode(tokens.access_token);
+      //     return { ...profile, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: decoded.exp * 1000 };
+      //   }
 
-        return {
-          id: profile.id,
-          email: profile.email,
-          name: profile.full_name,
-          role: "OWNER", // Temporally overide for testing
-          // role: profile.role || "OWNER",
-          tenant_id: profile.tenant_id,
-          organization_id: profile.organization_id,
-          business_id: profile.business_id,
-          active: profile.active,
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token,
-          expiresAt: expiresAt,
-        };
+      //   return {
+      //     id: profile.id,
+      //     email: profile.email,
+      //     name: profile.full_name,
+      //     // role: "OWNER", // Temporally overide for testing
+      //     role: profile.role || "OWNER",
+      //     tenant_id: profile.tenant_id,
+      //     organization_id: profile.organization_id,
+      //     business_id: profile.business_id,
+      //     active: profile.active,
+      //     accessToken: tokens.access_token,
+      //     refreshToken: tokens.refresh_token,
+      //     expiresAt: expiresAt,
+      //   };
+      // },
+
+      async authorize(credentials) {
+  console.log("=== AUTHORIZE START ===", { email: credentials?.email });
+
+  if (!credentials?.email || !credentials?.password) {
+    throw new Error("Missing credentials");
+  }
+
+  try {
+    // 1. Login
+    const loginResponse = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "password",
+        username: credentials.email as string,
+        password: credentials.password as string,
+      }),
+    });
+
+    console.log("Login response status:", loginResponse.status);
+
+    if (!loginResponse.ok) {
+      const errorText = await loginResponse.text();
+      console.error("Login failed body:", errorText);
+      throw new Error("Invalid credentials");
+    }
+
+    const tokens = await loginResponse.json();
+    console.log("✅ Tokens received:", {
+      hasAccessToken: !!tokens.access_token,
+      hasRefreshToken: !!tokens.refresh_token,
+      expires_at: tokens.expires_at,
+    });
+
+    // 2. Get profile
+    const profileResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokens.access_token}`,
       },
+    });
+
+    console.log("Profile response status:", profileResponse.status);
+
+    if (!profileResponse.ok) {
+      const errorText = await profileResponse.text();
+      console.error("Profile fetch failed:", errorText);
+      throw new Error(`Profile fetch failed: ${profileResponse.status}`);
+    }
+
+    const profile = await profileResponse.json();
+    console.log("✅ Profile received:", profile);
+
+    // 3. Handle expiration
+    let expiresAt = Date.parse(tokens.expires_at);
+    if (isNaN(expiresAt)) {
+      console.warn("Invalid expires_at, falling back to JWT decode");
+      const decoded: any = jwtDecode(tokens.access_token);
+      expiresAt = decoded.exp * 1000;
+    }
+
+    console.log("✅ Authorize successful - returning user");
+
+    return {
+      id: profile.id,
+      email: profile.email,
+      name: profile.full_name,
+      role: profile.role || "OWNER",
+      tenant_id: profile.tenant_id,
+      organization_id: profile.organization_id,
+      business_id: profile.business_id,
+      active: profile.active,
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+      expiresAt,
+    };
+  } catch (error: any) {
+    console.error("🚨 AUTHORIZE ERROR:", error.message);
+    console.error("Error stack:", error.stack);
+    throw error;   // re-throw so Auth.js shows the error
+  }
+},
     }),
   ],
 
   callbacks: {
     // Callback 1: The Gatekeeper (Security verification on initial login)
-    async signIn({ user }) {
-      const u = user as any;
-      if (u) {
-        if (u.active === false) {
-          console.warn(`[auth] Blocked entry for deactivated account profile: ${u.email}`);
-          return "/login?error=AccountDeactivated";
-        }
-        if (!u.tenant_id && u.role) {
-          console.error(`[auth] Owner login rejected due to missing organizational bounds: ${u.email}`);
-          return "/login?error=MissingOrganization";
-        }
-      }
-      return true;
-    },
+    // async signIn({ user }) {
+    //   const u = user as any;
+    //   if (u) {
+    //     if (u.active === false) {
+    //       console.warn(`[auth] Blocked entry for deactivated account profile: ${u.email}`);
+    //       return false
+    //     }
+    //     if (!u.tenant_id && u.role) {
+    //       console.error(`[auth] Owner login rejected due to missing organizational bounds: ${u.email}`);
+    //       return false;
+    //     }
+    //   }
+    //   return true;
+    // },
 
     // Callback 2: The Redirection Shield (Prevents Open Redirection Vulnerabilities)
-    async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      else if (new URL(url).origin === baseUrl) return url;
-      return `${baseUrl}/org`;
-    },
+    // async redirect({ url, baseUrl }) {
+    //   if (url.startsWith("/")) return `${baseUrl}${url}`;
+    //   else if (new URL(url).origin === baseUrl) return url;
+    //   return `${baseUrl}/org`;
+    // },
 
     // Callback 3: The Cryptographic JWT State Processor
     async jwt({ token, user, account }) {

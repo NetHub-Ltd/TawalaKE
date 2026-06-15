@@ -18,11 +18,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Business ID not provided" }, { status: 400 });
     }
 
+    console.log("fetching products for: ", business_id)
 
       // Determine targeted downstream service URL dynamically
-  const targetUrl = product_id 
-    ? `${API_BASE}/products/${product_id}`
-    : `${API_BASE}/products/multi/${business_id}`;
+    const targetUrl = product_id 
+      ? `${API_BASE}/products/${product_id}`
+      : `${API_BASE}/products/multi/${business_id}`;
 
 
   const res = await fetch(targetUrl, {
@@ -35,6 +36,8 @@ export async function GET(request: NextRequest) {
   if (!data.status) {
     return NextResponse.json({ error: data.message }, { status: res.status });
   }
+
+  console.log(`products for: ${business_id}`, data)
   return NextResponse.json(data.data, { status: res.status });
 }
 
