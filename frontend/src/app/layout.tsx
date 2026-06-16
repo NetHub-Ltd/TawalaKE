@@ -1,27 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
 
-// Premium interface typography designed for dense SaaS dashboards and legibility
-const interSans = Inter({
-  variable: "--font-inter-sans",
+// Premium interface typography designed for ultra-crisp scaling and a modern professional feel
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-// High-performance tabular mono font optimized for financial records, tables, and statistics
+// High-performance tabular mono font optimized for financial registers, currency, and stock codes
 const jetBrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
 
-// Viewport settings supporting full user scalability for strict accessibility (WCAG AA compliance)
+// Syncing viewport themeColor perfectly with your updated playful-pro brand colors
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#4f46e5" }, // Maps to Light --brand-primary
-    { media: "(prefers-color-scheme: dark)", color: "#818cf8" }   // Maps to Dark --brand-primary
+    { media: "(prefers-color-scheme: light)", color: "#6366f1" }, // Maps to Light --brand-primary (Indigo)
+    { media: "(prefers-color-scheme: dark)", color: "#818cf8" }   // Maps to Dark --brand-primary (Indigo Muted)
   ],
   width: "device-width",
   initialScale: 1,
@@ -31,7 +31,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "OmniPOS | High-Performance Cloud Commerce",
   description:
-    "The enterprise-grade POS engine built for sub-second speeds and global scale.",
+    "The enterprise-grade POS engine built for sub-second speeds and global multi-tenant scale.",
   metadataBase: new URL("https://omnipos.io"),
   alternates: { canonical: "/" },
   appleWebApp: {
@@ -49,13 +49,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${interSans.variable} ${jetBrainsMono.variable}`}
+      className={`${geistSans.variable} ${jetBrainsMono.variable}`}
       suppressHydrationWarning
     >
-      {/* Note: Standardized background behavior is defined inside your globals.css @layer base body hooks.
-        We do not hardcode 'bg-background' here so that the platform correctly drops down to 'var(--surface)' 
-        automatically, enabling your distinct layered lifting card pattern across dashboards.
-      */}
       <body className="min-h-screen antialiased selection:bg-brand-primary/20">
         <Providers>
           {/* Main Structural Landmark ensuring standard accessible layout parsing */}

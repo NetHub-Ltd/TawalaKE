@@ -4,8 +4,8 @@ import React from "react";
 import { Loader2 } from "lucide-react";
 
 /**
- * LoadingScreen: Performance-first transition state.
- * Optimized to minimize Main Thread work by avoiding JS-heavy animation libraries.
+ * LoadingScreen: Performance-first tokenized transition state.
+ * Uses hardware-accelerated backdrop filters and native variables to achieve a modern frosted look.
  */
 const LoadingScreen = () => {
   return (
@@ -13,26 +13,41 @@ const LoadingScreen = () => {
       role="status"
       aria-busy="true"
       aria-live="polite"
-      className="fixed inset-0 z-9999 flex flex-col items-center justify-center bg-white dark:bg-slate-950"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface/60 backdrop-blur-md transition-all"
     >
-      <div className="flex flex-col items-center gap-4">
-        {/* Spinner: Uses hardware-accelerated CSS animations */}
-        <div className="relative animate-in fade-in zoom-in duration-300">
+      <div className="flex flex-col items-center gap-5">
+        
+        {/* Hardware-accelerated Spinner Canvas */}
+        <div className="relative flex items-center justify-center">
+          
+          {/* Outer Ambient Glow Ring */}
+          <div 
+            className="absolute h-14 w-14 rounded-full border-2 border-brand-primary/10 border-t-brand-primary/40 animate-spin"
+            style={{ animationDuration: "1.2s" }}
+            aria-hidden="true" 
+          />
+          
+          {/* Inner High-Precision Core Icon */}
           <Loader2
-            className="h-12 w-12 animate-spin text-blue-600 dark:text-blue-400"
-            strokeWidth={1.5}
+            className="h-8 w-8 animate-spin text-brand-primary"
+            strokeWidth={2}
             aria-hidden="true"
           />
         </div>
 
-        {/* Text: Delayed fade-in via CSS to prevent flicker on fast loads */}
-        <p className="animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200 text-sm font-medium tracking-tight text-slate-600 dark:text-slate-300">
-          Securing your connection...
-        </p>
+        {/* Status Message matching Global Typography Token Matrix */}
+        <div className="text-center space-y-1">
+          <p className="text-base font-bold tracking-tight text-foreground animate-pulse">
+            Loading Station
+          </p>
+          <p className="text-[11px] font-bold text-muted uppercase tracking-widest block font-mono">
+            Securing Connection Matrix
+          </p>
+        </div>
       </div>
 
-      {/* Screen Reader Only */}
-      <span className="sr-only">Loading content, please wait.</span>
+      {/* Screen Reader Access Layer */}
+      <span className="sr-only">Loading secure business terminal, please wait.</span>
     </div>
   );
 };

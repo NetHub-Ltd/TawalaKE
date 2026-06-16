@@ -1,19 +1,19 @@
 import { Metadata } from "next";
-// import TerminalCockpit from "@/features/terminal/components/TerminalCockpit";
 import { Suspense } from "react";
 import TerminalCockpit from "@/features/business/components/TerminalCockpit";
 
-
 /**
  * @Scribe_Audit
- * SEO: No-index for internal terminal routes to protect business data.
- * Architecture: Server-side param handling with client-side interactivity.
+ * SEO: Protect corporate tenant operational layouts with tight indexing filters.
+ * Architecture: Clean stream orchestration decoupled from strict layout boxes.
  */
-
 export const metadata: Metadata = {
   title: "Terminal | POS System",
   description: "High-performance point of sale interface.",
   robots: { index: false, follow: false },
+  alternates: {
+    canonical: "https://tawala.io/terminal",
+  },
 };
 
 interface PageProps {
@@ -30,18 +30,29 @@ export default async function Page({ params }: PageProps) {
   );
 }
 
+/**
+ * TerminalLoadingSkeleton:
+ * Perfectly aligns with your layout viewport boundaries to achieve zero-layout-shift (CLS).
+ * Delegates background colors, borders, and border-radii directly to the system .card-layered design token.
+ */
 function TerminalLoadingSkeleton() {
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
-      <div className="flex-1 p-6 grid grid-cols-4 gap-6">
+    <div 
+      className="absolute inset-0 flex overflow-hidden gap-6"
+      aria-hidden="true"
+    >
+      {/* Primary Grid Stream Workspace */}
+      <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-6 overflow-hidden min-w-0">
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="h-64 bg-card rounded-[2.5rem] animate-pulse"
+            className="card-layered h-full min-h-64 animate-pulse"
           />
         ))}
       </div>
-      <div className="w-[420px] border-l border-border bg-card/50 animate-pulse" />
+      
+      {/* Dynamic Sidebar Control Deck Panel */}
+      <div className="hidden lg:block w-96 card-layered h-full bg-card/40 animate-pulse border-l" />
     </div>
   );
 }
