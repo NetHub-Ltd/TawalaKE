@@ -1,7 +1,7 @@
-// app/page.tsx
 import { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/lib/components/Header";
+import NavBar from "@/lib/components/NavBar"
 import { Button } from "@/lib/components/ui/Button";
 import { 
   ArrowRight, 
@@ -12,15 +12,17 @@ import {
   Package,
   Activity,
   Smile,
-  Heart
+  Zap,
+  Users,
+  Store,
+  HelpCircle
 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Tawala Platform | From Hustle to Structure",
-  description:
-    "Ditch the messy notebooks and hidden storefront leakages. Tawala transforms retail confusion into a calm, organized digital partner built around Kenyan biashara workflows.",
+  description: "Ditch messy notebooks. Tawala transforms retail confusion into a calm digital partner optimized for Kenyan biashara workflows.",
   alternates: {
-    canonical: "/",
+    canonical: "https://tawala.io",
   },
 };
 
@@ -28,15 +30,14 @@ export default function LandingPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Tawala Platform",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Windows, macOS, Linux, Web",
-    description:
-      "A calm, intuitive business partner for Kenyan shop owners to track counter sales, eliminate stock guesswork, and see daily net profits.",
-    offers: {
+    "name": "Tawala Platform",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Windows, macOS, Linux, Web",
+    "description": "A calm, intuitive business partner for Kenyan shop owners to track counter sales, eliminate stock guesswork, and see daily net profits.",
+    "offers": {
       "@type": "Offer",
-      price: "0",
-      priceCurrency: "KES",
+      "price": "0",
+      "priceCurrency": "KES",
     },
   };
 
@@ -46,187 +47,340 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {/* Screen-bounded viewport layout container relying natively on global base variables */}
-      <main className="h-screen w-full bg-surface text-foreground overflow-hidden relative flex flex-col p-4 lg:p-8 selection:bg-brand-primary/20">
+      
+      {/* Scrollable Layout Container:
+        Replaces the fixed height structure with a responsive, multi-tier marketing system.
+      */}
+      <main className="min-h-screen w-full bg-background text-foreground relative flex flex-col overflow-x-hidden selection:bg-brand-primary/20">
         
-        {/* Hardware-accelerated ambient visual indicators tailored to brand parameters */}
-        <div className="absolute top-[-5%] right-[-5%] w-[450px] h-[450px] bg-brand-secondary/5 rounded-full blur-[100px] pointer-events-none animate-pulse" aria-hidden="true" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[350px] h-[350px] bg-brand-primary/5 rounded-full blur-[90px] pointer-events-none animate-pulse" aria-hidden="true" />
+        {/* Background Visual Gradients */}
+        <div className="absolute top-0 right-[-10%] w-[600px] h-[600px] bg-brand-secondary/5 rounded-full blur-[140px] pointer-events-none" aria-hidden="true" />
+        <div className="absolute top-[40%] left-[-10%] w-[500px] h-[500px] bg-brand-primary/5 rounded-full blur-[120px] pointer-events-none" aria-hidden="true" />
 
-        {/* Unified Application Header Context */}
-        <Header />
+        <div className="p-4 lg:p-6 xl:p-8 w-full flex flex-col">
+          <NavBar />
+        </div>
 
-        {/* Core Screen Context Node Matrix */}
-        <div id="main-content" className="flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center min-h-0 py-4 outline-none relative z-10">
-          
-          {/* Conversion Engine Column */}
-          <section className="lg:col-span-6 flex flex-col space-y-6 lg:space-y-8 justify-center min-h-0" aria-labelledby="hero-heading">
-            
+        {/* =========================================================
+           SECTION 1: HERO SECTION
+        ========================================================= */}
+        <section className="max-w-7xl mx-auto px-6 lg:px-8 pt-12 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+          <div className="lg:col-span-5 flex flex-col space-y-6">
             <div className="space-y-4">
-              {/* Context Action Pill */}
-              <div className="inline-flex items-center gap-2 bg-brand-primary/10 border border-brand-primary/20 px-3.5 py-1 rounded-full w-fit">
-                <Sparkles size={13} className="text-brand-primary animate-spin" aria-hidden="true" />
-                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-primary">
-                  Built For Your Biashara
+              <div className="inline-flex items-center gap-2 bg-brand-primary/10 border border-brand-primary/20 px-3 py-1 rounded-full w-fit">
+                <Sparkles size={12} className="text-brand-primary" aria-hidden="true" />
+                <span className="text-[11px] font-bold uppercase tracking-wider text-brand-primary">
+                  Built For Kenyan Biashara
                 </span>
               </div>
 
-              <h1 id="hero-heading" className="text-gradient text-h2 animate-gradient font-black">
+              <h1 className="text-h1 font-extrabold tracking-tight leading-tight">
                 Tawala Biashara Yako <br />
-                <span className="text-gradient animate-gradient">
-                  Bila Stress.
-                </span>
+                <span className="text-gradient">Bila Stress.</span>
               </h1>
             </div>
 
-            <p className="text-muted text-base font-medium leading-relaxed max-w-xl">
-              Running a physical shop shouldn&apos;t mean staying up late calculating matching carbon-copy totals in an exercise notebook. Tawala gives you absolute control over your cash, stock levels, and staff shifts right from your pocket phone.
+            <p className="text-muted text-base leading-relaxed max-w-xl">
+              Move from manual chaos to organized, profitable growth. Tawala helps retail shops, minimarts, pharmacies, and hardwares track counter sales, eliminate stock guesswork, and view daily net profits.
             </p>
 
-            {/* Micro Balanced Data Metrics Card Panel */}
-            <div className="grid grid-cols-2 gap-4 max-w-lg bg-background border border-border/40 p-4 rounded-[1.5rem] shadow-lift relative overflow-hidden">
-              <div className="space-y-1.5 relative z-10">
+            {/* Core Value Micro-Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg bg-card border border-border/60 p-5 rounded-2xl shadow-lift">
+              <div className="space-y-1">
                 <div className="flex items-center gap-2 text-brand-secondary font-bold text-xs uppercase tracking-wider">
-                  <div className="p-1 bg-brand-secondary/10 rounded-lg">
+                  <div className="p-1.5 bg-brand-secondary/10 rounded-lg">
                     <Package size={14} aria-hidden="true" />
                   </div> 
                   Shelves Balanced
                 </div>
-                <p className="text-xs font-medium text-muted leading-relaxed">
-                  Know exactly what is running low without manual counting protocols.
+                <p className="text-xs text-muted leading-normal">
+                  Track items and get low stock alerts automatically.
                 </p>
               </div>
 
-              <div className="space-y-1.5 relative z-10">
+              <div className="space-y-1">
                 <div className="flex items-center gap-2 text-brand-accent font-bold text-xs uppercase tracking-wider">
-                  <div className="p-1 bg-brand-accent/10 rounded-lg">
+                  <div className="p-1.5 bg-brand-accent/10 rounded-lg">
                     <TrendingUp size={14} aria-hidden="true" />
                   </div> 
                   Clear Profit Lines
                 </div>
-                <p className="text-xs font-medium text-muted leading-relaxed">
-                  See true operational net profit margins instantly every evening.
+                <p className="text-xs text-muted leading-normal">
+                  See true net profit lines instantly every single evening.
                 </p>
               </div>
             </div>
 
-            {/* Button Layout Group utilizing refactored design token parameters */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-1">
-              <Link href="/org">
-                {/* @next-codemod-error This Link previously used the now removed `legacyBehavior` prop, and has a child that might not be an anchor. The codemod bailed out of lifting the child props to the Link. Check that the child component does not render an anchor, and potentially move the props manually to Link. */
-                }
-                <Button 
-                  variant="primary" 
-                  size="lg"
-                  className="min-w-[240px] group gap-2 Normal-case font-bold"
-                >
-                  Start your free trial
-                  <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform duration-200" aria-hidden="true" />
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+              <Link href="/org" className="w-full sm:w-auto">
+                <Button variant="primary" size="lg" className="w-full sm:min-w-[220px]">
+                  Start Free 14-Day Trial
+                  <ArrowRight size={14} className="ml-1" aria-hidden="true" />
                 </Button>
               </Link>
-              
-              <Link href="/features">
-                {/* @next-codemod-error This Link previously used the now removed `legacyBehavior` prop, and has a child that might not be an anchor. The codemod bailed out of lifting the child props to the Link. Check that the child component does not render an anchor, and potentially move the props manually to Link. */
-                }
-                <Button 
-                  variant="outline" 
-                  size="lg"
-                  className="normal-case font-bold"
-                >
-                  See How It Simplifies Life
+              <Link href="#features" className="w-full sm:w-auto">
+                <Button variant="outline" size="lg" className="w-full">
+                  Explore Features
                 </Button>
               </Link>
             </div>
-          </section>
+          </div>
 
-          {/* Graphical Mock System Dashboard Frame */}
-          <div className="lg:col-span-6 relative w-full h-full flex items-center justify-center min-h-0" aria-hidden="true">
-            <div className="w-full max-w-2xl bg-background rounded-[2rem] border border-border/40 shadow-lift overflow-hidden flex flex-col h-[88%] max-h-[500px] transform hover:scale-[1.005] transition-transform duration-500">
+          {/* Interactive Screen Dashboard Mockup Component */}
+          <div className="lg:col-span-7 w-full flex items-center justify-center relative">
+            <div className="w-full max-w-2xl bg-card rounded-2xl border border-border/60 shadow-lift overflow-hidden flex flex-col">
               
-              {/* Virtualized Navigation/Tab Workspace Boundary Header */}
-              <div className="px-5 py-3 bg-surface border-b border-border/40 flex items-center justify-between shrink-0">
+              <div className="px-4 py-3 bg-surface border-b border-border/60 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-1.5">
                   <div className="h-2.5 w-2.5 rounded-full bg-brand-primary/40" />
                   <div className="h-2.5 w-2.5 rounded-full bg-brand-secondary/40" />
                   <div className="h-2.5 w-2.5 rounded-full bg-brand-accent/40" />
                 </div>
-                <div className="px-4 py-1 bg-background border border-border/40 rounded-xl text-[10px] text-muted font-medium tracking-tight flex items-center gap-1.5 w-60 justify-center shadow-inner font-mono">
-                  <ShieldCheck size={11} className="text-brand-accent shrink-0" /> my.tawala.shop/live
+                <div className="px-3 py-0.5 bg-background border border-border/60 rounded-lg text-[11px] text-muted font-mono flex items-center gap-1.5 w-56 justify-center shadow-inner">
+                  <ShieldCheck size={10} className="text-brand-accent shrink-0" /> my.tawala.shop/live
                 </div>
-                <div className="w-8 flex justify-end">
-                  <Heart size={11} className="text-brand-primary/60 fill-brand-primary/10" />
-                </div>
+                <div className="w-6" />
               </div>
 
-              {/* Functional Dashboard Render Area */}
-              <div className="flex-1 p-6 flex flex-col justify-between min-h-0 bg-gradient-to-br from-brand-primary/[0.02] via-transparent to-transparent">
-                
-                {/* Structural Grid Elements */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 bg-surface border border-border/30 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase tracking-wider text-muted font-bold block">Counter Status</span>
-                    <span className="text-xs font-bold text-foreground block">Recording Active</span>
+              <div className="p-6 flex flex-col space-y-4 bg-gradient-to-br from-brand-primary/[0.01] to-transparent">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 bg-surface border border-border/40 rounded-xl">
+                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold block">Counter Status</span>
+                    <span className="text-xs font-bold text-foreground block truncate mt-0.5">Recording Active</span>
                   </div>
-                  <div className="p-3 bg-surface border border-border/30 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase tracking-wider text-muted font-bold block">Cashier Shifts</span>
-                    <span className="text-xs font-bold text-foreground block">Balanced & Safe</span>
+                  <div className="p-3 bg-surface border border-border/40 rounded-xl">
+                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold block">Cashier Shifts</span>
+                    <span className="text-xs font-bold text-foreground block truncate mt-0.5">Balanced & Safe</span>
                   </div>
-                  <div className="p-3 bg-surface border border-border/30 rounded-xl space-y-1">
-                    <span className="text-[9px] uppercase tracking-wider text-muted font-bold block">Cloud Storage</span>
-                    <span className="text-xs font-bold text-brand-accent flex items-center gap-1">
+                  <div className="p-3 bg-surface border border-border/40 rounded-xl">
+                    <span className="text-[10px] uppercase tracking-wider text-muted font-bold block">Cloud Storage</span>
+                    <span className="text-xs font-bold text-brand-accent flex items-center gap-1 mt-0.5 truncate">
                       <Activity size={12} className="animate-pulse" /> Synced Fully
                     </span>
                   </div>
                 </div>
 
-                {/* Core Status Message Overlay Element */}
-                <div className="my-auto border border-dashed border-border rounded-2xl p-4 flex flex-col items-center justify-center text-center space-y-2.5 bg-surface/30 py-6">
+                <div className="border border-dashed border-border/80 rounded-xl p-6 flex flex-col items-center justify-center text-center space-y-2 bg-surface/20">
                   <div className="h-10 w-10 rounded-full bg-brand-accent/10 text-brand-accent flex items-center justify-center border border-brand-accent/20 shadow-inner">
                     <Smile size={18} />
                   </div>
-                  <div className="space-y-0.5">
-                    <h3 className="text-xs font-bold text-foreground">Your Business Data, Perfectly Safe</h3>
-                    <p className="text-[11px] text-muted font-medium max-w-xs leading-normal">
-                      No physical logs to destroy, no calculator error surprises. Just clarity.
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">Your Business Data, Clean & Managed</h3>
+                    <p className="text-xs text-muted max-w-xs mt-1 leading-normal">
+                      No physical log vulnerabilities, no missing pages, no calculator error surprises.
                     </p>
                   </div>
                 </div>
 
-                {/* Lower Audit Feeds Layer */}
-                <div className="space-y-3 shrink-0">
-                  <div className="p-3 bg-background border border-border/40 rounded-xl flex items-center justify-between text-xs font-bold text-foreground shadow-lift">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 size={13} className="text-brand-accent" />
-                      <span>Stock Sync Audit: No records lost today</span>
+                <div className="space-y-3">
+                  <div className="p-3 bg-background border border-border/60 rounded-xl flex items-center justify-between text-xs font-bold text-foreground shadow-sm">
+                    <div className="flex items-center gap-2 truncate">
+                      <CheckCircle2 size={14} className="text-brand-accent shrink-0" />
+                      <span className="truncate">Stock Sync Audit: No records lost today</span>
                     </div>
-                    <span className="text-[9px] bg-brand-accent/10 text-brand-accent font-black px-2 py-0.5 rounded-md uppercase tracking-wider">Secure</span>
+                    <span className="text-[9px] bg-brand-accent/10 text-brand-accent font-black px-1.5 py-0.5 rounded uppercase tracking-wider">Secure</span>
                   </div>
 
-                  {/* High Contrast Ledger Revenue Area */}
-                  <div className="h-14 bg-foreground rounded-xl flex items-center px-4 justify-between bg-gradient-to-r from-foreground to-foreground/95">
-                    <div className="space-y-0.5">
-                      <p className="text-[9px] text-muted uppercase font-bold tracking-wider leading-none">Total Sales Tracked (Today)</p>
-                      <p className="text-base font-bold text-background font-mono tracking-tight leading-none">KES 48,250.00</p>
+                  <div className="p-4 bg-foreground text-background rounded-xl flex items-center justify-between bg-gradient-to-r from-foreground to-slate-900 shadow-lift">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Total Sales Tracked (Today)</p>
+                      <p className="text-lg font-bold font-mono tracking-tight text-white leading-none pt-1">KES 48,250.00</p>
                     </div>
-                    <Link href="/billing">
-                      {/* @next-codemod-error This Link previously used the now removed `legacyBehavior` prop, and has a child that might not be an anchor. The codemod bailed out of lifting the child props to the Link. Check that the child component does not render an anchor, and potentially move the props manually to Link. */
-                      }
-                      <Button 
-                        variant="secondary" 
-                        size="sm"
-                        className="h-8 px-4 normal-case font-bold"
-                      >
-                        View Plans
+                    <Link href="#pricing">
+                      <Button variant="secondary" size="sm">
+                        View Pricing
                       </Button>
                     </Link>
                   </div>
                 </div>
+              </div>
 
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+           SECTION 2: PROBLEMS TO STRUCTURE MATRIX
+        ========================================================= */}
+        <section id="features" className="w-full bg-surface/50 border-y border-border/50 py-20 relative z-10">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="text-center space-y-4 max-w-2xl mx-auto mb-16">
+              <h2 className="text-h2 font-bold tracking-tight text-foreground">
+                From Hustle to Structure
+              </h2>
+              <p className="text-muted text-sm sm:text-base">
+                Running a biashara in Kenya is tough. We eliminate the manual confusion so you can focus on building a more sustainable workflow.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="bg-card p-6 rounded-2xl border border-border/60 shadow-sm space-y-4">
+                <div className="h-10 w-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
+                  <Zap size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">Fast Sales & POS</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Record trades quickly. Complete tracking compatibility for Cash, M-Pesa statements, and Card transactions on any desktop screen or mobile responsive device.
+                </p>
+              </div>
+
+              <div className="bg-card p-6 rounded-2xl border border-border/60 shadow-sm space-y-4">
+                <div className="h-10 w-10 bg-brand-secondary/10 rounded-xl flex items-center justify-center text-brand-secondary">
+                  <Package size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">Inventory Management</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Real-time item deduction counts. Receive push indicators for low-performing counts and critical items before shelves are emptied unexpectedly.
+                </p>
+              </div>
+
+              <div className="bg-card p-6 rounded-2xl border border-border/60 shadow-sm space-y-4">
+                <div className="h-10 w-10 bg-brand-accent/10 rounded-xl flex items-center justify-center text-brand-accent">
+                  <Users size={20} />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">Staff Accountability</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Enforce quick authentication handling on shared counter equipment via our native 4-digit PIN access security structure. Lock down transaction tracking records securely.
+                </p>
               </div>
             </div>
           </div>
+        </section>
 
-        </div>
+        {/* =========================================================
+           SECTION 3: THREE-TIER SUBSCRIPTION ARCHITECTURE
+        ========================================================= */}
+        <section id="pricing" className="max-w-7xl mx-auto px-6 lg:px-8 py-24 relative z-10">
+          <div className="text-center space-y-4 max-w-2xl mx-auto mb-16">
+            <h2 className="text-h2 font-bold tracking-tight text-foreground">
+              Simple Pricing. No Hidden Fees.
+            </h2>
+            <p className="text-muted text-sm sm:text-base">
+              All plans include a 14-day trial of our Ndovu capabilities. Select the layout path optimized for your scale targets.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+            
+            {/* Basic Plan */}
+            <div className="bg-card p-8 rounded-2xl border border-border/60 shadow-sm flex flex-col justify-between min-h-[480px]">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Basic Plan</h3>
+                  <p className="text-xs text-muted mt-1">Single shop starters transitioning from paper.</p>
+                </div>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold font-mono text-foreground">KSh 1,490</span>
+                  <span className="text-xs text-muted font-medium"> / month</span>
+                </div>
+                <div className="border-t border-border/60 pt-6 space-y-3">
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-primary shrink-0" /> 1 Business Allocation Limit
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-primary shrink-0" /> Up to 3 Staff Accounts
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-primary shrink-0" /> 300 Products Catalog Limit
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-primary shrink-0" /> Digital Receipts & Cashier Registers
+                  </div>
+                </div>
+              </div>
+              <Link href="/org" className="pt-8 block">
+                <Button variant="outline" size="md" className="w-full">Select Basic</Button>
+              </Link>
+            </div>
+
+            {/* Ndovu Plan (Featured) */}
+            <div className="bg-card p-8 rounded-2xl border-2 border-brand-primary shadow-lift relative flex flex-col justify-between min-h-[520px] lg:-translate-y-4">
+              <div className="absolute top-0 right-8 transform -translate-y-1/2 bg-brand-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                Most Popular
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                    <Store size={18} className="text-brand-primary" /> Ndovu Plan
+                  </h3>
+                  <p className="text-xs text-muted mt-1">Growing SMEs managing multiple retail branches.</p>
+                </div>
+                <div className="pt-2">
+                  <span className="text-4xl font-bold font-mono text-foreground">KSh 3,990</span>
+                  <span className="text-xs text-muted font-medium"> / month</span>
+                </div>
+                <div className="border-t border-brand-primary/20 pt-6 space-y-3">
+                  <div className="flex items-center gap-2.5 text-xs font-medium text-foreground">
+                    <CheckCircle2 size={14} className="text-brand-accent shrink-0" /> Up to 5 Branch Operations
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs font-medium text-foreground">
+                    <CheckCircle2 size={14} className="text-brand-accent shrink-0" /> Unlimited Counter Staff Accounts
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs font-medium text-foreground">
+                    <CheckCircle2 size={14} className="text-brand-accent shrink-0" /> 5,000 Products Catalog Capacity
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs font-medium text-foreground">
+                    <CheckCircle2 size={14} className="text-brand-accent shrink-0" /> Custom Receipt Logs & Branding
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs font-medium text-foreground">
+                    <CheckCircle2 size={14} className="text-brand-accent shrink-0" /> Full Profit & Loss Statements
+                  </div>
+                </div>
+              </div>
+              <Link href="/org" className="pt-8 block">
+                <Button variant="primary" size="lg" className="w-full">Get Started Now</Button>
+              </Link>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="bg-card p-8 rounded-2xl border border-border/60 shadow-sm flex flex-col justify-between min-h-[480px]">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">Enterprise</h3>
+                  <p className="text-xs text-muted mt-1">Complex setups, wholesaling, and large teams.</p>
+                </div>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold font-mono text-foreground">KSh 9,990</span>
+                  <span className="text-xs text-muted font-medium"> + / month</span>
+                </div>
+                <div className="border-t border-border/60 pt-6 space-y-3">
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-secondary shrink-0" /> Unlimited Branch Configurations
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-secondary shrink-0" /> Full M-Pesa Core API Automation
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-secondary shrink-0" /> Advanced Multi-Tenant Audit Trails
+                  </div>
+                  <div className="flex items-center gap-2.5 text-xs text-muted">
+                    <CheckCircle2 size={14} className="text-brand-secondary shrink-0" /> Dedicated Local Account Support
+                  </div>
+                </div>
+              </div>
+              <Link href="mailto:support@tawala.io" className="pt-8 block">
+                <Button variant="outline" size="md" className="w-full">Contact Sales</Button>
+              </Link>
+            </div>
+
+          </div>
+        </section>
+
+        {/* =========================================================
+           SECTION 4: LOCAL TRUST ARCHITECTURE FOOTER
+        ========================================================= */}
+        <footer className="w-full border-t border-border/60 bg-surface/30 py-12 relative z-10">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="space-y-1 text-center sm:text-left">
+              <p className="text-sm font-bold text-foreground">Tawala Platform</p>
+              <p className="text-xs text-muted">Tawala biashara yako. Take control of your business.</p>
+            </div>
+            <p className="text-xs text-muted tabular-nums">
+              &copy; {new Date().getFullYear()} Tawala. All rights reserved.
+            </p>
+          </div>
+        </footer>
+
       </main>
     </>
   );

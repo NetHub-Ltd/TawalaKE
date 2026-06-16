@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { ProductSmartRow } from "@/features/inventory/ProductSmartRow";
+import { Button } from "@/lib/components/ui/Button";
 import {
   Plus,
   PackageSearch,
@@ -12,13 +13,6 @@ import {
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { cn } from "@/lib/utils";
-
-/**
- * @Scribe_Audit
- * Visual Hierarchy: Standardized typography and spacing for clarity.
- * Input Design: Refined search and actions.
- * Integration: Wired ProductSmartRow to optimize presentation layer mechanics.
- */
 
 // Localizing TableHeader for alignment synchronization
 const TableHeaderCell = ({
@@ -30,7 +24,7 @@ const TableHeaderCell = ({
 }) => (
   <th
     className={cn(
-      "px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground select-none",
+      "px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted select-none",
       className,
     )}
   >
@@ -64,9 +58,7 @@ export function InventoryRegistry() {
 
   const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-  // Hooking the presentation layer edit callbacks to mutation parameters
   const handleEditRedirect = (id: string) => {
-    // Navigates directly to the structural edit router canvas
     window.location.href = `/org/${organizationId}/${businessId}/inventory/${id}`;
   };
 
@@ -80,45 +72,28 @@ export function InventoryRegistry() {
   };
 
   return (
-    <main className="flex-1 flex flex-col min-h-0 bg-background font-sans overflow-hidden">
-      {/* Visual Context Header */}
-      <header className="border-b border-border/80 bg-card/95 px-8 py-6 flex items-center justify-between shrink-0 z-20 backdrop-blur-sm">
-
+    <main className="flex-1 flex flex-col min-h-0 font-sans overflow-hidden">
+      
+      {/* Header Panel Surface Container */}
+      <header className="border-b border-border/80 bg-card/95 px-8 py-4 flex items-center justify-between shrink-0 z-20 backdrop-blur-xs">
         <div className="flex items-center gap-4">
-          <div className="relative group">
-            <input
-              type="text"
-              placeholder="Search by Label or SKU identifier..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1); // Reset to page 1 on search
-              }}
-              className="h-11 w-80 bg-card border border-input rounded-lg pl-10 pr-4 text-sm font-medium focus:border-primary focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-            />
-          </div>
-          <Link href={`/org/${organizationId}/${businessId}/stock/audit`}>
-            <button className="h-10 px-5 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-md font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
-              <Plus size={14} strokeWidth={3} /> Audit Stock
-            </button>
-          </Link>
-
-          <Link href={`/org/${organizationId}/${businessId}/stock/restock`}>
-            <button className="h-10 px-5 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-md font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:opacity-90 active:scale-95 transition-all">
-              <Plus size={14} strokeWidth={3} /> New Stock
-            </button>
+          <Link href={`/org/${organizationId}/${businessId}/stock/audit`} passHref legacyBehavior>
+            <Button variant="primary" size="sm">
+              <Plus size={14} strokeWidth={3} className="shrink-0" /> 
+              <span>Audit Stock</span>
+            </Button>
           </Link>
         </div>
       </header>
 
       {/* Main Database Layer */}
       <div className="flex-1 p-8 min-h-0 overflow-hidden flex flex-col">
-        <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="bg-card border border-border rounded-xl shadow-xs overflow-hidden flex flex-col flex-1 min-h-0">
           
-          {/* Scrollable Viewport Wrapper */}
+          {/* Scrollable Viewport Table */}
           <div className="flex-1 overflow-auto min-h-0">
             <table className="w-full border-collapse text-left table-fixed min-w-[800px]">
-              <thead className="bg-muted/50 border-b border-border sticky top-0 z-10 backdrop-blur-sm">
+              <thead className="bg-background/40 border-b border-border sticky top-0 z-10 backdrop-blur-xs">
                 <tr>
                   <TableHeaderCell className="min-w-[300px]">
                     Product Details
@@ -141,20 +116,19 @@ export function InventoryRegistry() {
                   <tr>
                     <td
                       colSpan={4}
-                      className="px-6 py-24 text-center text-muted-foreground"
+                      className="px-6 py-24 text-center text-muted"
                     >
-                      <PackageSearch size={48} className="mx-auto mb-6 opacity-30 text-primary" strokeWidth={1} />
-                      <p className="text-base font-semibold tracking-tight">
+                      <PackageSearch size={48} className="mx-auto mb-4 opacity-30 text-brand-primary" strokeWidth={1} />
+                      <h3 className="uppercase tracking-tight text-foreground font-bold">
                         No Database Records Found
-                      </p>
-                      <p className="text-sm font-medium text-muted-foreground/80 mt-1.5">
-                        Adjust your search parameters or register a new asset.
+                      </h3>
+                      <p className="text-muted mt-1 text-xs">
+                        Adjust your search parameters or register a new asset entry.
                       </p>
                     </td>
                   </tr>
                 ) : (
                   paginatedItems.map((product) => (
-                    // Injected high-performance presentation component mapping response schemas cleanly
                     <ProductSmartRow
                       key={product.id}
                       product={product}
@@ -167,42 +141,47 @@ export function InventoryRegistry() {
             </table>
           </div>
 
-          {/* Database Footer: Control Interface */}
-          <footer className="border-t border-border bg-muted/20 px-6 py-4 flex items-center justify-between shrink-0">
-            <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+          {/* Table Footer Navigation Panel */}
+          <footer className="border-t border-border bg-background/30 px-6 py-4 flex items-center justify-between shrink-0">
+            <span className="text-xs font-medium text-muted tabular-nums">
               Showing{" "}
-              <span className="text-foreground">
+              <span className="text-foreground font-bold">
                 {paginatedItems.length}
               </span>{" "}
               of{" "}
-              <span className="text-foreground">
+              <span className="text-foreground font-bold">
                 {filteredItems.length.toLocaleString()}
               </span>{" "}
               database records
             </span>
-            <div className="flex items-center gap-3">
-              <div className="text-xs font-bold tracking-tight text-foreground/80 tabular-nums">
+            
+            <div className="flex items-center gap-4">
+              <div className="text-xs font-bold tracking-tight text-foreground tabular-nums">
                 Page {currentPage} of {totalPages || 1}
               </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={currentPage === 1 || totalPages === 0}
                   onClick={() => setCurrentPage((p) => p - 1)}
-                  className="h-9 w-9 rounded-lg border border-input bg-card flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40 transition-all hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="w-10 !px-0"
                   aria-label="Previous Page"
                 >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  type="button"
+                  <ChevronLeft size={16} />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
                   disabled={currentPage === totalPages || totalPages === 0}
                   onClick={() => setCurrentPage((p) => p + 1)}
-                  className="h-9 w-9 rounded-lg border border-input bg-card flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-40 transition-all hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="w-10 !px-0"
                   aria-label="Next Page"
                 >
-                  <ChevronRight size={18} />
-                </button>
+                  <ChevronRight size={16} />
+                </Button>
               </div>
             </div>
           </footer>
@@ -220,14 +199,14 @@ function SkeletonRows() {
           <td colSpan={4} className="px-6 py-4 h-[68px] border-b border-border/70 align-middle">
             <div className="flex items-center justify-between">
               <div className="flex-1 space-y-2">
-                <div className="h-4 bg-muted rounded-sm w-1/3" />
-                <div className="h-3 bg-muted rounded-sm w-1/5" />
+                <div className="h-4 bg-muted/20 rounded-xs w-1/3" />
+                <div className="h-3 bg-muted/20 rounded-xs w-1/5" />
               </div>
-              <div className="h-4 bg-muted rounded-sm w-[100px] mr-12" />
-              <div className="h-6 bg-muted rounded-md w-[80px] mr-12" />
+              <div className="h-4 bg-muted/20 rounded-xs w-[100px] mr-12" />
+              <div className="h-6 bg-muted/20 rounded-xs w-[80px] mr-12" />
               <div className="flex gap-2">
-                <div className="h-9 w-9 bg-muted rounded-xl" />
-                <div className="h-9 w-9 bg-muted rounded-xl" />
+                <div className="h-10 w-10 bg-muted/20 rounded-xl" />
+                <div className="h-10 w-10 bg-muted/20 rounded-xl" />
               </div>
             </div>
           </td>
