@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: data.message }, { status: res.status });
   }
 
-  console.log(`products for: ${business_id}`, data)
+  // console.log(`products for: ${business_id}`, data)
   return NextResponse.json(data.data, { status: res.status });
 }
 
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  console.log("Creating a product with body:", body); // Debug log
+  // console.log("Creating a product with body:", body); // Debug log
   const res = await fetch(`${API_BASE}/products/register`, {
     method: "POST",
     headers: {
