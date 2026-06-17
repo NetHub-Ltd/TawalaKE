@@ -99,7 +99,7 @@ class ProductBase(BaseModel):
     label: str
     selling_price: float
     track_stock: bool = True
-    last_stock_take: Optional[datetime.datetime] = None
+    last_stock_take: Optional[datetime] = None
     stock: float
     category: Optional[str] = "General"
     attributes: BaseAttributes = Field(default_factory=BaseAttributes)
