@@ -6,6 +6,8 @@
 // import { useProducts } from "@/features/business/hooks/useProducts";
 // import { Loader2, AlertCircle, Package } from "lucide-react";
 // import { ProductResponse } from "@/lib/api/generated/models";
+// import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+// import Link from "next/link";
 
 // interface AuditWorkspaceProps {
 //   businessId: string;
@@ -13,11 +15,10 @@
 
 // export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) => {
 //   const queryClient = useQueryClient();
+//   const {organizationId} = useBusinessContext()
   
-//   // 1. Read standard data collection matching your TanStack core custom hook definition
-//   const { products = [], isLoading, isError} = useProducts(businessId);
+//   const { products = [], isLoading, isError } = useProducts(businessId);
 
-//   // 2. Safe cache mutation callback for real-time row-level visual persistence matching
 //   const handleRowSave = async (payload: {
 //     product_id: string;
 //     business_id: string;
@@ -41,7 +42,6 @@
 //     const responseData = await res.json();
 //     console.log("📋 [Backend Response] -> POST /api/v1/business/stock/audit", responseData);
 
-//     // 3. 🔑 Direct Type-Safe TanStack Query Cache Mutation Wrapper
 //     queryClient.setQueryData(["products", businessId], (oldCacheData: any) => {
 //       if (!oldCacheData) return oldCacheData;
 
@@ -50,7 +50,6 @@
 //           p.id === payload.product_id ? { ...p, stock: payload.quantity } : p
 //         );
 
-//       // Handle structural variations dynamically based on your request payload shapes safely
 //       if (Array.isArray(oldCacheData)) {
 //         return updateList(oldCacheData);
 //       }
@@ -65,73 +64,78 @@
 //     });
 //   };
 
-//   // 4. Structural Loading Layout Layer
 //   if (isLoading) {
 //     return (
-//       <div className="w-full flex flex-col items-center justify-center min-h-[400px] gap-3">
+//       <div className="w-full flex flex-col items-center justify-center min-h-[400px] gap-4">
 //         <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
-//         <p className="text-[10px] font-black uppercase tracking-widest text-muted">
+//         <p className="font-bold uppercase tracking-widest text-muted">
 //           Loading Workspace Ledger Data...
 //         </p>
 //       </div>
 //     );
 //   }
 
-//   // 5. Boundary System Level Error Framework Definition
 //   if (isError) {
-//     // const errorMessage = isError instanceof Error ? isError.message : String(isError);
 //     return (
-//       <div className="w-full max-w-xl mx-auto my-12 p-6 bg-card rounded-[2rem] border border-border/40 shadow-lift flex flex-col items-center text-center gap-4">
+//       <div className="w-full max-w-xl mx-auto my-12 p-8 bg-card rounded-2xl border border-border/40 shadow-sm flex flex-col items-center text-center gap-4">
 //         <div className="h-14 w-14 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center border border-brand-primary/20">
 //           <AlertCircle size={24} />
 //         </div>
-//         <div className="space-y-1">
-//           <h2 className="text-sm font-black uppercase tracking-tight text-foreground">
+//         <div className="space-y-2">
+//           <h3 className="uppercase tracking-tight text-foreground font-bold">
 //             Data Load Execution Failure
-//           </h2>
-//           <p className="text-muted text-xs font-bold max-w-sm">
-//             Failed to assemble the interactive audit worksheet framework context
+//           </h3>
+//           <p className="text-muted font-medium max-w-sm">
+//             Failed to assemble the interactive audit worksheet framework context.
 //           </p>
 //         </div>
 //       </div>
 //     );
 //   }
 
-//   // 6. Filter matrix profiles to ensure non-stock-tracked profiles don't populate stocktake sheets
 //   const physicalItemsOnly = (products as ProductResponse[]).filter(
 //     (product) => product.track_stock !== false
 //   );
 
 //   return (
-//     <div className="w-full max-w-6xl mx-auto space-y-6">
-//       <header className="flex flex-col gap-1">
-//         <h1 className="text-h2 font-black uppercase tracking-tight">
-//           Physical Stocktake Reconciliation
-//         </h1>
-//         <p className="text-xs font-bold text-muted uppercase tracking-wider">
-//           Perform real-time warehouse count overrides. System variances enforce strict compliance trail fields.
+//     // Canvas Frame: Structured wrapper establishes layout isolation over your body's gradient
+//     <div className="w-full max-w-6xl mx-auto p-6 md:p-8 rounded-2xl bg-surface/30 border border-border/20 backdrop-blur-xs space-y-8">
+      
+//       {/* Guiding Action Header Block */}
+//       <header className="flex flex-col gap-2 max-w-3xl">
+//         <h2 className="uppercase tracking-tight font-black text-foreground">
+//           Inventory Discrepancy & Stock Audit
+//         </h2>
+//         <p className="font-medium text-muted">
+//           Compare actual physical shelf counts against system bookkeeping balances below. 
+//           Updating a value corrects live catalog visibility instantly. Any count causing a status 
+//           variance requires a clear compliance reason code and verification note before changes can be saved.
 //         </p>
+
+//         <Link href={`/org/${organizationId}/${businessId}/stock/restock`} passHref legacyBehavior>
+//              <span>New Stock</span>
+//           </Link>
 //       </header>
 
-//       {/* Advanced Ledger Matrix Data Board Wrapper */}
-//       <div className="bg-card border border-border/40 rounded-[2rem] shadow-lift overflow-hidden">
+//       {/* Main Grid Ledger Container - Grounded flat shadow structure */}
+//       <div className="bg-card border border-border/60 rounded-xl shadow-sm overflow-hidden">
         
 //         {/* Table Column Identification Ribbon Header */}
-//         <div className="hidden md:flex items-center px-6 py-4 bg-surface/50 border-b border-border/40 text-[10px] font-black uppercase tracking-widest text-muted">
-//           <div className="flex-1 min-w-[250px]">Product Specification Attributes</div>
-//           <div className="w-28">Book Stock</div>
-//           <div className="w-32">Physical Count</div>
-//           <div className="w-36">Calculated Delta</div>
-//           <div className="w-24 text-right">Commit</div>
+//         <div className="hidden md:flex items-center px-6 py-4 bg-background/60 border-b border-border/60 font-bold uppercase tracking-widest text-muted">
+//           <div className="flex-1 md:min-w-[250px]">Tracked Asset Details</div>
+//           <div className="md:w-32">Book Balance</div>
+//           <div className="md:w-36">Physical Count</div>
+//           <div className="md:w-36">Live Discrepancy</div>
+//           <div className="md:w-28 text-right">Actions</div>
 //         </div>
 
 //         {/* Data Layer Iteration Processing View */}
-//         <div className="divide-y divide-border/20">
+//         <div className="divide-y divide-border/30 bg-card">
 //           {physicalItemsOnly.length === 0 ? (
-//             <div className="h-[40vh] flex flex-col items-center justify-center text-muted p-6">
-//               <Package size={40} className="mb-3 opacity-60 text-muted" />
-//               <p className="font-black uppercase text-[10px] tracking-widest">
-//                 No Tracked Items Available
+//             <div className="min-h-[30vh] flex flex-col items-center justify-center text-muted p-6 gap-3">
+//               <Package size={36} className="opacity-30 text-muted" />
+//               <p className="font-bold uppercase tracking-widest">
+//                 No stock-tracked items found in this store registry
 //               </p>
 //             </div>
 //           ) : (
@@ -156,8 +160,10 @@ import React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { AuditTableRow } from "@/features/inventory/AuditTableRow";
 import { useProducts } from "@/features/business/hooks/useProducts";
-import { Loader2, AlertCircle, Package } from "lucide-react";
+import { Loader2, AlertCircle, Package, Plus } from "lucide-react";
 import { ProductResponse } from "@/lib/api/generated/models";
+import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+import Link from "next/link";
 
 interface AuditWorkspaceProps {
   businessId: string;
@@ -165,6 +171,7 @@ interface AuditWorkspaceProps {
 
 export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) => {
   const queryClient = useQueryClient();
+  const { organizationId } = useBusinessContext();
   
   const { products = [], isLoading, isError } = useProducts(businessId);
 
@@ -185,11 +192,11 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
 
     if (!res.ok) {
       const errorData = await res.json();
-      throw new Error(errorData?.detail || "Network engine returned an error persisting stock audit updates.");
+      throw new Error(errorData?.detail || "Failed to update stock records.");
     }
 
     const responseData = await res.json();
-    console.log("📋 [Backend Response] -> POST /api/v1/business/stock/audit", responseData);
+    console.log("📋 [Stock Adjusted] ->", responseData);
 
     queryClient.setQueryData(["products", businessId], (oldCacheData: any) => {
       if (!oldCacheData) return oldCacheData;
@@ -215,10 +222,10 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
 
   if (isLoading) {
     return (
-      <div className="w-full flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <div className="fixed inset-0 w-full h-full flex flex-col items-center justify-center bg-background/50 gap-4">
         <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
-        <p className="font-bold uppercase tracking-widest text-muted">
-          Loading Workspace Ledger Data...
+        <p className="font-bold uppercase tracking-wider text-muted text-xs">
+          Loading Stock Records...
         </p>
       </div>
     );
@@ -226,16 +233,16 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
 
   if (isError) {
     return (
-      <div className="w-full max-w-xl mx-auto my-12 p-8 bg-card rounded-2xl border border-border/40 shadow-sm flex flex-col items-center text-center gap-4">
+      <div className="w-full max-w-xl mx-auto  p-4 bg-card rounded-2xl border border-border/40 shadow-sm flex flex-col items-center text-center gap-4">
         <div className="h-14 w-14 bg-brand-primary/10 text-brand-primary rounded-full flex items-center justify-center border border-brand-primary/20">
           <AlertCircle size={24} />
         </div>
         <div className="space-y-2">
-          <h3 className="uppercase tracking-tight text-foreground font-bold">
-            Data Load Execution Failure
+          <h3 className="uppercase tracking-tight text-foreground font-bold text-sm">
+            Failed to Load Stock Data
           </h3>
-          <p className="text-muted font-medium max-w-sm">
-            Failed to assemble the interactive audit worksheet framework context.
+          <p className="text-muted font-medium max-w-sm text-xs">
+            Could not open the stock take sheet. Please check your connection and try again.
           </p>
         </div>
       </div>
@@ -247,40 +254,52 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
   );
 
   return (
-    // Canvas Frame: Structured wrapper establishes layout isolation over your body's gradient
-    <div className="w-full max-w-6xl mx-auto p-6 md:p-8 rounded-2xl bg-surface/30 border border-border/20 backdrop-blur-xs space-y-8">
+    /* PARENT CONTAINER LOCK: Forces maximum page bounds, freezing header layout positions completely */
+    <div className="w-full mx-auto px-4 p-4 flex flex-col h-screen max-h-screen overflow-hidden">
       
-      {/* Guiding Action Header Block */}
-      <header className="flex flex-col gap-2 max-w-3xl">
-        <h2 className="uppercase tracking-tight font-black text-foreground">
-          Inventory Discrepancy & Stock Audit
-        </h2>
-        <p className="font-medium text-muted">
-          Compare actual physical shelf counts against system bookkeeping balances below. 
-          Updating a value corrects live catalog visibility instantly. Any count causing a status 
-          variance requires a clear compliance reason code and verification note before changes can be saved.
-        </p>
+      {/* 1. Static Header Information Area */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 shrink-0 border-b border-border/40">
+        <div className="space-y-1 max-w-3xl">
+          <h2 className="text-sm font-black uppercase tracking-wider text-foreground">
+            Stock Take & Adjustments
+          </h2>
+          <p className="text-muted leading-relaxed">
+            Count what is physically on your shelves and match it with the system count below. 
+            Saving a change updates your store stock numbers immediately. 
+            If counts do not match, you must select a reason code before saving.
+          </p>
+        </div>
+
+        {/* Highlighted, Business-Friendly Link Action Button */}
+        <div className="shrink-0 flex items-center">
+          <Link href={`/org/${organizationId}/${businessId}/stock/restock`} passHref legacyBehavior>
+            <button className="inline-flex items-center gap-2 px-4 h-9 bg-brand-secondary text-background hover:scale-[1.01] active:scale-100 rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer">
+              <Plus size={14} strokeWidth={3} className="shrink-0" />
+              <span>Add New Stock</span>
+            </button>
+          </Link>
+        </div>
       </header>
 
-      {/* Main Grid Ledger Container - Grounded flat shadow structure */}
-      <div className="bg-card border border-border/60 rounded-xl shadow-sm overflow-hidden">
+      {/* 2. Frozen Table Framework: Consumes exactly the rest of the window view area */}
+      <div className="flex-1 min-h-0 my-6 bg-card border border-border/60 rounded-xl shadow-xs flex flex-col overflow-hidden">
         
-        {/* Table Column Identification Ribbon Header */}
-        <div className="hidden md:flex items-center px-6 py-4 bg-background/60 border-b border-border/60 font-bold uppercase tracking-widest text-muted">
-          <div className="flex-1 md:min-w-[250px]">Tracked Asset Details</div>
-          <div className="md:w-32">Book Balance</div>
-          <div className="md:w-36">Physical Count</div>
-          <div className="md:w-36">Live Discrepancy</div>
+        {/* 3. Static Column Ribbons: Never scrolls or shifts out of view */}
+        <div className="flex items-center px-6 py-4 bg-background border-b border-border/60 font-bold uppercase tracking-widest text-[10px] text-muted shrink-0 select-none z-10">
+          <div className="flex-1 md:min-w-[250px]">Product Details</div>
+          <div className="md:w-32">System Count</div>
+          <div className="md:w-36">Actual Count (On-Shelf)</div>
+          <div className="md:w-36">Difference</div>
           <div className="md:w-28 text-right">Actions</div>
         </div>
 
-        {/* Data Layer Iteration Processing View */}
-        <div className="divide-y divide-border/30 bg-card">
+        {/* 4. Mapped Row Node Feed Layer: The only fluid viewport context area permitted to scroll */}
+        <div className="flex-1 overflow-y-auto scroll-smooth divide-y divide-border/30 bg-card">
           {physicalItemsOnly.length === 0 ? (
-            <div className="min-h-[30vh] flex flex-col items-center justify-center text-muted p-6 gap-3">
-              <Package size={36} className="opacity-30 text-muted" />
-              <p className="font-bold uppercase tracking-widest">
-                No stock-tracked items found in this store registry
+            <div className="h-full w-full flex flex-col items-center justify-center text-muted p-6 gap-3">
+              <Package size={36} className="opacity-30 text-muted" strokeWidth={1.5} />
+              <p className="font-bold text-xs uppercase tracking-widest text-center">
+                No stock-tracked products found in your store.
               </p>
             </div>
           ) : (

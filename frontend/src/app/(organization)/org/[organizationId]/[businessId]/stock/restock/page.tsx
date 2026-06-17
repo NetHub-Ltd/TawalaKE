@@ -1,7 +1,8 @@
-import RestockForm from '@/features/stock/RestockForm';
+// src/app/products/[id]/restock/page.tsx
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { RestockFormWrapper } from '@/features/stock/RestockFormWrapper';
 
 export const metadata: Metadata = {
   title: 'Receive New Stock | Inventory System',
@@ -9,43 +10,84 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://tawala.nethub.co.ke/products/restock' }
 };
 
-
 interface PageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ businessId: string, organizationId: string }>;
 }
 
 export default async function RestockPage({ params }: PageProps) {
-  const { id } = await params;
+  const { businessId, organizationId } = await params;
   
-  // Simulated Product State Fetch representing live master state
-  const mockProduct = {
-    id: id,
-    label: "Premium Wireless Headphones",
-    currentStock: 42.0,
-    currentBuyingPrice: 12.50,
-    currentSellingPrice: 24.99
+  // 1. Structuring the payload context to match the ProductResponse contract explicitly
+  // const mockProduct: ProductResponse = {
+  //   id: id,
+  //   label: "Premium Wireless Headphones",
+  //   selling_price: 24.99,
+  //   track_stock: true,
+  //   stock: 42.0,
+  //   active: true,
+  //   category: "Electronics",
+  //   attributes: {
+  //     unit_of_measure: "Units",
+  //     buying_price: 12.50,
+  //     sku: "PRM-WRLS-HD-01"
+  //   }
+  // };
+
+  // const businessId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
+
+  // 2. Automated Structured Data Schema Injection for Crawler Indexing Engine Optimization
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Products",
+        "item": `https://tawala.nethub.co.ke/products`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": "Restock",
+        "item": `https://tawala.nethub.co.ke/org/${organizationId}/${businessId}/stock/restock`
+      }
+    ]
   };
 
   return (
-    <main id="main-content" className="min-h-screen bg-slate-50 p-4 sm:p-8 dark:bg-slate-900 dark:text-slate-100">
-      <div className="max-w-4xl mx-auto">
-        <nav className="mb-6">
-          <Link href={`/products/${id}`} className="text-sm font-medium text-slate-500 hover:text-slate-800 inline-flex items-center gap-1.5 dark:text-slate-400 dark:hover:text-slate-200">
-            <ArrowLeft className="w-4 h-4" /> Back to Product
-          </Link>
-        </nav>
+    <>
+      {/* Structural Inject for Search Spiders */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
-        <header className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dark:text-white">
-            Receive New Inventory
-          </h1>
-          <p className="text-sm text-slate-500 mt-1 dark:text-slate-400">
-            Target Item: <span className="font-semibold text-slate-800 dark:text-slate-200">{mockProduct.label}</span>
-          </p>
-        </header>
+      <main id="main-content" className="min-h-screen bg-slate-50 p-4 sm:p-8 dark:bg-slate-900 dark:text-slate-100 antialiased selection:bg-brand-primary/20">
+        <div className="w-full mx-auto">
+          
+          {/* Navigation Controls Context */}
+          <nav className="mb-6" aria-label="Back Navigation Links Path">
+            <Link 
+              href={`/org/${organizationId}/${businessId}/inventory`} 
+              className="text-sm font-medium text-slate-500 hover:text-slate-800 inline-flex items-center gap-1.5 dark:text-slate-400 dark:hover:text-slate-200 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary/40 rounded px-1.5 py-1 min-h-[44px]"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back to Product
+            </Link>
+          </nav>
 
-        <RestockForm product={mockProduct} />
-      </div>
-    </main>
+          {/* Semantic Top-Level Heading Hierarchy Structure */}
+          <header className="mb-8">
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dark:text-white uppercase">
+              Receive New Inventory
+            </h1>
+            
+          </header>
+
+          {/* Render the interactive Client form wrapper holding hook states */}
+          <RestockFormWrapper businessId={businessId} />
+        </div>
+      </main>
+    </>
   );
 }

@@ -14,7 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         {children}
         <Toaster
-          position="top-center"
+          position="top-right"
           richColors
           closeButton
           theme="light" // Or 'dark' based on your preference
