@@ -83,6 +83,14 @@ export function InventoryRegistry() {
               <span>Audit Stock</span>
             </Button>
           </Link>
+
+
+          <Link href={`/org/${organizationId}/${businessId}/stock/restock`} passHref legacyBehavior>
+            <Button variant="primary" size="sm">
+              <Plus size={14} strokeWidth={3} className="shrink-0" /> 
+              <span>New Stock</span>
+            </Button>
+          </Link>
         </div>
       </header>
 

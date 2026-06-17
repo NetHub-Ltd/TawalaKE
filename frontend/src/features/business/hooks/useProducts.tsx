@@ -77,5 +77,6 @@ export function useProducts(businessId: string, productId?: string) {
     createProduct,
     updateProduct,
     deleteProduct,
+    queryClient, // <-- Return this to allow ad-hoc invalidation controls downstream
   };
 }
