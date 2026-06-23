@@ -3,7 +3,7 @@
 
 // import React from "react";
 // import { useForm } from "react-hook-form";
-// import {useBusinessContext} from "@/features/business/hooks/useBusiness"
+// import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
 // import { 
 //   Plus, 
@@ -18,8 +18,15 @@
 // import { cn } from "@/lib/utils";
 
 // const CATEGORY_PRESETS = [
-//   "General", "Apparel & Clothing", "Beverages", "Electronics", 
-//   "Food & Groceries", "Hardware & Tools", "Health & Beauty", "Home Goods", "Services"
+//   "General",
+//   "Beverages & Drinks",
+//   "Food & Groceries",
+//   "Apparel & Clothing",
+//   "Electronics & Tech",
+//   "Hardware & Spares",
+//   "Health & Beauty",
+//   "Home & Kitchen Essentials",
+//   "Services & Subscriptions"
 // ];
 
 // const UNIT_PRESETS = [
@@ -32,6 +39,7 @@
 // ];
 
 // export interface AssetFormValues {
+//   business_id?: string;
 //   label: string;
 //   selling_price: number;
 //   stock: number;
@@ -56,6 +64,8 @@
 //   isPending = false,
 //   submitButtonText = "Save Product"
 // }: AssetComposerProps) {
+//   // 1. Pull the global context dynamically
+//   const { businessId } = useBusinessContext();
   
 //   const {
 //     register,
@@ -77,9 +87,28 @@
 //   });
 
 //   const handleFormSubmit = (data: AssetFormValues) => {
-//     // Pass the standard React Hook Form reset handle function upstream
-//     data.business_id = ""
-//     onSubmit(data, () => reset());
+//     // 2. Generate custom automated SKU format: TWL-AUTO + 8-char string chunk + Epoch timestamp
+//     const businessIdString = Array.isArray(businessId) ? businessId[0] : businessId;
+//     const businessChunk = businessIdString ? businessIdString.replace(/-/g, "").slice(0, 8).toUpperCase() : "UNKNOWN";
+//     const computedSku = data.attributes.sku?.trim() !== "" 
+//       ? data.attributes.sku.trim() 
+//       : `TWL-AUTO-${businessChunk}-${Date.now()}`;
+
+//     // 3. Compose exact JSON data tree matching destination payload schema requirements explicitly
+//     const structuredPayload: AssetFormValues = {
+//       business_id: businessIdString || "",
+//       label: data.label.trim(),
+//       selling_price: Number(data.selling_price) || 0,
+//       stock: 0, // Enforced zero baseline rule protection
+//       category: data.category,
+//       attributes: {
+//         unit_of_measure: data.attributes.unit_of_measure,
+//         buying_price: Number(data.attributes.buying_price) || 0,
+//         sku: computedSku
+//       }
+//     };
+
+//     onSubmit(structuredPayload, () => reset());
 //   };
 
 //   return (
@@ -281,12 +310,417 @@
 //   );
 // }
 
-// src/features/inventory/AssetComposer.tsx
+// "use client";
+
+// import React from "react";
+// import { useForm } from "react-hook-form";
+// import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+// import { Button } from "@/lib/components/ui/Button";
+
+// import { 
+//   Plus, 
+//   Layers, 
+//   DollarSign, 
+//   Tag, 
+//   Barcode,
+//   Package,
+//   Loader2,
+//   ChevronDown
+// } from "lucide-react";
+// import { cn } from "@/lib/utils";
+
+// export interface CategoryPresetItem {
+//   id: string;
+//   label: string;
+//   industryGroup: 'Retail & Minimart' | 'Pharmacy & Agrovet' | 'Hardware & Electronics' | 'Apparel, Beauty & Branding' | 'Food & Hospitality' | 'Services & General';
+// }
+
+// export const CATEGORY_PRESETS: CategoryPresetItem[] = [
+//   // == Retail, Minimarts & Wholesalers ==
+//   { id: "beverages", label: "Beverages & Drinks", industryGroup: "Retail & Minimart" },
+//   { id: "packaged_foods", label: "Packaged Foods & Groceries", industryGroup: "Retail & Minimart" },
+//   { id: "fresh_produce", label: "Fresh Produce & Grains", industryGroup: "Retail & Minimart" },
+//   { id: "bakery_confectionery", label: "Bakery & Confectionery", industryGroup: "Retail & Minimart" },
+//   { id: "household_cleaning", label: "Household Cleaning & Detergents", industryGroup: "Retail & Minimart" },
+//   { id: "personal_care", label: "Personal Toiletries & Care", industryGroup: "Retail & Minimart" },
+
+//   // == Pharmacies & Agrovets ==
+//   { id: "prescription_meds", label: "Prescription Medications (POM)", industryGroup: "Pharmacy & Agrovet" },
+//   { id: "otc_meds", label: "Over-The-Counter (OTC) Drugs", industryGroup: "Pharmacy & Agrovet" },
+//   { id: "medical_supplies", label: "Medical Supplies & First Aid", industryGroup: "Pharmacy & Agrovet" },
+//   { id: "supplements_vitamins", label: "Supplements & Vitamins", industryGroup: "Pharmacy & Agrovet" },
+//   { id: "animal_feed", label: "Animal Feeds & Nutrition", industryGroup: "Pharmacy & Agrovet" },
+//   { id: "crop_protection", label: "Agrochemicals & Crop Protection", industryGroup: "Pharmacy & Agrovet" },
+//   { id: "veterinary_meds", label: "Veterinary Drugs & Care", industryGroup: "Pharmacy & Agrovet" },
+
+//   // == Hardwares & Electronics ==
+//   { id: "construction_materials", label: "Cement, Sand & Materials", industryGroup: "Hardware & Electronics" },
+//   { id: "plumbing_fixtures", label: "Plumbing Pipes & Fixtures", industryGroup: "Hardware & Electronics" },
+//   { id: "electrical_wiring", label: "Electrical Fittings & Cables", industryGroup: "Hardware & Electronics" },
+//   { id: "hand_power_tools", label: "Hand & Power Tools", industryGroup: "Hardware & Electronics" },
+//   { id: "paints_coatings", label: "Paints, Thinners & Coatings", industryGroup: "Hardware & Electronics" },
+//   { id: "fasteners_hardware", label: "Nails, Screws & Fasteners", industryGroup: "Hardware & Electronics" },
+//   { id: "phones_accessories", label: "Mobile Phones & Accessories", industryGroup: "Hardware & Electronics" },
+
+//   // == Apparel, Beauty & Branding (Clean Target Verticals) ==
+//   { id: "clothing_apparel", label: "Clothing & Apparel", industryGroup: "Apparel, Beauty & Branding" },
+//   { id: "footwear", label: "Footwear & Shoes", industryGroup: "Apparel, Beauty & Branding" },
+//   { id: "dtf_printing_branding", label: "DTF Printing & Branding Supplies", industryGroup: "Apparel, Beauty & Branding" },
+//   { id: "barber_salon_services", label: "Barbershop & Beauty Salon Items", industryGroup: "Apparel, Beauty & Branding" },
+//   { id: "cosmetics_makeup", label: "Cosmetics & Makeup Products", industryGroup: "Apparel, Beauty & Branding" },
+
+//   // == Restaurants & Food Hospitality ==
+//   { id: "cooked_meals", label: "Prepared Food & Hot Meals", industryGroup: "Food & Hospitality" },
+//   { id: "fast_food_snacks", label: "Fast Foods & Snacks", industryGroup: "Food & Hospitality" },
+//   { id: "cooking_ingredients", label: "Bulk Cooking Oils & Spices", industryGroup: "Food & Hospitality" },
+
+//   // == Services & Subscriptions ==
+//   { id: "professional_services", label: "Billable Labor & Services", industryGroup: "Services & General" },
+//   { id: "digital_goods", label: "Airtime, Tokens & Digital Products", industryGroup: "Services & General" },
+//   { id: "other_category", label: "Other / Unlisted Industry Category", industryGroup: "Services & General" }
+// ];
+
+// export interface UnitPresetItem {
+//   value: string;
+//   label: string;
+//   category: 'Count' | 'Weight' | 'Volume' | 'Packaging & Wholesale' | 'Measurement' | 'Other';
+// }
+
+// export const UNIT_PRESETS: UnitPresetItem[] = [
+//   // == Discrete Item Counting Units ==
+//   { value: "pcs", label: "Pieces (PCS)", category: "Count" },
+//   { value: "pair", label: "Pairs (PR)", category: "Count" },
+//   { value: "set", label: "Sets (SET)", category: "Count" },
+//   { value: "strip", label: "Strips (STP)", category: "Count" },
+//   { value: "unit", label: "Individual Units (UNT)", category: "Count" },
+
+//   // == Weight Measurement Units ==
+//   { value: "kg", label: "Kilograms (KG)", category: "Weight" },
+//   { value: "g", label: "Grams (G)", category: "Weight" },
+//   { value: "ton", label: "Metric Tons (TON)", category: "Weight" },
+
+//   // == Fluid and Liquid Volume Units ==
+//   { value: "l", label: "Liters (L)", category: "Volume" },
+//   { value: "ml", label: "Milliliters (ML)", category: "Volume" },
+
+//   // == Industrial / Construction Specific Measurements ==
+//   { value: "m", label: "Meters (M)", category: "Measurement" },
+//   { value: "ft", label: "Feet (FT)", category: "Measurement" },
+//   { value: "sqm", label: "Square Meters (SQM)", category: "Measurement" },
+
+//   // == Bulk Logistics / Storage Packaging Units ==
+//   { value: "box", label: "Boxes (BOX)", category: "Packaging & Wholesale" },
+//   { value: "pack", label: "Packs (PCK)", category: "Packaging & Wholesale" },
+//   { value: "carton", label: "Cartons (CTN)", category: "Packaging & Wholesale" },
+//   { value: "crate", label: "Crates (CRT)", category: "Packaging & Wholesale" },
+//   { value: "bale", label: "Bales (BAL)", category: "Packaging & Wholesale" },
+//   { value: "bag_sack", label: "Bags / Sacks (BAG)", category: "Packaging & Wholesale" },
+//   { value: "roll", label: "Rolls (ROL)", category: "Packaging & Wholesale" },
+//   { value: "dozen", label: "Dozens (DZN)", category: "Packaging & Wholesale" },
+
+//   // == Fallback ==
+//   { value: "other", label: "Other Unit Measure", category: "Other" }
+// ];
+// export interface AssetFormValues {
+//   business_id?: string;
+//   label: string;
+//   selling_price: number;
+//   stock: number;
+//   category: string;
+//   attributes: {
+//     unit_of_measure: string;
+//     buying_price: number;
+//     sku: string;
+//   };
+// }
+
+// interface AssetComposerProps {
+//   onSubmit: (data: AssetFormValues, resetForm: () => void) => void;
+//   onCancel: () => void;
+//   isPending?: boolean;
+//   submitButtonText?: string;
+// }
+
+// export function AssetComposer({ 
+//   onSubmit, 
+//   onCancel, 
+//   isPending = false,
+//   submitButtonText = "Save Product"
+// }: AssetComposerProps) {
+//   // 1. Pull the global context dynamically
+//   const { businessId } = useBusinessContext();
+  
+//   const {
+//     register,
+//     handleSubmit,
+//     reset,
+//     formState: { errors },
+//   } = useForm<AssetFormValues>({
+//     defaultValues: {
+//       label: "",
+//       selling_price: 0,
+//       stock: 0,
+//       category: "general_inventory",
+//       attributes: {
+//         unit_of_measure: "pcs",
+//         buying_price: 0,
+//         sku: "",
+//       },
+//     }
+//   });
+
+//   const handleFormSubmit = (data: AssetFormValues) => {
+//     // 2. Generate custom automated SKU format: TWL-AUTO + 8-char string chunk + Epoch timestamp
+//     const businessIdString = Array.isArray(businessId) ? businessId[0] : businessId;
+//     const businessChunk = businessIdString ? businessIdString.replace(/-/g, "").slice(0, 8).toUpperCase() : "UNKNOWN";
+//     const computedSku = data.attributes.sku?.trim() !== "" 
+//       ? data.attributes.sku.trim() 
+//       : `TWL-AUTO-${businessChunk}-${Date.now()}`;
+
+//     // 3. Compose exact JSON data tree matching destination payload schema requirements explicitly
+//     const structuredPayload: AssetFormValues = {
+//       business_id: businessIdString || "",
+//       label: data.label.trim(),
+//       selling_price: Number(data.selling_price) || 0,
+//       stock: 0, // Enforced zero baseline rule protection
+//       category: data.category,
+//       attributes: {
+//         unit_of_measure: data.attributes.unit_of_measure,
+//         buying_price: Number(data.attributes.buying_price) || 0,
+//         sku: computedSku
+//       }
+//     };
+
+//     onSubmit(structuredPayload, () => reset());
+//   };
+
+//   // Group Category Presets dynamically for <optgroup> parsing
+//   const industryGroups = Array.from(new Set(CATEGORY_PRESETS.map(c => c.industryGroup)));
+  
+//   // Group Unit Presets dynamically for <optgroup> parsing
+//   const unitCategories = Array.from(new Set(UNIT_PRESETS.map(u => u.category)));
+
+//   return (
+//     <form 
+//       onSubmit={handleSubmit(handleFormSubmit)} 
+//       className="w-full bg-card border border-border/40 rounded-xl shadow-xs overflow-hidden flex flex-col"
+//     >
+//       <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+//         {/* LEFT COLUMN */}
+//         <div className="space-y-6">
+//           <div className="flex items-center gap-2 pb-3 border-b border-border/30">
+//             <Package size={16} className="text-brand-secondary" />
+//             <h3 className="text-xs font-black text-foreground uppercase tracking-wider">
+//               Identity & Parameters
+//             </h3>
+//           </div>
+
+//           <div className="space-y-2">
+//             <label htmlFor="label" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+//               Product Label / Title <span className="text-brand-primary">*</span>
+//             </label>
+//             <input
+//               id="label"
+//               type="text"
+//               {...register("label", { required: "Product identifier is mandatory" })}
+//               placeholder="e.g., Premium Roasted Arabica Coffee"
+//               className={cn(
+//                 "w-full bg-background border border-border/60 rounded text-xs font-bold font-mono h-10 px-3 text-foreground focus:outline-none focus:border-brand-primary/40 disabled:bg-surface",
+//                 errors.label && "border-brand-primary"
+//               )}
+//             />
+//             {errors.label && (
+//               <p className="text-[10px] font-bold text-brand-primary uppercase tracking-wide mt-0.5">
+//                 {errors.label.message}
+//               </p>
+//             )}
+//           </div>
+
+//           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+//             <div className="space-y-2">
+//               <label htmlFor="category" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+//                 Category Placement
+//               </label>
+//               <div className="relative">
+//                 <Tag className="absolute left-3 top-3 text-muted/60" size={14} />
+//                 <select
+//                   id="category"
+//                   {...register("category")}
+//                   className="w-full bg-background border border-border/60 rounded text-xs font-bold pl-9 pr-8 h-10 text-foreground focus:outline-none focus:border-brand-primary/40 appearance-none cursor-pointer"
+//                 >
+//                   {industryGroups.map((group) => (
+//                     <optgroup key={group} label={group} className="text-muted font-bold text-[11px] bg-card">
+//                       {CATEGORY_PRESETS.filter(cat => cat.industryGroup === group).map((cat) => (
+//                         <option key={cat.id} value={cat.id} className="text-foreground font-medium text-xs">
+//                           {cat.label}
+//                         </option>
+//                       ))}
+//                     </optgroup>
+//                   ))}
+//                 </select>
+//                 <ChevronDown className="absolute right-3 top-3 text-muted/60 pointer-events-none" size={14} />
+//               </div>
+//             </div>
+
+//             <div className="space-y-2">
+//               <label htmlFor="stock" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+//                 Initial Stock Base
+//               </label>
+//               <div className="relative">
+//                 <Layers className="absolute left-3 top-3 text-muted/40" size={14} />
+//                 <input
+//                   id="stock"
+//                   type="number"
+//                   readOnly
+//                   value={0}
+//                   className="w-full bg-surface/50 border border-border/40 rounded text-xs font-bold font-mono pl-9 pr-3 h-10 text-muted cursor-not-allowed select-none focus:outline-none"
+//                   title="Stock counts must be altered using active Ledger entry points."
+//                 />
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* RIGHT COLUMN */}
+//         <div className="space-y-6 lg:border-l lg:border-border/30 lg:pl-8">
+//           <div className="flex items-center gap-2 pb-3 border-b border-border/30">
+//             <DollarSign size={16} className="text-brand-secondary" />
+//             <h3 className="text-xs font-black text-foreground uppercase tracking-wider">
+//               Financial & Logistics
+//             </h3>
+//           </div>
+
+//           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+//             <div className="space-y-2">
+//               <label htmlFor="buying_price" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+//                 Unit Cost Price (Buying)
+//               </label>
+//               <div className="relative">
+//                 <span className="absolute left-3 top-2.5 text-[10px] font-bold text-muted/60 font-mono">KES</span>
+//                 <input
+//                   id="buying_price"
+//                   type="number"
+//                   step="any"
+//                   {...register("attributes.buying_price", { valueAsNumber: true })}
+//                   className="w-full bg-background border border-border/60 rounded text-xs font-bold font-mono pl-11 pr-3 h-10 text-foreground focus:outline-none focus:border-brand-primary/40"
+//                 />
+//               </div>
+//             </div>
+
+//             <div className="space-y-2">
+//               <label htmlFor="selling_price" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+//                 Unit Retail Price (Selling) <span className="text-brand-primary">*</span>
+//               </label>
+//               <div className="relative">
+//                 <span className="absolute left-3 top-2.5 text-[10px] font-bold text-muted/60 font-mono">KES</span>
+//                 <input
+//                   id="selling_price"
+//                   type="number"
+//                   step="any"
+//                   {...register("selling_price", { valueAsNumber: true, required: "Selling price required" })}
+//                   className={cn(
+//                     "w-full bg-background border border-border/60 rounded text-xs font-bold font-mono pl-11 pr-3 h-10 text-foreground focus:outline-none focus:border-brand-primary/40",
+//                     errors.selling_price && "border-brand-primary"
+//                   )}
+//                 />
+//               </div>
+//               {errors.selling_price && (
+//                 <p className="text-[10px] font-bold text-brand-primary uppercase tracking-wide mt-0.5">
+//                   {errors.selling_price.message}
+//                 </p>
+//               )}
+//             </div>
+//           </div>
+
+//           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+//             <div className="space-y-2">
+//               <label htmlFor="sku" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+//                 SKU / Barcode Identifier
+//               </label>
+//               <div className="relative">
+//                 <Barcode className="absolute left-3 top-3 text-muted/60" size={14} />
+//                 <input
+//                   id="sku"
+//                   type="text"
+//                   {...register("attributes.sku")}
+//                   placeholder="Auto-generated if left empty"
+//                   className="w-full bg-background border border-border/60 rounded text-xs font-bold font-mono pl-9 pr-3 h-10 text-foreground placeholder:text-muted/40 placeholder:font-sans focus:outline-none focus:border-brand-primary/40"
+//                 />
+//               </div>
+//             </div>
+
+//             <div className="space-y-2">
+//               <label htmlFor="unit_of_measure" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+//                 Unit of Measure (UoM)
+//               </label>
+//               <div className="relative">
+//                 <select
+//                   id="unit_of_measure"
+//                   {...register("attributes.unit_of_measure")}
+//                   className="w-full bg-background border border-border/60 rounded text-xs font-bold pl-3 pr-8 h-10 text-foreground focus:outline-none focus:border-brand-primary/40 appearance-none cursor-pointer"
+//                 >
+//                   {unitCategories.map((category) => (
+//                     <optgroup key={category} label={category} className="text-muted font-bold text-[11px] bg-card">
+//                       {UNIT_PRESETS.filter(unit => unit.category === category).map((unit) => (
+//                         <option key={unit.value} value={unit.value} className="text-foreground font-medium text-xs">
+//                           {unit.label}
+//                         </option>
+//                       ))}
+//                     </optgroup>
+//                   ))}
+//                 </select>
+//                 <ChevronDown className="absolute right-3 top-3 text-muted/60 pointer-events-none" size={14} />
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+
+//       </div>
+
+//       {/* FOOTER CONTROLS ACTION BAR */}
+//       <div className="px-6 py-4 bg-surface/20 border-t border-border/40 flex items-center justify-end gap-3">
+//         <Button
+//           type="button"
+//           variant="ghost"
+//           size="sm"
+//           onClick={onCancel}
+//           disabled={isPending}
+//           className="font-black uppercase text-[10px] tracking-wider text-muted hover:text-foreground h-9"
+//         >
+//           Cancel
+//         </Button>
+        
+//         <Button
+//           type="submit"
+//           variant="secondary"
+//           size="sm"
+//           disabled={isPending}
+//           className="font-black uppercase text-[10px] tracking-wider h-9 min-w-[120px] transition-all hover:scale-[1.01] active:scale-100 shadow-xs"
+//         >
+//           {isPending ? (
+//             <>
+//               <Loader2 className="animate-spin mr-1.5" size={12} />
+//               Processing...
+//             </>
+//           ) : (
+//             <>
+//               <Plus size={12} className="mr-1.5" />
+//               {submitButtonText}
+//             </>
+//           )}
+//         </Button>
+//       </div>
+//     </form>
+//   );
+// }
+
 "use client";
 
 import React from "react";
 import { useForm } from "react-hook-form";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+import { Button } from "@/lib/components/ui/Button";
 
 import { 
   Plus, 
@@ -300,25 +734,97 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const CATEGORY_PRESETS = [
-  "General",
-  "Beverages & Drinks",
-  "Food & Groceries",
-  "Apparel & Clothing",
-  "Electronics & Tech",
-  "Hardware & Spares",
-  "Health & Beauty",
-  "Home & Kitchen Essentials",
-  "Services & Subscriptions"
+export interface CategoryPresetItem {
+  id: string;
+  label: string;
+  industryGroup: 'Retail & Minimart' | 'Pharmacy & Agrovet' | 'Hardware & Electronics' | 'Apparel, Beauty & Branding' | 'Food & Hospitality' | 'Services & General';
+}
+
+export const CATEGORY_PRESETS: CategoryPresetItem[] = [
+  // == Retail, Minimarts & Wholesalers ==
+  { id: "beverages", label: "Beverages & Drinks", industryGroup: "Retail & Minimart" },
+  { id: "packaged_foods", label: "Packaged Foods & Groceries", industryGroup: "Retail & Minimart" },
+  { id: "fresh_produce", label: "Fresh Produce & Grains", industryGroup: "Retail & Minimart" },
+  { id: "bakery_confectionery", label: "Bakery & Confectionery", industryGroup: "Retail & Minimart" },
+  { id: "household_cleaning", label: "Household Cleaning & Detergents", industryGroup: "Retail & Minimart" },
+  { id: "personal_care", label: "Personal Toiletries & Care", industryGroup: "Retail & Minimart" },
+
+  // == Pharmacies & Agrovets ==
+  { id: "prescription_meds", label: "Prescription Medications (POM)", industryGroup: "Pharmacy & Agrovet" },
+  { id: "otc_meds", label: "Over-The-Counter (OTC) Drugs", industryGroup: "Pharmacy & Agrovet" },
+  { id: "medical_supplies", label: "Medical Supplies & First Aid", industryGroup: "Pharmacy & Agrovet" },
+  { id: "supplements_vitamins", label: "Supplements & Vitamins", industryGroup: "Pharmacy & Agrovet" },
+  { id: "animal_feed", label: "Animal Feeds & Nutrition", industryGroup: "Pharmacy & Agrovet" },
+  { id: "crop_protection", label: "Agrochemicals & Crop Protection", industryGroup: "Pharmacy & Agrovet" },
+  { id: "veterinary_meds", label: "Veterinary Drugs & Care", industryGroup: "Pharmacy & Agrovet" },
+
+  // == Hardwares & Electronics ==
+  { id: "construction_materials", label: "Cement, Sand & Materials", industryGroup: "Hardware & Electronics" },
+  { id: "plumbing_fixtures", label: "Plumbing Pipes & Fixtures", industryGroup: "Hardware & Electronics" },
+  { id: "electrical_wiring", label: "Electrical Fittings & Cables", industryGroup: "Hardware & Electronics" },
+  { id: "hand_power_tools", label: "Hand & Power Tools", industryGroup: "Hardware & Electronics" },
+  { id: "paints_coatings", label: "Paints, Thinners & Coatings", industryGroup: "Hardware & Electronics" },
+  { id: "fasteners_hardware", label: "Nails, Screws & Fasteners", industryGroup: "Hardware & Electronics" },
+  { id: "phones_accessories", label: "Mobile Phones & Accessories", industryGroup: "Hardware & Electronics" },
+
+  // == Apparel, Beauty & Branding (Clean Target Verticals) ==
+  { id: "clothing_apparel", label: "Clothing & Apparel", industryGroup: "Apparel, Beauty & Branding" },
+  { id: "footwear", label: "Footwear & Shoes", industryGroup: "Apparel, Beauty & Branding" },
+  { id: "dtf_printing_branding", label: "DTF Printing & Branding Supplies", industryGroup: "Apparel, Beauty & Branding" },
+  { id: "barber_salon_services", label: "Barbershop & Beauty Salon Items", industryGroup: "Apparel, Beauty & Branding" },
+  { id: "cosmetics_makeup", label: "Cosmetics & Makeup Products", industryGroup: "Apparel, Beauty & Branding" },
+
+  // == Restaurants & Food Hospitality ==
+  { id: "cooked_meals", label: "Prepared Food & Hot Meals", industryGroup: "Food & Hospitality" },
+  { id: "fast_food_snacks", label: "Fast Foods & Snacks", industryGroup: "Food & Hospitality" },
+  { id: "cooking_ingredients", label: "Bulk Cooking Oils & Spices", industryGroup: "Food & Hospitality" },
+
+  // == Services & Subscriptions ==
+  { id: "professional_services", label: "Billable Labor & Services", industryGroup: "Services & General" },
+  { id: "digital_goods", label: "Airtime, Tokens & Digital Products", industryGroup: "Services & General" },
+  { id: "other_category", label: "Other / Unlisted Industry Category", industryGroup: "Services & General" }
 ];
 
-const UNIT_PRESETS = [
-  { value: "pcs", label: "Pieces (PCS)" },
-  { value: "kg", label: "Kilograms (KG)" },
-  { value: "g", label: "Grams (G)" },
-  { value: "l", label: "Liters (L)" },
-  { value: "box", label: "Boxes (BOX)" },
-  { value: "pack", label: "Packs (PCK)" }
+export interface UnitPresetItem {
+  value: string;
+  label: string;
+  category: 'Count' | 'Weight' | 'Volume' | 'Packaging & Wholesale' | 'Measurement' | 'Other';
+}
+
+export const UNIT_PRESETS: UnitPresetItem[] = [
+  // == Discrete Item Counting Units ==
+  { value: "pcs", label: "Pieces (PCS)", category: "Count" },
+  { value: "pair", label: "Pairs (PR)", category: "Count" },
+  { value: "set", label: "Sets (SET)", category: "Count" },
+  { value: "strip", label: "Strips (STP)", category: "Count" },
+  { value: "unit", label: "Individual Units (UNT)", category: "Count" },
+
+  // == Weight Measurement Units ==
+  { value: "kg", label: "Kilograms (KG)", category: "Weight" },
+  { value: "g", label: "Grams (G)", category: "Weight" },
+  { value: "ton", label: "Metric Tons (TON)", category: "Weight" },
+
+  // == Fluid and Liquid Volume Units ==
+  { value: "l", label: "Liters (L)", category: "Volume" },
+  { value: "ml", label: "Milliliters (ML)", category: "Volume" },
+
+  // == Industrial / Construction Specific Measurements ==
+  { value: "m", label: "Meters (M)", category: "Measurement" },
+  { value: "ft", label: "Feet (FT)", category: "Measurement" },
+  { value: "sqm", label: "Square Meters (SQM)", category: "Measurement" },
+
+  // == Bulk Logistics / Storage Packaging Units ==
+  { value: "box", label: "Boxes (BOX)", category: "Packaging & Wholesale" },
+  { value: "pack", label: "Packs (PCK)", category: "Packaging & Wholesale" },
+  { value: "carton", label: "Cartons (CTN)", category: "Packaging & Wholesale" },
+  { value: "crate", label: "Crates (CRT)", category: "Packaging & Wholesale" },
+  { value: "bale", label: "Bales (BAL)", category: "Packaging & Wholesale" },
+  { value: "bag_sack", label: "Bags / Sacks (BAG)", category: "Packaging & Wholesale" },
+  { value: "roll", label: "Rolls (ROL)", category: "Packaging & Wholesale" },
+  { value: "dozen", label: "Dozens (DZN)", category: "Packaging & Wholesale" },
+
+  // == Fallback ==
+  { value: "other", label: "Other Unit Measure", category: "Other" }
 ];
 
 export interface AssetFormValues {
@@ -347,7 +853,6 @@ export function AssetComposer({
   isPending = false,
   submitButtonText = "Save Product"
 }: AssetComposerProps) {
-  // 1. Pull the global context dynamically
   const { businessId } = useBusinessContext();
   
   const {
@@ -360,7 +865,7 @@ export function AssetComposer({
       label: "",
       selling_price: 0,
       stock: 0,
-      category: "General",
+      category: "general_inventory",
       attributes: {
         unit_of_measure: "pcs",
         buying_price: 0,
@@ -370,19 +875,17 @@ export function AssetComposer({
   });
 
   const handleFormSubmit = (data: AssetFormValues) => {
-    // 2. Generate custom automated SKU format: TWL-AUTO + 8-char string chunk + Epoch timestamp
     const businessIdString = Array.isArray(businessId) ? businessId[0] : businessId;
     const businessChunk = businessIdString ? businessIdString.replace(/-/g, "").slice(0, 8).toUpperCase() : "UNKNOWN";
     const computedSku = data.attributes.sku?.trim() !== "" 
       ? data.attributes.sku.trim() 
       : `TWL-AUTO-${businessChunk}-${Date.now()}`;
 
-    // 3. Compose exact JSON data tree matching destination payload schema requirements explicitly
     const structuredPayload: AssetFormValues = {
       business_id: businessIdString || "",
       label: data.label.trim(),
       selling_price: Number(data.selling_price) || 0,
-      stock: 0, // Enforced zero baseline rule protection
+      stock: 0, 
       category: data.category,
       attributes: {
         unit_of_measure: data.attributes.unit_of_measure,
@@ -394,24 +897,27 @@ export function AssetComposer({
     onSubmit(structuredPayload, () => reset());
   };
 
+  const industryGroups = Array.from(new Set(CATEGORY_PRESETS.map(c => c.industryGroup)));
+  const unitCategories = Array.from(new Set(UNIT_PRESETS.map(u => u.category)));
+
   return (
     <form 
       onSubmit={handleSubmit(handleFormSubmit)} 
-      className="w-full bg-card border border-border/40 rounded-xl shadow-xs overflow-hidden flex flex-col"
+      className="w-full card-layered overflow-hidden flex flex-col"
     >
-      <div className="p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="p-6 lg:p-10 grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10">
         
         {/* LEFT COLUMN */}
         <div className="space-y-6">
-          <div className="flex items-center gap-2 pb-3 border-b border-border/30">
-            <Package size={16} className="text-brand-secondary" />
-            <h3 className="text-xs font-black text-foreground uppercase tracking-wider">
+          <div className="flex items-center gap-2.5 pb-4 border-b-2 border-border/60">
+            <Package size={18} className="text-brand-primary" />
+            <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
               Identity & Parameters
             </h3>
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="label" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+            <label htmlFor="label" className="block text-xs font-extrabold uppercase tracking-wide text-foreground/90">
               Product Label / Title <span className="text-brand-primary">*</span>
             </label>
             <input
@@ -420,49 +926,55 @@ export function AssetComposer({
               {...register("label", { required: "Product identifier is mandatory" })}
               placeholder="e.g., Premium Roasted Arabica Coffee"
               className={cn(
-                "w-full bg-background border border-border/60 rounded text-xs font-bold font-mono h-10 px-3 text-foreground focus:outline-none focus:border-brand-primary/40 disabled:bg-surface",
-                errors.label && "border-brand-primary"
+                "w-full bg-background/50 border-2 border-border/80 rounded-xl text-sm font-bold h-12 px-4 text-foreground placeholder:text-muted/50 transition-all focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 disabled:bg-surface/50",
+                errors.label && "border-brand-primary focus:ring-brand-primary/20"
               )}
             />
             {errors.label && (
-              <p className="text-[10px] font-bold text-brand-primary uppercase tracking-wide mt-0.5">
+              <p className="text-xs font-bold text-brand-primary tracking-wide mt-1.5">
                 {errors.label.message}
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label htmlFor="category" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+              <label htmlFor="category" className="block text-xs font-extrabold uppercase tracking-wide text-foreground/90">
                 Category Placement
               </label>
               <div className="relative">
-                <Tag className="absolute left-3 top-3 text-muted/60" size={14} />
+                <Tag className="absolute left-3.5 top-3.5 text-muted" size={16} />
                 <select
                   id="category"
                   {...register("category")}
-                  className="w-full bg-background border border-border/60 rounded text-xs font-bold pl-9 pr-8 h-10 text-foreground focus:outline-none focus:border-brand-primary/40 appearance-none cursor-pointer"
+                  className="w-full bg-background/50 border-2 border-border/80 rounded-xl text-sm font-bold pl-11 pr-10 h-12 text-foreground focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 appearance-none cursor-pointer"
                 >
-                  {CATEGORY_PRESETS.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  {industryGroups.map((group) => (
+                    <optgroup key={group} label={group} className="text-brand-primary font-extrabold text-xs bg-card p-2">
+                      {CATEGORY_PRESETS.filter(cat => cat.industryGroup === group).map((cat) => (
+                        <option key={cat.id} value={cat.id} className="text-foreground font-semibold text-sm bg-card">
+                          {cat.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-3 text-muted/60 pointer-events-none" size={14} />
+                <ChevronDown className="absolute right-3.5 top-3.5 text-muted pointer-events-none" size={16} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="stock" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+              <label htmlFor="stock" className="block text-xs font-extrabold uppercase tracking-wide text-muted">
                 Initial Stock Base
               </label>
               <div className="relative">
-                <Layers className="absolute left-3 top-3 text-muted/40" size={14} />
+                <Layers className="absolute left-3.5 top-3.5 text-muted/40" size={16} />
                 <input
                   id="stock"
                   type="number"
                   readOnly
                   value={0}
-                  className="w-full bg-surface/50 border border-border/40 rounded text-xs font-bold font-mono pl-9 pr-3 h-10 text-muted cursor-not-allowed select-none focus:outline-none"
+                  className="w-full bg-surface border-2 border-border/40 rounded-xl text-sm font-bold font-mono pl-11 pr-4 h-12 text-muted/60 cursor-not-allowed select-none focus:outline-none"
                   title="Stock counts must be altered using active Ledger entry points."
                 />
               </div>
@@ -471,88 +983,94 @@ export function AssetComposer({
         </div>
 
         {/* RIGHT COLUMN */}
-        <div className="space-y-6 lg:border-l lg:border-border/30 lg:pl-8">
-          <div className="flex items-center gap-2 pb-3 border-b border-border/30">
-            <DollarSign size={16} className="text-brand-secondary" />
-            <h3 className="text-xs font-black text-foreground uppercase tracking-wider">
+        <div className="space-y-6 lg:border-l-2 lg:border-border/60 lg:pl-10">
+          <div className="flex items-center gap-2.5 pb-4 border-b-2 border-border/60">
+            <DollarSign size={18} className="text-brand-accent" />
+            <h3 className="text-sm font-extrabold text-foreground uppercase tracking-wider">
               Financial & Logistics
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label htmlFor="buying_price" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+              <label htmlFor="buying_price" className="block text-xs font-extrabold uppercase tracking-wide text-foreground/90">
                 Unit Cost Price (Buying)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-[10px] font-bold text-muted/60 font-mono">KES</span>
+                <span className="absolute left-3.5 top-3.5 text-xs font-black text-muted font-mono">KES</span>
                 <input
                   id="buying_price"
                   type="number"
                   step="any"
                   {...register("attributes.buying_price", { valueAsNumber: true })}
-                  className="w-full bg-background border border-border/60 rounded text-xs font-bold font-mono pl-11 pr-3 h-10 text-foreground focus:outline-none focus:border-brand-primary/40"
+                  className="w-full bg-background/50 border-2 border-border/80 rounded-xl text-sm font-bold font-mono pl-14 pr-4 h-12 text-foreground focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="selling_price" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+              <label htmlFor="selling_price" className="block text-xs font-extrabold uppercase tracking-wide text-foreground/90">
                 Unit Retail Price (Selling) <span className="text-brand-primary">*</span>
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-2.5 text-[10px] font-bold text-muted/60 font-mono">KES</span>
+                <span className="absolute left-3.5 top-3.5 text-xs font-black text-muted font-mono">KES</span>
                 <input
                   id="selling_price"
                   type="number"
                   step="any"
                   {...register("selling_price", { valueAsNumber: true, required: "Selling price required" })}
                   className={cn(
-                    "w-full bg-background border border-border/60 rounded text-xs font-bold font-mono pl-11 pr-3 h-10 text-foreground focus:outline-none focus:border-brand-primary/40",
-                    errors.selling_price && "border-brand-primary"
+                    "w-full bg-background/50 border-2 border-border/80 rounded-xl text-sm font-bold font-mono pl-14 pr-4 h-12 text-foreground focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10",
+                    errors.selling_price && "border-brand-primary focus:ring-brand-primary/20"
                   )}
                 />
               </div>
               {errors.selling_price && (
-                <p className="text-[10px] font-bold text-brand-primary uppercase tracking-wide mt-0.5">
+                <p className="text-xs font-bold text-brand-primary tracking-wide mt-1.5">
                   {errors.selling_price.message}
                 </p>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label htmlFor="sku" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+              <label htmlFor="sku" className="block text-xs font-extrabold uppercase tracking-wide text-foreground/90">
                 SKU / Barcode Identifier
               </label>
               <div className="relative">
-                <Barcode className="absolute left-3 top-3 text-muted/60" size={14} />
+                <Barcode className="absolute left-3.5 top-3.5 text-muted" size={16} />
                 <input
                   id="sku"
                   type="text"
                   {...register("attributes.sku")}
                   placeholder="Auto-generated if left empty"
-                  className="w-full bg-background border border-border/60 rounded text-xs font-bold font-mono pl-9 pr-3 h-10 text-foreground placeholder:text-muted/40 placeholder:font-sans focus:outline-none focus:border-brand-primary/40"
+                  className="w-full bg-background/50 border-2 border-border/80 rounded-xl text-sm font-bold font-mono pl-11 pr-4 h-12 text-foreground placeholder:text-muted/50 placeholder:font-sans focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="unit_of_measure" className="block text-[10px] font-black uppercase tracking-widest text-muted">
+              <label htmlFor="unit_of_measure" className="block text-xs font-extrabold uppercase tracking-wide text-foreground/90">
                 Unit of Measure (UoM)
               </label>
               <div className="relative">
                 <select
                   id="unit_of_measure"
                   {...register("attributes.unit_of_measure")}
-                  className="w-full bg-background border border-border/60 rounded text-xs font-bold pl-3 pr-8 h-10 text-foreground focus:outline-none focus:border-brand-primary/40 appearance-none cursor-pointer"
+                  className="w-full bg-background/50 border-2 border-border/80 rounded-xl text-sm font-bold pl-4 pr-10 h-12 text-foreground focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 appearance-none cursor-pointer"
                 >
-                  {UNIT_PRESETS.map((unit) => (
-                    <option key={unit.value} value={unit.value}>{unit.label}</option>
+                  {unitCategories.map((category) => (
+                    <optgroup key={category} label={category} className="text-brand-secondary font-extrabold text-xs bg-card p-2">
+                      {UNIT_PRESETS.filter(unit => unit.category === category).map((unit) => (
+                        <option key={unit.value} value={unit.value} className="text-foreground font-semibold text-sm bg-card">
+                          {unit.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-3 text-muted/60 pointer-events-none" size={14} />
+                <ChevronDown className="absolute right-3.5 top-3.5 text-muted pointer-events-none" size={16} />
               </div>
             </div>
           </div>
@@ -561,33 +1079,37 @@ export function AssetComposer({
       </div>
 
       {/* FOOTER CONTROLS ACTION BAR */}
-      <div className="px-6 py-4 bg-surface/20 border-t border-border/40 flex items-center justify-end gap-3">
-        <button
+      <div className="px-6 py-5 bg-surface/40 border-t border-border/60 flex items-center justify-end gap-4">
+        <Button
           type="button"
+          variant="primary"
+          size="sm"
           onClick={onCancel}
           disabled={isPending}
-          className="inline-flex items-center justify-center px-4 h-9 text-[10px] font-black uppercase tracking-wider text-muted hover:text-foreground rounded-lg border border-transparent transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          className="font-black uppercase text-xs tracking-wider text-muted hover:text-foreground h-11 px-5 transition-colors"
         >
           Cancel
-        </button>
+        </Button>
         
-        <button
+        <Button
           type="submit"
+          variant="secondary"
+          size="sm"
           disabled={isPending}
-          className="inline-flex items-center justify-center gap-1.5 px-4 h-9 text-[10px] font-black uppercase tracking-wider rounded-lg border border-transparent bg-brand-secondary text-background hover:scale-[1.01] active:scale-100 transition-all shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-brand-primary hover:bg-brand-primary/95 text-white font-black uppercase text-xs tracking-wider h-11 min-w-[140px] px-6 rounded-xl transition-all hover:scale-[1.02] active:scale-100 shadow-lift"
         >
           {isPending ? (
             <>
-              <Loader2 className="animate-spin" size={12} />
-              <span>Processing...</span>
+              <Loader2 className="animate-spin mr-2" size={14} />
+              Processing...
             </>
           ) : (
             <>
-              <Plus size={12} />
-              <span>{submitButtonText}</span>
+              <Plus size={14} className="mr-2" />
+              {submitButtonText}
             </>
           )}
-        </button>
+        </Button>
       </div>
     </form>
   );
