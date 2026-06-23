@@ -1,11 +1,10 @@
-from typing import Type
+from typing import Type, List, Dict,Tuple
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-import datetime
 
 
 from app.crud.base import BaseCRUD
@@ -18,11 +17,13 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import select
-from app.models.models import ( Product
+from app.models.models import ( Product, Sale, SaleItem, FinancialDocument, DocumentType, SaleStatus,
+    Payment, PaymentMethod, Customer, StockHistory, StockMovementType
 )
 from app.schemas.business import StockTakeRequest
 from app.utils.logging import logger
 from app.utils.helpers import utc_now
+from app.schemas.store import FinalizeCheckoutIn
 
 class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
@@ -275,6 +276,264 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=500,
                 detail="Database transaction conflict encountered while updating inventory levels."
             )
+        
+    async def create_pending_sale(db: AsyncSession, payload: FinalizeCheckoutIn) -> Tuple[Sale, List[SaleItem]]:
+        """
+        Instantiates a draft transaction record, validates product status, checks 
+        inventory thresholds in a single batch query execution context, and saves 
+        the immutable line items safely.
+        """
+        # 1. Extract and deduplicate item identifiers to prevent N+1 loop round-trips
+        product_ids = list({item.product_id for item in payload.items})
+        if not product_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Transaction payload must contain at least one retail item line."
+            )
+
+        # Bulk fetch all relevant products in one round-trip
+        product_query = await db.exec(select(Product).where(Product.id.in_(product_ids)))
+        products_map: Dict[UUID, Product] = {product.id: product for product in product_query.all()}
+
+        # 2. Instantiate root draft Sale container structure
+        new_sale = Sale(
+            business_id=payload.business_id,
+            cashier_id=payload.cashier_id,
+            customer_id=getattr(payload, "customer_id", None),
+            status=SaleStatus.PENDING_PAYMENT,
+            subtotal=0.0,
+            discount=0.0,
+            tax_amount=0.0,
+            total_amount=0.0
+        )
+        
+        db.add(new_sale)
+        # Flush registers the record and obtains the primary key ID without writing a commit block
+        await db.flush()
+
+        running_subtotal = 0.0
+        running_tax = 0.0
+        created_items: List[SaleItem] = []
+
+        # 3. Safe linear validation and calculation phase
+        for item in payload.items:
+            product = products_map.get(item.product_id)
+
+            if not product or not getattr(product, "active", True):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Product with ID {item.product_id} is unavailable or does not exist."
+                )
+
+            # Enforce server-side stock safety checkpoints
+            if getattr(product, "track_stock", False) and getattr(product, "stock", 0) < item.quantity:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Insufficient stock for '{product.label}'. Available: {product.stock}, Requested: {item.quantity}"
+                )
+
+            # Establish tax rate constraints (falling back to standard 16% corporate VAT if unspecified)
+            # tax_rate = getattr(product, "tax_rate", 0.0)
+            # if tax_rate is None:
+            #     tax_rate = 0.0
+
+            # force a taxrate for now
+            tax_rate = 0.0
+
+            # Standard clean currency calculations
+            item_subtotal = round(product.selling_price * item.quantity, 2)
+            item_tax = round(item_subtotal * tax_rate, 2)
+
+            # Map correct safe fallback parameters to match matching model keys
+            sku_code = getattr(product, "sku", "GENERIC") or "GENERIC"
+            cost_price = getattr(product, "cost_price", None) or getattr(product, "buying_price", None)
+
+            sale_item = SaleItem(
+                sale_id=new_sale.id,
+                product_id=product.id,
+                sku=sku_code,
+                name=product.label,
+                unit_price=product.selling_price,
+                quantity=item.quantity,
+                tax_rate=tax_rate,
+                subtotal=item_subtotal,
+                cost_price_at_sale=cost_price
+            )
+            
+            db.add(sale_item)
+            created_items.append(sale_item)
+            
+            running_subtotal += item_subtotal
+            running_tax += item_tax
+
+        # 4. Bind running financial totals to parent transaction ledger container
+        new_sale.subtotal = round(running_subtotal, 2)
+        new_sale.tax_amount = round(running_tax, 2)
+        new_sale.total_amount = round(running_subtotal + running_tax, 2)
+
+        db.add(new_sale)
+        
+        # Commit execution updates all transactional tables together safely
+        await db.commit()
+        await db.refresh(new_sale)
+        
+        return new_sale, created_items
+
+    
+    async def finalize_checkout(
+        cls, 
+        db: AsyncSession, 
+        sale_id: UUID, 
+        payload: FinalizeCheckoutIn
+    ) -> FinancialDocument:
+        """
+        Locks inventory records, calculates margins, processes documents, 
+        and triggers metrics inside an isolated transaction.
+        """
+        today = utc_now()
+        
+        # 1. Look up the initial draft transaction record
+        sale_res = await db.exec(select(Sale).where(Sale.id == sale_id))
+        sale = sale_res.first()
+        if not sale:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction records not found.")
+        if sale.status == SaleStatus.COMPLETED:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This transaction is already finalized.")
+
+        # Resolve items in the current async frame cleanly
+        items_res = await db.exec(select(SaleItem).where(SaleItem.sale_id == sale.id))
+        sale_items = items_res.all()
+
+        # 2. PESSIMISTIC ROW-LEVEL DATABASE LOCKING
+        # Sort product IDs uniformly to prevent random concurrent deadlocks in the DB kernel
+        product_ids = sorted(list({item.product_id for item in sale_items}))
+        if not product_ids:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot checkout an empty sale.")
+        
+        # Execute 'SELECT ... FOR UPDATE' to freeze these item metrics completely
+        locked_products_query = select(Product).where(Product.id.in_(product_ids)).with_for_update()
+        locked_products_res = await db.exec(locked_products_query)
+        locked_products = {p.id: p for p in locked_products_res.all()}
+
+        # 3. Process Customer Profiles Safely
+        if payload.customer_name or payload.customer_phone:
+            customer_stmt = select(Customer).where(
+                Customer.business_id == sale.business_id,
+                Customer.phone == payload.customer_phone if payload.customer_phone else ""
+            )
+            customer_res = await db.exec(customer_stmt)
+            customer = customer_res.first()
+
+            if not customer and payload.customer_name:
+                org_id = uuid4()
+                if hasattr(sale, "business") and getattr(sale.business, "organization_id", None):
+                    org_id = sale.business.organization_id
+
+                customer = Customer(
+                    name=payload.customer_name,
+                    phone=payload.customer_phone,
+                    organization_id=org_id,
+                    business_id=sale.business_id
+                )
+                db.add(customer)
+                await db.flush()  # Gets customer ID within the transaction scope
+            
+            if customer:
+                sale.customer_id = customer.id
+
+        # 4. Route Payment & Configure Operational Document Status
+        payment = Payment(
+            business_id=sale.business_id,
+            sale_id=sale.id,
+            amount=sale.total_amount,
+            method=payload.payment_method,
+            reference=payload.payment_reference
+        )
+        db.add(payment)
+
+        if payload.payment_method == PaymentMethod.INVOICE:
+            sale.status = SaleStatus.PENDING_PAYMENT
+            doc_type = DocumentType.INVOICE
+        else:
+            sale.status = SaleStatus.COMPLETED
+            doc_type = DocumentType.RECEIPT
+
+        # 5. Inventory Deduction Loop Under Safe Row-Locking Guarantee
+        total_cogs_today = 0.0
+        for item in sale_items:
+            product = locked_products.get(item.product_id)
+            
+            if product and getattr(product, "track_stock", False):
+                # Re-verify stock volumes within the locked isolation context block
+                if product.stock < item.quantity:
+                    # Let the router catch the error; the context block handles safe session rollbacks
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Stock for '{product.label}' depleted by a concurrent checkout thread. Only {product.stock} items left."
+                    )
+                
+                prev_stock = product.stock
+                new_stock = prev_stock - item.quantity
+                
+                product.stock = new_stock
+                db.add(product)
+
+                # Append historical single source of truth audit event records
+                history = StockHistory(
+                    product_id=product.id,
+                    business_id=sale.business_id,
+                    performed_by=sale.cashier_id,
+                    movement_type=StockMovementType.SALE,
+                    quantity=-item.quantity,
+                    previous_stock=prev_stock,
+                    new_stock=new_stock,
+                    buying_price=item.cost_price_at_sale,
+                    selling_price=item.unit_price,
+                    reference_id=sale.id,
+                    reference_type="SALE"
+                )
+                db.add(history)
+
+            cogs_unit = getattr(item, "cost_price_at_sale", 0.0) or 0.0
+            total_cogs_today += (cogs_unit * item.quantity)
+
+        # 6 & 7. Call the Decoupled Analytics Tracking Layer Method
+        # await AnalyticsService.track_daily_checkout_metrics(
+        #     db=db,
+        #     sale=sale,
+        #     sale_items=sale_items,
+        #     total_cogs_today=total_cogs_today,
+        #     payment_method=payload.payment_method,
+        #     today=today
+        # )
+
+        db.add(sale)
+
+        # 8. Mint Global Billing References & Save Document Row Contexts
+        prefix = "REC" if doc_type == DocumentType.RECEIPT else "INV"
+        serial_hash = sale.id.hex[:6].upper()
+        date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
+        generated_number = f"{prefix}-{date_slug}-{serial_hash}"
+
+        document = FinancialDocument(
+            business_id=sale.business_id,
+            sale_id=sale.id,
+            customer_id=sale.customer_id,
+            document_type=doc_type,
+            document_number=generated_number,
+            subtotal=sale.subtotal,
+            discount_amount=sale.discount,
+            tax_amount=sale.tax_amount,
+            total_amount=sale.total_amount,
+            amount_paid=0.0 if payload.payment_method == PaymentMethod.INVOICE else sale.total_amount
+        )
+        db.add(document)
+        
+        await db.commit()
+        await db.refresh(document)
+        return document
+                
+                
 
 
 store_crud = StoreCrud(Business)

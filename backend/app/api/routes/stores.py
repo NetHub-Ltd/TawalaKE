@@ -10,6 +10,7 @@ from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
 from app.schemas.business import RestockRequest, ProductAuditRequest, StaffRequest, ProductRestockRequest
 from app.utils.logging import logger
 from app.crud.store import store_crud
+from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 
 router = APIRouter()
 
@@ -172,3 +173,8 @@ async def audit_product_stock(
     Calculates the inventory variance delta and tracks loss anomalies.
     """
     return await store_crud.audit_stock(db=db, payload=payload, current_user=user)
+
+
+@router.post("/create-sale", status_code=200)
+async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep):
+    pass
