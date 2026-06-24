@@ -2,6 +2,10 @@ from pydantic import BaseModel, Field
 from uuid import UUID
 from typing import List, Optional
 from enum import Enum
+from pydantic import BaseModel
+from uuid import UUID
+from datetime import datetime
+# from app.models.models import SaleStatus
 
 # =========================================================
 # SYSTEM ENUMS
@@ -90,7 +94,19 @@ class InitializeCheckout(BaseModel):
     items: List[CartItemIn]
 
 class FinalizeCheckoutIn(BaseModel):
+    sale_id: UUID
     payment_method: PaymentMethod
     payment_reference: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
+
+
+class SaleResponse(BaseModel):
+    id: UUID
+    status: SaleStatus
+    subtotal: float
+    discount: float
+    tax_rate: float
+    tax_amount: float
+    total_amount: float
+    created_at: datetime

@@ -764,16 +764,15 @@ class StockHistory(BaseMixin, table=True):
         description="The staff identity or system worker who committed or authorized the inventory event."
     )
 
+
     movement_type: StockMovementType = Field(
-        sa_column=Column(
-            SAEnum(StockMovementType, name="stock_history_type_enum", create_type=True),
-            nullable=False,
-            index=True
-        ),
+        sa_type=SAEnum(StockMovementType, name="stock_history_type_enum", create_type=True),
+        nullable=False,
+        index=True,
         description="Categorizes the operational flow: SALE, RESTOCK, RECONCILIATION, WASTAGE, or RETURN."
     )
 
-    type: Optional[str] = sa.Column(sa.String, default="SALE")  # Fallback for deprecated fields if needed
+    # type: Optional[str] = sa.Column(sa.String, default="SALE")  # Fallback for deprecated fields if needed
 
     quantity: float = Field(
         default=0.0,

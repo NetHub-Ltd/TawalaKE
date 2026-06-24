@@ -30,6 +30,7 @@ class InitializeCheckout(BaseModel):
     items: List[CartItemIn]
 
 class FinalizeCheckoutIn(BaseModel):
+    sale_id: UUID
     payment_method: PaymentMethod
     payment_reference: Optional[str] = None
     customer_name: Optional[str] = None

@@ -1,11 +1,12 @@
 from typing import Type, List, Dict,Tuple
 from uuid import UUID
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-
+from sqlalchemy.orm import selectinload
 
 from app.crud.base import BaseCRUD
 from app.models.models import Business, StaffBusinessAssignment, Staff, StockHistory, StockMovementType
@@ -24,6 +25,7 @@ from app.schemas.business import StockTakeRequest
 from app.utils.logging import logger
 from app.utils.helpers import utc_now
 from app.schemas.store import FinalizeCheckoutIn
+from uuid import uuid4
 
 class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
@@ -277,7 +279,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Database transaction conflict encountered while updating inventory levels."
             )
         
-    async def create_pending_sale(db: AsyncSession, payload: FinalizeCheckoutIn) -> Tuple[Sale, List[SaleItem]]:
+    async def create_pending_sale(self, db: AsyncSession, payload: FinalizeCheckoutIn) -> Tuple[Sale, List[SaleItem]]:
         """
         Instantiates a draft transaction record, validates product status, checks 
         inventory thresholds in a single batch query execution context, and saves 
@@ -377,161 +379,119 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         await db.commit()
         await db.refresh(new_sale)
         
-        return new_sale, created_items
+        return new_sale
 
-    
+    #     return document
     async def finalize_checkout(
-        cls, 
+        self, 
         db: AsyncSession, 
         sale_id: UUID, 
         payload: FinalizeCheckoutIn
-    ) -> FinancialDocument:
+    ) -> Sale:
         """
-        Locks inventory records, calculates margins, processes documents, 
-        and triggers metrics inside an isolated transaction.
+        Finalizes a pending sale:
+        - Updates payment
+        - Deducts stock
+        - Records inventory history
+        - Returns the completed Sale object
+        
+        Everything happens in one atomic transaction.
+        Receipt/Invoice generation should be handled separately (background task).
         """
-        today = utc_now()
-        
-        # 1. Look up the initial draft transaction record
-        sale_res = await db.exec(select(Sale).where(Sale.id == sale_id))
-        sale = sale_res.first()
-        if not sale:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction records not found.")
-        if sale.status == SaleStatus.COMPLETED:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This transaction is already finalized.")
-
-        # Resolve items in the current async frame cleanly
-        items_res = await db.exec(select(SaleItem).where(SaleItem.sale_id == sale.id))
-        sale_items = items_res.all()
-
-        # 2. PESSIMISTIC ROW-LEVEL DATABASE LOCKING
-        # Sort product IDs uniformly to prevent random concurrent deadlocks in the DB kernel
-        product_ids = sorted(list({item.product_id for item in sale_items}))
-        if not product_ids:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot checkout an empty sale.")
-        
-        # Execute 'SELECT ... FOR UPDATE' to freeze these item metrics completely
-        locked_products_query = select(Product).where(Product.id.in_(product_ids)).with_for_update()
-        locked_products_res = await db.exec(locked_products_query)
-        locked_products = {p.id: p for p in locked_products_res.all()}
-
-        # 3. Process Customer Profiles Safely
-        if payload.customer_name or payload.customer_phone:
-            customer_stmt = select(Customer).where(
-                Customer.business_id == sale.business_id,
-                Customer.phone == payload.customer_phone if payload.customer_phone else ""
+        try:
+            # 1. Fetch the pending sale with necessary relationships
+            sale_res = await db.exec(
+                select(Sale)
+                .where(Sale.id == sale_id)
+                .options(selectinload(Sale.items))
             )
-            customer_res = await db.exec(customer_stmt)
-            customer = customer_res.first()
+            sale = sale_res.first()
 
-            if not customer and payload.customer_name:
-                org_id = uuid4()
-                if hasattr(sale, "business") and getattr(sale.business, "organization_id", None):
-                    org_id = sale.business.organization_id
+            if not sale:
+                raise HTTPException(status_code=404, detail="Sale not found")
+            
+            if sale.status == SaleStatus.COMPLETED:
+                logger.info("Sale with id: {sale.id} is already completed")
+                return sale
+                # raise HTTPException(status_code=400, detail="Sale already completed")
 
-                customer = Customer(
-                    name=payload.customer_name,
-                    phone=payload.customer_phone,
-                    organization_id=org_id,
-                    business_id=sale.business_id
+            # 2. Create Payment record
+            payment = Payment(
+                business_id=sale.business_id,
+                sale_id=sale.id,
+                amount=sale.total_amount,
+                method=payload.payment_method,
+                reference=payload.payment_reference
+            )
+            db.add(payment)
+
+            # 3. Update sale status
+            if payload.payment_method == PaymentMethod.INVOICE:
+                sale.status = SaleStatus.PENDING_PAYMENT
+            else:
+                sale.status = SaleStatus.COMPLETED
+
+            # 4. Stock Deduction + History (Critical part)
+            for item in sale.items:
+                # Get product with lock for safety
+                product_res = await db.exec(
+                    select(Product)
+                    .where(Product.id == item.product_id)
+                    .with_for_update()
                 )
-                db.add(customer)
-                await db.flush()  # Gets customer ID within the transaction scope
-            
-            if customer:
-                sale.customer_id = customer.id
+                product = product_res.first()
 
-        # 4. Route Payment & Configure Operational Document Status
-        payment = Payment(
-            business_id=sale.business_id,
-            sale_id=sale.id,
-            amount=sale.total_amount,
-            method=payload.payment_method,
-            reference=payload.payment_reference
-        )
-        db.add(payment)
+                if not product:
+                    continue
 
-        if payload.payment_method == PaymentMethod.INVOICE:
-            sale.status = SaleStatus.PENDING_PAYMENT
-            doc_type = DocumentType.INVOICE
-        else:
-            sale.status = SaleStatus.COMPLETED
-            doc_type = DocumentType.RECEIPT
+                if getattr(product, "track_stock", False):
+                    if product.stock < item.quantity:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Insufficient stock for '{product.label}'. Available: {product.stock}"
+                        )
 
-        # 5. Inventory Deduction Loop Under Safe Row-Locking Guarantee
-        total_cogs_today = 0.0
-        for item in sale_items:
-            product = locked_products.get(item.product_id)
-            
-            if product and getattr(product, "track_stock", False):
-                # Re-verify stock volumes within the locked isolation context block
-                if product.stock < item.quantity:
-                    # Let the router catch the error; the context block handles safe session rollbacks
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Stock for '{product.label}' depleted by a concurrent checkout thread. Only {product.stock} items left."
+                    prev_stock = product.stock
+                    new_stock = prev_stock - item.quantity
+
+                    # Update current stock
+                    product.stock = new_stock
+
+                    # Record stock movement history
+                    history = StockHistory(
+                        product_id=product.id,
+                        business_id=sale.business_id,
+                        performed_by=sale.cashier_id,
+                        movement_type=StockMovementType.SALE,
+                        quantity=-item.quantity,
+                        previous_stock=prev_stock,
+                        new_stock=new_stock,
+                        buying_price=getattr(item, "cost_price_at_sale", None),
+                        selling_price=item.unit_price,
+                        reference_id=sale.id,
+                        reference_type="SALE",
+                        notes="Sale deduction"
                     )
-                
-                prev_stock = product.stock
-                new_stock = prev_stock - item.quantity
-                
-                product.stock = new_stock
-                db.add(product)
+                    db.add(history)
 
-                # Append historical single source of truth audit event records
-                history = StockHistory(
-                    product_id=product.id,
-                    business_id=sale.business_id,
-                    performed_by=sale.cashier_id,
-                    movement_type=StockMovementType.SALE,
-                    quantity=-item.quantity,
-                    previous_stock=prev_stock,
-                    new_stock=new_stock,
-                    buying_price=item.cost_price_at_sale,
-                    selling_price=item.unit_price,
-                    reference_id=sale.id,
-                    reference_type="SALE"
-                )
-                db.add(history)
+            # 5. Commit everything atomically
+            await db.commit()
+            await db.refresh(sale)
 
-            cogs_unit = getattr(item, "cost_price_at_sale", 0.0) or 0.0
-            total_cogs_today += (cogs_unit * item.quantity)
+            return sale
 
-        # 6 & 7. Call the Decoupled Analytics Tracking Layer Method
-        # await AnalyticsService.track_daily_checkout_metrics(
-        #     db=db,
-        #     sale=sale,
-        #     sale_items=sale_items,
-        #     total_cogs_today=total_cogs_today,
-        #     payment_method=payload.payment_method,
-        #     today=today
-        # )
-
-        db.add(sale)
-
-        # 8. Mint Global Billing References & Save Document Row Contexts
-        prefix = "REC" if doc_type == DocumentType.RECEIPT else "INV"
-        serial_hash = sale.id.hex[:6].upper()
-        date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
-        generated_number = f"{prefix}-{date_slug}-{serial_hash}"
-
-        document = FinancialDocument(
-            business_id=sale.business_id,
-            sale_id=sale.id,
-            customer_id=sale.customer_id,
-            document_type=doc_type,
-            document_number=generated_number,
-            subtotal=sale.subtotal,
-            discount_amount=sale.discount,
-            tax_amount=sale.tax_amount,
-            total_amount=sale.total_amount,
-            amount_paid=0.0 if payload.payment_method == PaymentMethod.INVOICE else sale.total_amount
-        )
-        db.add(document)
+        except HTTPException:
+            await db.rollback()
+            raise
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to finalize sale: {str(e)}"
+            )
         
-        await db.commit()
-        await db.refresh(document)
-        return document
+    async def create_financial_document(db: AsyncSession, sale_id: UUID):
+        pass
                 
                 
 

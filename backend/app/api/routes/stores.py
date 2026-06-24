@@ -11,6 +11,10 @@ from app.schemas.business import RestockRequest, ProductAuditRequest, StaffReque
 from app.utils.logging import logger
 from app.crud.store import store_crud
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
+from app.schemas.store import SaleResponse, FinalizeCheckoutIn
+from sqlmodel import select
+from app.models.models import Sale
+
 
 router = APIRouter()
 
@@ -175,6 +179,29 @@ async def audit_product_stock(
     return await store_crud.audit_stock(db=db, payload=payload, current_user=user)
 
 
-@router.post("/create-sale", status_code=200)
-async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep):
-    pass
+@router.post("/create-sale", status_code=200, response_model=SaleResponse)
+async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep, user: AuthUser):
+    payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
+    record_sale = await store_crud.create_pending_sale(db=db, payload=payload_data)
+    return record_sale
+
+@router.get('/get-sales/{business_id}', response_model=List[SaleResponse])
+async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, sale_id: UUID = None, limit: int = 20, offset: int = None):
+    # fetch sales for a business
+    stmt = select(Sale).where(Sale.business_id == business_id)
+    if sale_id:
+        stmt = stmt.where(Sale.id == sale_id)
+    
+    if limit:
+        stmt = stmt.limit(limit)
+    if offset:
+        stmt = stmt.offset(offset)
+    
+    sales = (await db.exec(stmt)).all()
+    if not sales:
+        raise HTTPException(status_code=404, detail="Sales not found")
+    return sales
+
+@router.post("/checkout")
+async def checkout_sale(db: SessionDep, payload: FinalizeCheckoutIn, user: AuthUser):
+    return await store_crud.finalize_checkout(db=db, payload=payload, sale_id=payload.sale_id)
