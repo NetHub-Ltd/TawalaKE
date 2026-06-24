@@ -490,10 +490,143 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail=f"Failed to finalize sale: {str(e)}"
             )
         
-    async def create_financial_document(db: AsyncSession, sale_id: UUID):
+    # async def create_financial_document(
+    #     self, 
+    #     db: AsyncSession, 
+    #     sale_id: UUID
+    # ) -> FinancialDocument:
+    #     """
+    #     Creates a FinancialDocument (Receipt or Invoice) from a completed sale.
+    #     Fetches all related data (business, cashier, customer, items) for frontend consumption.
+    #     """
+    #     logger.info("Attempting to create a financial document for sale with Id: {sale_id}")
+    #     try:
+    #         # 1. Fetch the sale with all necessary relationships
+    #         sale_res = await db.exec(
+    #             select(Sale)
+    #             .where(Sale.id == sale_id)
+    #             .options(
+    #                 selectinload(Sale.business),
+    #                 selectinload(Sale.cashier),
+    #                 selectinload(Sale.customer),
+    #                 selectinload(Sale.items)
+    #             )
+    #         )
+    #         sale = sale_res.first()
+
+    #         if not sale:
+    #             raise HTTPException(status_code=404, detail="Sale not found")
+
+    #         if sale.status not in [SaleStatus.COMPLETED, SaleStatus.PENDING_PAYMENT]:
+    #             raise HTTPException(status_code=400, detail="Sale must be completed or pending for document generation")
+
+    #         # 2. Determine document type
+    #         is_invoice = sale.status == SaleStatus.PENDING_PAYMENT
+    #         doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
+
+    #         # 3. Generate document number
+    #         prefix = "INV" if is_invoice else "REC"
+    #         date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
+    #         serial = sale.id.hex[:8].upper()
+    #         document_number = f"{prefix}-{date_slug}-{serial}"
+
+    #         # 4. Create Financial Document
+    #         document = FinancialDocument(
+    #             business_id=sale.business_id,
+    #             sale_id=sale.id,
+    #             customer_id=sale.customer_id,
+    #             document_type=doc_type,
+    #             document_number=document_number,
+    #             subtotal=sale.subtotal,
+    #             discount_amount=sale.discount,
+    #             tax_amount=sale.tax_amount,
+    #             total_amount=sale.total_amount,
+    #             amount_paid=sale.total_amount if not is_invoice else 0.0
+    #         )
+
+    #         db.add(document)
+    #         await db.flush()  # Get document ID
+
+    #         # 5. Link SaleItems to this document (for easy retrieval)
+    #         for item in sale.items:
+    #             item.financial_document_id = document.id
+    #             db.add(item)
+
+    #         await db.commit()
+    #         await db.refresh(document)
+    #         logger.info(f"{document.document_type} Created with Id: {document.document_number}")
+
+    #         return document
+
+    #     except HTTPException:
+    #         await db.rollback()
+    #         raise
+    #     except Exception as e:
+    #         await db.rollback()
+    #         raise HTTPException(
+    #             status_code=500,
+    #             detail=f"Failed to create financial document: {str(e)}"
+    #         )
+
+    async def create_financial_document(self, db: AsyncSession, sale_id: UUID):
+        """
+        Background task: Generate receipt or invoice after sale is finalized.
+        """
+        try:
+            # Fetch sale with all needed relationships
+            sale_res = await db.exec(
+                select(Sale)
+                .where(Sale.id == sale_id)
+                .options(
+                    selectinload(Sale.business),
+                    selectinload(Sale.cashier),
+                    selectinload(Sale.customer),
+                    selectinload(Sale.items)
+                )
+            )
+            sale = sale_res.first()
+
+            if not sale:
+                return
+
+            # Determine document type
+            is_invoice = sale.status == SaleStatus.PENDING_PAYMENT
+            doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
+
+            # Generate document number
+            prefix = "INV" if is_invoice else "REC"
+            date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
+            serial = sale.id.hex[:8].upper()
+            document_number = f"{prefix}-{date_slug}-{serial}"
+
+            document = FinancialDocument(
+                business_id=sale.business_id,
+                sale_id=sale.id,
+                customer_id=sale.customer_id,
+                document_type=doc_type,
+                document_number=document_number,
+                subtotal=sale.subtotal,
+                discount_amount=sale.discount,
+                tax_amount=sale.tax_amount,
+                total_amount=sale.total_amount,
+                amount_paid=sale.total_amount if not is_invoice else 0.0
+            )
+
+            db.add(document)
+            await db.commit()
+
+            # Optional: Link items to document
+            for item in sale.items:
+                item.financial_document_id = document.id
+                db.add(item)
+
+            await db.commit()
+        except IntegrityError as e:
+            logger.error(f"we encountered an error while tring to {document.document_type}: {e}")
+            await db.rollback()
+
+    async def fetch_financial_docs(db: AsyncSession, sale_id: UUID, type: str):
         pass
-                
-                
 
 
 store_crud = StoreCrud(Business)

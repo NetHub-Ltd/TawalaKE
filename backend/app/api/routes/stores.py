@@ -1,7 +1,7 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException,BackgroundTasks
 
 from app.api.deps import SessionDep, AuthUser
 from app.crud.business import business_crud
@@ -202,6 +202,35 @@ async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, s
         raise HTTPException(status_code=404, detail="Sales not found")
     return sales
 
+# @router.post("/checkout")
+# async def checkout_sale(db: SessionDep, payload: FinalizeCheckoutIn, user: AuthUser):
+#     return await store_crud.finalize_checkout(db=db, payload=payload, sale_id=payload.sale_id)
+
 @router.post("/checkout")
-async def checkout_sale(db: SessionDep, payload: FinalizeCheckoutIn, user: AuthUser):
-    return await store_crud.finalize_checkout(db=db, payload=payload, sale_id=payload.sale_id)
+async def checkout_sale(
+    db: SessionDep,
+    payload: FinalizeCheckoutIn,
+    user: AuthUser,
+    background_tasks: BackgroundTasks
+):
+    """
+    Finalizes the sale (payment + stock deduction) and returns immediately.
+    Document (Receipt/Invoice) generation runs in the background.
+    """
+    # 1. Finalize the sale (critical path - fast response)
+    sale = await store_crud.finalize_checkout(
+        db=db, 
+        sale_id=payload.sale_id, 
+        payload=payload
+    )
+
+    # 2. Fire background task for document creation (non-blocking)
+    logger.info("firing background task to create receipt/invoice")
+    background_tasks.add_task(
+        store_crud.create_financial_document,
+        db,           # Note: Background tasks get their own session in real implementation
+        sale.id
+    )
+
+    # 3. Return fast response to frontend
+    return sale
