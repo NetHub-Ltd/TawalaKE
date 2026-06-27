@@ -2,7 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 
 // fetch staff using organization id
-export async function GET(request: NextRequest) {
+export async function GET() {
     const session = await auth();
     const organizationId = session?.user.tenant_id
     if (!session?.accessToken) {

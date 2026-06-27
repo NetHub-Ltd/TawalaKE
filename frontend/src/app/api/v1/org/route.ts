@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: res.statusText}, { status: res.status });
     }
     const data = await res.json();
-    console.log("GET /organizations/:id response:", data);
     if (!data.status) {
         return NextResponse.json({ error: data.message }, { status: res.status });
     }

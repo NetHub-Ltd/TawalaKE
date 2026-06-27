@@ -11,8 +11,10 @@ import {
   Tag,
   X,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner"; // Modern, context-clean notifications engine
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
@@ -30,6 +32,8 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
 
   const [mounted, setMounted] = useState(false);
   const [isAddingDiscount, setIsAddingDiscount] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -54,9 +58,75 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
     }
   };
 
-  const handleCheckoutRedirect = () => {
-    if (cart.length > 0) {
-      router.push(`/org/${organizationId}/${businessId}/checkout`);
+  const handleClearCartWithFeedback = () => {
+    clearCart();
+    toast.info("Cart Cleared", {
+      description: "All pending terminal line items have been removed.",
+    });
+  };
+
+  // Asynchronous operational pipeline communicating with create_pending_sale
+  const handleCheckoutRedirect = async () => {
+    if (cart.length === 0 || !businessId) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    // Initial user lifecycle progress indicator
+    const toastId = toast.loading("Staging transaction...", {
+      description: "Reserving items and generating secure pending ledger lines.",
+    });
+
+    // Transform local Zustand cart definitions into backend's validation payload schema
+    const payload = {
+      business_id: businessId,
+      items: cart.map((item) => ({
+        product_id: item.id,
+        quantity: item.qty,
+      })),
+    };
+
+    try {
+      const response = await fetch(`/api/v1/org/stores/sales`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData?.detail || "Failed to establish pending database ledger reference.");
+      }
+
+      const pendingSaleData = await response.json();
+      
+      // Update loading toast instance to explicit operational completion state
+      toast.success("Order staged successfully", {
+        id: toastId,
+        description: `Sale reference generated for KES ${grandTotal.toLocaleString()}`,
+      });
+
+      // Purge memory parameters of standard terminal arrays immediately prior to navigational dispatch
+      clearCart();
+
+      // Direct user down to the multi-tenant physical payment checkout node
+      router.push(`/org/${organizationId}/${businessId}/checkout?sale_id=${pendingSaleData.id}`);
+      
+    } catch (error: any) {
+      console.error("Pending Checkout Submission Error:", error);
+      const fallbackMsg = error?.message || "An operational pipeline error occurred. Please try again.";
+      
+      setSubmitError(fallbackMsg);
+      
+      // Flash structural failure contextual details
+      toast.error("Checkout staging failed", {
+        id: toastId,
+        description: fallbackMsg,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -86,18 +156,20 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
         <div className="flex items-center gap-0.5 shrink-0">
           <button
             type="button"
+            disabled={isSubmitting}
             onClick={handleExpand}
             title="Expand Tray View"
-            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-muted hover:text-brand-primary hover:bg-surface/60 transition-all active:scale-95 cursor-pointer"
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-muted hover:text-brand-primary hover:bg-surface/60 transition-all active:scale-95 cursor-pointer disabled:opacity-30"
           >
             <Maximize2 size={15} aria-hidden="true" />
           </button>
           {cart.length > 0 && (
             <button
               type="button"
-              onClick={clearCart}
+              disabled={isSubmitting}
+              onClick={handleClearCartWithFeedback}
               title="Clear Tray items"
-              className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-muted hover:text-brand-accent hover:bg-brand-accent/10 transition-all active:scale-95 cursor-pointer"
+              className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-xl text-muted hover:text-brand-accent hover:bg-brand-accent/10 transition-all active:scale-95 cursor-pointer disabled:opacity-30"
             >
               <Trash2 size={15} aria-hidden="true" />
             </button>
@@ -135,8 +207,9 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
               <div className="flex items-center bg-surface border border-border/40 rounded-lg p-0.5 mx-2 shrink-0">
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => updateQty(item.id, -1)}
-                  className="h-7 w-7 flex items-center justify-center bg-background border border-border/20 text-muted hover:text-brand-primary rounded-md transition-all active:scale-90 cursor-pointer"
+                  className="h-7 w-7 flex items-center justify-center bg-background border border-border/20 text-muted hover:text-brand-primary rounded-md transition-all active:scale-90 cursor-pointer disabled:opacity-30"
                 >
                   <Minus size={10} strokeWidth={3} aria-hidden="true" />
                 </button>
@@ -145,8 +218,9 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
                 </span>
                 <button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => updateQty(item.id, 1)}
-                  className="h-7 w-7 flex items-center justify-center bg-background border border-border/20 text-muted hover:text-brand-primary rounded-md transition-all active:scale-90 cursor-pointer"
+                  className="h-7 w-7 flex items-center justify-center bg-background border border-border/20 text-muted hover:text-brand-primary rounded-md transition-all active:scale-90 cursor-pointer disabled:opacity-30"
                 >
                   <Plus size={10} strokeWidth={3} aria-hidden="true" />
                 </button>
@@ -172,21 +246,32 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
               <Tag size={13} className="text-brand-primary absolute left-1" aria-hidden="true" />
               <input
                 autoFocus
+                disabled={isSubmitting}
                 type="number"
                 min="0"
-                className="w-full bg-transparent border-none py-0 pl-6 pr-6 text-xs font-bold text-foreground focus:outline-none focus:ring-0 placeholder-muted/50 font-mono"
+                className="w-full bg-transparent border-none py-0 pl-6 pr-6 text-xs font-bold text-foreground focus:outline-none focus:ring-0 placeholder-muted/50 font-mono disabled:opacity-50"
                 placeholder="Enter KES amount"
                 value={discount || ""}
                 onChange={(e) => setDiscount(Number(e.target.value))}
                 onBlur={() => !discount && setIsAddingDiscount(false)}
-                onKeyDown={(e) => e.key === "Enter" && setIsAddingDiscount(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setIsAddingDiscount(false);
+                    if (discount > 0) {
+                      toast.success("Discount Registered", {
+                        description: `Deduction value of KES ${discount.toLocaleString()} applied to totals.`,
+                      });
+                    }
+                  }
+                }}
               />
-              {discount > 0 && (
+              {discount > 0 && !isSubmitting && (
                 <button
                   type="button"
                   onClick={() => {
                     setDiscount(0);
                     setIsAddingDiscount(false);
+                    toast.info("Discount Cancelled");
                   }}
                   className="absolute right-0 text-muted hover:text-brand-accent p-1 cursor-pointer"
                   title="Remove Discount"
@@ -198,18 +283,22 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
           ) : (
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => setIsAddingDiscount(true)}
-              className="text-[10px] font-bold uppercase tracking-wider text-brand-primary flex items-center gap-1.5 hover:text-brand-primary/80 transition-all cursor-pointer min-h-[32px]"
+              className="text-[10px] font-bold uppercase tracking-wider text-brand-primary flex items-center gap-1.5 hover:text-brand-primary/80 transition-all cursor-pointer min-h-[32px] disabled:opacity-40"
             >
               <Tag size={11} strokeWidth={2.5} aria-hidden="true" />
               {discount > 0 ? `Discount Applied: -KES ${discount.toLocaleString()}` : "Add Discount"}
             </button>
           )}
 
-          {!isAddingDiscount && discount > 0 && (
+          {!isAddingDiscount && discount > 0 && !isSubmitting && (
             <button 
               type="button"
-              onClick={() => setDiscount(0)}
+              onClick={() => {
+                setDiscount(0);
+                toast.info("Discount Reset");
+              }}
               className="text-[9px] font-bold text-brand-accent uppercase hover:underline cursor-pointer"
             >
               Reset
@@ -255,15 +344,31 @@ export const CartSidebar = ({ businessId }: { businessId?: string }) => {
           </div>
         </div>
 
-        {/* --- CHECKOUT REDIRECT ROUTE BUTTON --- */}
+        {/* Runtime Exception Alert Box */}
+        {submitError && (
+          <div className="p-3 text-[11px] bg-brand-accent/10 border border-brand-accent/20 rounded-xl text-brand-accent font-bold text-center animate-in fade-in zoom-in-95 duration-150">
+            {submitError}
+          </div>
+        )}
+
+        {/* --- CHECKOUT REDIRECT ROUTE BUTTON WITH INTERCEPT --- */}
         <button
           type="button"
-          disabled={cart.length === 0}
+          disabled={cart.length === 0 || isSubmitting}
           onClick={handleCheckoutRedirect}
           className="group w-full h-12 rounded-xl bg-brand-primary text-background font-bold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:bg-brand-primary/90 transition-all shadow-md disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
         >
-          <span>Proceed to Checkout</span>
-          <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          {isSubmitting ? (
+            <>
+              <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+              <span>Staging Pending Order...</span>
+            </>
+          ) : (
+            <>
+              <span>Proceed to Checkout</span>
+              <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+            </>
+          )}
         </button>
       </div>
     </aside>
