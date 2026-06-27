@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     // grab the organization_id from the params
     const { searchParams } = new URL(request.url);
-    const organization_id = searchParams.get("organization_id");
+    const organization_id = searchParams.get("organizationId");
     if (!organization_id) {
         return NextResponse.json({ error: "Organization ID not provided" }, { status: 400 });
     }
@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const organization_id = searchParams.get("organization_id");    
-    if (!organization_id) {
+    const organizationId = searchParams.get("organization_id");    
+    if (!organizationId) {
         return NextResponse.json({ error: "Organization ID not provided" }, { status: 400 });
     }
     // grab the body from the request
