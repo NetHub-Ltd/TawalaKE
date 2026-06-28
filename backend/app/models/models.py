@@ -190,8 +190,8 @@ class Business(BaseMixin, table=True):
     __tablename__ = "businesses"
 
     tenant_id: UUID = Field(index=True)
-    # organization_id: Optional[UUID] = Field(default=None, index=True)
-    organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(default=None, index=True)
+    # organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
 
     name: str = Field(index=True)
     tax_rate: Optional[float] = Field(default=0.16)
