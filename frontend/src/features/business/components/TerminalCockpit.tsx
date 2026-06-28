@@ -100,7 +100,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
         - `shrink-0`: Blocks the flex canvas from squishing or altering width metrics.
         - `h-full`: Forces layout execution perfectly from top to bottom of parent panel bounds.
       */}
-      <aside className="w-86 shrink-0 h-full overflow-hidden border-l border-border/40 bg-card/40 flex flex-col min-w-0">
+      <aside className="w-76 shrink-0 h-full overflow-hidden border-l border-border/40 bg-card/40 flex flex-col min-w-0">
         <CartSidebar businessId={businessId} />
       </aside>
 

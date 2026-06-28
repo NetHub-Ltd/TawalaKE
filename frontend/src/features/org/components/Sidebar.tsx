@@ -37,12 +37,12 @@ interface SidebarLink {
 
 // 1. Meaningful dedicated icons correctly mapped contextually across links
 const NAVIGATION_SCHEMA: SidebarLink[] = [
-  // { label: "Overview", path: "/#", allowedRoles: ["OWNER"], icon: LayoutDashboard },
-  { label: "Terminal", path: "", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: Monitor },
+  { label: "Overview", path: "/overview", allowedRoles: ["OWNER"], icon: LayoutDashboard },
+  { label: "Terminal", path: "/terminal", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: Monitor },
   { label: "Stock Management", path: "/stock/audit", allowedRoles: ["OWNER", "MANAGER"], icon: Package },
-  // { label: "Sales History", path: "/#", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: History },
+  { label: "Sales History", path: "/sale-history", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: History },
   { label: "Products", path: "/inventory", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: Boxes },
-  // { label: "Staff", path: "/#", allowedRoles: ["OWNER", "MANAGER"], icon: Users2 },
+  { label: "Staff", path: "/staff", allowedRoles: ["OWNER", "MANAGER"], icon: Users2 },
   // { label: "Receipts and Invoices", path: "/#", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: FileSpreadsheet },
   // { label: "Store Settings", path: "/#", allowedRoles: ["OWNER"], icon: Store },
 ];

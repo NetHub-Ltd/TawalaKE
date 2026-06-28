@@ -1,7 +1,7 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException,BackgroundTasks
 
 from app.api.deps import SessionDep, AuthUser
 from app.crud.business import business_crud
@@ -10,6 +10,11 @@ from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
 from app.schemas.business import RestockRequest, ProductAuditRequest, StaffRequest, ProductRestockRequest
 from app.utils.logging import logger
 from app.crud.store import store_crud
+from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
+from app.schemas.store import SaleResponse, FinalizeCheckoutIn
+from sqlmodel import select
+from app.models.models import Sale
+
 
 router = APIRouter()
 
@@ -172,3 +177,60 @@ async def audit_product_stock(
     Calculates the inventory variance delta and tracks loss anomalies.
     """
     return await store_crud.audit_stock(db=db, payload=payload, current_user=user)
+
+
+@router.post("/create-sale", status_code=200, response_model=SaleResponse)
+async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep, user: AuthUser):
+    payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
+    record_sale = await store_crud.create_pending_sale(db=db, payload=payload_data)
+    return record_sale
+
+@router.get('/get-sales/{business_id}', response_model=List[SaleResponse])
+async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, sale_id: UUID = None, limit: int = 20, offset: int = None):
+    # fetch sales for a business
+    stmt = select(Sale).where(Sale.business_id == business_id)
+    if sale_id:
+        stmt = stmt.where(Sale.id == sale_id)
+    
+    if limit:
+        stmt = stmt.limit(limit)
+    if offset:
+        stmt = stmt.offset(offset)
+    
+    sales = (await db.exec(stmt)).all()
+    if not sales:
+        raise HTTPException(status_code=404, detail="Sales not found")
+    return sales
+
+# @router.post("/checkout")
+# async def checkout_sale(db: SessionDep, payload: FinalizeCheckoutIn, user: AuthUser):
+#     return await store_crud.finalize_checkout(db=db, payload=payload, sale_id=payload.sale_id)
+
+@router.post("/checkout")
+async def checkout_sale(
+    db: SessionDep,
+    payload: FinalizeCheckoutIn,
+    user: AuthUser,
+    background_tasks: BackgroundTasks
+):
+    """
+    Finalizes the sale (payment + stock deduction) and returns immediately.
+    Document (Receipt/Invoice) generation runs in the background.
+    """
+    # 1. Finalize the sale (critical path - fast response)
+    sale = await store_crud.finalize_checkout(
+        db=db, 
+        sale_id=payload.sale_id, 
+        payload=payload
+    )
+
+    # 2. Fire background task for document creation (non-blocking)
+    logger.info("firing background task to create receipt/invoice")
+    background_tasks.add_task(
+        store_crud.create_financial_document,
+        db,           # Note: Background tasks get their own session in real implementation
+        sale.id
+    )
+
+    # 3. Return fast response to frontend
+    return sale

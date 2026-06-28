@@ -1,12 +1,12 @@
-from typing import Type
+from typing import Type, List, Dict,Tuple
 from uuid import UUID
+from datetime import datetime, timezone
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-import datetime
-
+from sqlalchemy.orm import selectinload
 
 from app.crud.base import BaseCRUD
 from app.models.models import Business, StaffBusinessAssignment, Staff, StockHistory, StockMovementType
@@ -18,11 +18,14 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import select
-from app.models.models import ( Product
+from app.models.models import ( Product, Sale, SaleItem, FinancialDocument, DocumentType, SaleStatus,
+    Payment, PaymentMethod, Customer, StockHistory, StockMovementType
 )
 from app.schemas.business import StockTakeRequest
 from app.utils.logging import logger
 from app.utils.helpers import utc_now
+from app.schemas.store import FinalizeCheckoutIn
+from uuid import uuid4
 
 class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
@@ -275,6 +278,355 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=500,
                 detail="Database transaction conflict encountered while updating inventory levels."
             )
+        
+    async def create_pending_sale(self, db: AsyncSession, payload: FinalizeCheckoutIn) -> Tuple[Sale, List[SaleItem]]:
+        """
+        Instantiates a draft transaction record, validates product status, checks 
+        inventory thresholds in a single batch query execution context, and saves 
+        the immutable line items safely.
+        """
+        # 1. Extract and deduplicate item identifiers to prevent N+1 loop round-trips
+        product_ids = list({item.product_id for item in payload.items})
+        if not product_ids:
+            raise HTTPException(
+                status_code=400,
+                detail="Transaction payload must contain at least one retail item line."
+            )
+
+        # Bulk fetch all relevant products in one round-trip
+        product_query = await db.exec(select(Product).where(Product.id.in_(product_ids)))
+        products_map: Dict[UUID, Product] = {product.id: product for product in product_query.all()}
+
+        # 2. Instantiate root draft Sale container structure
+        new_sale = Sale(
+            business_id=payload.business_id,
+            cashier_id=payload.cashier_id,
+            customer_id=getattr(payload, "customer_id", None),
+            status=SaleStatus.PENDING_PAYMENT,
+            subtotal=0.0,
+            discount=0.0,
+            tax_amount=0.0,
+            total_amount=0.0
+        )
+        
+        db.add(new_sale)
+        # Flush registers the record and obtains the primary key ID without writing a commit block
+        await db.flush()
+
+        running_subtotal = 0.0
+        running_tax = 0.0
+        created_items: List[SaleItem] = []
+
+        # 3. Safe linear validation and calculation phase
+        for item in payload.items:
+            product = products_map.get(item.product_id)
+
+            if not product or not getattr(product, "active", True):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Product with ID {item.product_id} is unavailable or does not exist."
+                )
+
+            # Enforce server-side stock safety checkpoints
+            if getattr(product, "track_stock", False) and getattr(product, "stock", 0) < item.quantity:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Insufficient stock for '{product.label}'. Available: {product.stock}, Requested: {item.quantity}"
+                )
+
+            # Establish tax rate constraints (falling back to standard 16% corporate VAT if unspecified)
+            # tax_rate = getattr(product, "tax_rate", 0.0)
+            # if tax_rate is None:
+            #     tax_rate = 0.0
+
+            # force a taxrate for now
+            tax_rate = 0.0
+
+            # Standard clean currency calculations
+            item_subtotal = round(product.selling_price * item.quantity, 2)
+            item_tax = round(item_subtotal * tax_rate, 2)
+
+            # Map correct safe fallback parameters to match matching model keys
+            sku_code = getattr(product, "sku", "GENERIC") or "GENERIC"
+            cost_price = getattr(product, "cost_price", None) or getattr(product, "buying_price", None)
+
+            sale_item = SaleItem(
+                sale_id=new_sale.id,
+                product_id=product.id,
+                sku=sku_code,
+                name=product.label,
+                unit_price=product.selling_price,
+                quantity=item.quantity,
+                tax_rate=tax_rate,
+                subtotal=item_subtotal,
+                cost_price_at_sale=cost_price
+            )
+            
+            db.add(sale_item)
+            created_items.append(sale_item)
+            
+            running_subtotal += item_subtotal
+            running_tax += item_tax
+
+        # 4. Bind running financial totals to parent transaction ledger container
+        new_sale.subtotal = round(running_subtotal, 2)
+        new_sale.tax_amount = round(running_tax, 2)
+        new_sale.total_amount = round(running_subtotal + running_tax, 2)
+
+        db.add(new_sale)
+        
+        # Commit execution updates all transactional tables together safely
+        await db.commit()
+        await db.refresh(new_sale)
+        
+        return new_sale
+
+    #     return document
+    async def finalize_checkout(
+        self, 
+        db: AsyncSession, 
+        sale_id: UUID, 
+        payload: FinalizeCheckoutIn
+    ) -> Sale:
+        """
+        Finalizes a pending sale:
+        - Updates payment
+        - Deducts stock
+        - Records inventory history
+        - Returns the completed Sale object
+        
+        Everything happens in one atomic transaction.
+        Receipt/Invoice generation should be handled separately (background task).
+        """
+        try:
+            # 1. Fetch the pending sale with necessary relationships
+            sale_res = await db.exec(
+                select(Sale)
+                .where(Sale.id == sale_id)
+                .options(selectinload(Sale.items))
+            )
+            sale = sale_res.first()
+
+            if not sale:
+                raise HTTPException(status_code=404, detail="Sale not found")
+            
+            if sale.status == SaleStatus.COMPLETED:
+                logger.info("Sale with id: {sale.id} is already completed")
+                return sale
+                # raise HTTPException(status_code=400, detail="Sale already completed")
+
+            # 2. Create Payment record
+            payment = Payment(
+                business_id=sale.business_id,
+                sale_id=sale.id,
+                amount=sale.total_amount,
+                method=payload.payment_method,
+                reference=payload.payment_reference
+            )
+            db.add(payment)
+
+            # 3. Update sale status
+            if payload.payment_method == PaymentMethod.INVOICE:
+                sale.status = SaleStatus.PENDING_PAYMENT
+            else:
+                sale.status = SaleStatus.COMPLETED
+
+            # 4. Stock Deduction + History (Critical part)
+            for item in sale.items:
+                # Get product with lock for safety
+                product_res = await db.exec(
+                    select(Product)
+                    .where(Product.id == item.product_id)
+                    .with_for_update()
+                )
+                product = product_res.first()
+
+                if not product:
+                    continue
+
+                if getattr(product, "track_stock", False):
+                    if product.stock < item.quantity:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Insufficient stock for '{product.label}'. Available: {product.stock}"
+                        )
+
+                    prev_stock = product.stock
+                    new_stock = prev_stock - item.quantity
+
+                    # Update current stock
+                    product.stock = new_stock
+
+                    # Record stock movement history
+                    history = StockHistory(
+                        product_id=product.id,
+                        business_id=sale.business_id,
+                        performed_by=sale.cashier_id,
+                        movement_type=StockMovementType.SALE,
+                        quantity=-item.quantity,
+                        previous_stock=prev_stock,
+                        new_stock=new_stock,
+                        buying_price=getattr(item, "cost_price_at_sale", None),
+                        selling_price=item.unit_price,
+                        reference_id=sale.id,
+                        reference_type="SALE",
+                        notes="Sale deduction"
+                    )
+                    db.add(history)
+
+            # 5. Commit everything atomically
+            await db.commit()
+            await db.refresh(sale)
+
+            return sale
+
+        except HTTPException:
+            await db.rollback()
+            raise
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to finalize sale: {str(e)}"
+            )
+        
+    # async def create_financial_document(
+    #     self, 
+    #     db: AsyncSession, 
+    #     sale_id: UUID
+    # ) -> FinancialDocument:
+    #     """
+    #     Creates a FinancialDocument (Receipt or Invoice) from a completed sale.
+    #     Fetches all related data (business, cashier, customer, items) for frontend consumption.
+    #     """
+    #     logger.info("Attempting to create a financial document for sale with Id: {sale_id}")
+    #     try:
+    #         # 1. Fetch the sale with all necessary relationships
+    #         sale_res = await db.exec(
+    #             select(Sale)
+    #             .where(Sale.id == sale_id)
+    #             .options(
+    #                 selectinload(Sale.business),
+    #                 selectinload(Sale.cashier),
+    #                 selectinload(Sale.customer),
+    #                 selectinload(Sale.items)
+    #             )
+    #         )
+    #         sale = sale_res.first()
+
+    #         if not sale:
+    #             raise HTTPException(status_code=404, detail="Sale not found")
+
+    #         if sale.status not in [SaleStatus.COMPLETED, SaleStatus.PENDING_PAYMENT]:
+    #             raise HTTPException(status_code=400, detail="Sale must be completed or pending for document generation")
+
+    #         # 2. Determine document type
+    #         is_invoice = sale.status == SaleStatus.PENDING_PAYMENT
+    #         doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
+
+    #         # 3. Generate document number
+    #         prefix = "INV" if is_invoice else "REC"
+    #         date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
+    #         serial = sale.id.hex[:8].upper()
+    #         document_number = f"{prefix}-{date_slug}-{serial}"
+
+    #         # 4. Create Financial Document
+    #         document = FinancialDocument(
+    #             business_id=sale.business_id,
+    #             sale_id=sale.id,
+    #             customer_id=sale.customer_id,
+    #             document_type=doc_type,
+    #             document_number=document_number,
+    #             subtotal=sale.subtotal,
+    #             discount_amount=sale.discount,
+    #             tax_amount=sale.tax_amount,
+    #             total_amount=sale.total_amount,
+    #             amount_paid=sale.total_amount if not is_invoice else 0.0
+    #         )
+
+    #         db.add(document)
+    #         await db.flush()  # Get document ID
+
+    #         # 5. Link SaleItems to this document (for easy retrieval)
+    #         for item in sale.items:
+    #             item.financial_document_id = document.id
+    #             db.add(item)
+
+    #         await db.commit()
+    #         await db.refresh(document)
+    #         logger.info(f"{document.document_type} Created with Id: {document.document_number}")
+
+    #         return document
+
+    #     except HTTPException:
+    #         await db.rollback()
+    #         raise
+    #     except Exception as e:
+    #         await db.rollback()
+    #         raise HTTPException(
+    #             status_code=500,
+    #             detail=f"Failed to create financial document: {str(e)}"
+    #         )
+
+    async def create_financial_document(self, db: AsyncSession, sale_id: UUID):
+        """
+        Background task: Generate receipt or invoice after sale is finalized.
+        """
+        try:
+            # Fetch sale with all needed relationships
+            sale_res = await db.exec(
+                select(Sale)
+                .where(Sale.id == sale_id)
+                .options(
+                    selectinload(Sale.business),
+                    selectinload(Sale.cashier),
+                    selectinload(Sale.customer),
+                    selectinload(Sale.items)
+                )
+            )
+            sale = sale_res.first()
+
+            if not sale:
+                return
+
+            # Determine document type
+            is_invoice = sale.status == SaleStatus.PENDING_PAYMENT
+            doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
+
+            # Generate document number
+            prefix = "INV" if is_invoice else "REC"
+            date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
+            serial = sale.id.hex[:8].upper()
+            document_number = f"{prefix}-{date_slug}-{serial}"
+
+            document = FinancialDocument(
+                business_id=sale.business_id,
+                sale_id=sale.id,
+                customer_id=sale.customer_id,
+                document_type=doc_type,
+                document_number=document_number,
+                subtotal=sale.subtotal,
+                discount_amount=sale.discount,
+                tax_amount=sale.tax_amount,
+                total_amount=sale.total_amount,
+                amount_paid=sale.total_amount if not is_invoice else 0.0
+            )
+
+            db.add(document)
+            await db.commit()
+
+            # Optional: Link items to document
+            for item in sale.items:
+                item.financial_document_id = document.id
+                db.add(item)
+
+            await db.commit()
+        except IntegrityError as e:
+            logger.error(f"we encountered an error while tring to {document.document_type}: {e}")
+            await db.rollback()
+
+    async def fetch_financial_docs(db: AsyncSession, sale_id: UUID, type: str):
+        pass
 
 
 store_crud = StoreCrud(Business)

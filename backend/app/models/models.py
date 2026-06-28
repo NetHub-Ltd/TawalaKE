@@ -51,7 +51,7 @@ class StaffRole(str, Enum):
     OWNER = "OWNER"
     MANAGER = "MANAGER"
     CASHIER = "CASHIER"
-    KITCHEN_STAFF = "KITCHEN"
+    ADMIN = "ADMIN"
 
 
 class StockMovementType(str, Enum):
@@ -70,6 +70,10 @@ class StockTakeStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 
+class DocumentType(str, Enum):
+    INVOICE = "INVOICE"
+    RECEIPT = "RECEIPT"
+    CREDIT_NOTE = "CREDIT_NOTE"
 # =========================================================
 # REDUNDANT / DEPRECATED ITEMS (For backward compatibility)
 # =========================================================
@@ -144,10 +148,10 @@ class StaffBusinessAssignment(BaseMixin, table=True):
     staff_id: UUID = Field(foreign_key="staff.id", primary_key=True, ondelete="CASCADE")
     business_id: UUID = Field(foreign_key="businesses.id", primary_key=True, ondelete="CASCADE")
 
-    # role: StaffRole = Field(                                      # ← Moved here
-    #     sa_column=Column(SAEnum(StaffRole, name="staff_role_enum")),
-    #     default=StaffRole.CASHIER
-    # )
+    role: StaffRole = Field(                                      # ← Moved here
+        sa_column=Column(SAEnum(StaffRole, name="staff_role_enum")),
+        default=StaffRole.CASHIER
+    )
 
 
 class Staff(BaseMixin, table=True):
@@ -186,9 +190,11 @@ class Business(BaseMixin, table=True):
     __tablename__ = "businesses"
 
     tenant_id: UUID = Field(index=True)
-    organization_id: Optional[UUID] = Field(default=None, index=True)
+    # organization_id: Optional[UUID] = Field(default=None, index=True)
+    organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
 
     name: str = Field(index=True)
+    tax_rate: Optional[float] = Field(default=0.16)
     address: Optional[str] = Field(default=None)
     phone: Optional[str] = Field(default=None)
     active: bool = Field(index=True, default=True)
@@ -270,14 +276,15 @@ class StockHistory(BaseMixin, table=True):
         description="The staff identity or system worker who committed or authorized the inventory event."
     )
 
+
     movement_type: StockMovementType = Field(
-        sa_column=Column(
-            SAEnum(StockMovementType, name="stock_history_type_enum", create_type=True),
-            nullable=False,
-            index=True
-        ),
+        sa_type=SAEnum(StockMovementType, name="stock_history_type_enum", create_type=True),
+        nullable=False,
+        index=True,
         description="Categorizes the operational flow: SALE, RESTOCK, RECONCILIATION, WASTAGE, or RETURN."
     )
+
+    # type: Optional[str] = sa.Column(sa.String, default="SALE")  # Fallback for deprecated fields if needed
 
     quantity: float = Field(
         default=0.0,
@@ -342,7 +349,8 @@ class Customer(BaseMixin, table=True):
     __tablename__ = "customers"
 
     tenant_id: Optional[UUID] = Field(default=None, index=True)
-    organization_id: UUID = Field(foreign_key="organizations.id", index=True)
+    # organization_id: UUID = Field(foreign_key="organizations.id", index=True)
+    organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
 
     name: str
@@ -350,116 +358,6 @@ class Customer(BaseMixin, table=True):
     email: Optional[str] = Field(default=None)
 
     sales: List["Sale"] = Relationship(back_populates="customer")
-
-
-# =========================================================
-# 7. SALES & TRANSACTIONS
-# =========================================================
-
-class Sale(BaseMixin, table=True):
-    """Main sales transaction"""
-    __tablename__ = "sales"
-
-    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
-    cashier_id: UUID = Field(foreign_key="staff.id", index=True)
-    customer_id: Optional[UUID] = Field(default=None, foreign_key="customers.id")
-
-    currency: str = Field(default="KES", max_length=5)
-    status: SaleStatus = Field(
-        sa_column=Column(SAEnum(SaleStatus, name="business_sale_status_enum")),
-        default=SaleStatus.PENDING_PAYMENT
-    )
-
-    subtotal: float = Field(default=0.0)
-    discount: float = Field(default=0.0)
-    tax_rate: float = Field(default=0.0)
-    tax_amount: float = Field(default=0.0)
-    discount_applied: float = Field(default=0.0)
-    total_amount: float = Field(default=0.0)
-
-    # relationships
-    business: Business = Relationship(back_populates="sales")
-    cashier: Staff = Relationship(back_populates="sales_processed")
-    customer: Optional[Customer] = Relationship()
-    payments: List["Payment"] = Relationship(back_populates="sale")
-    items: List["SaleItem"] = Relationship(back_populates="sale")
-    ledger_events: List["SaleLedgerEvent"] = Relationship(back_populates="sale")
-
-
-class SaleItem(BaseMixin, table=True):
-    """Individual items in a sale"""
-    __tablename__ = "sale_items"
-    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
-    product_id: UUID = Field(index=True)
-    sku: str = Field(max_length=50, index=True)
-    name: str = Field(max_length=150)
-    unit_price: float
-    quantity: float
-    tax_rate: float = Field(default=0.16, nullable=True)
-    quantity_refunded: float = Field(default=0.0, nullable=True)
-    subtotal: float
-    # stock_batch_id: Optional[UUID] = Field(default=None, foreign_key="stock_batches.id")
-    cost_price_at_sale: Optional[float] = Field(default=None)
-
-    sale: Sale = Relationship(back_populates="items")
-
-
-# =========================================================
-# 8. PAYMENTS & EXTERNAL INTEGRATIONS
-# =========================================================
-
-class Payment(BaseMixin, table=True):
-    __tablename__ = "payments"
-    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
-    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
-    amount: float
-    
-    method: PaymentMethod = Field(
-        sa_column=Column(SAEnum(PaymentMethod, name="payment_method_enum"))
-    )
-    reference: Optional[str] = Field(default=None, index=True)
-
-    sale: Sale = Relationship(back_populates="payments")
-    mpesa_payload: Optional["MpesaPayload"] = Relationship(back_populates="payment")
-
-
-class MpesaPayload(BaseMixin, table=True):
-    __tablename__ = "mpesa_payloads"
-
-    payment_id: Optional[UUID] = Field(default=None, foreign_key="payments.id", index=True)
-    transaction_type: str = Field(index=True)
-
-    raw_payload: Dict[str, Any] = Field(sa_column=Column(JSONB))
-    response_payload: Optional[Dict[str, Any]] = Field(sa_column=Column(JSONB), default=None)
-
-    mpesa_receipt_number: Optional[str] = Field(index=True)
-    transaction_status: str = Field(default="PENDING")
-    amount: float
-    phone_number: str
-    account_reference: Optional[str] = Field(default=None)
-
-    is_reconciled: bool = Field(default=False)
-    reconciled_at: Optional[datetime] = Field(default=None)
-
-    payment: Optional[Payment] = Relationship(back_populates="mpesa_payload")
-
-
-# =========================================================
-# 9. AUDIT & ANALYTICS
-# =========================================================
-
-class SaleLedgerEvent(BaseMixin, table=True):
-    """Immutable audit log for sales events"""
-    __tablename__ = "sale_ledger_events"
-    sale_id: UUID = Field(foreign_key="sales.id", index=True)
-    event_type: EventType = Field(
-        sa_column=Column(SAEnum(EventType, name="event_type_enum"))
-    )
-    amount_delta: float = Field(default=0.0)
-    product_id_context: Optional[UUID] = Field(default=None, index=True)
-    notes: Optional[str] = Field(default=None)
-
-    sale: Sale = Relationship(back_populates="ledger_events")
 
 
 class SaleAnalyticsSummary(BaseMixin, table=True):
@@ -479,3 +377,122 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
 
     business: Business = Relationship(back_populates="analytics_summaries")
 
+
+# =========================================================
+# CORE BILLING & TRANSACTION MODELS
+# =========================================================
+
+class Sale(BaseMixin, table=True):
+    """Main sales transaction record."""
+    __tablename__ = "sales"
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    cashier_id: UUID = Field(foreign_key="staff.id", index=True)
+    customer_id: Optional[UUID] = Field(default=None, foreign_key="customers.id")
+
+    currency: str = Field(default="KES", max_length=5)
+    
+    # CHANGE: Added `default=SaleStatus.PENDING_PAYMENT` to the SQLModel Field.
+    # REASON: When providing custom `sa_column` declarations with defaults, SQLModel doesn't forward the default back to the underlying Pydantic schema layout. 
+    # Adding it here prevents validation errors when parsing/instantiating a new Sale without explicitly submitting a status code.
+    status: SaleStatus = Field(
+        default=SaleStatus.PENDING_PAYMENT,
+        sa_column=Column(
+            SAEnum(SaleStatus, name="business_sale_status_enum"), 
+            nullable=False, 
+            default=SaleStatus.PENDING_PAYMENT
+        )
+    )
+
+    subtotal: float = Field(default=0.0)
+    discount: float = Field(default=0.0)
+    tax_rate: float = Field(default=0.0)
+    tax_amount: float = Field(default=0.0)
+    discount_applied: float = Field(default=0.0)
+    total_amount: float = Field(default=0.0)
+
+    # Standard two-way relationships
+    items: List["SaleItem"] = Relationship(back_populates="sale")
+    document: Optional["FinancialDocument"] = Relationship(back_populates="sale", sa_relationship_kwargs={"uselist": False})
+    cashier: "Staff" = Relationship(back_populates="sales_processed")
+    business: "Business" = Relationship(back_populates="sales")
+    customer: "Customer" = Relationship(back_populates="sales")
+    
+    # CHANGE: Normalized lowercase `list` to capitalized `List` typing.
+    # REASON: Keeps collection types strictly uniform with the rest of your system (e.g., List["SaleItem"]) to bypass runtime parsing variations in strict SQLModel implementations.
+    payments: List["Payment"] = Relationship(back_populates="sale")
+
+
+class Payment(BaseMixin, table=True):
+    __tablename__ = "payments"
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    amount: float
+    
+    method: PaymentMethod = Field(
+        sa_column=Column(SAEnum(PaymentMethod, name="payment_method_enum"))
+    )
+    reference: Optional[str] = Field(default=None, index=True)
+
+    sale: Sale = Relationship(back_populates="payments")
+    # mpesa_payload: Optional["MpesaPayload"] = Relationship(back_populates="payment")
+
+
+class SaleItem(BaseMixin, table=True):
+    """
+    Individual items tied to a sale. 
+    This acts as your immutable receipt/invoice line-item snapshot.
+    """
+    __tablename__ = "sale_items"
+
+    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    product_id: UUID = Field(index=True)
+    sku: str = Field(max_length=50, index=True)
+    name: str = Field(max_length=150)
+    unit_price: float
+    quantity: float
+    tax_rate: float = Field(default=0.16, nullable=True)
+    quantity_refunded: float = Field(default=0.0, nullable=True)
+    subtotal: float
+    cost_price_at_sale: Optional[float] = Field(default=None)
+
+    # Link back to the parent sale container
+    sale: Sale = Relationship(back_populates="items")
+    financial_document_id: Optional[UUID] = Field(
+        default=None, 
+        foreign_key="financial_documents.id", 
+        index=True, 
+        ondelete="CASCADE"
+    )
+
+
+class FinancialDocument(BaseMixin, table=True):
+    """
+    Unified Invoice and Receipt model.
+    Allows direct retrieval of items without walking through the Sale model.
+    """
+    __tablename__ = "financial_documents"
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    sale_id: UUID = Field(foreign_key="sales.id", index=True, unique=True, ondelete="CASCADE")
+    customer_id: Optional[UUID] = Field(default=None, foreign_key="customers.id", index=True)
+
+    document_type: DocumentType = Field(default=DocumentType.RECEIPT, index=True)
+    document_number: str = Field(unique=True, index=True, max_length=50)
+    
+    subtotal: float = Field(default=0.0)
+    discount_amount: float = Field(default=0.0)
+    tax_amount: float = Field(default=0.0)
+    total_amount: float = Field(default=0.0)
+    amount_paid: float = Field(default=0.0)
+    fiscal_metadata: Dict[str, Any] = Field(sa_column=Column(JSONB), default_factory=dict)
+
+    # Standard relationship to get parent sale details if needed
+    sale: Sale = Relationship(back_populates="document")
+
+    items: List["SaleItem"] = Relationship(
+        sa_relationship_kwargs={
+            "lazy": "joined",
+            "viewonly": True
+        }
+    )
