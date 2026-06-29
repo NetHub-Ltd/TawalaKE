@@ -294,13 +294,14 @@ class StaffCreateIn(BaseModel):
     tenant_id: UUID
     email: EmailStr
     full_name: str
+    business_id: UUID
     password: Optional[str] = None  # Plaintext password from front-end to be hashed on server
     role: StaffRole = StaffRole.CASHIER
 
 
 class StaffResponse(BaseModel):
     id: UUID
-    tenant_id: UUID
+    # tenant_id: UUID
     organization_id: Optional[UUID] = None
     business_id: Optional[UUID] = None
     email: EmailStr
