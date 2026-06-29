@@ -237,12 +237,15 @@ async def checkout_sale(
     return sale
 
 
-@router.post("/asign-staff")
+@router.post("/assign-staff", response_model=StaffResponse)
 async def register_and_assign_staff(db: SessionDep, user: AuthUser, payload: StaffCreateIn):
+    logger.info("received payload")
     staff = await store_crud.register_staff(db, payload)
+    if staff:
+        logger.info(f"created staff with id: {staff.id}")
     return staff
 
-@router.get("/get-staff")
+@router.get("/get-staff", response_model=StaffResponse)
 async def fetch_staff_with_id(db: SessionDep, staff_id: UUID):
     staff, ass = await store_crud.fetch_staff_with_id(db, staff_id)
     if ass.business_id is not None:
