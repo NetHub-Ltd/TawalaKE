@@ -125,7 +125,7 @@ class ProductResponse(BaseResponseSchema):
     label: str
     selling_price: float
     track_stock: bool
-    stock: int
+    stock: float
     active: bool
     category: str
     attributes: BaseAttributes
