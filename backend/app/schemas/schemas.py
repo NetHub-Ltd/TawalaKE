@@ -301,7 +301,7 @@ class StaffCreateIn(BaseModel):
 
 class StaffResponse(BaseModel):
     id: UUID
-    # tenant_id: UUID
+    tenant_id: UUID
     organization_id: Optional[UUID] = None
     business_id: Optional[UUID] = None
     email: EmailStr

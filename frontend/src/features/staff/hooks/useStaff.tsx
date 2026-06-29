@@ -9,7 +9,7 @@ export interface StaffMember {
   business_id: string;
   email: string;
   full_name: string;
-  role: "OWNER" | "ADMIN" | "MANAGER" | "CASHIER" | "OPERATOR";
+  role: "CASHIER"
   active: boolean;
 }
 

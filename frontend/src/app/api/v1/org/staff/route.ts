@@ -41,15 +41,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const organizationId = searchParams.get("organization_id");    
-    if (!organizationId) {
-        return NextResponse.json({ error: "Organization ID not provided" }, { status: 400 });
-    }
     // grab the body from the request
     const body = await request.json();
+
+    console.log(body)
     // proxy the request to the backend
-    const res = await fetch(`${process.env.BACKEND_URL}/staff/register`, {
+    const res = await fetch(`${process.env.BACKEND_URL}/business/assign-staff`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -58,6 +55,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(body),
     });
     if (!res.ok) {
+        console.error(res.statusText)
         return NextResponse.json({ error: res.statusText}, { status: res.status });
     }
     const data = await res.json();

@@ -10,7 +10,7 @@ export default function NavBar() {
   return (
     <nav 
       aria-label="Main Corporate Navigation" 
-      className="w-full h-20 flex items-center justify-between relative z-50 select-none"
+      className="w-full flex items-center justify-between relative z-50 select-none"
     >
       {/* BRAND ARCHITECTURE LOGO NODE */}
       <Link 
