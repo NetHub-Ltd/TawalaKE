@@ -7,6 +7,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import selectinload
+from app.core.security import hash_password 
 
 from app.crud.base import BaseCRUD
 from app.models.models import Business, StaffBusinessAssignment, Staff, StockHistory, StockMovementType
@@ -19,13 +20,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import select
 from app.models.models import ( Product, Sale, SaleItem, FinancialDocument, DocumentType, SaleStatus,
-    Payment, PaymentMethod, Customer, StockHistory, StockMovementType
+    Payment, PaymentMethod, Customer, StockHistory, StockMovementType, Staff, StaffBusinessAssignment, StaffRole
 )
 from app.schemas.business import StockTakeRequest
 from app.utils.logging import logger
 from app.utils.helpers import utc_now
 from app.schemas.store import FinalizeCheckoutIn
 from uuid import uuid4
+from app.schemas.schemas import StaffCreateIn
 
 class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
@@ -490,83 +492,79 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail=f"Failed to finalize sale: {str(e)}"
             )
         
-    # async def create_financial_document(
-    #     self, 
-    #     db: AsyncSession, 
-    #     sale_id: UUID
-    # ) -> FinancialDocument:
-    #     """
-    #     Creates a FinancialDocument (Receipt or Invoice) from a completed sale.
-    #     Fetches all related data (business, cashier, customer, items) for frontend consumption.
-    #     """
-    #     logger.info("Attempting to create a financial document for sale with Id: {sale_id}")
-    #     try:
-    #         # 1. Fetch the sale with all necessary relationships
-    #         sale_res = await db.exec(
-    #             select(Sale)
-    #             .where(Sale.id == sale_id)
-    #             .options(
-    #                 selectinload(Sale.business),
-    #                 selectinload(Sale.cashier),
-    #                 selectinload(Sale.customer),
-    #                 selectinload(Sale.items)
-    #             )
-    #         )
-    #         sale = sale_res.first()
+    async def register_staff(self, db: AsyncSession, payload: StaffCreateIn):
+         # 1. Verification Gate: Check if email is already taken globally
+        stmt = select(Staff).where(Staff.email == payload.email)
+        result = await db.exec(stmt)
+        existing_staff = result.first()
+        
+        if existing_staff:
+            raise HTTPException(
+                status_code=400, 
+                detail="A staff account with this email address already exists."
+            )
 
-    #         if not sale:
-    #             raise HTTPException(status_code=404, detail="Sale not found")
+        try:
+            # 2. Hash plaintext password for storage safety
+            # hashed_pwd = get_password_hash(payload.password)
 
-    #         if sale.status not in [SaleStatus.COMPLETED, SaleStatus.PENDING_PAYMENT]:
-    #             raise HTTPException(status_code=400, detail="Sale must be completed or pending for document generation")
+            # 3. Initialize instance mapping to BaseMixin properties
+            db_staff = Staff(
+                tenant_id=payload.tenant_id,
+                organization_id=payload.tenant_id,
+                email=payload.email,
+                full_name=payload.full_name,
+                hashed_password=hash_password(payload.password),  # Replaced with hashed_pwd in production
+                role=payload.role,
+                active=True
+            )
 
-    #         # 2. Determine document type
-    #         is_invoice = sale.status == SaleStatus.PENDING_PAYMENT
-    #         doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
+            # 4. Stage record in memory (Remember: do NOT await db.add)
+            db.add(db_staff)
+            
+            # 5. Flush over network wire to generate the auto-incrementing UUID id
+            await db.flush()
 
-    #         # 3. Generate document number
-    #         prefix = "INV" if is_invoice else "REC"
-    #         date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
-    #         serial = sale.id.hex[:8].upper()
-    #         document_number = f"{prefix}-{date_slug}-{serial}"
+            assignment = StaffBusinessAssignment(
+                staff_id=db_staff.id,
+                business_id=payload.business_id,
+                role=payload.role
+            )
 
-    #         # 4. Create Financial Document
-    #         document = FinancialDocument(
-    #             business_id=sale.business_id,
-    #             sale_id=sale.id,
-    #             customer_id=sale.customer_id,
-    #             document_type=doc_type,
-    #             document_number=document_number,
-    #             subtotal=sale.subtotal,
-    #             discount_amount=sale.discount,
-    #             tax_amount=sale.tax_amount,
-    #             total_amount=sale.total_amount,
-    #             amount_paid=sale.total_amount if not is_invoice else 0.0
-    #         )
+            db.add(assignment)
+            
+            # 6. Commit transaction safely
+            await db.commit()
+            await db.refresh(db_staff)
+            
+            return db_staff
+        except Exception as error:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to provision staff record. Pipeline rolled back safely. Logs: {str(error)}"
+            )
 
-    #         db.add(document)
-    #         await db.flush()  # Get document ID
 
-    #         # 5. Link SaleItems to this document (for easy retrieval)
-    #         for item in sale.items:
-    #             item.financial_document_id = document.id
-    #             db.add(item)
+    async def fetch_staff_with_id(self, db: AsyncSession, staff_id: UUID):
+    # Enforce type conversion at runtime if a string sneaked in
+        if isinstance(staff_id, str):
+            staff_id = UUID(staff_id)
+            
+        # statement = (
+        #     select(Staff)
+        #     .where(Staff.id == staff_id)
+        #     .options(selectinload(Staff.assigned_businesses))
+        # )
+        
+        # result = await db.exec(statement)
+        staff = await db.get(Staff, staff_id)
+        # staff = result.first()
 
-    #         await db.commit()
-    #         await db.refresh(document)
-    #         logger.info(f"{document.document_type} Created with Id: {document.document_number}")
-
-    #         return document
-
-    #     except HTTPException:
-    #         await db.rollback()
-    #         raise
-    #     except Exception as e:
-    #         await db.rollback()
-    #         raise HTTPException(
-    #             status_code=500,
-    #             detail=f"Failed to create financial document: {str(e)}"
-    #         )
+        
+        assignment = await db.exec(select(StaffBusinessAssignment).where(StaffBusinessAssignment.staff_id == staff.id))
+        ass = assignment.first()
+        return staff, ass
 
     async def create_financial_document(self, db: AsyncSession, sale_id: UUID):
         """

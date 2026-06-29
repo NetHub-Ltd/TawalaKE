@@ -14,6 +14,7 @@ from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 from app.schemas.store import SaleResponse, FinalizeCheckoutIn
 from sqlmodel import select
 from app.models.models import Sale
+from app.schemas.schemas import StaffCreateIn, StaffResponse
 
 
 router = APIRouter()
@@ -234,3 +235,18 @@ async def checkout_sale(
 
     # 3. Return fast response to frontend
     return sale
+
+
+@router.post("/asign-staff")
+async def register_and_assign_staff(db: SessionDep, user: AuthUser, payload: StaffCreateIn):
+    staff = await store_crud.register_staff(db, payload)
+    return staff
+
+@router.get("/get-staff")
+async def fetch_staff_with_id(db: SessionDep, staff_id: UUID):
+    staff, ass = await store_crud.fetch_staff_with_id(db, staff_id)
+    if ass.business_id is not None:
+        db_obj = StaffResponse(**staff.model_dump(), business_id=ass.business_id)
+    
+    db_obj = StaffResponse(**staff.model_dump())
+    return db_obj
