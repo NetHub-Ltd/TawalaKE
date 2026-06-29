@@ -12,7 +12,7 @@ export default function PublicLayout({
     <div className="flex min-h-screen flex-col">
       {/* 1. Your public navigation bar renders here */}
       {/* FIXED TOP NAVBAR */}
-        <header className="fixed top-0 left-0 right-0 h-20 bg-card border-b border-border/40 flex items-center px-6 z-50">
+        <header className="fixed top-0 left-0 right-0 bg-card border-b border-border/40 flex items-center px-6 z-50">
         <div className="w-full ">
             <NavBar />
         </div>

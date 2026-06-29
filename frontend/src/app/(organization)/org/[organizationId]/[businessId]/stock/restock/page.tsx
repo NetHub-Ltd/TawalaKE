@@ -17,24 +17,6 @@ interface PageProps {
 export default async function RestockPage({ params }: PageProps) {
   const { businessId, organizationId } = await params;
   
-  // 1. Structuring the payload context to match the ProductResponse contract explicitly
-  // const mockProduct: ProductResponse = {
-  //   id: id,
-  //   label: "Premium Wireless Headphones",
-  //   selling_price: 24.99,
-  //   track_stock: true,
-  //   stock: 42.0,
-  //   active: true,
-  //   category: "Electronics",
-  //   attributes: {
-  //     unit_of_measure: "Units",
-  //     buying_price: 12.50,
-  //     sku: "PRM-WRLS-HD-01"
-  //   }
-  // };
-
-  // const businessId = "3fa85f64-5717-4562-b3fc-2c963f66afa6";
-
   // 2. Automated Structured Data Schema Injection for Crawler Indexing Engine Optimization
   const jsonLd = {
     "@context": "https://schema.org",

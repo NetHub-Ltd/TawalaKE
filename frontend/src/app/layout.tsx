@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
-import NavBar from "@/lib/components/NavBar";
 import { MonitorX } from "lucide-react"; // Import an elegant fallback indicator icon
 
 const geistSans = Geist({
@@ -55,7 +54,7 @@ export default function RootLayout({
           
           {/* 2. FIXED: Mobile Blocker Layer - Automatically triggered when screen size falls below 'md' */}
           <div className="flex md:hidden fixed inset-0 bg-background flex-col items-center justify-center p-6 text-center z-[100] font-sans">
-            <div className="h-10 w-10 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-xl flex items-center justify-center mb-4">
+            <div className="h-10 w-10 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-xl flex items-center justify-center">
               <MonitorX size={18} />
             </div>
             <div>
