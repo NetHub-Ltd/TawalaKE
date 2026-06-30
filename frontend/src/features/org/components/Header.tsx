@@ -28,7 +28,7 @@ export function Header() {
   }, []);
 
   return (
-    <header className="h-16 w-full border-b border-border/60 bg-card mb-1 flex items-center justify-between px-6 z-40 shrink-0 relative">
+    <header className="h-20 w-full border-b border-border/60 bg-card mb-1 flex items-center justify-between px-6 z-40 shrink-0 relative">
       
       {/* LEFT SECTION: Brand Identity / Microcopy Context */}
       <div className="flex items-center gap-3">

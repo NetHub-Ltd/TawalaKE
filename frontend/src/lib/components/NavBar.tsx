@@ -10,7 +10,7 @@ export default function NavBar() {
   return (
     <nav 
       aria-label="Main Corporate Navigation" 
-      className="w-full flex items-center justify-between relative z-50 select-none"
+      className="w-full flex items-center justify-between h-20 relative z-50 select-none"
     >
       {/* BRAND ARCHITECTURE LOGO NODE */}
       <Link 
@@ -62,7 +62,7 @@ export default function NavBar() {
         </Link> */}
         
         <Link 
-          href="/login"
+          href="/org"
           tabIndex={-1} // Prevents duplicate tab-stops for clean keyboard access
         >
           <Button 

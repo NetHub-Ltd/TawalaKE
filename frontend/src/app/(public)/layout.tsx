@@ -19,7 +19,7 @@ export default function PublicLayout({
         </header>
       
       {/* 2. Your route content (billing, features, home page) renders here */}
-      <main className="flex-1">
+      <main className="flex-1 mt-20">
         {children}
       </main>
     </div>

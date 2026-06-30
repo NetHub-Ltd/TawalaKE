@@ -68,12 +68,12 @@ export default function RootLayout({
           </div>
 
           {/* 3. FIXED: Desktop Core Shell Framework - Enforces fixed NavBar and Footer positioning */}
-          <div className="hidden md:flex flex-col min-h-screen pt-14 pb-8">
+          <div className="hidden md:flex flex-col min-h-screen pb-8">
             
             
 
             {/* LIVE SYSTEM APP INTERFACE STREAM */}
-            <main id="main-content" className="flex-1 w-full bg-surface relative mt-2">
+            <main id="main-content" className="flex-1 w-full bg-surface relative">
               {children}
             </main>
 

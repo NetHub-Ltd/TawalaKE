@@ -15,7 +15,7 @@ import { ProductResponse } from "@/lib/api/generated/models";
 // ==========================================
 export const CHECKOUT_CONFIG = {
   /** Default Tax Rate (e.g., 0.16 for Kenyan Standard VAT, 0.08 for specialized sectors) */
-  DEFAULT_TAX_RATE: 0.16,
+  DEFAULT_TAX_RATE: 0.0,
   CURRENCY_CODE: "KES",
   STORAGE_KEY: "terminal-cart-storage",
 };
