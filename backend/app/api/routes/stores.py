@@ -134,26 +134,6 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID):
     )
 
 
-@router.post('/assign-staff')
-async def assign_staff_to_business(db: SessionDep, request: StaffRequest):
-    """
-    Assigns a staff member to a business entity based on the provided request data.
-    This function processes the staff assignment by validating the existence of the
-    target business and ensuring that the staff member is associated with the same
-    tenant. It then creates an assignment record linking the staff member to the
-    specified business.
-
-    :param user:
-    :param db: Database session dependency for database operations.
-    :param request: Data object containing staff and business identifiers for assignment.
-    :return: An API response indicating the success or failure of the staff assignment operation.
-    :rtype: ApiResponse
-    """
-    assignment = await business_crud.assign_staff_to_business(db, request)
-    if not assignment:
-        raise HTTPException(status_code=400, detail="Failed to assign staff to business")
-    return assignment
-
 
 @router.post("/restock")
 async def restock_product(
