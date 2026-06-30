@@ -70,7 +70,7 @@ export function useRegisterStaff(organizationId?: string) {
       });
       if (!res.ok) {
         const structuralError = await res.json().catch(() => ({}));
-        throw new Error(structuralError.message || "Failed to provision new staff operational profile.");
+        throw new Error(structuralError.message || "Failed to create new staff");
       }
       return res.json();
     },
