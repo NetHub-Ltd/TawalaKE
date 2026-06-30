@@ -494,6 +494,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         
     async def register_staff(self, db: AsyncSession, payload: StaffCreateIn):
          # 1. Verification Gate: Check if email is already taken globally
+        logger.info(f"Creating Staff with data: \n {payload}")
         stmt = select(Staff).where(Staff.email == payload.email)
         result = await db.exec(stmt)
         existing_staff = result.first()
@@ -525,6 +526,8 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             # 5. Flush over network wire to generate the auto-incrementing UUID id
             await db.flush()
 
+            logger.info(f"Created staff with: {db_staff.email}, now proceeding to assigning the staff to business")
+
             assignment = StaffBusinessAssignment(
                 staff_id=db_staff.id,
                 business_id=payload.business_id,
@@ -536,13 +539,16 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             # 6. Commit transaction safely
             await db.commit()
             await db.refresh(db_staff)
+
+            logger.info(f"assigned staff: {db_staff.id} to business: {assignment.business_id} with role: {assignment.role}")
             
             return db_staff
         except Exception as error:
+            logger.error(f"we encountered an error: {error}")
             await db.rollback()
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to provision staff record. Pipeline rolled back safely. Logs: {str(error)}"
+                detail=f"Failed to provision staff record. Try again later"
             )
 
 
