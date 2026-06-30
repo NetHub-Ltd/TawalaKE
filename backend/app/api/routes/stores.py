@@ -239,10 +239,11 @@ async def checkout_sale(
 
 @router.post("/assign-staff", response_model=StaffResponse)
 async def register_and_assign_staff(db: SessionDep, user: AuthUser, payload: StaffCreateIn):
-    logger.info("received payload")
+    logger.info(f"endpoint hit with payload: {payload}")
     staff = await store_crud.register_staff(db, payload)
     if staff:
         logger.info(f"created staff with id: {staff.id}")
+    logger.info(f"Created Staff with id: {staff.id}")
     return staff
 
 @router.get("/get-staff", response_model=StaffResponse)
