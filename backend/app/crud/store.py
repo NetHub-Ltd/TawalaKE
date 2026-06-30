@@ -33,6 +33,34 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
         super().__init__(model)
 
+    async def get_store_products(self, db: AsyncSession, store_id: UUID, product_id: UUID = None, category: str = None, active: bool = None, out_of_stock: bool = None, limit: int = None, offset: int = None):
+        # this fetches products for s store
+        # can return all products, or filtered by category, inactive or active and out of stock
+        # should support pagination and sorting
+        # defult behavior is active products only
+        # can also match by product id
+
+
+        if product_id is not None:
+            stmt = select(Product).where(Product.id == product_id)
+            product = (await db.exec(stmt)).one()
+            return [product]
+
+        stmt = select(Product).where(Product.business_id == store_id)
+        if category is not None:
+            stmt = stmt.where(Product.category == category)
+        if active is not None:
+            stmt = stmt.where(Product.active == active)
+        if out_of_stock is not None:
+            stmt = stmt.where(Product.stock == 0)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        if offset is not None:
+            stmt = stmt.offset(offset)
+        products = (await db.exec(stmt)).all()
+        return products
+
+        
 
     async def get_tenant_businesses(self, db: AsyncSession, tenant_id: UUID):
         """

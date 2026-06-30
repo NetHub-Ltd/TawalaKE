@@ -124,7 +124,7 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             full_name=staff_data.name,
             email=staff_data.email,
             organization_id=organization_id,
-            tenant_id=tenant_id,
+            tenant_id=organization_id,
             role=StaffRole.CASHIER,  # default role for new staff, can be updated later
             hashed_password=hash_password(password) if password else "TEMP_DISABLED"
         )

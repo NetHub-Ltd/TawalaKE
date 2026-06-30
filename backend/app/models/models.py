@@ -117,7 +117,7 @@ class Subscription(BaseMixin, table=True):
     __tablename__ = "subscriptions"
 
     tenant_id: UUID = Field(foreign_key="tenants.id", index=True, ondelete="CASCADE")
-    organization_id: Optional[UUID] = Field(default=None, index=True)
+    organization_id: UUID = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
 
     tier: SubscriptionTier = Field(
         sa_column=Column(SAEnum(SubscriptionTier, name="subscription_tier_enum")),
@@ -135,7 +135,7 @@ class Subscription(BaseMixin, table=True):
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
-    max_businesses: int = Field(default=1)
+    
 
 
 # =========================================================
@@ -207,7 +207,7 @@ class Business(BaseMixin, table=True):
         link_model=StaffBusinessAssignment
     )
 
-
+    
 # =========================================================
 # 5. PRODUCTS & INVENTORY
 # =========================================================
@@ -226,6 +226,7 @@ class Product(BaseMixin, table=True):
 
     track_stock: bool = Field(index=True, default=True)
     stock: float = Field(default=0.0)
+    popularity_score: float = Field(default=0.0)
     min_stock_level: float = Field(default=10.0, nullable=True)
     # last_stock_take: Optional[datetime] = Field(default=None)
     last_stock_take: Optional[datetime] = Field(

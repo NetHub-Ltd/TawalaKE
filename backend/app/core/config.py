@@ -41,6 +41,16 @@ class Settings(BaseSettings):
     resource_server: str
     allowed_origins: str
 
+    # Email Configuration
+    resend_api_key: str
+    email_from_security: str = "NetHub Security <security@nethub.co.ke>"
+    email_from_billing: str = "NetHub Billing <billing@nethub.co.ke>"
+    email_from_support: str = "NetHub Support <support@nethub.co.ke>"
+    email_from_tawala: str = "Tawala System <tawala@nethub.co.ke>"
+    email_from_marketing: str = "NetHub Updates <newsletter@nethub.co.ke>"
+
+    redis_url: str
+
     @property
     def cors_origins(self) -> list:
         if not self.allowed_origins:
