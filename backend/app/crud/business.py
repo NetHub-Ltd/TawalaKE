@@ -34,7 +34,7 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         """
         # Using pure SQLModel select() ensures db.exec().all() returns clean model instances,
         # not raw database row-tuples.
-        stmt = select(self.model).where(self.model.organization_id == tenant_id, self.model.is_active == True)
+        stmt = select(self.model).where(self.model.organization_id == tenant_id, self.model.active == True)
         result = (await db.exec(stmt)).all()
 
         return result
