@@ -42,7 +42,7 @@ async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: Au
         raise HTTPException(status_code=404, detail="Organization not found")
     
     if organization.id != user.organization_id:
-        raise HTTPException(status_code=403, detail="Unauthorized")
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
 
     return ApiResponse(
         status=True,
@@ -54,6 +54,9 @@ async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: Au
 
 @router.get('/stores/{organization_id}', response_model=ApiResponse[List[BusinessResponse]])
 async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
+    
+    if organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
     businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
     return ApiResponse(
         status=True,
@@ -64,6 +67,8 @@ async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: 
 
 @router.get('/staff/{organization_id}', response_model=ApiResponse[List[StaffResponse]])
 async def get_staff_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None):
+    
+    
     staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
     return ApiResponse(
         status=True,
@@ -72,3 +77,16 @@ async def get_staff_by_tenant(organization_id: UUID, db: SessionDep, user: AuthU
         data=staff
     )
 
+
+@router.get("/billing/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
+async def get_billing_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
+    
+    if organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
+    businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Businesses retrieved successfully",
+        data=businesses
+    )

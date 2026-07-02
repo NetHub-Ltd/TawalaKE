@@ -28,33 +28,14 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         super().__init__(model)
 
 
-    async def get_tenant_businesses(self, db: AsyncSession, tenant_id: UUID):
+    async def get_tenant_businesses(self, db: AsyncSession, tenant_id: UUID) -> list[Business]:
         """
         Retrieves all businesses associated with a specified tenant ID.
         """
         # Using pure SQLModel select() ensures db.exec().all() returns clean model instances,
         # not raw database row-tuples.
-        stmt = select(self.model).where(self.model.tenant_id == tenant_id)
-        result = (await db.exec(stmt)).all() 
-        
-        if not result:
-            return []
-
-        needs_commit = False
-
-        # Because of SQLModel's design, 'biz' here is cleanly inferred as a Business instance.
-        # No weird tuple unpacking like 'for (biz,) in result:' needed!
-        for biz in result:
-            if not biz.organization_id:
-                logger.info(f"Staging organization_id update to {tenant_id}")
-                biz.organization_id = tenant_id
-                db.add(biz)
-                needs_commit = True
-
-        if needs_commit:
-            await db.commit()
-            for biz in result:
-                await db.refresh(biz)
+        stmt = select(self.model).where(self.model.organization_id == tenant_id, self.model.active == True)
+        result = (await db.exec(stmt)).all()
 
         return result
 
@@ -73,7 +54,7 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
     async def get_business_by_id(self,db: AsyncSession, business_id: UUID)-> Business:
         biz = await self.get(db, id=business_id)
-        if not biz:
+        if not biz or biz.is_active == False:
             raise HTTPException(status_code=404, detail="Business not found")
         return biz
 
@@ -82,7 +63,7 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         try:
             # 1. Fetch the business and verify it exists
             biz = await self.get(db, id=payload.business_id)
-            if not biz:
+            if not biz or biz.is_active == False:
                 raise HTTPException(status_code=404, detail="Business node not found")
 
             # 2. TODO RESOLVED: Verify both the staff and business belong to the same organization

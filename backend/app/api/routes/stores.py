@@ -14,10 +14,22 @@ from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 from app.schemas.store import SaleResponse, FinalizeCheckoutIn
 from sqlmodel import select
 from app.models.models import Sale
-from app.schemas.schemas import StaffCreateIn, StaffResponse
+from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
 
 
 router = APIRouter()
+
+@router.get("/store-products/{store_id}", response_model=ApiResponse[List[ProductResponse]])
+async def get_store_products(user: AuthUser, db: SessionDep, store_id: UUID, category: str = None, product_id: UUID = None, active: bool = True, limit: int = 20, offset: int = None):
+    # this fetches products for s store
+    # can return all products, or filtered by category, inactive or active and out of stock
+    # should support pagination and sorting
+    # defult behavior is active products only
+
+    products = await store_crud.get_store_products(db=db, store_id=store_id, category=category, product_id=product_id, active=active, limit=limit, offset=offset)
+    return ApiResponse(status=True, status_code=200, message="Success", data=products)
+
+
 
 # =======================================================================
 # Business Logic

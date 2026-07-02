@@ -13,6 +13,12 @@ from app.utils.logging import logger
 from app.core.security import oauth2_scheme
 from app.models.models import Staff
 from sqlmodel import select
+from redis.asyncio.client import Redis as AsyncRedis
+from app.core.redis_client import redis_manager
+
+
+async def get_redis()-> AsyncRedis:
+    return redis_manager.get_async_client()
 
 # ------------------------------------------------------------------
 # Database Session

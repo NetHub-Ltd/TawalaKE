@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import EmailStr
-from app.api.deps import SessionDep, AuthUser
+from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
 from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant
 from app.api.deps import SessionDep, AuthUser
 from app.schemas.schemas import TenantResponse, TenantCreate
@@ -10,11 +10,33 @@ from pydantic import EmailStr
 from app.models.models import Product, Business
 from uuid import UUID
 from app.crud.organization import organization_crud
+from app.core.mailer import mailer
+
 
 
 router = APIRouter()
 
 # route for Tawala admins and sysetm monitoring and management route
+
+@router.post("/cache/{key}")
+async def set_cache(key: str, value: str, r: AsyncRedis = Depends(get_redis)):
+    # This works exactly the same whether using FakeRedis or a real cluster
+    await r.set(key, value, ex=60)  # Expires in 60 seconds
+    return {"status": "success", "key": key, "value": value}
+
+@router.get("/cache/{key}")
+async def get_cache(key: str, r: AsyncRedis = Depends(get_redis)):
+    value = await r.get(key)
+    if not value:
+        return {"message": "Cache miss"}
+    return {"cache_hit": value}
+
+@router.get("/test-email")
+async def send_test_email(email: EmailStr, background_tasks: BackgroundTasks):
+    background_tasks.add_task(
+     mailer.send_testing,
+     to_email=email)
+    return {"status": "accepted", "message": "System Testing Sent!."}
 
 @router.get("/org")
 async def get_organizations(db: SessionDep):
