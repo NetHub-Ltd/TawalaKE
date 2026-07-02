@@ -8,7 +8,7 @@ import { HelpCircle, ArrowLeft, Radio, Orbit } from "lucide-react";
 export default function NotFound() {
   return (
     <main className="min-h-screen bg-surface flex items-center justify-center p-6 select-none antialiased">
-      <div className="max-w-md w-full bg-card border border-border/60 rounded-[2rem] p-8 md:p-10 shadow-xl text-center relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:border-border/80 group">
+      <div className="max-w-md w-full bg-card border border-border/60 rounded-4xl p-8 md:p-10 shadow-xl text-center relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:border-border/80 group">
         
         {/* Playful Background Decorative Ambient Rings */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-primary/5 rounded-full blur-xl pointer-events-none group-hover:bg-brand-primary/10 transition-colors" />
@@ -54,7 +54,7 @@ export default function NotFound() {
           </button>
           
           <Link
-            href="/"
+            href="/org"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-brand-primary text-background hover:scale-[1.02] active:scale-100 transition-all shadow-md shadow-brand-primary/10 cursor-pointer"
           >
             Return to Hub
