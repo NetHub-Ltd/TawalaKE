@@ -17,5 +17,6 @@ class TenantResponse(BaseModel):
     active: bool = True
     plan: SubscriptionTier
     created_at: datetime.datetime
+    
     class Config:
         from_attributes = True

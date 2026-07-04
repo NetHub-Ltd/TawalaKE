@@ -1,8 +1,8 @@
-
-from typing import Generic, Type, TypeVar, Optional, Sequence, Any, Dict, List
+from typing import Generic, Type, TypeVar, Optional, Sequence, Any, Dict, List, Tuple
 from uuid import UUID
 from pydantic import BaseModel, ValidationError, TypeAdapter
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import or_
 from sqlmodel import SQLModel, select, col, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException, status
@@ -18,66 +18,178 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.model = model
 
     async def get(self, db: AsyncSession, id: UUID) -> Optional[ModelType]:
-        # result.first() is fine, but scalar_one_or_none() is more explicit for UUID lookups
-        stmt = select(self.model).where(self.model.id == id)
-        result = await db.exec(stmt)
-        return result.first()
+        """
+        Fetches a single record by its primary UUID key using clean scalar resolution.
+        """
+        try:
+            stmt = select(self.model).where(col(self.model.id) == id)
+            result = await db.exec(stmt)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError as e:
+            logger.error("Database read error during get() on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal database retrieval operation failed."
+            )
 
     async def get_multi(
-                    self,
-                    db: AsyncSession,
-                    *,
-                    skip: int = 0,
-                    limit: int = 100,
-                ) -> Sequence[ModelType]:
-                    stmt = select(self.model).offset(skip).limit(limit)
-                    result = await db.exec(stmt)
-                    return result.all()
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> Sequence[ModelType]:
+        """
+        Retrieves multiple records. Defaults to latest-first sorting via 'created_at',
+        falling back gracefully to 'id' if the attribute is absent.
+        """
+        try:
+            stmt = select(self.model)
+            
+            # Dynamic sorting execution block for maximum compatibility
+            if hasattr(self.model, "created_at"):
+                stmt = stmt.order_by(col(self.model.created_at).desc())
+            else:
+                stmt = stmt.order_by(col(self.model.id).desc())
+                
+            stmt = stmt.offset(skip).limit(limit)
+            result = await db.exec(stmt)
+            return result.all()
+        except SQLAlchemyError as e:
+            logger.error("Database read error during get_multi() on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal database batch retrieval operation failed."
+            )
 
     async def get_by_attributes(
-            self,
-            db: AsyncSession,
-            *,
-            filters: Dict[str, Any],
-            skip: int = 0,
-            limit: int = 100,
-            descending: bool = False,
+        self,
+        db: AsyncSession,
+        *,
+        filters: Dict[str, Any],
+        skip: int = 0,
+        limit: int = 100,
+        descending: bool = False,
+        sort_field: Optional[str] = None  # Non-breaking extension for explicit sorting control
     ) -> Sequence[ModelType]:
-        stmt = select(self.model)
+        """
+        Executes exact match filtering against attributes with full runtime Pydantic validation.
+        Maintains strict backward compatibility with existing sorting parameters.
+        """
+        try:
+            stmt = select(self.model)
 
-        for field_name, value in filters.items():
-            if not hasattr(self.model, field_name):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Field '{field_name}' invalid for {self.model.__name__}",
-                )
-
-            # Type validation: Optimized check
-            field_info = self.model.model_fields.get(field_name)
-            if field_info and value is not None:
-                try:
-                    TypeAdapter(field_info.annotation).validate_python(value)
-                except ValidationError:
+            for field_name, value in filters.items():
+                if not hasattr(self.model, field_name):
                     raise HTTPException(
-                        status_code=422,
-                        detail=f"Value '{value}' is invalid for {field_name}",
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Field '{field_name}' invalid for model {self.model.__name__}",
                     )
 
-            stmt = stmt.where(getattr(self.model, field_name) == value)
+                field_info = self.model.model_fields.get(field_name)
+                if field_info and value is not None:
+                    try:
+                        TypeAdapter(field_info.annotation).validate_python(value)
+                    except ValidationError:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=f"Value '{value}' is invalid for field '{field_name}'",
+                        )
 
-        if descending:
-            # col() is good practice for SQLModel column referencing
-            stmt = stmt.order_by(col(self.model.id).desc())
-        else:
-            stmt = stmt.order_by(col(self.model.id).asc())
+                stmt = stmt.where(getattr(self.model, field_name) == value)
 
-        result = await db.exec(stmt.offset(skip).limit(limit))
-        return result.all()
+            # Determine sorting target to ensure absolute backward safety
+            target_sort = sort_field if sort_field and hasattr(self.model, sort_field) else "id"
+            
+            if descending:
+                stmt = stmt.order_by(col(getattr(self.model, target_sort)).desc())
+            else:
+                stmt = stmt.order_by(col(getattr(self.model, target_sort)).asc())
+
+            result = await db.exec(stmt.offset(skip).limit(limit))
+            return result.all()
+        except HTTPException:
+            raise
+        except SQLAlchemyError as e:
+            logger.error("Database error during get_by_attributes() on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Attribute filter execution failed internally."
+            )
+
+    async def search(
+        self,
+        db: AsyncSession,
+        *,
+        search_query: str,
+        search_fields: List[str],
+        filters: Optional[Dict[str, Any]] = None,
+        skip: int = 0,
+        limit: int = 100,
+        order_by: str = "created_at",
+        descending: bool = True
+    ) -> Tuple[Sequence[ModelType], int]:
+        """
+        Highly scalable, cross-module generic search engine. Performs database-level paginated 
+        ILIKE lookups, strict relational filtering, and returns a (records, total_count) tuple 
+        designed for high-throughput operational interfaces.
+        """
+        try:
+            if not search_query.strip():
+                # Short-circuit if query is blank to save DB compute cycles
+                records = await self.get_multi(db, skip=skip, limit=limit)
+                total_stmt = select(func.count()).select_from(self.model)
+                total_res = await db.exec(total_stmt)
+                return records, (total_res.scalar_one() or 0)
+
+            # 1. Base Query Conditions Creation
+            base_stmt = select(self.model)
+            
+            # 2. Append Explicit Attribute Key Filters if provided
+            if filters:
+                for field_name, value in filters.items():
+                    if hasattr(self.model, field_name) and value is not None:
+                        base_stmt = base_stmt.where(getattr(self.model, field_name) == value)
+
+            # 3. Compile the Cross-Field ILIKE Conditions safely
+            search_conditions = []
+            for field in search_fields:
+                if hasattr(self.model, field):
+                    search_conditions.append(col(getattr(self.model, field)).ilike(f"%{search_query}%"))
+
+            if search_conditions:
+                base_stmt = base_stmt.where(or_(*search_conditions))
+
+            # 4. Count total matching entries across the subset table before pagination limits slice it
+            count_stmt = select(func.count()).select_from(base_stmt.subquery())
+            count_result = await db.exec(count_stmt)
+            total_count = count_result.scalar_one() or 0
+
+            # 5. Apply Dynamic Ordering Configuration
+            sort_attr = getattr(self.model, order_by) if hasattr(self.model, order_by) else self.model.id
+            if descending:
+                base_stmt = base_stmt.order_by(col(sort_attr).desc())
+            else:
+                base_stmt = base_stmt.order_by(col(sort_attr).asc())
+
+            # 6. Apply Pagination Bounds and Extract
+            final_stmt = base_stmt.offset(skip).limit(limit)
+            records_result = await db.exec(final_stmt)
+            
+            return records_result.all(), total_count
+
+        except SQLAlchemyError as e:
+            logger.error("Global search failed on model {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Generic search routine encountered a persistent error."
+            )
 
     async def create(
-            self, db: AsyncSession, *, obj_in: CreateSchemaType
+        self, db: AsyncSession, *, obj_in: CreateSchemaType
     ) -> ModelType:
-        db_obj = self.model.model_validate(obj_in)  # SQLModel preferred way
+        """Validates incoming structural schema payloads and commits them to disk."""
+        db_obj = self.model.model_validate(obj_in)
         try:
             db.add(db_obj)
             await db.flush()
@@ -85,20 +197,23 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return db_obj
         except IntegrityError as e:
             await db.rollback()
-            logger.error("Integrity Error during create: {}", str(e))
+            logger.error("Integrity Constraint Violation during create on {}: {}", self.model.__name__, str(e))
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Resource already exists or constraint violation."
+                detail="Resource conflict occurred: uniqueness or relationship constraint violated."
             )
         except SQLAlchemyError as e:
             await db.rollback()
-            logger.error("Database Error: {}", str(e))
-            raise HTTPException(status_code=500, detail="Database transaction failed")
+            logger.error("Transaction rollback during create on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail="Database transaction write failure."
+            )
 
     async def update(
-            self, db: AsyncSession, *, db_obj: ModelType, obj_in: UpdateSchemaType | Dict[str, Any]
+        self, db: AsyncSession, *, db_obj: ModelType, obj_in: UpdateSchemaType | Dict[str, Any]
     ) -> ModelType:
-        # Handle both Pydantic model or a plain dictionary
+        """Executes safe partial data updates on an active in-memory record tracking reference."""
         update_data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
 
         for field, value in update_data.items():
@@ -110,12 +225,23 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             await db.flush()
             await db.refresh(db_obj)
             return db_obj
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error("Integrity Constraint Violation during update on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Modification breaks unique data rules or constraints."
+            )
         except SQLAlchemyError as e:
             await db.rollback()
-            logger.error("Update failed: {}", str(e))
-            raise HTTPException(status_code=500, detail="Update failed")
+            logger.error("Transaction rollback during update on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail="Database write persistence failure during modification."
+            )
 
     async def remove(self, db: AsyncSession, *, id: UUID) -> Optional[ModelType]:
+        """Safely removes an entity from persistence tracking by its primary key identifier."""
         obj = await self.get(db, id)
         if obj:
             try:
@@ -123,6 +249,9 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 await db.flush()
             except SQLAlchemyError as e:
                 await db.rollback()
-                logger.error("Delete failed: {}", str(e))
-                raise HTTPException(status_code=500, detail="Deletion failed")
+                logger.error("Transaction rollback during deletion on {}: {}", self.model.__name__, str(e))
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                    detail="Database entity removal operation failed."
+                )
         return obj

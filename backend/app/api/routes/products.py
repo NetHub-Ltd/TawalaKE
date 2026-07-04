@@ -10,9 +10,9 @@ from app.crud.product import product_crud
 from app.schemas.schemas import ProductResponse, ProductCreate, ApiResponse, \
     ProductUpdate, ProductBase
 from app.utils.logging import logger
+from app.core.redis_client import redis_manager
 
 router = APIRouter()
-
 
 @router.get("/multi/{business_id}", response_model=ApiResponse[List[ProductResponse]], operation_id="getBusinessProducts")
 async def get_products(db: SessionDep, business_id:UUID):
