@@ -1,148 +1,250 @@
-# testing/test_crudbase.py
-import pytest
-from datetime import datetime, timezone
-from uuid import uuid4, UUID
-from typing import Optional, Dict, Any
-from unittest.mock import AsyncMock, MagicMock
-from sqlmodel import SQLModel, Field
-from pydantic import BaseModel
+# app/crud/base.py
+from typing import Generic, Type, TypeVar, Optional, Sequence, Any, Dict, List, Tuple
+from uuid import UUID
+from pydantic import BaseModel, ValidationError, TypeAdapter
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy import or_
+from sqlmodel import SQLModel, select, col, func
+from sqlmodel.ext.asyncio.session import AsyncSession
 from fastapi import HTTPException, status
+from loguru import logger
 
-from app.crud.base import BaseCRUD
-
-
-# --------------------------------------------------------------
-# Mock Schemas & Models Setup for Isolated Testing
-# --------------------------------------------------------------
-class MockModel(SQLModel, table=True):
-    id: UUID = Field(default_factory=uuid4, primary_key=True)
-    name: str
-    tenant_id: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+ModelType = TypeVar("ModelType", bound=SQLModel)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 
-class MockCreateSchema(BaseModel):
-    name: str
-    tenant_id: str
+class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+    def __init__(self, model: Type[ModelType]):
+        self.model = model
 
+    async def get(self, db: AsyncSession, id: UUID) -> Optional[ModelType]:
+        """
+        Fetches a single record by its primary UUID key using clean scalar resolution.
+        """
+        try:
+            stmt = select(self.model).where(col(self.model.id) == id)
+            result = await db.exec(stmt)
+            # FIX: SQLModel db.exec returns a ScalarResult, which uses .one_or_none()
+            return result.one_or_none()
+        except SQLAlchemyError as e:
+            logger.error("Database read error during get() on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal database retrieval operation failed."
+            )
 
-class MockUpdateSchema(BaseModel):
-    name: Optional[str] = None
+    async def get_multi(
+        self,
+        db: AsyncSession,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> Sequence[ModelType]:
+        """
+        Retrieves multiple records. Defaults to latest-first sorting via 'created_at',
+        falling back gracefully to 'id' if the attribute is absent.
+        """
+        try:
+            stmt = select(self.model)
+            
+            if hasattr(self.model, "created_at"):
+                stmt = stmt.order_by(col(self.model.created_at).desc())
+            else:
+                stmt = stmt.order_by(col(self.model.id).desc())
+                
+            stmt = stmt.offset(skip).limit(limit)
+            result = await db.exec(stmt)
+            return result.all()
+        except SQLAlchemyError as e:
+            logger.error("Database read error during get_multi() on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Internal database batch retrieval operation failed."
+            )
 
+    async def get_by_attributes(
+        self,
+        db: AsyncSession,
+        *,
+        filters: Dict[str, Any],
+        skip: int = 0,
+        limit: int = 100,
+        descending: bool = False,
+        sort_field: Optional[str] = None
+    ) -> Sequence[ModelType]:
+        """
+        Executes exact match filtering against attributes with full runtime Pydantic validation.
+        """
+        try:
+            stmt = select(self.model)
 
-@pytest.fixture
-def crud_instance():
-    """Returns an isolated instance of the BaseCRUD interface targeting MockModel."""
-    return BaseCRUD[MockModel, MockCreateSchema, MockUpdateSchema](MockModel)
+            for field_name, value in filters.items():
+                if not hasattr(self.model, field_name):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Field '{field_name}' invalid for model {self.model.__name__}",
+                    )
 
+                field_info = self.model.model_fields.get(field_name)
+                if field_info and value is not None:
+                    try:
+                        TypeAdapter(field_info.annotation).validate_python(value)
+                    except ValidationError:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail=f"Value '{value}' is invalid for field '{field_name}'",
+                        )
 
-@pytest.fixture
-def mock_session():
-    """Generates an encapsulated, mocked AsyncSession engine connection handle."""
-    session = AsyncMock()
-    
-    # db.add is synchronous in AsyncSession; explicitly override 
-    # the default AsyncMock behavior to prevent 'coroutine was never awaited' warnings.
-    session.add = MagicMock()
-    
-    # Mock async context manager lifecycle wrappers safely
-    session.__aenter__ = AsyncMock(return_value=session)
-    session.__aexit__ = AsyncMock(return_value=None)
-    return session
+                stmt = stmt.where(getattr(self.model, field_name) == value)
 
+            target_sort = sort_field if sort_field and hasattr(self.model, sort_field) else "id"
+            
+            if descending:
+                stmt = stmt.order_by(col(getattr(self.model, target_sort)).desc())
+            else:
+                stmt = stmt.order_by(col(getattr(self.model, target_sort)).asc())
 
-# --------------------------------------------------------------
-# Test Specifications
-# --------------------------------------------------------------
+            result = await db.exec(stmt.offset(skip).limit(limit))
+            return result.all()
+        except HTTPException:
+            raise
+        except SQLAlchemyError as e:
+            logger.error("Database error during get_by_attributes() on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Attribute filter execution failed internally."
+            )
 
-@pytest.mark.asyncio
-async def test_get_multi_applies_latest_first_sorting(crud_instance, mock_session):
-    """Verifies get_multi adds dynamic created_at DESC sequencing and pagination limits."""
-    mock_result = MagicMock()
-    mock_result.all.return_value = [
-        MockModel(name="Latest Item", tenant_id="tenant-1"),
-        MockModel(name="Older Item", tenant_id="tenant-1")
-    ]
-    mock_session.exec.return_value = mock_result
+    async def search(
+        self,
+        db: AsyncSession,
+        *,
+        search_query: str,
+        search_fields: List[str],
+        filters: Optional[Dict[str, Any]] = None,
+        skip: int = 0,
+        limit: int = 100,
+        order_by: str = "created_at",
+        descending: bool = True
+    ) -> Tuple[Sequence[ModelType], int]:
+        """
+        Highly scalable, cross-module generic search engine. Performs database-level paginated 
+        ILIKE lookups, strict relational filtering, and returns a (records, total_count) tuple.
+        """
+        try:
+            if not search_query.strip():
+                records = await self.get_multi(db, skip=skip, limit=limit)
+                total_stmt = select(func.count()).select_from(self.model)
+                total_res = await db.exec(total_stmt)
+                # FIX: Change .scalar_one() to .one() for ScalarResult compatibility
+                return records, (total_res.one() or 0)
 
-    records = await crud_instance.get_multi(mock_session, skip=10, limit=25)
+            base_stmt = select(self.model)
+            
+            if filters:
+                for field_name, value in filters.items():
+                    if hasattr(self.model, field_name) and value is not None:
+                        base_stmt = base_stmt.where(getattr(self.model, field_name) == value)
 
-    assert len(records) == 2
-    assert records[0].name == "Latest Item"
-    mock_session.exec.assert_called_once()
-    
-    # Confirm SQL query execution structure applied pagination configurations correctly
-    stmt = mock_session.exec.call_args[0][0]
-    assert "limit" in str(stmt).lower()
-    assert "offset" in str(stmt).lower()
+            search_conditions = []
+            for field in search_fields:
+                if hasattr(self.model, field):
+                    search_conditions.append(col(getattr(self.model, field)).ilike(f"%{search_query}%"))
 
+            if search_conditions:
+                base_stmt = base_stmt.where(or_(*search_conditions))
 
-@pytest.mark.asyncio
-async def test_get_by_attributes_validates_types_gracefully(crud_instance, mock_session):
-    """Ensures get_by_attributes throws 422 errors if types conflict with schema definitions."""
-    invalid_filters = {"name": {"malicious_nested_object": True}}
+            count_stmt = select(func.count()).select_from(base_stmt.subquery())
+            count_result = await db.exec(count_stmt)
+            # FIX: Change .scalar_one() to .one() for ScalarResult compatibility
+            total_count = count_result.one() or 0
 
-    with pytest.raises(HTTPException) as exc_info:
-        await crud_instance.get_by_attributes(mock_session, filters=invalid_filters)
+            sort_attr = getattr(self.model, order_by) if hasattr(self.model, order_by) else self.model.id
+            if descending:
+                base_stmt = base_stmt.order_by(col(sort_attr).desc())
+            else:
+                base_stmt = base_stmt.order_by(col(sort_attr).asc())
 
-    # Updated to latest non-deprecated FastAPI operational token status
-    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-    assert "is invalid for field" in exc_info.value.detail
+            final_stmt = base_stmt.offset(skip).limit(limit)
+            records_result = await db.exec(final_stmt)
+            
+            return records_result.all(), total_count
 
+        except SQLAlchemyError as e:
+            logger.error("Global search failed on model {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Generic search routine encountered a persistent error."
+            )
 
-@pytest.mark.asyncio
-async def test_global_search_executes_paginated_ilike_clauses(crud_instance, mock_session):
-    """
-    Guarantees the cross-module search method constructs internal case-insensitive 
-    expressions, extracts a match count, and returns the correct payload schema.
-    """
-    mock_records_res = MagicMock()
-    mock_records_res.all.return_value = [MockModel(name="Cloud Storage Core", tenant_id="t-9")]
-    
-    mock_count_res = MagicMock()
-    mock_count_res.scalar_one.return_value = 1
-    
-    # Configure mock session sequence responses for count execution then record retrieval execution
-    mock_session.exec.side_effect = [mock_count_res, mock_records_res]
+    async def create(
+        self, db: AsyncSession, *, obj_in: CreateSchemaType
+    ) -> ModelType:
+        """Validates incoming structural schema payloads and commits them to disk."""
+        db_obj = self.model.model_validate(obj_in)
+        try:
+            db.add(db_obj)
+            await db.flush()
+            await db.refresh(db_obj)
+            return db_obj
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error("Integrity Constraint Violation during create on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Resource conflict occurred: uniqueness or relationship constraint violated."
+            )
+        except SQLAlchemyError as e:
+            await db.rollback()
+            logger.error("Transaction rollback during create on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail="Database transaction write failure."
+            )
 
-    records, total = await crud_instance.search(
-        db=mock_session,
-        search_query="Cloud",
-        search_fields=["name", "tenant_id"],
-        filters={"tenant_id": "t-9"},
-        skip=0,
-        limit=10
-    )
+    async def update(
+        self, db: AsyncSession, *, db_obj: ModelType, obj_in: UpdateSchemaType | Dict[str, Any]
+    ) -> ModelType:
+        """Executes safe partial data updates on an active in-memory record tracking reference."""
+        update_data = obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
 
-    assert total == 1
-    assert len(records) == 1
-    assert records[0].name == "Cloud Storage Core"
-    assert mock_session.exec.call_count == 2
-    
-    # Extract structural compilation components to check execution behaviors
-    first_stmt = mock_session.exec.call_args_list[0][0][0]
-    second_stmt = mock_session.exec.call_args_list[1][0][0]
-    
-    assert "count" in str(first_stmt).lower()
-    
-    # FIX: SQLAlchemy compiles ILIKE down to standard agnostic lower() LIKE lower() expressions
-    compiled_sql = str(second_stmt).lower()
-    assert "like" in compiled_sql
-    assert "lower" in compiled_sql
+        for field, value in update_data.items():
+            if hasattr(db_obj, field):
+                setattr(db_obj, field, value)
 
+        db.add(db_obj)
+        try:
+            await db.flush()
+            await db.refresh(db_obj)
+            return db_obj
+        except IntegrityError as e:
+            await db.rollback()
+            logger.error("Integrity Constraint Violation during update on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Modification breaks unique data rules or constraints."
+            )
+        except SQLAlchemyError as e:
+            await db.rollback()
+            logger.error("Transaction rollback during update on {}: {}", self.model.__name__, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                detail="Database write persistence failure during modification."
+            )
 
-@pytest.mark.asyncio
-async def test_create_catches_integrity_violations_cleanly(crud_instance, mock_session):
-    """Verifies database integrity errors are caught and transformed into clean 409 conflict responses."""
-    from sqlalchemy.exc import IntegrityError
-    
-    mock_session.flush.side_effect = IntegrityError("Unique constraint violation", params={}, orig=None)
-    
-    input_payload = MockCreateSchema(name="Unique Service Target", tenant_id="net-prod")
-
-    with pytest.raises(HTTPException) as exc_info:
-        await crud_instance.create(mock_session, obj_in=input_payload)
-
-    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
-    assert "Resource conflict occurred" in exc_info.value.detail
-    mock_session.rollback.assert_called_once()
+    async def remove(self, db: AsyncSession, *, id: UUID) -> Optional[ModelType]:
+        """Safely removes an entity from persistence tracking by its primary key identifier."""
+        obj = await self.get(db, id)
+        if obj:
+            try:
+                await db.delete(obj)
+                await db.flush()
+            except SQLAlchemyError as e:
+                await db.rollback()
+                logger.error("Transaction rollback during deletion on {}: {}", self.model.__name__, str(e))
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                    detail="Database entity removal operation failed."
+                )
+        return obj

@@ -16,18 +16,16 @@ from datetime import datetime, date
 from typing import Optional, List, Dict, Any, Union, Generic, TypeVar
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.schemas.enums import CategoryType,PaymentMethod
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 from app.models.models import StaffRole, SaleStatus, PaymentMethod
-from pydantic import BaseModel
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
 from app.models.models import PaymentMethod
-from pydantic import BaseModel
 from typing import List, Optional
 from uuid import UUID
 from datetime import datetime
@@ -69,8 +67,7 @@ class BaseResponseSchema(BaseModel):
     # created_at: datetime
     # updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # =========================================================

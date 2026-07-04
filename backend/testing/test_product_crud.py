@@ -179,7 +179,7 @@ async def test_search_products_executes_complex_multitenant_lookups(mock_session
     applies the textual search scopes on ('label', 'category'), and yields records along with full totals.
     """
     mock_count_res = MagicMock()
-    mock_count_res.scalar_one.return_value = 142  # Large scale match count simulation
+    mock_count_res.one.return_value = 142  # Large scale match count simulation
     
     mock_records_res = MagicMock()
     mock_records_res.all.return_value = [sample_product]
