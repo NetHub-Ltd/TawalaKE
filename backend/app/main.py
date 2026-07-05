@@ -12,6 +12,8 @@ from app.core.config import settings
 from app.core.session import engine
 from app.core.redis_client import redis_manager, limiter # Import slowapi limiter setup
 from app.utils.logging import logger
+from app.prestart import create_admin_tenant
+from app.utils.helpers import utc_now
 
 
 @asynccontextmanager
@@ -19,7 +21,8 @@ async def lifespan(app: FastAPI):
     logger.info(
         f"Starting {settings.app_name} | "
         f"Version: {settings.app_version} | "
-        f"Environment: {settings.environment}"
+        f"Environment: {settings.environment} | "
+        f"System Time: {utc_now()}"
     )
 
     # --------------------------------------------------------------
@@ -30,6 +33,8 @@ async def lifespan(app: FastAPI):
             logger.info("Verifying database connectivity...")
             await session.exec(text("SELECT 1"))
         logger.info("Database connectivity verified.")
+        logger.info("Checking admin account")
+        await create_admin_tenant()
     except Exception as e:
         logger.critical(f"Database connection failed: {str(e)}")
         raise RuntimeError("Database unavailable. Aborting startup.") from e

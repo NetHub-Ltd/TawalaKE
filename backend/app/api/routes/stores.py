@@ -19,45 +19,6 @@ from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
 
 router = APIRouter()
 
-@router.get("/store-products/{store_id}", response_model=ApiResponse[List[ProductResponse]])
-async def get_store_products(user: AuthUser, db: SessionDep, store_id: UUID, category: str = None, product_id: UUID = None, active: bool = True, limit: int = 20, offset: int = None):
-    # this fetches products for s store
-    # can return all products, or filtered by category, inactive or active and out of stock
-    # should support pagination and sorting
-    # defult behavior is active products only
-
-    products = await store_crud.get_store_products(db=db, store_id=store_id, category=category, product_id=product_id, active=active, limit=limit, offset=offset)
-    return ApiResponse(status=True, status_code=200, message="Success", data=products)
-
-
-
-# =======================================================================
-# Business Logic
-# =======================================================================
-@router.get("/multi", response_model=ApiResponse[List[BusinessResponse]])
-async def get_businesses(user: AuthUser, db: SessionDep):
-    """
-    Retrieve the list of businesses associated with a specified tenant.
-
-    This function handles the HTTP GET request to fetch businesses linked to the given
-    tenant ID. The response is structured as an ApiResponse containing a list of business
-    data models. It ensures the operation's success and provides a status message along
-    with the relevant data.
-
-    :param user:
-    :param db: Database session dependency used for querying tenant businesses.
-    :type db: SessionDep
-    :return: ApiResponse containing a list of businesses associated with the given tenant ID.
-    :rtype: ApiResponse[List[BusinessResponse]]
-    """
-    businesses = await business_crud.get_tenant_businesses(db, user.tenant_id)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Success",
-        data=businesses
-    )
-
 @router.post("/register-business", response_model=ApiResponse[BusinessResponse])
 async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase):
     """

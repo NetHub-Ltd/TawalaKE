@@ -54,7 +54,7 @@ class BusinessCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
     async def get_business_by_id(self,db: AsyncSession, business_id: UUID)-> Business:
         biz = await self.get(db, id=business_id)
-        if not biz or biz.is_active == False:
+        if not biz or biz.active == False:
             raise HTTPException(status_code=404, detail="Business not found")
         return biz
 

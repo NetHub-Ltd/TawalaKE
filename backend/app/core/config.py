@@ -1,6 +1,7 @@
 import enum
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import EmailStr
 
 
 # environment enum
@@ -34,6 +35,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int
     refresh_token_expire_days: int
     pin_token_expire_hours: int
+
+    admin_name: str
+    admin_email: EmailStr
+    admin_password: str
 
     # Management
     admin_route: bool = False
