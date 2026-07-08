@@ -440,7 +440,12 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self, db: AsyncSession, *, obj_in: CreateSchemaType
     ) -> ModelType:
         """Validates incoming structural schema payloads and commits them to disk."""
-        db_obj = self.model.model_validate(obj_in)
+        # db_obj = self.model.model_validate(obj_in)
+        if isinstance(obj_in, BaseModel):
+            obj_data = obj_in.model_dump()
+        else:
+            obj_data = obj_in
+        db_obj = self.model(**obj_data)
         try:
             db.add(db_obj)
             await db.flush()

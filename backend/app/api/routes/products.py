@@ -172,7 +172,7 @@ async def get_product_detail(
     return ApiResponse(status=True, status_code=200, message="Success", data=db_obj)
 
 
-@router.post("/register", response_model=ApiResponse[ProductResponse], operation_id="createProduct")
+@router.post("/new", response_model=ApiResponse[ProductResponse], operation_id="createProduct")
 @limiter.limit("20/minute")  # Fine-tuned stricter limit for state-mutating ingestion blocks
 async def create_product(
     request: Request, 
@@ -181,16 +181,16 @@ async def create_product(
     redis_client: AsyncRedis = Depends(get_redis)  # Injected dependency for invalidation pass-through
 ):
     """
-    POST /products/register
+    POST /products/new
 
     PURPOSE:
     --------
     Create a new product with core fields and dynamic JSONB attributes.
     """
     try:
-        db_obj = await product_crud.create(db, obj_in=payload)
+        db_obj = await product_crud.create(db, obj_in=payload.model_dump(exclude_unset=True))
         await db.commit()
-        
+        logger.info(f"Product created: {db_obj}")
         # Pass client explicitly to flush stale queries for the business
         await invalidate_product_caches(redis_client, business_id=db_obj.business_id)
         
