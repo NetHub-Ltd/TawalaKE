@@ -444,9 +444,9 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 quantity=payload.quantity,
                 previous_stock=previous_stock,
                 new_stock=new_stock,
-                buying_price=payload.buying_price if payload.buying_price is not None else product.cost_price,
-                selling_price=payload.selling_price if payload.selling_price is not None else product.selling_price,
-                reference_id=payload.reference_id,
+                buying_price=product.cost_price,
+                selling_price=product.selling_price,
+                reference_id=payload.reason_code,
                 reference_type=payload.reference_type or "PURCHASE_ORDER",
                 notes=payload.notes
             )
