@@ -455,13 +455,13 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             product.stock = new_stock
             product.last_stock_take=utc_now()
             
-            # Update purchase cost structures if valid parameters are parsed
-            if payload.buying_price is not None and payload.buying_price > 0:
-                product.cost_price = payload.buying_price
+            # # Update purchase cost structures if valid parameters are parsed
+            # if payload.buying_price is not None and payload.buying_price > 0:
+            #     product.cost_price = payload.buying_price
 
-            # Apply new selling/shelf marks if provided in the batch restock payload
-            if payload.selling_price is not None and payload.selling_price > 0:
-                product.selling_price = payload.selling_price
+            # # Apply new selling/shelf marks if provided in the batch restock payload
+            # if payload.selling_price is not None and payload.selling_price > 0:
+            #     product.selling_price = payload.selling_price
 
             # Stage transactional models into the current Active Unit of Work
             db.add(product)
