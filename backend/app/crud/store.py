@@ -103,7 +103,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
 
         # Standard Kenyan 16% VAT Configuration
-        tax_rate = 0.16
+        tax_rate = 0.0
         tax_amount = round(subtotal * tax_rate, 2)
         total_amount = subtotal + tax_amount
 
@@ -411,6 +411,79 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 "total_stock_valuation_at_selling_price": 0.0
             }
         }
+    
+    async def add_new_stock(self, db: AsyncSession, payload: ProductRestockRequest, current_user) -> StockHistory:
+        """
+        Executes a secure inbound inventory restock operation.
+        Increments physical item volumes and updates catalog cost/selling margins 
+        atomically while safeguarding the historical trace timeline.
+        """
+        try:
+            # 1. Fetch product with row-level write validation locking protection (FOR UPDATE)
+            stmt = select(Product).where(Product.id == payload.product_id).with_for_update()
+            result = await db.exec(stmt)
+            product = result.one_or_none()
+
+            if not product:
+                raise HTTPException(
+                    status_code=404,
+                    detail="The targeted product entry was not found in this business catalog."
+                )
+
+            # 2. Compute snapshots for inventory historical balancing metrics
+            previous_stock = product.stock
+            new_stock = previous_stock + payload.quantity
+
+            # 3. Create the historical ledger trail record
+            # Automatically falls back to the current catalog price parameters if the incoming transaction lacks explicit overrides
+            history_entry = StockHistory(
+                product_id=product.id,
+                business_id=product.business_id, 
+                performed_by=current_user.id,
+                movement_type=StockMovementType.STOCK_TAKE, 
+                quantity=payload.quantity,
+                previous_stock=previous_stock,
+                new_stock=new_stock,
+                buying_price=payload.buying_price if payload.buying_price is not None else product.cost_price,
+                selling_price=payload.selling_price if payload.selling_price is not None else product.selling_price,
+                reference_id=payload.reference_id,
+                reference_type=payload.reference_type or "PURCHASE_ORDER",
+                notes=payload.notes
+            )
+
+            # 4. Mutate master product ledger catalog values directly in memory
+            product.stock = new_stock
+            product.last_stock_take=utc_now()
+            
+            # Update purchase cost structures if valid parameters are parsed
+            if payload.buying_price is not None and payload.buying_price > 0:
+                product.cost_price = payload.buying_price
+
+            # Apply new selling/shelf marks if provided in the batch restock payload
+            if payload.selling_price is not None and payload.selling_price > 0:
+                product.selling_price = payload.selling_price
+
+            # Stage transactional models into the current Active Unit of Work
+            db.add(product)
+            db.add(history_entry)
+
+            # 5. Execute atomic database flush commitment
+            await db.commit()
+            
+            # Refresh the history entry row so it populates the auto-generated primary key UUID and timestamp strings
+            await db.refresh(product)
+            return product
+
+        except HTTPException:
+            await db.rollback()
+            raise
+        except SQLAlchemyError as e:
+            await db.rollback()
+            logger.error(f"Database infrastructure collision during bulk stocking pipeline execution: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Database transaction conflict encountered while updating inventory levels."
+            )
 
 
 # Global object instance mapping injection
