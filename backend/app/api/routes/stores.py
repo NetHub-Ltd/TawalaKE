@@ -130,7 +130,7 @@ async def audit_product_stock(
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    return await store_crud.audit_stock(db=db, payload=payload, current_user=user)
+    return await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
 
 
 @router.post("/create-sale", status_code=200, response_model=SaleResponse)
