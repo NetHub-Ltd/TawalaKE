@@ -446,7 +446,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 new_stock=new_stock,
                 buying_price=product.cost_price,
                 selling_price=product.selling_price,
-                # reference_id=payload.reason_code,
+                reference_id=product.id,
                 reference_type=payload.reference_type or "PURCHASE_ORDER",
                 notes=payload.notes
             )
