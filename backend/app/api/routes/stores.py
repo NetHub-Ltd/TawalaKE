@@ -152,8 +152,8 @@ async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, s
         stmt = stmt.offset(offset)
     
     sales = (await db.exec(stmt)).all()
-    if not sales:
-        raise HTTPException(status_code=404, detail="Sales not found")
+    # if not sales:
+    #     raise HTTPException(status_code=404, detail="Sales not found")
     return sales
 
 # @router.post("/checkout")
