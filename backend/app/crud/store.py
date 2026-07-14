@@ -87,7 +87,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="One or more selected inventory items could not be found."
                 )
-
+            logger.info(f"Product data: {product}")
             item_total = product.selling_price * item.quantity
             subtotal += item_total
 
