@@ -16,8 +16,7 @@ export async function POST(req: NextRequest) {
         // return a 400
         return NextResponse.json({"error": "Invalid request body"}, {status: 400})
     }
-    console.log("request data", body)
-
+    console.debug("Request Data", JSON.stringify(body))
     const res = await fetch(`${API_BASE}/business/stock-audit`, {
     method: "POST",
     headers: {
@@ -26,6 +25,10 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify(body),
   });
+
+  if(!res.ok){
+    console.error("Request encountered a problem", res.status, res.statusText)
+  }
 
   const data = await res.json();
     if (!data.status) {

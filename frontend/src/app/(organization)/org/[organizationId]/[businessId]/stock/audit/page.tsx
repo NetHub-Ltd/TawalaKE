@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function Page({ params }: PageProps) {
-  const {businessId, organizationId} = await params;
+  const {businessId} = await params;
 
   // 2. Structural Schema Injection for deep administrative context paths
   const jsonLdSchema = {
@@ -46,7 +46,7 @@ export default async function Page({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
       />
-      <main id="main-content" className="min-h-screen bg-slate-50">
+      <main id="main-content" className="">
         <AuditWorkspace businessId={businessId} />
       </main>
     </>
