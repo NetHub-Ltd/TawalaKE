@@ -59,7 +59,7 @@ if(!body){
 }
 
 
-const res = await fetch(`${process.env.BACKEND_URL}/business/create-sale`, {
+const res = await fetch(`${process.env.BACKEND_URL}/business/new-sale`, {
     method: "POST",
     headers: {
             "Content-Type": "application/json",

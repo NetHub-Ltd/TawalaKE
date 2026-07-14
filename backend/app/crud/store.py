@@ -66,7 +66,8 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         self,
         db: AsyncSession,
         *,
-        payload: InitializeCheckout
+        payload: InitializeCheckout,
+        tax_rate: float = 0.0
     ) -> Sale:
         """
         Validates checkout initiation, accurately tracks item lines, computes totals,
@@ -78,7 +79,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         for item in payload.items:
             stmt = select(Product).where(Product.id == item.product_id)
             res = await db.exec(stmt)
-            product = res.scalar_one_or_none()
+            product = res.one_or_none()
             
             if not product:
                 logger.error(f"Checkout failure: Product ID {item.product_id} not found.")
@@ -103,7 +104,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
 
         # Standard Kenyan 16% VAT Configuration
-        tax_rate = 0.0
         tax_amount = round(subtotal * tax_rate, 2)
         total_amount = subtotal + tax_amount
 
@@ -149,7 +149,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         """
         stmt = select(Sale).where(Sale.id == sale_id)
         res = await db.exec(stmt)
-        sale = res.scalar_one_or_none()
+        sale = res.one_or_none()
 
         if not sale:
             raise HTTPException(
@@ -191,32 +191,32 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 )
                 db.add(history)
 
-        # Build chronological financial document number slugs
-        is_invoice = payload.payment_method == PaymentMethod.INVOICE
-        doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
-        prefix = "INV" if is_invoice else "REC"
-        date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
-        serial = sale.id.hex[:8].upper()
-        document_number = f"{prefix}-{date_slug}-{serial}"
+        # # Build chronological financial document number slugs
+        # is_invoice = payload.payment_method == PaymentMethod.INVOICE
+        # doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
+        # prefix = "INV" if is_invoice else "REC"
+        # date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
+        # serial = sale.id.hex[:8].upper()
+        # document_number = f"{prefix}-{date_slug}-{serial}"
 
-        document = FinancialDocument(
-            id=uuid4(),
-            business_id=sale.business_id,
-            sale_id=sale.id,
-            customer_id=sale.customer_id,
-            document_type=doc_type,
-            document_number=document_number,
-            subtotal=sale.subtotal,
-            discount_amount=sale.discount,
-            tax_amount=sale.tax_amount,
-            total_amount=sale.total_amount,
-            amount_paid=0.0 if is_invoice else sale.total_amount,
-            fiscal_metadata={"device_serial": "TRA-2026-X"}
-        )
-        db.add(document)
+        # document = FinancialDocument(
+        #     id=uuid4(),
+        #     business_id=sale.business_id,
+        #     sale_id=sale.id,
+        #     customer_id=sale.customer_id,
+        #     document_type=doc_type,
+        #     document_number=document_number,
+        #     subtotal=sale.subtotal,
+        #     discount_amount=sale.discount,
+        #     tax_amount=sale.tax_amount,
+        #     total_amount=sale.total_amount,
+        #     amount_paid=0.0 if is_invoice else sale.total_amount,
+        #     fiscal_metadata={"device_serial": "TRA-2026-X"}
+        # )
+        # db.add(document)
 
         try:
-            await db.commit()
+            # await db.commit()
             # 5. Dispatch the offloaded task down the Celery wire for async invoice processing & analytics
             generate_financial_document_task.delay(str(sale.id))
             return sale
