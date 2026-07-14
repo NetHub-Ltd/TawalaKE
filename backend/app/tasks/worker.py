@@ -207,27 +207,66 @@ if not settings.is_prod:
     celery_app.conf.task_eager_propagates = True
 
 
+# @celery_app.task(name="tasks.generate_financial_document_task", acks_late=True, max_retries=3)
+# def generate_financial_document_task(sale_id_str: str) -> str:
+#     """
+#     Decoupled Task Execution Environment handling immutable Invoice/Receipt row creation and analytics tracking.
+#     Executes inline synchronously during development, and pushes to a Redis queue in production.
+#     """
+#     import asyncio
+#     sale_id = UUID(sale_id_str)
+    
+#     try:
+#         # Secure or create a valid running event loop across varied environment execution runtimes
+#         loop = asyncio.get_event_loop()
+#     except RuntimeError:
+#         loop = asyncio.new_event_loop()
+#         asyncio.set_event_loop(loop)
+        
+#     if loop.is_closed():
+#         loop = asyncio.new_event_loop()
+#         asyncio.set_event_loop(loop)
+        
+#     return loop.run_until_complete(async_process_document_generation(sale_id))
+
+from concurrent.futures import ThreadPoolExecutor
+
 @celery_app.task(name="tasks.generate_financial_document_task", acks_late=True, max_retries=3)
 def generate_financial_document_task(sale_id_str: str) -> str:
     """
     Decoupled Task Execution Environment handling immutable Invoice/Receipt row creation and analytics tracking.
-    Executes inline synchronously during development, and pushes to a Redis queue in production.
+    Safely manages uvloop execution states during local synchronous eager test runs and production execution.
     """
     import asyncio
     sale_id = UUID(sale_id_str)
     
+    # 1. Detect if there is an event loop already running on this thread (e.g., FastAPI/uvloop)
     try:
-        # Secure or create a valid running event loop across varied environment execution runtimes
-        loop = asyncio.get_event_loop()
+        running_loop = asyncio.get_running_loop()
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-    if loop.is_closed():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        
-    return loop.run_until_complete(async_process_document_generation(sale_id))
+        running_loop = None
+
+    if running_loop and running_loop.is_running():
+        # 2. If running inline (eager mode), offload to a separate thread to avoid conflicting loop runtimes
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(
+                asyncio.run, 
+                async_process_document_generation(sale_id)
+            )
+            return future.result()
+    else:
+        # 3. Standard background execution worker thread environment (production/normal Celery worker)
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        if loop.is_closed():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+        return loop.run_until_complete(async_process_document_generation(sale_id))
 
 
 async def async_process_document_generation(sale_id: UUID) -> str:
