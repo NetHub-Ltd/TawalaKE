@@ -309,7 +309,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Database transaction conflict encountered while updating inventory levels."
             )
         
-    async def create_pending_sale(self, db: AsyncSession, payload: FinalizeCheckoutIn) -> Tuple[Sale, List[SaleItem]]:
+    async def create_pending_sale(self, db: AsyncSession, payload: FinalizeCheckoutIn, tax_rate: float = 0.00) -> Tuple[Sale, List[SaleItem]]:
         """
         Instantiates a draft transaction record, validates product status, checks 
         inventory thresholds in a single batch query execution context, and saves 
@@ -370,7 +370,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             #     tax_rate = 0.0
 
             # force a taxrate for now
-            tax_rate = 0.0
 
             # Standard clean currency calculations
             item_subtotal = round(product.selling_price * item.quantity, 2)

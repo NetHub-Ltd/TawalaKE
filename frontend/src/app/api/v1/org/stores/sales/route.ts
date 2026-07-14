@@ -40,6 +40,7 @@ if(!session?.accessToken){
     }
 
     const body = await res.json()
+    console.log("Fetched Sales Object", body)
     return NextResponse.json(body, {status: 200})
 }
 
