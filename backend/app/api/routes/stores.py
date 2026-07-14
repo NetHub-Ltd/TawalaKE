@@ -207,3 +207,11 @@ async def fetch_staff_with_id(db: SessionDep, staff_id: UUID):
     
     db_obj = StaffResponse(**staff.model_dump())
     return db_obj
+
+@router.get("/receipts/{sale_id}", status_code=200)
+async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
+    """
+    Fetches a list of receipts for a given business, with optional pagination.
+    """
+    receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
+    return receipt

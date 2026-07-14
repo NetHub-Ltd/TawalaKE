@@ -268,52 +268,104 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Staff account creation error."
             )
 
+    # async def get_financial_document_json(
+    #     self,
+    #     db: AsyncSession,
+    #     *,
+    #     document_id: UUID
+    # ) -> Optional[Dict[str, Any]]:
+    #     """
+    #     Queries a financial document by its primary key, builds the dictionary format,
+    #     and provides flat attributes satisfying test schemas.
+    #     """
+    #     stmt = select(FinancialDocument).where(FinancialDocument.id == document_id)
+    #     res = await db.exec(stmt)
+    #     doc = res.scalar_one_or_none()
+        
+    #     if not doc:
+    #         return None
+
+    #     # Fetch matching line items linked down inside the sale pipeline
+    #     items_stmt = select(SaleItem).where(SaleItem.sale_id == doc.sale_id)
+    #     items_res = await db.exec(items_stmt)
+    #     items = items_res.all()
+
+    #     return {
+    #         "id": str(doc.id),
+    #         "business_id": str(doc.business_id),
+    #         "sale_id": str(doc.sale_id),
+    #         "document_type": doc.document_type.value if hasattr(doc.document_type, 'value') else str(doc.document_type),
+    #         "document_number": doc.document_number,
+    #         "subtotal": doc.subtotal,
+    #         "tax_amount": doc.tax_amount,
+    #         "discount_amount": doc.discount_amount,
+    #         "total_amount": doc.total_amount,
+    #         "amount_paid": doc.amount_paid,
+    #         "fiscal_metadata": doc.fiscal_metadata,
+    #         "items": [
+    #             {
+    #                 "id": str(item.id),
+    #                 "product_id": str(item.product_id),
+    #                 "quantity": item.quantity,
+    #                 "unit_price": item.unit_price,
+    #                 "total_price": item.total_price,
+    #                 "sku": item.sku,
+    #                 "name": item.name
+    #             } for item in items
+    #         ]
+    #     }
+
     async def get_financial_document_json(
         self,
         db: AsyncSession,
         *,
-        document_id: UUID
+        sale_id: UUID
     ) -> Optional[Dict[str, Any]]:
         """
         Queries a financial document by its primary key, builds the dictionary format,
         and provides flat attributes satisfying test schemas.
         """
-        stmt = select(FinancialDocument).where(FinancialDocument.id == document_id)
+        stmt = select(FinancialDocument).where(FinancialDocument.sale_id == sale_id)
         res = await db.exec(stmt)
-        doc = res.scalar_one_or_none()
+        # Use one_or_none() directly on the SQLModel ScalarResult
+        # doc = res.one_or_none() 
+        doc = res.unique().one_or_none()
         
         if not doc:
             return None
+        
+        return doc.document_snapshot
 
-        # Fetch matching line items linked down inside the sale pipeline
-        items_stmt = select(SaleItem).where(SaleItem.sale_id == doc.sale_id)
-        items_res = await db.exec(items_stmt)
-        items = items_res.all()
 
-        return {
-            "id": str(doc.id),
-            "business_id": str(doc.business_id),
-            "sale_id": str(doc.sale_id),
-            "document_type": doc.document_type.value if hasattr(doc.document_type, 'value') else str(doc.document_type),
-            "document_number": doc.document_number,
-            "subtotal": doc.subtotal,
-            "tax_amount": doc.tax_amount,
-            "discount_amount": doc.discount_amount,
-            "total_amount": doc.total_amount,
-            "amount_paid": doc.amount_paid,
-            "fiscal_metadata": doc.fiscal_metadata,
-            "items": [
-                {
-                    "id": str(item.id),
-                    "product_id": str(item.product_id),
-                    "quantity": item.quantity,
-                    "unit_price": item.unit_price,
-                    "total_price": item.total_price,
-                    "sku": item.sku,
-                    "name": item.name
-                } for item in items
-            ]
-        }
+        # # Fetch matching line items linked down inside the sale pipeline
+        # items_stmt = select(SaleItem).where(SaleItem.sale_id == doc.sale_id)
+        # items_res = await db.exec(items_stmt)
+        # items = items_res.all()
+
+        # return {
+        #     "id": str(doc.id),
+        #     "business_id": str(doc.business_id),
+        #     "sale_id": str(doc.sale_id),
+        #     "document_type": doc.document_type.value if hasattr(doc.document_type, 'value') else str(doc.document_type),
+        #     "document_number": doc.document_number,
+        #     "subtotal": doc.subtotal,
+        #     "tax_amount": doc.tax_amount,
+        #     "discount_amount": doc.discount_amount,
+        #     "total_amount": doc.total_amount,
+        #     "amount_paid": doc.amount_paid,
+        #     "fiscal_metadata": doc.fiscal_metadata,
+        #     "items": [
+        #         {
+        #             "id": str(item.id),
+        #             "product_id": str(item.product_id),
+        #             "quantity": item.quantity,
+        #             "unit_price": item.unit_price,
+        #             "total_price": item.subtotal,
+        #             "sku": item.sku,
+        #             "name": item.name
+        #         } for item in items
+        #     ]
+        # }
 
     async def list_business_financial_documents_json(
         self,
@@ -488,3 +540,76 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
 # Global object instance mapping injection
 store_crud = StoreCrud(Business)
+
+
+
+# {
+#   "document_id": "0885447c-40de-40b9-a48b-e11c1b6c6892",
+#   "document_number": "REC-260714-74A86EF9",
+#   "document_type": "RECEIPT",
+#   "issued_at": "2026-07-14T15:04:23Z",
+  
+#   "seller": {
+#     "business_id": "71e60ea3-6c97-4da0-ab9d-2444a54ba370",
+#     "business_name": "Tawala Electronics - Nairobi Branch",
+#     "address": "123 Moi Avenue, Nairobi",
+#     "phone": "+254712345678",
+#     "tax_number": "A001234567Z",
+#     "cashier": {
+#       "id": "550e8400-e29b-41d4-a716-446655440000",
+#       "name": "Davie Karanja",
+#       "role": "CASHIER"
+#     }
+#   },
+  
+#   "buyer": {
+#     "customer_id": "99b8283a-1123-4b68-b391-766b1e6e0278",
+#     "name": "John Doe",
+#     "phone": "+254799999999",
+#     "email": "johndoe@example.com"
+#   },
+  
+#   "financials": {
+#     "currency": "KES",
+#     "subtotal": 160.00,
+#     "discount_amount": 0.00,
+#     "tax_rate_applied": 0.16,
+#     "tax_amount": 22.07,
+#     "total_amount": 160.00,
+#     "amount_paid": 160.00,
+#     "balance_due": 0.00
+#   },
+  
+#   "items": [
+#     {
+#       "item_id": "112c6042-bf14-42f2-845d-acc3ec7b21d9",
+#       "product_id": "aaa9e03e-8740-4fbd-a308-c9b47cfcc491",
+#       "sku": "AMY-CHG-01",
+#       "name": "AMAYA CHARGER MICRO",
+#       "quantity": 1.0,
+#       "unit_price": 137.93,
+#       "tax_rate": 0.16,
+#       "tax_amount": 22.07,
+#       "discount_amount": 0.00,
+#       "total_price": 160.00,
+#       "cost_price_at_sale": 90.00
+#     }
+#   ],
+  
+#   "payments": [
+#     {
+#       "payment_id": "f83928c2-3112-4aa8-bc13-88bb9a2d8e09",
+#       "method": "MPESA",
+#       "amount": 160.00,
+#       "reference": "SGH4X9K8PL",
+#       "processed_at": "2026-07-14T15:04:20Z"
+#     }
+#   ],
+  
+#   "dispute_and_audit": {
+#     "parent_sale_id": "74a86ef9-af8b-4fc4-857f-7a7c17b7ff8a",
+#     "status": "COMPLETED",
+#     "original_document_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+#     "notes": "Standard retail sale. Customer requested no printed receipt."
+#   }
+# }

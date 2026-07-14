@@ -497,3 +497,9 @@ class FinancialDocument(BaseMixin, table=True):
             "viewonly": True
         }
     )
+
+    document_snapshot: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
+        description="Immutable snapshot of the invoice/receipt at issuance. Added for ledger compliance."
+    )
