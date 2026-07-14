@@ -26,6 +26,9 @@ export async function GET(request: NextRequest) {
       : `${API_BASE}/products/multi/${business_id}`;
 
 
+      console.log("Target Url:", targetUrl)
+
+
   const res = await fetch(targetUrl, {
     headers: {
       "Content-Type": "application/json",
@@ -36,6 +39,8 @@ export async function GET(request: NextRequest) {
   if (!data.status) {
     return NextResponse.json({ error: data.message }, { status: res.status });
   }
+
+  console.log("returned product", data.data)
 
   // console.log(`products for: ${business_id}`, data)
   return NextResponse.json(data.data, { status: res.status });

@@ -45,7 +45,7 @@ export default async function RestockPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <main id="main-content" className="min-h-screen bg-slate-50 p-4 sm:p-8 dark:bg-slate-900 dark:text-slate-100 antialiased selection:bg-brand-primary/20">
+      <main id="main-content" className="">
         <div className="w-full mx-auto">
           
           {/* Navigation Controls Context */}
@@ -57,14 +57,6 @@ export default async function RestockPage({ params }: PageProps) {
               <ArrowLeft className="w-4 h-4" /> Back to Product
             </Link>
           </nav>
-
-          {/* Semantic Top-Level Heading Hierarchy Structure */}
-          <header className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight dark:text-white uppercase">
-              Receive New Inventory
-            </h1>
-            
-          </header>
 
           {/* Render the interactive Client form wrapper holding hook states */}
           <RestockFormWrapper businessId={businessId} />
