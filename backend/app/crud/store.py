@@ -87,18 +87,17 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="One or more selected inventory items could not be found."
                 )
-            logger.info(f"Product data: {product}")
+            logger.info(f"Product data: {product.attributes.get('sku', 'N/A')} ")
             item_total = product.selling_price * item.quantity
             subtotal += item_total
 
             sale_items.append(
                 SaleItem(
-                    id=uuid4(),
                     product_id=product.id,
                     quantity=item.quantity,
                     unit_price=product.selling_price,
                     total_price=item_total,
-                    sku=product.attributes.sku,
+                    sku=product.attributes.get('sku', 'N/A'),
                     name=product.name
                 )
             )
