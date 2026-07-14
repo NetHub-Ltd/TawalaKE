@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. FIXED: Added the body payload downstream to your backend service
-    const res = await fetch(`${process.env.BACKEND_URL}/business/create-sale`, {
+    const res = await fetch(`${process.env.BACKEND_URL}/business/checkout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
