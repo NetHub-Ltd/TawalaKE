@@ -137,6 +137,7 @@ async def audit_product_stock(
 async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep, user: AuthUser):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
     record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data)
+    await db.commit()
     return record_sale
 
 @router.get('/get-sales/{business_id}', response_model=List[SaleResponse])

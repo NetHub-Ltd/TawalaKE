@@ -39,6 +39,7 @@ if(!session?.accessToken){
     
 
     const body = await res.json()
+    console.log("fetched sale data", body)
     return NextResponse.json(body, {status: 200})
 }
 
