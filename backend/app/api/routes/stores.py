@@ -133,10 +133,10 @@ async def audit_product_stock(
     return await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
 
 
-@router.post("/create-sale", status_code=200, response_model=SaleResponse)
+@router.post("/new-sale", status_code=200, response_model=SaleResponse)
 async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep, user: AuthUser):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
-    record_sale = await store_crud.create_pending_sale(db=db, payload=payload_data)
+    record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data)
     return record_sale
 
 @router.get('/get-sales/{business_id}', response_model=List[SaleResponse])
