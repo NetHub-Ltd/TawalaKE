@@ -361,9 +361,38 @@ class Customer(BaseMixin, table=True):
     sales: List["Sale"] = Relationship(back_populates="customer")
 
 
+# class SaleAnalyticsSummary(BaseMixin, table=True):
+#     """Pre-aggregated analytics for performance"""
+#     __tablename__ = "sale_analytics_summaries"
+#     business_id: UUID = Field(foreign_key="businesses.id", index=True)
+#     date_dimension: datetime = Field(
+#         sa_column=Column(DateTime(timezone=True), index=True)
+#     )
+    
+#     gross_sales_volume: float = Field(default=0.0)
+#     total_tax_collected: float = Field(default=0.0)
+#     total_discounts_granted: float = Field(default=0.0)
+#     net_revenue_collected: float = Field(default=0.0)
+#     refund_deductions_volume: float = Field(default=0.0)
+#     total_completed_orders_count: int = Field(default=0)
+
+#     business: Business = Relationship(back_populates="analytics_summaries")
+
+
+
 class SaleAnalyticsSummary(BaseMixin, table=True):
     """Pre-aggregated analytics for performance"""
     __tablename__ = "sale_analytics_summaries"
+    
+    # ADD THIS: Define composite unique constraint for ON CONFLICT resolution
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id", 
+            "date_dimension", 
+            name="uq_business_analytics_date"
+        ),
+    )
+
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     date_dimension: datetime = Field(
         sa_column=Column(DateTime(timezone=True), index=True)
