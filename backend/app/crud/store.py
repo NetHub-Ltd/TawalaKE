@@ -21,6 +21,7 @@ from app.schemas.business import StaffRequest, ProductAuditRequest, ProductResto
 from app.schemas.store import FinalizeCheckoutIn, CartItemIn, InitializeCheckout
 from app.utils.logging import logger
 from app.utils.helpers import utc_now
+from sqlalchemy.orm import selectinload
 
 from app.tasks.worker import generate_financial_document_task
 
@@ -136,6 +137,75 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Failed to initialize transient checkout ledger."
             )
 
+    # async def finalize_checkout(
+    #     self,
+    #     db: AsyncSession,
+    #     *,
+    #     sale_id: UUID,
+    #     payload: FinalizeCheckoutIn
+    # ) -> Sale:
+    #     """
+    #     Transitions a pending checkout process into a completed state, processes inventory stock
+    #     reductions, creates stock movement logs, and yields transaction documents.
+    #     """
+    #     stmt = select(Sale).where(Sale.id == sale_id)
+    #     res = await db.exec(stmt)
+    #     sale = res.one_or_none()
+
+    #     if not sale:
+    #         raise HTTPException(
+    #             status_code=status.HTTP_404_NOT_FOUND,
+    #             detail="Target pending sale tracking code not found."
+    #         )
+
+    #     sale.status = SaleStatus.COMPLETED
+    #     db.add(sale)
+
+    #     # Process standard transactional payment attachment
+    #     payment = Payment(
+    #         id=uuid4(),
+    #         sale_id=sale.id,
+    #         amount=sale.total_amount,
+    #         payment_method=payload.payment_method,
+    #         payment_reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}",
+    #         status="SUCCESS"
+    #     )
+    #     db.add(payment)
+
+    #     # Defer/Execute product stock balances decrements
+    #     for item in sale.items:
+    #         prod_stmt = select(Product).where(Product.id == item.product_id)
+    #         prod_res = await db.exec(prod_stmt)
+    #         product = prod_res.one_or_none()
+
+    #         if product and product.track_stock:
+    #             product.stock -= item.quantity
+    #             db.add(product)
+
+    #             history = StockHistory(
+    #                 id=uuid4(),
+    #                 product_id=product.id,
+    #                 business_id=sale.business_id,
+    #                 quantity=-item.quantity,
+    #                 movement_type=StockMovementType.SALE,
+    #                 description=f"Automated POS checkout tracking deduction for sale ID: {sale.id}"
+    #             )
+    #             db.add(history)
+
+
+    #     try:
+    #         await db.commit()
+    #         # 5. Dispatch the offloaded task down the Celery wire for async invoice processing & analytics
+    #         generate_financial_document_task.delay(str(sale.id))
+    #         return sale
+    #     except IntegrityError as e:
+    #         await db.rollback()
+    #         logger.error(f"Uniqueness check violation during storefront finalization: {str(e)}")
+    #         raise HTTPException(
+    #             status_code=status.HTTP_409_CONFLICT,
+    #             detail="Document sequencing integrity index crash. Transaction aborted."
+    #         )
+
     async def finalize_checkout(
         self,
         db: AsyncSession,
@@ -147,7 +217,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         Transitions a pending checkout process into a completed state, processes inventory stock
         reductions, creates stock movement logs, and yields transaction documents.
         """
-        stmt = select(Sale).where(Sale.id == sale_id)
+        # 1. Eagerly load the items relationship to prevent MissingGreenlet errors
+        stmt = (
+            select(Sale)
+            .where(Sale.id == sale_id)
+            .options(selectinload(Sale.items))
+        )
         res = await db.exec(stmt)
         sale = res.one_or_none()
 
@@ -160,64 +235,47 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         sale.status = SaleStatus.COMPLETED
         db.add(sale)
 
-        # Process standard transactional payment attachment
+        # 2. Process standard transactional payment attachment with corrected field keys
         payment = Payment(
             id=uuid4(),
+            business_id=sale.business_id,  # Required by models.py
             sale_id=sale.id,
             amount=sale.total_amount,
-            payment_method=payload.payment_method,
-            payment_reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}",
-            status="SUCCESS"
+            method=payload.payment_method,  # Corrected from payment_method -> method
+            reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}"  # Corrected from payment_reference -> reference
+            # Note: Removed status="SUCCESS" as 'status' does not exist in the Payment model schema
         )
         db.add(payment)
 
-        # Defer/Execute product stock balances decrements
+        # 3. Defer/Execute product stock balances decrements
         for item in sale.items:
             prod_stmt = select(Product).where(Product.id == item.product_id)
             prod_res = await db.exec(prod_stmt)
             product = prod_res.one_or_none()
 
             if product and product.track_stock:
+                previous_stock_level = product.stock
                 product.stock -= item.quantity
                 db.add(product)
 
+                # Correctly structured to feed the actual models.py StockHistory schema definitions
                 history = StockHistory(
                     id=uuid4(),
                     product_id=product.id,
                     business_id=sale.business_id,
                     quantity=-item.quantity,
+                    previous_stock=previous_stock_level,
+                    new_stock=product.stock,
+                    selling_price=item.unit_price,
+                    buying_price=product.cost_price,
                     movement_type=StockMovementType.SALE,
-                    description=f"Automated POS checkout tracking deduction for sale ID: {sale.id}"
+                    notes=f"Automated POS checkout tracking deduction for sale ID: {sale.id}"  # Corrected description -> notes
                 )
                 db.add(history)
 
-        # # Build chronological financial document number slugs
-        # is_invoice = payload.payment_method == PaymentMethod.INVOICE
-        # doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
-        # prefix = "INV" if is_invoice else "REC"
-        # date_slug = datetime.now(timezone.utc).strftime("%y%m%d")
-        # serial = sale.id.hex[:8].upper()
-        # document_number = f"{prefix}-{date_slug}-{serial}"
-
-        # document = FinancialDocument(
-        #     id=uuid4(),
-        #     business_id=sale.business_id,
-        #     sale_id=sale.id,
-        #     customer_id=sale.customer_id,
-        #     document_type=doc_type,
-        #     document_number=document_number,
-        #     subtotal=sale.subtotal,
-        #     discount_amount=sale.discount,
-        #     tax_amount=sale.tax_amount,
-        #     total_amount=sale.total_amount,
-        #     amount_paid=0.0 if is_invoice else sale.total_amount,
-        #     fiscal_metadata={"device_serial": "TRA-2026-X"}
-        # )
-        # db.add(document)
-
         try:
-            # await db.commit()
-            # 5. Dispatch the offloaded task down the Celery wire for async invoice processing & analytics
+            await db.commit()
+            # 4. Dispatch the offloaded task down the Celery wire for async invoice processing & analytics
             generate_financial_document_task.delay(str(sale.id))
             return sale
         except IntegrityError as e:
