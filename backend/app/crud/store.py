@@ -98,7 +98,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     quantity=item.quantity,
                     unit_price=product.selling_price,
                     total_price=item_total,
-                    sku=product.sku,
+                    sku=product.attributes.sku,
                     name=product.name
                 )
             )
@@ -175,7 +175,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         for item in sale.items:
             prod_stmt = select(Product).where(Product.id == item.product_id)
             prod_res = await db.exec(prod_stmt)
-            product = prod_res.scalar_one_or_none()
+            product = prod_res.one_or_none()
 
             if product and product.track_stock:
                 product.stock -= item.quantity
