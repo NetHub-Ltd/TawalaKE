@@ -98,7 +98,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     unit_price=product.selling_price,
                     total_price=item_total,
                     sku=product.attributes.get('sku', 'N/A'),
-                    name=product.name
+                    name=product.label
                 )
             )
 
