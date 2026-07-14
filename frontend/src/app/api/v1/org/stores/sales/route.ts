@@ -39,12 +39,6 @@ if(!session?.accessToken){
     
 
     const body = await res.json()
-<<<<<<< HEAD
-    console.log("Fetched Sales Object", body)
-=======
-
-    // TODO: check if body is an array
->>>>>>> frontend
     return NextResponse.json(body, {status: 200})
 }
 
