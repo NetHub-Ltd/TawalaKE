@@ -1,6 +1,7 @@
 from typing import Type, List, Dict, Tuple, Optional, Any
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
+from fastapi import BackgroundTasks
 
 from fastapi import HTTPException, status
 from sqlmodel import select, desc, func, col
@@ -23,7 +24,7 @@ from app.utils.logging import logger
 from app.utils.helpers import utc_now
 from sqlalchemy.orm import selectinload
 
-from app.tasks.worker import generate_financial_document_task
+from app.tasks.worker import async_process_document_generation,async_update_sales_analytics
 
 
 class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
@@ -137,81 +138,14 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Failed to initialize transient checkout ledger."
             )
 
-    # async def finalize_checkout(
-    #     self,
-    #     db: AsyncSession,
-    #     *,
-    #     sale_id: UUID,
-    #     payload: FinalizeCheckoutIn
-    # ) -> Sale:
-    #     """
-    #     Transitions a pending checkout process into a completed state, processes inventory stock
-    #     reductions, creates stock movement logs, and yields transaction documents.
-    #     """
-    #     stmt = select(Sale).where(Sale.id == sale_id)
-    #     res = await db.exec(stmt)
-    #     sale = res.one_or_none()
-
-    #     if not sale:
-    #         raise HTTPException(
-    #             status_code=status.HTTP_404_NOT_FOUND,
-    #             detail="Target pending sale tracking code not found."
-    #         )
-
-    #     sale.status = SaleStatus.COMPLETED
-    #     db.add(sale)
-
-    #     # Process standard transactional payment attachment
-    #     payment = Payment(
-    #         id=uuid4(),
-    #         sale_id=sale.id,
-    #         amount=sale.total_amount,
-    #         payment_method=payload.payment_method,
-    #         payment_reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}",
-    #         status="SUCCESS"
-    #     )
-    #     db.add(payment)
-
-    #     # Defer/Execute product stock balances decrements
-    #     for item in sale.items:
-    #         prod_stmt = select(Product).where(Product.id == item.product_id)
-    #         prod_res = await db.exec(prod_stmt)
-    #         product = prod_res.one_or_none()
-
-    #         if product and product.track_stock:
-    #             product.stock -= item.quantity
-    #             db.add(product)
-
-    #             history = StockHistory(
-    #                 id=uuid4(),
-    #                 product_id=product.id,
-    #                 business_id=sale.business_id,
-    #                 quantity=-item.quantity,
-    #                 movement_type=StockMovementType.SALE,
-    #                 description=f"Automated POS checkout tracking deduction for sale ID: {sale.id}"
-    #             )
-    #             db.add(history)
-
-
-    #     try:
-    #         await db.commit()
-    #         # 5. Dispatch the offloaded task down the Celery wire for async invoice processing & analytics
-    #         generate_financial_document_task.delay(str(sale.id))
-    #         return sale
-    #     except IntegrityError as e:
-    #         await db.rollback()
-    #         logger.error(f"Uniqueness check violation during storefront finalization: {str(e)}")
-    #         raise HTTPException(
-    #             status_code=status.HTTP_409_CONFLICT,
-    #             detail="Document sequencing integrity index crash. Transaction aborted."
-    #         )
-
+ 
     async def finalize_checkout(
         self,
         db: AsyncSession,
         *,
         sale_id: UUID,
-        payload: FinalizeCheckoutIn
+        payload: FinalizeCheckoutIn,
+        background_tasks: BackgroundTasks  # ← Added
     ) -> Sale:
         """
         Transitions a pending checkout process into a completed state, processes inventory stock
@@ -238,12 +172,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         # 2. Process standard transactional payment attachment with corrected field keys
         payment = Payment(
             id=uuid4(),
-            business_id=sale.business_id,  # Required by models.py
+            business_id=sale.business_id,
             sale_id=sale.id,
             amount=sale.total_amount,
-            method=payload.payment_method,  # Corrected from payment_method -> method
-            reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}"  # Corrected from payment_reference -> reference
-            # Note: Removed status="SUCCESS" as 'status' does not exist in the Payment model schema
+            method=payload.payment_method,
+            reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}"
         )
         db.add(payment)
 
@@ -258,7 +191,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 product.stock -= item.quantity
                 db.add(product)
 
-                # Correctly structured to feed the actual models.py StockHistory schema definitions
                 history = StockHistory(
                     id=uuid4(),
                     product_id=product.id,
@@ -269,14 +201,22 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     selling_price=item.unit_price,
                     buying_price=product.cost_price,
                     movement_type=StockMovementType.SALE,
-                    notes=f"Automated POS checkout tracking deduction for sale ID: {sale.id}"  # Corrected description -> notes
+                    notes=f"Automated POS checkout tracking deduction for sale ID: {sale.id}"
                 )
                 db.add(history)
 
         try:
             await db.commit()
-            # 4. Dispatch the offloaded task down the Celery wire for async invoice processing & analytics
-            generate_financial_document_task.delay(str(sale.id))
+            
+            # === Background Document & Analytics Generation ===
+            background_tasks.add_task(
+                async_process_document_generation, 
+                sale.id
+            )
+
+            # background_tasks.add_task(async_process_document_generation, sale.id)
+            background_tasks.add_task(async_update_sales_analytics, sale.id)
+            
             return sale
         except IntegrityError as e:
             await db.rollback()
@@ -326,52 +266,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Staff account creation error."
             )
 
-    # async def get_financial_document_json(
-    #     self,
-    #     db: AsyncSession,
-    #     *,
-    #     document_id: UUID
-    # ) -> Optional[Dict[str, Any]]:
-    #     """
-    #     Queries a financial document by its primary key, builds the dictionary format,
-    #     and provides flat attributes satisfying test schemas.
-    #     """
-    #     stmt = select(FinancialDocument).where(FinancialDocument.id == document_id)
-    #     res = await db.exec(stmt)
-    #     doc = res.scalar_one_or_none()
-        
-    #     if not doc:
-    #         return None
-
-    #     # Fetch matching line items linked down inside the sale pipeline
-    #     items_stmt = select(SaleItem).where(SaleItem.sale_id == doc.sale_id)
-    #     items_res = await db.exec(items_stmt)
-    #     items = items_res.all()
-
-    #     return {
-    #         "id": str(doc.id),
-    #         "business_id": str(doc.business_id),
-    #         "sale_id": str(doc.sale_id),
-    #         "document_type": doc.document_type.value if hasattr(doc.document_type, 'value') else str(doc.document_type),
-    #         "document_number": doc.document_number,
-    #         "subtotal": doc.subtotal,
-    #         "tax_amount": doc.tax_amount,
-    #         "discount_amount": doc.discount_amount,
-    #         "total_amount": doc.total_amount,
-    #         "amount_paid": doc.amount_paid,
-    #         "fiscal_metadata": doc.fiscal_metadata,
-    #         "items": [
-    #             {
-    #                 "id": str(item.id),
-    #                 "product_id": str(item.product_id),
-    #                 "quantity": item.quantity,
-    #                 "unit_price": item.unit_price,
-    #                 "total_price": item.total_price,
-    #                 "sku": item.sku,
-    #                 "name": item.name
-    #             } for item in items
-    #         ]
-    #     }
 
     async def get_financial_document_json(
         self,
@@ -394,36 +288,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         
         return doc.document_snapshot
 
-
-        # # Fetch matching line items linked down inside the sale pipeline
-        # items_stmt = select(SaleItem).where(SaleItem.sale_id == doc.sale_id)
-        # items_res = await db.exec(items_stmt)
-        # items = items_res.all()
-
-        # return {
-        #     "id": str(doc.id),
-        #     "business_id": str(doc.business_id),
-        #     "sale_id": str(doc.sale_id),
-        #     "document_type": doc.document_type.value if hasattr(doc.document_type, 'value') else str(doc.document_type),
-        #     "document_number": doc.document_number,
-        #     "subtotal": doc.subtotal,
-        #     "tax_amount": doc.tax_amount,
-        #     "discount_amount": doc.discount_amount,
-        #     "total_amount": doc.total_amount,
-        #     "amount_paid": doc.amount_paid,
-        #     "fiscal_metadata": doc.fiscal_metadata,
-        #     "items": [
-        #         {
-        #             "id": str(item.id),
-        #             "product_id": str(item.product_id),
-        #             "quantity": item.quantity,
-        #             "unit_price": item.unit_price,
-        #             "total_price": item.subtotal,
-        #             "sku": item.sku,
-        #             "name": item.name
-        #         } for item in items
-        #     ]
-        # }
 
     async def list_business_financial_documents_json(
         self,

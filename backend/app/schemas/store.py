@@ -179,10 +179,15 @@ class FinancialDocumentSnapshotSchema(BaseModel):
     document_number: str
     document_type: DocumentType
     issued_at: datetime
+    version: str = "1.0"
     
     seller: SellerSnapshot
     buyer: BuyerSnapshot
     financials: FinancialsSnapshot
-    items: List[ItemSnapshot]
-    payments: List[PaymentSnapshot]
+    items: list[ItemSnapshot]
+    payments: list[PaymentSnapshot]
+    
+    # New professional summary
+    summary: dict = Field(default_factory=dict)
+    
     dispute_and_audit: DisputeAuditSnapshot

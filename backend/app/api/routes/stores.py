@@ -11,7 +11,7 @@ from app.schemas.business import RestockRequest, ProductAuditRequest, StaffReque
 from app.utils.logging import logger
 from app.crud.store import store_crud
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
-from app.schemas.store import SaleResponse, FinalizeCheckoutIn
+from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
 from sqlmodel import select
 from app.models.models import Sale
 from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
@@ -157,9 +157,6 @@ async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, s
     #     raise HTTPException(status_code=404, detail="Sales not found")
     return sales
 
-# @router.post("/checkout")
-# async def checkout_sale(db: SessionDep, payload: FinalizeCheckoutIn, user: AuthUser):
-#     return await store_crud.finalize_checkout(db=db, payload=payload, sale_id=payload.sale_id)
 
 @router.post("/checkout")
 async def checkout_sale(
@@ -176,18 +173,9 @@ async def checkout_sale(
     sale = await store_crud.finalize_checkout(
         db=db, 
         sale_id=payload.sale_id, 
-        payload=payload
+        payload=payload,
+        background_tasks=background_tasks
     )
-
-    # 2. Fire background task for document creation (non-blocking)
-    logger.info("firing background task to create receipt/invoice")
-    background_tasks.add_task(
-        store_crud.create_financial_document,
-        db,           # Note: Background tasks get their own session in real implementation
-        sale.id
-    )
-
-    # 3. Return fast response to frontend
     return sale
 
 
@@ -209,7 +197,7 @@ async def fetch_staff_with_id(db: SessionDep, staff_id: UUID):
     db_obj = StaffResponse(**staff.model_dump())
     return db_obj
 
-@router.get("/receipts/{sale_id}", status_code=200)
+@router.get("/receipts/{sale_id}", status_code=200, response_model=FinancialDocumentSnapshotSchema)
 async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
     """
     Fetches a list of receipts for a given business, with optional pagination.
