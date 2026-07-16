@@ -99,6 +99,7 @@ class ProductBase(BaseModel):
     label: str
     selling_price: float
     track_stock: bool = True
+    last_stock_take: Optional[datetime] = None
     stock: float
     category: Optional[str] = "General"
     attributes: BaseAttributes = Field(default_factory=BaseAttributes)
@@ -124,7 +125,7 @@ class ProductResponse(BaseResponseSchema):
     label: str
     selling_price: float
     track_stock: bool
-    stock: int
+    stock: float
     active: bool
     category: str
     attributes: BaseAttributes
@@ -293,6 +294,7 @@ class StaffCreateIn(BaseModel):
     tenant_id: UUID
     email: EmailStr
     full_name: str
+    business_id: UUID
     password: Optional[str] = None  # Plaintext password from front-end to be hashed on server
     role: StaffRole = StaffRole.CASHIER
 

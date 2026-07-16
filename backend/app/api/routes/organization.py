@@ -31,37 +31,19 @@ async def create_tenant(db: SessionDep, data: TenantCreate):
         data=new_tenant
     )
 
-@router.post("/migrate")
-async def migrate_tenant(db: SessionDep, email: EmailStr):
-    # Implementation for migrating tenant
-    stmt = select(Tenant).where(Tenant.email == email)
-    result = (await db.exec(stmt)).first()
-
-    if not result:
-        raise HTTPException(status_code=404, detail="Tenant not found for migration")
-
-    payload = TenantCreate(
-        name=result.name,
-        email=result.email,
-        tenant_id=result.id,
-        active=result.active
-    )
-
-    new_org = await organization_crud.onboard_tenant(payload=payload, db=db, password="")
-    return ApiResponse(
-        status=True,
-        status_code=201,
-        message="Tenant onboarded successfully",
-        data=new_org
-    )
-
 
 @router.get("/{organization_id}")
 async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
     stmt = select(Organization).where(Organization.id == organization_id)
     organization = (await db.exec(stmt)).first()
+
+    # ensure the user is only fetching their own organization, this would prevent sniffing
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
+    
+    if organization.id != user.organization_id:
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
+
     return ApiResponse(
         status=True,
         status_code=200,
@@ -72,6 +54,9 @@ async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: Au
 
 @router.get('/stores/{organization_id}', response_model=ApiResponse[List[BusinessResponse]])
 async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
+    
+    if organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
     businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
     return ApiResponse(
         status=True,
@@ -82,6 +67,8 @@ async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: 
 
 @router.get('/staff/{organization_id}', response_model=ApiResponse[List[StaffResponse]])
 async def get_staff_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None):
+    
+    
     staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
     return ApiResponse(
         status=True,
@@ -90,3 +77,16 @@ async def get_staff_by_tenant(organization_id: UUID, db: SessionDep, user: AuthU
         data=staff
     )
 
+
+@router.get("/billing/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
+async def get_billing_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
+    
+    if organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
+    businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Businesses retrieved successfully",
+        data=businesses
+    )

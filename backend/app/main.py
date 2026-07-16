@@ -8,6 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.api_router import api_router
 from app.core.config import settings
 from app.core.session import engine
+from app.core.redis_client import redis_manager
 
 from app.utils.logging import logger
 
@@ -31,9 +32,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.critical(f"Database connection failed: {e}")
         raise RuntimeError("Database unavailable. Aborting startup.") from e
+    
     yield
-
     logger.info(f"Shutting down {settings.app_name}")
+    await redis_manager.close()
+    await engine.dispose()
+
+    logger.info(f"{settings.app_name} shutdown complete.")
+
+
 
 
 def create_application() -> FastAPI:

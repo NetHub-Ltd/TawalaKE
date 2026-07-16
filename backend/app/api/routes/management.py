@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import EmailStr
-from app.api.deps import SessionDep, AuthUser
+from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
 from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant
 from app.api.deps import SessionDep, AuthUser
 from app.schemas.schemas import TenantResponse, TenantCreate
@@ -10,11 +10,33 @@ from pydantic import EmailStr
 from app.models.models import Product, Business
 from uuid import UUID
 from app.crud.organization import organization_crud
+from app.core.mailer import mailer
+
 
 
 router = APIRouter()
 
 # route for Tawala admins and sysetm monitoring and management route
+
+@router.post("/cache/{key}")
+async def set_cache(key: str, value: str, r: AsyncRedis = Depends(get_redis)):
+    # This works exactly the same whether using FakeRedis or a real cluster
+    await r.set(key, value, ex=60)  # Expires in 60 seconds
+    return {"status": "success", "key": key, "value": value}
+
+@router.get("/cache/{key}")
+async def get_cache(key: str, r: AsyncRedis = Depends(get_redis)):
+    value = await r.get(key)
+    if not value:
+        return {"message": "Cache miss"}
+    return {"cache_hit": value}
+
+@router.get("/test-email")
+async def send_test_email(email: EmailStr, background_tasks: BackgroundTasks):
+    background_tasks.add_task(
+     mailer.send_testing,
+     to_email=email)
+    return {"status": "accepted", "message": "System Testing Sent!."}
 
 @router.get("/org")
 async def get_organizations(db: SessionDep):
@@ -42,9 +64,30 @@ async def get_all_staff(db: SessionDep):
     return staff_members
 
 @router.patch("/migrate-org")
-async def patch_business_org_id(db: SessionDep, tenant_id: UUID):
+async def patch_org_id(db: SessionDep, tenant_id: UUID):
     migration = await organization_crud.migrate_single_tenant_to_organization(db, tenant_id)
     return migration
+
+
+@router.patch("/migrate-stores")
+async def patch_business_org_id(db: SessionDep, tenant_id: UUID):
+    org = await organization_crud.get_organization_by_id(tenant_id, db)
+    if not org:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    
+    # find busineses with that tenant id and update the org id
+    business_stmt = select(Business).where(Business.tenant_id == org.id)
+    businesses = (await db.exec(business_stmt)).all()
+
+    if not businesses:
+        raise HTTPException(status_code=404, detail="Businesses not found")
+
+    # only update the org id if its not the same as the tenant if
+    for business in businesses:
+        business.organization_id = org.id
+        db.add(business)
+    await db.commit()
+    return businesses
 
 
 @router.patch("/patch-staff-password")

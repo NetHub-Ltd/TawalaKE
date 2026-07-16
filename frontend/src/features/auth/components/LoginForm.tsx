@@ -43,6 +43,7 @@ export function LoginForm() {
         redirect: false,
         email: data.email,
         password: data.password,
+        // callbackUrl: "/org"
       });
 
       if (result?.error) {

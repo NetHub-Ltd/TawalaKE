@@ -66,7 +66,9 @@ export function useProducts(businessId: string, productId?: string) {
   });
 
   const queryData = productsQuery.data;
+  console.log("this is running inside useProducts", queryData)
   const isArray = Array.isArray(queryData);
+  console.log("isArray", queryData)
 
   return {
     // Standardize mapping extraction layer cleanly
@@ -77,5 +79,6 @@ export function useProducts(businessId: string, productId?: string) {
     createProduct,
     updateProduct,
     deleteProduct,
+    queryClient, // <-- Return this to allow ad-hoc invalidation controls downstream
   };
 }

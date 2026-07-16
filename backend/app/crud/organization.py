@@ -30,7 +30,6 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             tenant = Organization(
                 name=workspace_name,
                 email=payload.email,
-                # id=payload.tenant_id,
                 active=payload.active
             )
             db.add(tenant)
@@ -83,6 +82,14 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             raise HttpException(status_code=404, detail="Tenant not found")
         return tenant
 
+    async def get_organization_by_id(self, org_id: UUID, db: AsyncSession) -> Organization:
+        stmt = select(Organization).where(Organization.id == org_id)
+        org = (await db.exec(stmt)).first()
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+        return org
+
+
     async def upgrade_tenant_plan(self, tenant_id: str, new_plan: str, db: AsyncSession) -> Tenant:
         tenant = await self.get_tenant_by_id(tenant_id, db)
         tenant.plan = new_plan
@@ -117,7 +124,7 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             full_name=staff_data.name,
             email=staff_data.email,
             organization_id=organization_id,
-            tenant_id=tenant_id,
+            tenant_id=organization_id,
             role=StaffRole.CASHIER,  # default role for new staff, can be updated later
             hashed_password=hash_password(password) if password else "TEMP_DISABLED"
         )

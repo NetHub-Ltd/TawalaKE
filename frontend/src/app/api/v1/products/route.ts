@@ -18,11 +18,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Business ID not provided" }, { status: 400 });
     }
 
+    console.log("fetching products for: ", business_id)
 
       // Determine targeted downstream service URL dynamically
-  const targetUrl = product_id 
-    ? `${API_BASE}/products/${product_id}`
-    : `${API_BASE}/products/multi/${business_id}`;
+    const targetUrl = product_id 
+      ? `${API_BASE}/products/${product_id}`
+      : `${API_BASE}/products/multi/${business_id}`;
+
+
+      console.log("Target Url:", targetUrl)
 
 
   const res = await fetch(targetUrl, {
@@ -35,6 +39,10 @@ export async function GET(request: NextRequest) {
   if (!data.status) {
     return NextResponse.json({ error: data.message }, { status: res.status });
   }
+
+  console.log("returned product", data.data)
+
+  // console.log(`products for: ${business_id}`, data)
   return NextResponse.json(data.data, { status: res.status });
 }
 
@@ -52,7 +60,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  console.log("Creating a product with body:", body); // Debug log
+  // console.log("Creating a product with body:", body); // Debug log
   const res = await fetch(`${API_BASE}/products/register`, {
     method: "POST",
     headers: {

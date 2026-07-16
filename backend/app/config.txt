@@ -1,0 +1,38 @@
+{
+  "platform": "NetHub",
+  "domain": "nethub.co.ke",
+  "subdomain": "mail.nethub.co.ke",
+  "email_channels": {
+    "security": {
+      "from": "NetHub Security <security@nethub.co.ke>",
+      "purpose": "Authentication, magic links, OTPs, and password resets.",
+      "priority": "critical",
+      "reply_allowed": false
+    },
+    "billing": {
+      "from": "NetHub Billing <billing@nethub.co.ke>",
+      "purpose": "Invoices, receipts, subscription changes, and payment failures.",
+      "priority": "high",
+      "reply_allowed": false
+    },
+    "support": {
+      "from": "NetHub Support <support@nethub.co.ke>",
+      "purpose": "Customer service tickets, technical inquiries, and account resolutions.",
+      "priority": "high",
+      "reply_allowed": true,
+      "reply_to": "support@mail.nethub.co.ke"
+    },
+    "system": {
+      "from": "Tawala System <tawala@nethub.co.ke>",
+      "purpose": "Automated background events, environment provisioning logs, and deployment audits.",
+      "priority": "medium",
+      "reply_allowed": false
+    },
+    "marketing": {
+      "from": "NetHub Updates <newsletter@nethub.co.ke>",
+      "purpose": "Product announcements, newsletters, feature updates, and mass broadcasts.",
+      "priority": "low",
+      "reply_allowed": false
+    }
+  }
+}

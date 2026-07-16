@@ -1,135 +1,160 @@
-// app/(organization)/org/[organizationId]/components/Sidebar.tsx
+
+// src/components/Sidebar.tsx
 "use client";
 
+import React from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { 
-  LayoutDashboard, 
-  Store, 
-  Users, 
   Monitor, 
   Package, 
   History, 
   Settings, 
-  ChevronLeft,
-  User
+  ChevronsUpDown,
+  User,
+  LogOut,
+  Building2,
+  LayoutDashboard,
+  Boxes,
+  Users2,
+  FileSpreadsheet,
+  Store
 } from "lucide-react";
 import { ComponentType } from "react";
+
+interface SidebarProps {
+  organizationId: string;
+  businessId: string;
+}
 
 interface SidebarLink {
   label: string;
   path: string;
   allowedRoles: string[];
-  scope: "organization" | "business";
   icon: ComponentType<{ className?: string }>;
 }
 
+// 1. Meaningful dedicated icons correctly mapped contextually across links
 const NAVIGATION_SCHEMA: SidebarLink[] = [
-  // --- ORGANIZATION LEVEL SCOPE ---
-  { label: "Overview", path: "", allowedRoles: ["OWNER", "MANAGER"], scope: "organization", icon: LayoutDashboard },
-  { label: "Stores & Registers", path: "/terminal", allowedRoles: ["OWNER"], scope: "organization", icon: Store },
-  { label: "Staff Members", path: "/staff", allowedRoles: ["OWNER", "MANAGER"], scope: "organization", icon: Users },
-  
-  // --- BUSINESS TERMINAL LEVEL SCOPE ---
-  { label: "POS Terminal", path: "", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], scope: "business", icon: Monitor },
-  { label: "Inventory & Stock", path: "/inventory", allowedRoles: ["OWNER", "MANAGER"], scope: "business", icon: Package },
-  { label: "Sales History", path: "/history", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], scope: "business", icon: History },
-  { label: "Store Settings", path: "/settings", allowedRoles: ["OWNER"], scope: "business", icon: Settings },
+  { label: "Overview", path: "/overview", allowedRoles: ["OWNER"], icon: LayoutDashboard },
+  { label: "Terminal", path: "/terminal", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: Monitor },
+  { label: "Stock Management", path: "/stock/audit", allowedRoles: ["OWNER", "MANAGER"], icon: Package },
+  { label: "Sales History", path: "/sale-history", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: History },
+  { label: "Products", path: "/inventory", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: Boxes },
+  { label: "Staff", path: "/staff", allowedRoles: ["OWNER", "MANAGER"], icon: Users2 },
+  // { label: "Receipts and Invoices", path: "/#", allowedRoles: ["OWNER", "MANAGER", "CASHIER"], icon: FileSpreadsheet },
+  // { label: "Store Settings", path: "/#", allowedRoles: ["OWNER"], icon: Store },
 ];
 
-export function Sidebar() {
+export function Sidebar({ organizationId, businessId }: SidebarProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const params = useParams();
-
-  const organizationId = params.organizationId as string;
-  const businessId = params.businessId as string;
-  
   const userRole = session?.user?.role || "CASHIER";
 
-  const visibleLinks = NAVIGATION_SCHEMA.filter((link) => {
-    if (!link.allowedRoles.includes(userRole)) return false;
-    if (link.scope === "business" && !businessId) return false;
-    if (link.scope === "organization" && businessId && userRole === "CASHIER") return false;
-    return true;
-  });
-
-  const getHref = (link: SidebarLink) => {
-    if (link.scope === "business") {
-      return `/org/${organizationId}/terminal/${businessId}${link.path}`;
-    }
-    return `/org/${organizationId}${link.path}`;
-  };
+  const visibleLinks = NAVIGATION_SCHEMA.filter((link) => 
+    link.allowedRoles.includes(userRole)
+  );
 
   return (
-    <aside className="w-56 md:w-60 bg-[#f8fafc] border-r border-slate-200 min-h-screen p-4 flex flex-col justify-between shrink-0 selection:bg-blue-500 selection:text-white">
-      <div className="space-y-5">
-        {/* Context-Aware Header */}
-        <div className="pb-3 border-b border-slate-200/60">
-          <h2 className="text-sm font-bold text-slate-800 truncate tracking-tight">
-            {businessId ? "Store Terminal Node" : "Tawala HQ Admin"}
-          </h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 font-mono">
-            {businessId ? `CTX: ${businessId.slice(0, 8)}` : "GLOBAL CONTROL"}
-          </p>
-        </div>
+    <aside 
+      className="w-64 bg-card border-r border-border/60 min-h-screen p-2 flex flex-col justify-between shrink-0 text-foreground select-none"
+      aria-label="Application Sidebar"
+    >
+      <div className="space-y-6">
+        
+        {/* Branch Context Workspace Switcher Header - Styled with soft rounded scaling */}
+        <div className="bg-surface/40 border border-border/40 rounded-2xl p-3 flex items-center justify-between gap-2 transition-all hover:bg-surface/60">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center justify-center text-brand-primary shrink-0 transition-transform hover:rotate-6">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div className="truncate min-w-0">
+              <h2 className="text-xs font-black uppercase tracking-wider text-foreground truncate leading-none">
+                Tawala Node
+              </h2>
+              <span className="text-xs font-mono text-muted font-bold block mt-1 tracking-tight">
+                ID: {businessId?.slice(0, 8)}
+              </span>
+            </div>
+          </div>
 
-        {/* Dynamic Context Escape Button */}
-        {businessId && (userRole === "OWNER" || userRole === "MANAGER") && (
-          <Link
-            href={`/org/${organizationId}/terminal`}
-            className="flex items-center justify-center gap-1.5 w-full py-1.5 px-3 text-[11px] font-bold text-blue-600 bg-blue-50/60 hover:bg-blue-100/80 active:bg-blue-100 rounded-lg transition-colors border border-blue-100/50 group"
-          >
-            <ChevronLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-0.5 transition-transform" />
-            <span>Switch Workspace</span>
-          </Link>
-        )}
-
-        {/* Navigation Link Stack */}
-        <nav className="space-y-0.5" aria-label="Main Navigation">
-          {visibleLinks.map((link) => {
-            const href = getHref(link);
-            const isActive = pathname === href;
-            const Icon = link.icon;
-
-            return (
-              <Link
-                key={link.label + link.path}
-                href={href}
-                aria-current={isActive ? "page" : undefined}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 group ${
-                  isActive
-                    ? "bg-blue-600 text-white shadow-sm shadow-blue-600/10"
-                    : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
-                }`}
-              >
-                <Icon className={`w-4 h-4 shrink-0 transition-colors ${
-                  isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"
-                }`} />
-                <span className="truncate">{link.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Profile & Security Context Footer */}
-      <div className="bg-white border border-slate-200/60 p-2.5 rounded-xl flex items-center gap-2.5 shadow-xs">
-        <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-inner">
-          {session?.user?.name ? (
-            session.user.name[0].toUpperCase()
-          ) : (
-            <User className="w-3.5 h-3.5" />
+          {(userRole === "OWNER" || userRole === "MANAGER") && (
+            <button
+              onClick={() => console.log("Trigger dynamic modal system")}
+              className="p-1.5 text-muted hover:text-foreground rounded-xl hover:bg-background border border-border/40 transition-all active:scale-95 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+              aria-label="Switch store branch location context"
+            >
+              <ChevronsUpDown className="w-4 h-4" />
+            </button>
           )}
         </div>
-        <div className="truncate flex-1 min-w-0">
-          <p className="text-[11px] font-bold text-slate-800 truncate leading-tight">
-            {session?.user?.name || "Terminal User"}
-          </p>
-          <span className="inline-block px-1.5 py-0.5 bg-slate-100 text-[8px] font-bold text-slate-500 rounded uppercase tracking-wider scale-95 origin-left mt-0.5">
-            {userRole}
-          </span>
+
+        {/* Navigation Section */}
+        <div className="space-y-3">
+          
+          {/* Playful, tactile spring-action layout link lists */}
+          <nav className="space-y-1.5" aria-label="Terminal Primary Workspace Navigation">
+            {visibleLinks.map((link) => {
+              const href = `/org/${organizationId}/${businessId}${link.path}`;
+              
+              const isActive = link.path === "" 
+                ? pathname === href 
+                : pathname.startsWith(href);
+                
+              const Icon = link.icon;
+
+              return (
+                <Link
+                  key={link.label + link.path}
+                  href={href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all duration-200 active:scale-98 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+                    isActive
+                      ? "bg-brand-primary text-background font-black shadow-md shadow-brand-primary/10 scale-[1.01]"
+                      : "text-muted hover:bg-surface/60 hover:text-foreground hover:translate-x-1"
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
+                    isActive ? "text-background scale-110" : "text-muted group-hover:text-foreground group-hover:scale-110"
+                  }`} />
+                  <span className="truncate">{link.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      {/* Operator Session Context Footer */}
+      <div className="pt-4 border-t border-border/40">
+        <div className="bg-surface/40 border border-border/40 p-2.5 rounded-2xl flex items-center justify-between gap-2.5 transition-all hover:bg-surface/60">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-background text-foreground flex items-center justify-center font-bold text-xs shrink-0 border border-border/60 shadow-sm transition-transform hover:scale-105 hover:-rotate-3">
+              {session?.user?.name ? (
+                session.user.name[0].toUpperCase()
+              ) : (
+                <User className="w-4 h-4" />
+              )}
+            </div>
+            <div className="truncate min-w-0">
+              <p className="text-xs font-bold text-foreground truncate leading-tight">
+                {session?.user?.name || "Terminal User"}
+              </p>
+              <span className="inline-block px-1.5 py-0.5 bg-background text-[10px] font-black text-brand-accent rounded uppercase tracking-wider mt-1 border border-border/40 shadow-xs">
+                {userRole}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="p-2 text-muted hover:text-brand-primary hover:bg-brand-primary/10 rounded-xl transition-all cursor-pointer group active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            title="Terminate operator system access session"
+            aria-label="Sign out of system session"
+          >
+            <LogOut className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+          </button>
         </div>
       </div>
     </aside>
