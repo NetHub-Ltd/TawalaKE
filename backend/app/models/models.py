@@ -194,7 +194,7 @@ class Business(BaseMixin, table=True):
     # organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
 
     name: str = Field(index=True)
-    tax_rate: Optional[float] = Field(default=0.16)
+    tax_rate: Optional[float] = Field(default=0.0)
     address: Optional[str] = Field(default=None)
     phone: Optional[str] = Field(default=None)
     active: bool = Field(index=True, default=True)
@@ -205,6 +205,12 @@ class Business(BaseMixin, table=True):
     assigned_staff: List[Staff] = Relationship(
         back_populates="assigned_businesses", 
         link_model=StaffBusinessAssignment
+    )
+
+    # add a jsob column for storing store level configs like logo etc
+    config: Dict[str, Any] = Field(
+        sa_column=Column(JSONB),
+        default_factory=dict
     )
 
     
@@ -226,7 +232,7 @@ class Product(BaseMixin, table=True):
 
     track_stock: bool = Field(index=True, default=True)
     stock: float = Field(default=0.0)
-    popularity_score: float = Field(default=0.0)
+    popularity_score: Optional[float] = Field(default=None, nullable=True)
     min_stock_level: float = Field(default=10.0, nullable=True)
     # last_stock_take: Optional[datetime] = Field(default=None)
     last_stock_take: Optional[datetime] = Field(
