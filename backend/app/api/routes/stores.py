@@ -202,5 +202,7 @@ async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
     """
     Fetches a list of receipts for a given business, with optional pagination.
     """
+
+    cache_key: str = f"cache:receipts:user_id:{user.id}:sale_id:{sale_id}"
     receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
     return receipt
