@@ -11,52 +11,13 @@ from app.schemas.business import RestockRequest, ProductAuditRequest, StaffReque
 from app.utils.logging import logger
 from app.crud.store import store_crud
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
-from app.schemas.store import SaleResponse, FinalizeCheckoutIn
+from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
 from sqlmodel import select
 from app.models.models import Sale
 from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
 
 
 router = APIRouter()
-
-@router.get("/store-products/{store_id}", response_model=ApiResponse[List[ProductResponse]])
-async def get_store_products(user: AuthUser, db: SessionDep, store_id: UUID, category: str = None, product_id: UUID = None, active: bool = True, limit: int = 20, offset: int = None):
-    # this fetches products for s store
-    # can return all products, or filtered by category, inactive or active and out of stock
-    # should support pagination and sorting
-    # defult behavior is active products only
-
-    products = await store_crud.get_store_products(db=db, store_id=store_id, category=category, product_id=product_id, active=active, limit=limit, offset=offset)
-    return ApiResponse(status=True, status_code=200, message="Success", data=products)
-
-
-
-# =======================================================================
-# Business Logic
-# =======================================================================
-@router.get("/multi", response_model=ApiResponse[List[BusinessResponse]])
-async def get_businesses(user: AuthUser, db: SessionDep):
-    """
-    Retrieve the list of businesses associated with a specified tenant.
-
-    This function handles the HTTP GET request to fetch businesses linked to the given
-    tenant ID. The response is structured as an ApiResponse containing a list of business
-    data models. It ensures the operation's success and provides a status message along
-    with the relevant data.
-
-    :param user:
-    :param db: Database session dependency used for querying tenant businesses.
-    :type db: SessionDep
-    :return: ApiResponse containing a list of businesses associated with the given tenant ID.
-    :rtype: ApiResponse[List[BusinessResponse]]
-    """
-    businesses = await business_crud.get_tenant_businesses(db, user.tenant_id)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Success",
-        data=businesses
-    )
 
 @router.post("/register-business", response_model=ApiResponse[BusinessResponse])
 async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase):
@@ -169,13 +130,14 @@ async def audit_product_stock(
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    return await store_crud.audit_stock(db=db, payload=payload, current_user=user)
+    return await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
 
 
-@router.post("/create-sale", status_code=200, response_model=SaleResponse)
+@router.post("/new-sale", status_code=200, response_model=SaleResponse)
 async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep, user: AuthUser):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
-    record_sale = await store_crud.create_pending_sale(db=db, payload=payload_data)
+    record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data)
+    await db.commit()
     return record_sale
 
 @router.get('/get-sales/{business_id}', response_model=List[SaleResponse])
@@ -191,13 +153,10 @@ async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, s
         stmt = stmt.offset(offset)
     
     sales = (await db.exec(stmt)).all()
-    if not sales:
-        raise HTTPException(status_code=404, detail="Sales not found")
+    # if not sales:
+    #     raise HTTPException(status_code=404, detail="Sales not found")
     return sales
 
-# @router.post("/checkout")
-# async def checkout_sale(db: SessionDep, payload: FinalizeCheckoutIn, user: AuthUser):
-#     return await store_crud.finalize_checkout(db=db, payload=payload, sale_id=payload.sale_id)
 
 @router.post("/checkout")
 async def checkout_sale(
@@ -214,18 +173,9 @@ async def checkout_sale(
     sale = await store_crud.finalize_checkout(
         db=db, 
         sale_id=payload.sale_id, 
-        payload=payload
+        payload=payload,
+        background_tasks=background_tasks
     )
-
-    # 2. Fire background task for document creation (non-blocking)
-    logger.info("firing background task to create receipt/invoice")
-    background_tasks.add_task(
-        store_crud.create_financial_document,
-        db,           # Note: Background tasks get their own session in real implementation
-        sale.id
-    )
-
-    # 3. Return fast response to frontend
     return sale
 
 
@@ -246,3 +196,13 @@ async def fetch_staff_with_id(db: SessionDep, staff_id: UUID):
     
     db_obj = StaffResponse(**staff.model_dump())
     return db_obj
+
+@router.get("/receipts/{sale_id}", status_code=200, response_model=FinancialDocumentSnapshotSchema)
+async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
+    """
+    Fetches a list of receipts for a given business, with optional pagination.
+    """
+
+    cache_key: str = f"cache:receipts:user_id:{user.id}:sale_id:{sale_id}"
+    receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
+    return receipt

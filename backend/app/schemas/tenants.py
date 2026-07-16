@@ -1,5 +1,5 @@
 import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from app.models.models import SubscriptionTier
 from typing import Optional
@@ -17,5 +17,5 @@ class TenantResponse(BaseModel):
     active: bool = True
     plan: SubscriptionTier
     created_at: datetime.datetime
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)

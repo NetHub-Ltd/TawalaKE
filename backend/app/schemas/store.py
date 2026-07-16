@@ -110,3 +110,84 @@ class SaleResponse(BaseModel):
     tax_amount: float
     total_amount: float
     created_at: datetime
+
+
+from pydantic import BaseModel, EmailStr, Field
+from uuid import UUID
+from datetime import datetime
+from typing import List, Optional, Dict, Any
+from app.models.models import DocumentType, PaymentMethod, SaleStatus
+
+class CashierSnapshot(BaseModel):
+    id: UUID
+    name: str
+    role: str
+
+class SellerSnapshot(BaseModel):
+    business_id: UUID
+    business_name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    tax_number: Optional[str] = None
+    cashier: CashierSnapshot
+
+class BuyerSnapshot(BaseModel):
+    customer_id: Optional[UUID] = None
+    name: str
+    phone: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+class FinancialsSnapshot(BaseModel):
+    currency: str = "KES"
+    subtotal: float
+    discount_amount: float
+    tax_rate_applied: float
+    tax_amount: float
+    total_amount: float
+    amount_paid: float
+    balance_due: float
+
+class ItemSnapshot(BaseModel):
+    item_id: UUID
+    product_id: UUID
+    sku: str
+    name: str
+    quantity: float
+    unit_price: float
+    tax_rate: float
+    tax_amount: float
+    discount_amount: float = 0.0
+    total_price: float
+    cost_price_at_sale: Optional[float] = None
+
+class PaymentSnapshot(BaseModel):
+    payment_id: UUID
+    method: PaymentMethod
+    amount: float
+    reference: Optional[str] = None
+    processed_at: datetime
+
+class DisputeAuditSnapshot(BaseModel):
+    parent_sale_id: UUID
+    status: SaleStatus
+    original_document_hash: Optional[str] = None
+    notes: Optional[str] = None
+
+# This is the master validator schema for the JSONB snapshot
+class FinancialDocumentSnapshotSchema(BaseModel):
+    document_id: UUID
+    document_number: str
+    document_type: DocumentType
+    issued_at: datetime
+    version: str = "1.0"
+    
+    seller: SellerSnapshot
+    buyer: BuyerSnapshot
+    financials: FinancialsSnapshot
+    items: list[ItemSnapshot]
+    payments: list[PaymentSnapshot]
+    
+    # New professional summary
+    summary: dict = Field(default_factory=dict)
+    
+    dispute_and_audit: DisputeAuditSnapshot

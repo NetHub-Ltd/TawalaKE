@@ -69,7 +69,7 @@ export function CheckoutForm({ saleId, grandTotal, organizationId, businessId }:
       });
 
       // Forward directly into the unified receipt presentation file component
-      router.push(`/org/${organizationId}/${businessId}/checkout/receipt?sale_id=${saleId}`);
+      router.push(`/org/${organizationId}/${businessId}/sale/${saleId}/preview`);
     } catch (error) {
       console.error("Settlement operational execution failure:", error);
       toast.error("Process Failed", {

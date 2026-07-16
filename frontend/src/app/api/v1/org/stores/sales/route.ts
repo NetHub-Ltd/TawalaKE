@@ -15,8 +15,6 @@ if(!session?.accessToken){
     const { searchParams } = new URL(req.url);
     const business_id = searchParams.get("business_id");
     const sale_id = searchParams.get("sale_id");
-
-    
     
       if (!business_id) {
       return NextResponse.json({ error: "Business ID not provided" }, { status: 400 });
@@ -38,8 +36,10 @@ if(!session?.accessToken){
     if(!res.ok){
         return NextResponse.json({error: res.statusText}, {status: res.status})
     }
+    
 
     const body = await res.json()
+    console.log("fetched sale data", body)
     return NextResponse.json(body, {status: 200})
 }
 
@@ -60,7 +60,7 @@ if(!body){
 }
 
 
-const res = await fetch(`${process.env.BACKEND_URL}/business/create-sale`, {
+const res = await fetch(`${process.env.BACKEND_URL}/business/new-sale`, {
     method: "POST",
     headers: {
             "Content-Type": "application/json",
@@ -82,5 +82,3 @@ console.debug("Saved Sale Object", data)
 return NextResponse.json(data, {status: 200})
 
 }
-
-
