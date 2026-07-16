@@ -25,7 +25,7 @@ def upgrade() -> None:
     op.add_column('financial_documents', sa.Column('document_snapshot', postgresql.JSONB(astext_type=sa.Text()), nullable=True))
     op.alter_column('products', 'popularity_score',
                existing_type=sa.DOUBLE_PRECISION(precision=53),
-               nullable=False)
+               nullable=True)
     # ### end Alembic commands ###
 
 
