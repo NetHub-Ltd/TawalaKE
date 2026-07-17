@@ -24,6 +24,7 @@ ecdsa==0.19.2
 email-validator==2.3.0
 fakeredis==2.36.2
 fastapi==0.136.0
+fastapi-cache2==0.2.2
 fastapi-cli==0.0.24
 fastapi-cloud-cli==0.17.0
 fastar==0.11.0
@@ -44,6 +45,7 @@ MarkupSafe==3.0.3
 mdurl==0.1.2
 packaging==26.2
 passlib==1.7.4
+pendulum==3.2.0
 pluggy==1.6.0
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.11
@@ -62,7 +64,7 @@ python-dotenv==1.2.2
 python-jose==3.5.0
 python-multipart==0.0.26
 PyYAML==6.0.3
-redis==8.0.1
+redis==4.6.0
 requests==2.34.2
 resend==2.32.2
 rich==15.0.0
