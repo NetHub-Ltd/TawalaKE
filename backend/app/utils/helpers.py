@@ -1,6 +1,8 @@
 import re
 from datetime import datetime, timezone
 from typing import Optional
+from fastapi import Request
+from app.utils.logging import logger
 
 
 def utc_now() -> datetime:
@@ -50,3 +52,57 @@ def validate_and_format_kenyan_phone(phone: str, format: bool = False) -> Option
     else:
         # Return cleaned local format (with 0 prefix)
         return f"0{digits}"
+
+
+# # Caching
+# def universal_key_builder(func, namespace: str = "", *, request: Request = None, **kwargs):
+#     """
+#     A generic key builder that scales across all routes (products, categories, orders, etc.)
+#     Example key format: fastapi-cache:products:business_id=uuid:skip=0:limit=50
+#     """
+#     prefix = f"{FastAPICache.get_prefix()}:{namespace}"
+    
+#     # 1. Extract standard query/path arguments passed to the endpoint function
+#     func_kwargs = kwargs.get("kwargs", {})
+    
+#     # Filter out parameters we don't want part of the cache key (like database sessions or requests)
+#     filtered_args = {
+#         k: str(v) for k, v in func_kwargs.items() 
+#         if k not in ("db", "request", "redis_client", "response") and v is not None
+#     }
+    
+#     # 2. Sort the arguments so 'skip=0&limit=50' and 'limit=50&skip=0' generate the exact same cache key
+#     sorted_args_str = ":".join(f"{k}={v}" for k, v in sorted(filtered_args.items()))
+    
+#     # 3. Construct the clean, predictable key
+#     if sorted_args_str:
+#         return f"{prefix}:{sorted_args_str}"
+    
+#     # Fallback if the route has absolutely zero parameters
+#     return f"{prefix}:{func.__name__}"
+
+
+# async def purge_cache_namespace(redis_client: AsyncRedis, namespace: str, **identifiers):
+#     """
+#     Purges targeted cache matrices cleanly across any namespace.
+#     Usage: await purge_cache_namespace(redis_client, "products", business_id=business_id)
+#     """
+#     try:
+#         # Reconstruct the exact string prefix based on the identifier changed
+#         for key, value in identifiers.items():
+#             # Targets paths that match the exact identifier signature
+#             scan_pattern = f"fastapi-cache:{namespace}:*{key}={value}*"
+            
+#             async for match_key in redis_client.scan_iter(match=scan_pattern):
+#                 await redis_client.delete(match_key)
+                
+#         logger.info(f"Evicted stale entries for namespace: {namespace}")
+#     except Exception as e:
+#         logger.error(f"Cache eviction failed: {str(e)}")
+
+
+# @router.get("/list/{tenant_id}")
+# @cache(expire=300, namespace="categories", key_builder=universal_key_builder)
+# async def get_categories(request: Request, db: SessionDep, tenant_id: UUID):
+#     # Generates: fastapi-cache:categories:tenant_id=<uuid>
+#     ...

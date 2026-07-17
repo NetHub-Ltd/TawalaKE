@@ -1,9 +1,9 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException,BackgroundTasks
+from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends
 
-from app.api.deps import SessionDep, AuthUser
+from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace, get_redis, AsyncRedis
 from app.crud.business import business_crud
 from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
     BusinessUpdate, BusinessBase
@@ -15,12 +15,12 @@ from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumen
 from sqlmodel import select
 from app.models.models import Sale
 from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
-
+from fastapi_cache.decorator import cache
 
 router = APIRouter()
 
 @router.post("/register-business", response_model=ApiResponse[BusinessResponse])
-async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase):
+async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase, redis_client: AsyncRedis = Depends(get_redis)):
     """
     Create a new business within a specified tenant.
 
@@ -43,6 +43,8 @@ async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase)
     data = BusinessCreate(name=payload.name,tenant_id=user.tenant_id, active=True, organization_id=user.tenant_id)
     db_obj = await business_crud.register_business(data, db=db)
 
+    await purge_cache_namespace(redis_client, namespace="stores", business_id=db_obj.id)
+
     return ApiResponse(
         status=True,
         status_code=200,
@@ -52,7 +54,7 @@ async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase)
 #
 #
 @router.patch('/update-business/{business_id}', response_model=ApiResponse[BusinessResponse])
-async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payload:BusinessUpdate):
+async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payload:BusinessUpdate, redis_client: AsyncRedis = Depends(get_redis)):
     """
     Updates the details of an existing business entity identified by its unique
     business ID. This function interacts with the database session to locate the
@@ -72,6 +74,7 @@ async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payl
     if db_obj.tenant_id != user.tenant_id:
         raise HTTPException(status_code=403, detail="Unauthorized")
     new = await business_crud.update_business(business_id, db=db, db_obj=payload)
+    await purge_cache_namespace(redis_client, namespace="stores", business_id=new.id)
     return ApiResponse(
         status_code=200,
         message="Success",
@@ -81,7 +84,7 @@ async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payl
 #
 #
 @router.delete('/delete/{business_id}', status_code=200, response_model=ApiResponse)
-async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID):
+async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis_client: AsyncRedis = Depends(get_redis)):
     """
     Deletes a client business entity by its unique identifier. This endpoint removes
     the business entity from the database and returns a successful response if the
@@ -100,6 +103,8 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID):
         raise HTTPException(status_code=403, detail="Unauthorized")
     await business_crud.remove(db=db, id=business_id)
     await db.commit()
+    
+    await purge_cache_namespace(redis_client, namespace="stores", business_id=business_id)
     return ApiResponse(
         status=True,
         status_code=200,
@@ -189,7 +194,7 @@ async def register_and_assign_staff(db: SessionDep, user: AuthUser, payload: Sta
     return staff
 
 @router.get("/get-staff", response_model=StaffResponse)
-async def fetch_staff_with_id(db: SessionDep, staff_id: UUID):
+async def fetch_staff_with_id(db: SessionDep, staff_id: UUID, user: AuthUser,):
     staff, ass = await store_crud.fetch_staff_with_id(db, staff_id)
     if ass.business_id is not None:
         db_obj = StaffResponse(**staff.model_dump(), business_id=ass.business_id)
@@ -203,6 +208,5 @@ async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
     Fetches a list of receipts for a given business, with optional pagination.
     """
 
-    cache_key: str = f"cache:receipts:user_id:{user.id}:sale_id:{sale_id}"
     receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
     return receipt

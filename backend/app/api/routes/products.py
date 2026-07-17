@@ -4,13 +4,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status, Request, Response, Depends
 from pydantic import ValidationError
+from fastapi_cache.decorator import cache
 
 # Directly utilizing your provided dependency definitions
-from app.api.deps import SessionDep, get_redis, AsyncRedis
+from app.api.deps import SessionDep, get_redis, AsyncRedis,universal_key_builder, purge_cache_namespace
 from app.crud.product import product_crud
 from app.schemas.schemas import ProductResponse, ProductCreate, ApiResponse, ProductUpdate
 from app.utils.logging import logger
 from app.core.redis_client import limiter
+
 
 router = APIRouter()
 
@@ -18,45 +20,18 @@ router = APIRouter()
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
 
-# --- High Performance Fail-Safe Redis Invalidation Helper ---
-async def invalidate_product_caches(
-    redis_client: AsyncRedis, 
-    product_id: Optional[UUID] = None, 
-    business_id: Optional[UUID] = None
-):
-    """
-    Purges dirty cache entry keys across distributed worker nodes following mutations.
-    Accepts the active injected AsyncRedis instance to decouple from the global manager.
-    """
-    try:
-        keys_to_delete = []
-        
-        if product_id:
-            keys_to_delete.append(f"cache:products:id:{product_id}")
-        if business_id:
-            # Drop multi-tenant lists and paginated result sets for this business
-            scan_pattern = f"cache:products:business:{business_id}:*"
-            async for key in redis_client.scan_iter(match=scan_pattern):
-                keys_to_delete.append(key)
-                
-        if keys_to_delete:
-            await redis_client.delete(*keys_to_delete)
-            logger.info("Successfully dropped {} stale product cache records.", len(keys_to_delete))
-    except Exception as cache_error:
-        logger.error("Redis cache invalidation encountered failure: {}", str(cache_error))
-
-
 # --- API Routes ---
 
 @router.get("/multi/{business_id}", response_model=ApiResponse[List[ProductResponse]], operation_id="getBusinessProducts")
 @limiter.limit("100/minute")  # Fine-tuned limit for high-frequency POS screens/pickers
+@cache(expire=CACHE_TTL_SEC, namespace="products", key_builder=universal_key_builder)  # 👈 Wired generic key patterns
 async def get_products(
     request: Request,
     db: SessionDep, 
     business_id: UUID, 
     skip: int = 0, 
     limit: int = 50,
-    redis_client: AsyncRedis = Depends(get_redis)  # Wired clean dependency layer
+    redis_client: AsyncRedis = Depends(get_redis)  # Maintained injection to prevent breaking route dependency trees
 ):
     """
     GET /products/multi/{business_id}
@@ -68,25 +43,7 @@ async def get_products(
     if not business_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Business ID is required")
     
-    cache_key = f"cache:products:business:{business_id}:skip:{skip}:limit:{limit}"
-    try:
-        cached_data = await redis_client.get(cache_key)
-        if cached_data:
-            logger.info(f"Cache hit: {cache_key}")
-            return ApiResponse(status=True, status_code=200, message="Success (Cached)", data=json.loads(cached_data))
-    except Exception as cache_err:
-        logger.error("Cache read failed on multi-get: {}", str(cache_err))
-
-    # Route execution through custom product_crud/base_crud layers
     db_objs = await product_crud.fetch_business_products(business_id=business_id, db=db, limit=limit, skip=skip)
-    
-    try:
-        serialized_data = [obj.model_dump(mode='json') for obj in db_objs]
-        logger.info(f"Setting cache: {cache_key}")
-        await redis_client.setex(cache_key, CACHE_TTL_SEC, json.dumps(serialized_data))
-    except Exception as cache_err:
-        logger.error("Cache write failed on multi-get: {}", str(cache_err))
-
     return ApiResponse(status=True, status_code=200, message="Success", data=db_objs)
 
 
@@ -134,11 +91,12 @@ async def search_products(
 
 @router.get("/{product_id}", response_model=ApiResponse[ProductResponse], operation_id="getProductDetail")
 @limiter.limit("150/minute")  # Fine-tuned higher allowance for asset detail retrievals
+@cache(expire=CACHE_TTL_SEC, namespace="products", key_builder=universal_key_builder)  # 👈 Wired generic key patterns
 async def get_product_detail(
     request: Request, 
     product_id: UUID, 
     db: SessionDep,
-    redis_client: AsyncRedis = Depends(get_redis)  # Wired clean dependency layer
+    redis_client: AsyncRedis = Depends(get_redis)  # Maintained injection to prevent breaking route dependency trees
 ):
     """
     GET /products/{product_id}
@@ -150,25 +108,10 @@ async def get_product_detail(
     if not product_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product ID is required")
         
-    cache_key = f"cache:products:id:{product_id}"
-    try:
-        cached_data = await redis_client.get(cache_key)
-        if cached_data:
-            logger.info(f"Cache hit: {cache_key}")
-            return ApiResponse(status=True, status_code=200, message="Success (Cached)", data=json.loads(cached_data))
-    except Exception as cache_err:
-        logger.error("Cache read failed on single get: {}", str(cache_err))
-
     db_obj = await product_crud.get(db, product_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
         
-    try:
-        logger.info(f"Setting cache: {cache_key}")
-        await redis_client.setex(cache_key, CACHE_TTL_SEC, json.dumps(db_obj.model_dump(mode='json')))
-    except Exception as cache_err:
-        logger.error("Cache write failed on single get: {}", str(cache_err))
-
     return ApiResponse(status=True, status_code=200, message="Success", data=db_obj)
 
 
@@ -191,8 +134,9 @@ async def create_product(
         db_obj = await product_crud.create(db, obj_in=payload.model_dump(exclude_unset=True))
         await db.commit()
         logger.info(f"Product created: {db_obj}")
-        # Pass client explicitly to flush stale queries for the business
-        await invalidate_product_caches(redis_client, business_id=db_obj.business_id)
+        
+        # Micro-targeted namespace eviction via your generic shared utility
+        await purge_cache_namespace(redis_client, namespace="products", business_id=db_obj.business_id)
         
         return ApiResponse(
             status=True,
@@ -223,8 +167,9 @@ async def update_product(
     """
     new_obj = await product_crud.update_product(product_id=product_id, payload=payload, db=db)
     
-    # Invalidate both cache matrices cleanly using the injected thread-safe instance
-    await invalidate_product_caches(redis_client, product_id=product_id, business_id=new_obj.business_id)
+    # Drops targeted arrays matching both specific IDs and parent business matrices cleanly
+    await purge_cache_namespace(redis_client, namespace="products", product_id=product_id)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=new_obj.business_id)
     
     return ApiResponse(
         status=True, 
@@ -256,7 +201,8 @@ async def delete_product(
     business_id = target_product.business_id
     await product_crud.delete_product(product_id, db)
     
-    # Cascade invalidations through cache namespaces immediately via clean pass-through
-    await invalidate_product_caches(redis_client, product_id=product_id, business_id=business_id)
+    # Cascade invalidations completely through isolated namespaces immediately
+    await purge_cache_namespace(redis_client, namespace="products", product_id=product_id)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=business_id)
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
