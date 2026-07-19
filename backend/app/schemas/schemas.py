@@ -122,6 +122,7 @@ class ProductResponse(BaseResponseSchema):
     label: str
     selling_price: float
     track_stock: bool
+    last_stock_take: Optional[datetime] = None
     stock: float
     active: bool
     category: str

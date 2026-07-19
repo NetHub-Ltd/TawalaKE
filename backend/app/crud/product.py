@@ -1,6 +1,7 @@
 from typing import Type, List, Optional, Dict, Any, Tuple, Sequence
 from uuid import UUID
 from datetime import datetime
+from sqlmodel import col
 
 from fastapi import HTTPException, status
 from loguru import logger
@@ -23,15 +24,34 @@ class ProductCrud(BaseCRUD[Product, ProductCreate, ProductUpdate]):
     async def fetch_poducts(
         self, 
         db: AsyncSession, 
+        *,
         limit: int = 50, 
-        skip: int = 0
-    ) -> Sequence[Product]:
+        skip: int = 0,
+        sort_by: Optional[str] = None,
+        sort_order: str = "desc",
+        business_id: Optional[str] = None
+    ) -> Tuple[Sequence[Product], int]:
         """
         Retrieves products using the base class batch engine.
-        Automatically leverages latest-first sorting using 'created_at' and structured logging.
+        Automatically leverages dynamic column sorting, total counts, and structured logging.
         Note: Method name retains the historical typo 'fetch_poducts' to maintain zero breaking changes.
         """
-        return await self.get_multi(db, skip=skip, limit=limit)
+        # Build dynamic clauses to ensure data multi-tenancy isolation by business
+        where_clauses = []
+        if business_id:
+            where_clauses.append(col(self.model.business_id) == business_id)
+
+        # Forward parameters safely into the base paginated engine
+        items, total = await self.get_multi_paginated(
+            db, 
+            skip=skip, 
+            limit=limit, 
+            where_clauses=where_clauses,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
+        
+        return items, total
 
     async def delete_product(self, product_id: UUID, db: AsyncSession) -> bool:
         """

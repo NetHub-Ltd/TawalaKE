@@ -1,8 +1,10 @@
 import json
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TypeVar, Generic
 from uuid import UUID
+from pydantic import BaseModel
+import math
 
-from fastapi import APIRouter, HTTPException, status, Request, Response, Depends
+from fastapi import APIRouter, HTTPException, status, Request, Response, Depends, Query
 from pydantic import ValidationError
 from fastapi_cache.decorator import cache
 
@@ -20,31 +22,108 @@ router = APIRouter()
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
 
-# --- API Routes ---
+# --- Pagination Schema Core ---
+T = TypeVar('T')
 
-@router.get("/multi/{business_id}", response_model=ApiResponse[List[ProductResponse]], operation_id="getBusinessProducts")
-@limiter.limit("100/minute")  # Fine-tuned limit for high-frequency POS screens/pickers
-@cache(expire=CACHE_TTL_SEC, namespace="products", key_builder=universal_key_builder)  # 👈 Wired generic key patterns
+class PaginatedMetadata(BaseModel):
+    total: int
+    page: int
+    size: int
+    pages: int
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    status: bool = True
+    status_code: int = 200
+    message: str = "Success"
+    data: List[T]
+    pagination: PaginatedMetadata
+
+# --- Router Implementation ---
+@router.get(
+    "/multi/{business_id}", 
+    response_model=PaginatedResponse[ProductResponse], 
+    operation_id="getBusinessProducts"
+)
+@limiter.limit("100/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="products", key_builder=universal_key_builder)
 async def get_products(
     request: Request,
-    db: SessionDep, 
     business_id: UUID, 
-    skip: int = 0, 
-    limit: int = 50,
-    redis_client: AsyncRedis = Depends(get_redis)  # Maintained injection to prevent breaking route dependency trees
+    db: SessionDep,
+    page: int = Query(default=1, ge=1, description="Current page number"),
+    size: int = Query(default=50, ge=1, le=100, alias="limit", description="Number of rows per page"),
+    sort_by: Optional[str] = Query(default=None, description="Model column attribute name to sort by"),
+    sort_order: str = Query(default="desc", regex="^(asc|desc)$", description="Sort direction order"),
+    redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
     GET /products/multi/{business_id}
 
     PURPOSE:
     --------
-    Fetch a paginated list of products scoped to a specific business identifier.
+    Fetch a true paginated payload structural framework of products scoped to a specific business identifier
+    coupled with execution metadata allowing absolute page length control configurations on the client.
     """
     if not business_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Business ID is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Business ID is required"
+        )
     
-    db_objs = await product_crud.fetch_business_products(business_id=business_id, db=db, limit=limit, skip=skip)
-    return ApiResponse(status=True, status_code=200, message="Success", data=db_objs)
+    # Calculate offset engine parameters from 1-indexed page systems
+    skip = (page - 1) * size
+
+    # Fire modern multi-tuple indexing batch engine
+    items, total = await product_crud.fetch_poducts(
+        db=db,
+        limit=size,
+        skip=skip,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        business_id=str(business_id)
+    )
+
+    # Compute absolute pagination landscape geometry
+    pages = math.ceil(total / size) if total > 0 else 1
+
+    return PaginatedResponse(
+        status=True,
+        status_code=200,
+        message="Success",
+        data=items,
+        pagination=PaginatedMetadata(
+            total=total,
+            page=page,
+            size=size,
+            pages=pages
+        )
+    )
+
+# --- API Routes ---
+
+# @router.get("/multi/{business_id}", response_model=ApiResponse[List[ProductResponse]], operation_id="getBusinessProducts")
+# @limiter.limit("100/minute")  # Fine-tuned limit for high-frequency POS screens/pickers
+# @cache(expire=CACHE_TTL_SEC, namespace="products", key_builder=universal_key_builder)  # 👈 Wired generic key patterns
+# async def get_products(
+#     request: Request,
+#     db: SessionDep, 
+#     business_id: UUID, 
+#     skip: int = 0, 
+#     limit: int = 50,
+#     redis_client: AsyncRedis = Depends(get_redis)  # Maintained injection to prevent breaking route dependency trees
+# ):
+#     """
+#     GET /products/multi/{business_id}
+
+#     PURPOSE:
+#     --------
+#     Fetch a paginated list of products scoped to a specific business identifier.
+#     """
+#     if not business_id:
+#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Business ID is required")
+    
+#     db_objs = await product_crud.fetch_business_products(business_id=business_id, db=db, limit=limit, skip=skip)
+#     return ApiResponse(status=True, status_code=200, message="Success", data=db_objs)
 
 
 @router.get("/search", response_model=ApiResponse[Dict[str, Any]], operation_id="searchProducts")
