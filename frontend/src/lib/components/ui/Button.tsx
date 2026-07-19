@@ -1,4 +1,4 @@
-// 'use client';
+// "use client";
 
 // import * as React from 'react';
 // import { cn } from '@/lib/utils';
@@ -39,24 +39,24 @@
 //     ref
 //   ) => {
     
-//     // Core structural resets utilizing global transition-all curves
-//     const baseStyles = 'inline-flex items-center justify-center font-bold tracking-wide transition-all duration-500 ease-out active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-40 disabled:pointer-events-none select-none cursor-pointer';
+//     // Core structural resets utilizing native border-color configurations and clean focus curves
+//     const baseStyles = 'inline-flex items-center justify-center font-bold uppercase tracking-wider text-center transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 disabled:opacity-40 disabled:pointer-events-none select-none cursor-pointer';
 
-//     // Variant style matrix reading unified tokens directly from globals.css theme mapping
+//     // Variant style matrix reading unified tokens directly from global system tokens
 //     const variantStyles = {
-//       primary: 'bg-brand-primary text-background hover:bg-brand-secondary focus-visible:outline-brand-primary shadow-lift hover:shadow-glow',
-//       secondary: 'bg-brand-secondary text-background hover:bg-brand-primary focus-visible:outline-brand-secondary shadow-lift',
-//       outline: 'bg-transparent border border-border text-foreground hover:bg-surface focus-visible:outline-brand-primary',
+//       primary: 'bg-brand-primary text-white hover:bg-brand-primary/90 shadow-lift border border-brand-primary/10',
+//       secondary: 'bg-brand-secondary text-white hover:bg-brand-secondary/90 shadow-lift border border-brand-secondary/10',
+//       outline: 'bg-transparent border border-border/80 text-foreground hover:bg-surface/60 hover:text-foreground',
 //     };
 
 //     // Fitts's Law Target Map: Enforcing unified border configurations and touch bounds
 //     const sizeStyles = {
 //       /** Minimum 40px layout size optimized for compact components or micro header actions */
-//       sm: 'min-h-[40px] px-4 py-2 text-xs rounded-xl',
+//       sm: 'h-10 px-4 text-[11px] rounded-xl gap-2',
 //       /** Strict 48px target — The desktop and web application sweet spot for form density controls */
-//       md: 'min-h-[48px] px-6 py-3 text-sm rounded-xl',
+//       md: 'h-12 px-6 text-xs rounded-xl gap-2.5',
 //       /** Heavy 56px landing page / core visual marketing checkout conversions */
-//       lg: 'min-h-[56px] px-8 py-4 text-base rounded-2xl',
+//       lg: 'h-14 px-8 text-sm rounded-2xl gap-3',
 //     };
 
 //     return (
@@ -73,10 +73,10 @@
 //         {...props}
 //       >
 //         {isLoading ? (
-//           <span className="flex items-center gap-2">
+//           <React.Fragment>
 //             {/* Optimized hardware-accelerated inline rendering spinner utilizing current color profiles */}
 //             <svg
-//               className="animate-spin h-4 w-4 text-current"
+//               className="animate-spin h-4 w-4 text-current shrink-0"
 //               xmlns="http://www.w3.org/2000/svg"
 //               fill="none"
 //               viewBox="0 0 24 24"
@@ -88,7 +88,7 @@
 //                 cy="12"
 //                 r="10"
 //                 stroke="currentColor"
-//                 strokeWidth="4"
+//                 strokeWidth="3"
 //               />
 //               <path
 //                 className="opacity-75"
@@ -96,8 +96,10 @@
 //                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 //               />
 //             </svg>
-//             <span className="font-semibold text-xs tracking-wider uppercase">Processing...</span>
-//           </span>
+//             <span className="font-black text-[10px] tracking-widest uppercase">
+//               Processing
+//             </span>
+//           </React.Fragment>
 //         ) : (
 //           children
 //         )}
@@ -143,7 +145,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       size = 'md',
       isLoading = false,
       disabled,
-      type = 'button',
+      type, // Removed hardcoded default assignment from destructured assignment to prevent overrides
       ...props
     },
     ref
@@ -172,7 +174,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
-        type={type}
+        // Enforce native browser layout defaults ('submit') if type is omitted or undefined
+        type={type || 'submit'}
         disabled={disabled || isLoading}
         className={cn(
           baseStyles,
@@ -206,7 +209,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            <span className="font-black text-[10px] tracking-widest uppercase">
+            <span className="font-black text-[10px] tracking-widest uppercase ml-2">
               Processing
             </span>
           </React.Fragment>
