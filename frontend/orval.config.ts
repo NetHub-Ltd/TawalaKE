@@ -2,7 +2,7 @@ import { defineConfig } from "orval";
 
 export default defineConfig({
   api: {
-    input: "http://localhost:8000/openapi.json",
+    input: "https://omnipos-c9u5.onrender.com/openapi.json",
 
     output: {
       target: "./src/lib/api/generated/index.ts",
