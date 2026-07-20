@@ -18,21 +18,22 @@ export function AssetFormWrapper({ businessId }: AssetFormWrapperProps) {
   const handleCreate = async (values: ProductCreate): Promise<void> => {
     try {
       await createProduct.mutateAsync(values);
-      toast.success(`Asset "${values.label}" registered successfully`);
-    } catch (error) {
-      toast.error("Failed to compile and persist asset registry profile");
-      throw error;
+      toast.success(`Product "${values.label}" created successfully!`);
+    } catch (error: any) {
+      const message = error?.message || "Failed to create product";
+      toast.error(message);
+      throw error; // Let the form know it failed
     }
   };
 
   return (
-    <main id="main-content" className="w-full">
+    <main className="w-full">
       <AssetComposer 
         initialData={null}
         onSubmit={handleCreate} 
         onCancel={() => router.push(`/terminal/${businessId}/inventory`)}
         isPending={createProduct.isPending}
-        submitButtonText="Confirm & Create Product"
+        // submitButtonText="Confirm & Create Product"
       />
     </main>
   );
