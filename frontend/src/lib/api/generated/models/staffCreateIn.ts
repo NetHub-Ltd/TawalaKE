@@ -4,8 +4,8 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { StaffCreateInPassword } from "./staffCreateInPassword";
-import type { StaffRole } from "./staffRole";
+import type { StaffCreateInPassword } from './staffCreateInPassword';
+import type { StaffRole } from './staffRole';
 
 export interface StaffCreateIn {
   tenant_id: string;

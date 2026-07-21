@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { SubscriptionTier } from "./subscriptionTier";
+import type { SubscriptionTier } from './subscriptionTier';
 
 export interface TenantResponse {
   id: string;

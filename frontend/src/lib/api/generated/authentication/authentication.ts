@@ -4,7 +4,11 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,234 +25,167 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
   BodyLoginWithEmailApiV1AuthLoginPost,
   HTTPValidationError,
   RefreshTokenRequest,
   StaffResponse,
-  TokenResponse,
-} from ".././models";
+  TokenResponse
+} from '.././models';
 
-import { customFetcher } from "../../fetcher";
+import { customFetcher } from '../../fetcher';
+
+
+
 
 /**
  * Owner / Manager login with email + password (Swagger friendly)
  * @summary Login With Email
  */
 export const login_with_email_api_v1_auth_login_post = (
-  bodyLoginWithEmailApiV1AuthLoginPost: BodyLoginWithEmailApiV1AuthLoginPost,
-  signal?: AbortSignal
+    bodyLoginWithEmailApiV1AuthLoginPost: BodyLoginWithEmailApiV1AuthLoginPost,
+ signal?: AbortSignal
 ) => {
-  const formUrlEncoded = new URLSearchParams();
-  if (
-    bodyLoginWithEmailApiV1AuthLoginPost.grant_type !== undefined &&
-    bodyLoginWithEmailApiV1AuthLoginPost.grant_type !== null
-  ) {
-    formUrlEncoded.append(
-      `grant_type`,
-      bodyLoginWithEmailApiV1AuthLoginPost.grant_type
-    );
-  }
-  formUrlEncoded.append(
-    `username`,
-    bodyLoginWithEmailApiV1AuthLoginPost.username
-  );
-  formUrlEncoded.append(
-    `password`,
-    bodyLoginWithEmailApiV1AuthLoginPost.password
-  );
-  if (bodyLoginWithEmailApiV1AuthLoginPost.scope !== undefined) {
-    formUrlEncoded.append(`scope`, bodyLoginWithEmailApiV1AuthLoginPost.scope);
-  }
-  if (
-    bodyLoginWithEmailApiV1AuthLoginPost.client_id !== undefined &&
-    bodyLoginWithEmailApiV1AuthLoginPost.client_id !== null
-  ) {
-    formUrlEncoded.append(
-      `client_id`,
-      bodyLoginWithEmailApiV1AuthLoginPost.client_id
-    );
-  }
-  if (
-    bodyLoginWithEmailApiV1AuthLoginPost.client_secret !== undefined &&
-    bodyLoginWithEmailApiV1AuthLoginPost.client_secret !== null
-  ) {
-    formUrlEncoded.append(
-      `client_secret`,
-      bodyLoginWithEmailApiV1AuthLoginPost.client_secret
-    );
-  }
+      
+      const formUrlEncoded = new URLSearchParams();
+if(bodyLoginWithEmailApiV1AuthLoginPost.grant_type !== undefined && bodyLoginWithEmailApiV1AuthLoginPost.grant_type !== null) {
+ formUrlEncoded.append(`grant_type`, bodyLoginWithEmailApiV1AuthLoginPost.grant_type)
+ }
+formUrlEncoded.append(`username`, bodyLoginWithEmailApiV1AuthLoginPost.username)
+formUrlEncoded.append(`password`, bodyLoginWithEmailApiV1AuthLoginPost.password)
+if(bodyLoginWithEmailApiV1AuthLoginPost.scope !== undefined) {
+ formUrlEncoded.append(`scope`, bodyLoginWithEmailApiV1AuthLoginPost.scope)
+ }
+if(bodyLoginWithEmailApiV1AuthLoginPost.client_id !== undefined && bodyLoginWithEmailApiV1AuthLoginPost.client_id !== null) {
+ formUrlEncoded.append(`client_id`, bodyLoginWithEmailApiV1AuthLoginPost.client_id)
+ }
+if(bodyLoginWithEmailApiV1AuthLoginPost.client_secret !== undefined && bodyLoginWithEmailApiV1AuthLoginPost.client_secret !== null) {
+ formUrlEncoded.append(`client_secret`, bodyLoginWithEmailApiV1AuthLoginPost.client_secret)
+ }
 
-  return customFetcher<TokenResponse>({
-    url: `/api/v1/auth/login`,
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    data: formUrlEncoded,
-    signal,
-  });
-};
+      return customFetcher<TokenResponse>(
+      {url: `/api/v1/auth/login`, method: 'POST',
+      headers: {'Content-Type': 'application/x-www-form-urlencoded', },
+       data: formUrlEncoded, signal
+    },
+      );
+    }
+  
 
-export const getLoginWithEmailApiV1AuthLoginPostMutationOptions = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>,
-    TError,
-    { data: BodyLoginWithEmailApiV1AuthLoginPost },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>,
-  TError,
-  { data: BodyLoginWithEmailApiV1AuthLoginPost },
-  TContext
-> => {
-  const mutationKey = ["loginWithEmailApiV1AuthLoginPost"];
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>,
-    { data: BodyLoginWithEmailApiV1AuthLoginPost }
-  > = (props) => {
-    const { data } = props ?? {};
+export const getLoginWithEmailApiV1AuthLoginPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>, TError,{data: BodyLoginWithEmailApiV1AuthLoginPost}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>, TError,{data: BodyLoginWithEmailApiV1AuthLoginPost}, TContext> => {
 
-    return login_with_email_api_v1_auth_login_post(data);
-  };
+const mutationKey = ['loginWithEmailApiV1AuthLoginPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-  return { mutationFn, ...mutationOptions };
-};
+      
 
-export type LoginWithEmailApiV1AuthLoginPostMutationResult = NonNullable<
-  Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>
->;
-export type LoginWithEmailApiV1AuthLoginPostMutationBody =
-  BodyLoginWithEmailApiV1AuthLoginPost;
-export type LoginWithEmailApiV1AuthLoginPostMutationError = HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>, {data: BodyLoginWithEmailApiV1AuthLoginPost}> = (props) => {
+          const {data} = props ?? {};
+
+          return  login_with_email_api_v1_auth_login_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginWithEmailApiV1AuthLoginPostMutationResult = NonNullable<Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>>
+    export type LoginWithEmailApiV1AuthLoginPostMutationBody = BodyLoginWithEmailApiV1AuthLoginPost
+    export type LoginWithEmailApiV1AuthLoginPostMutationError = HTTPValidationError
+
+    /**
  * @summary Login With Email
  */
-export const useLoginWithEmailApiV1AuthLoginPost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>,
-      TError,
-      { data: BodyLoginWithEmailApiV1AuthLoginPost },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>,
-  TError,
-  { data: BodyLoginWithEmailApiV1AuthLoginPost },
-  TContext
-> => {
-  const mutationOptions =
-    getLoginWithEmailApiV1AuthLoginPostMutationOptions(options);
+export const useLoginWithEmailApiV1AuthLoginPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>, TError,{data: BodyLoginWithEmailApiV1AuthLoginPost}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof login_with_email_api_v1_auth_login_post>>,
+        TError,
+        {data: BodyLoginWithEmailApiV1AuthLoginPost},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getLoginWithEmailApiV1AuthLoginPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * @summary Refresh Token
  */
 export const refresh_token_api_v1_auth_refresh_post = (
-  refreshTokenRequest: RefreshTokenRequest,
-  signal?: AbortSignal
+    refreshTokenRequest: RefreshTokenRequest,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<TokenResponse>({
-    url: `/api/v1/auth/refresh`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: refreshTokenRequest,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<TokenResponse>(
+      {url: `/api/v1/auth/refresh`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: refreshTokenRequest, signal
+    },
+      );
+    }
+  
 
-export const getRefreshTokenApiV1AuthRefreshPostMutationOptions = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>,
-    TError,
-    { data: RefreshTokenRequest },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>,
-  TError,
-  { data: RefreshTokenRequest },
-  TContext
-> => {
-  const mutationKey = ["refreshTokenApiV1AuthRefreshPost"];
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>,
-    { data: RefreshTokenRequest }
-  > = (props) => {
-    const { data } = props ?? {};
+export const getRefreshTokenApiV1AuthRefreshPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>, TError,{data: RefreshTokenRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>, TError,{data: RefreshTokenRequest}, TContext> => {
 
-    return refresh_token_api_v1_auth_refresh_post(data);
-  };
+const mutationKey = ['refreshTokenApiV1AuthRefreshPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-  return { mutationFn, ...mutationOptions };
-};
+      
 
-export type RefreshTokenApiV1AuthRefreshPostMutationResult = NonNullable<
-  Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>
->;
-export type RefreshTokenApiV1AuthRefreshPostMutationBody = RefreshTokenRequest;
-export type RefreshTokenApiV1AuthRefreshPostMutationError = HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>, {data: RefreshTokenRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  refresh_token_api_v1_auth_refresh_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RefreshTokenApiV1AuthRefreshPostMutationResult = NonNullable<Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>>
+    export type RefreshTokenApiV1AuthRefreshPostMutationBody = RefreshTokenRequest
+    export type RefreshTokenApiV1AuthRefreshPostMutationError = HTTPValidationError
+
+    /**
  * @summary Refresh Token
  */
-export const useRefreshTokenApiV1AuthRefreshPost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>,
-      TError,
-      { data: RefreshTokenRequest },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>,
-  TError,
-  { data: RefreshTokenRequest },
-  TContext
-> => {
-  const mutationOptions =
-    getRefreshTokenApiV1AuthRefreshPostMutationOptions(options);
+export const useRefreshTokenApiV1AuthRefreshPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>, TError,{data: RefreshTokenRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof refresh_token_api_v1_auth_refresh_post>>,
+        TError,
+        {data: RefreshTokenRequest},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getRefreshTokenApiV1AuthRefreshPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Get the current logged-in user's information. Requires a valid access token in the Authorization header.
  - The CurrentStaff dependency will handle token verification and user retrieval.
  - If the token is valid, it returns the user's information as defined in StaffResponse.
@@ -256,302 +193,166 @@ export const useRefreshTokenApiV1AuthRefreshPost = <
  * @summary Get Current User Info
  */
 export const get_current_user_info_api_v1_auth_me_get = (
-  signal?: AbortSignal
+    
+ signal?: AbortSignal
 ) => {
-  return customFetcher<StaffResponse>({
-    url: `/api/v1/auth/me`,
-    method: "GET",
-    signal,
-  });
-};
+      
+      
+      return customFetcher<StaffResponse>(
+      {url: `/api/v1/auth/me`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
 
 export const getGetCurrentUserInfoApiV1AuthMeGetInfiniteQueryKey = () => {
-  return ["infinite", `/api/v1/auth/me`] as const;
-};
+    return [
+    'infinite', `/api/v1/auth/me`
+    ] as const;
+    }
 
 export const getGetCurrentUserInfoApiV1AuthMeGetQueryKey = () => {
-  return [`/api/v1/auth/me`] as const;
-};
+    return [
+    `/api/v1/auth/me`
+    ] as const;
+    }
 
-export const getGetCurrentUserInfoApiV1AuthMeGetInfiniteQueryOptions = <
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-  >,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseInfiniteQueryOptions<
-      Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
+    
+export const getGetCurrentUserInfoApiV1AuthMeGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>>, }
+) => {
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetCurrentUserInfoApiV1AuthMeGetInfiniteQueryKey();
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-  > = ({ signal }) => get_current_user_info_api_v1_auth_me_get(signal);
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentUserInfoApiV1AuthMeGetInfiniteQueryKey();
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type GetCurrentUserInfoApiV1AuthMeGetInfiniteQueryResult = NonNullable<
-  Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
->;
-export type GetCurrentUserInfoApiV1AuthMeGetInfiniteQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>> = ({ signal }) => get_current_user_info_api_v1_auth_me_get(signal);
 
-export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-  >,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCurrentUserInfoApiV1AuthMeGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>>
+export type GetCurrentUserInfoApiV1AuthMeGetInfiniteQueryError = unknown
+
+
+export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>>, TError = unknown>(
+  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
           TError,
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
           TError,
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Current User Info
  */
 
-export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetCurrentUserInfoApiV1AuthMeGetInfiniteQueryOptions(options);
+export function useGetCurrentUserInfoApiV1AuthMeGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getGetCurrentUserInfoApiV1AuthMeGetInfiniteQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getGetCurrentUserInfoApiV1AuthMeGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getGetCurrentUserInfoApiV1AuthMeGetQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-  > = ({ signal }) => get_current_user_info_api_v1_auth_me_get(signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+export const getGetCurrentUserInfoApiV1AuthMeGetQueryOptions = <TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>>, }
+) => {
 
-export type GetCurrentUserInfoApiV1AuthMeGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
->;
-export type GetCurrentUserInfoApiV1AuthMeGetQueryError = unknown;
+const {query: queryOptions} = options ?? {};
 
-export function useGetCurrentUserInfoApiV1AuthMeGet<
-  TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentUserInfoApiV1AuthMeGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>> = ({ signal }) => get_current_user_info_api_v1_auth_me_get(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetCurrentUserInfoApiV1AuthMeGetQueryResult = NonNullable<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>>
+export type GetCurrentUserInfoApiV1AuthMeGetQueryError = unknown
+
+
+export function useGetCurrentUserInfoApiV1AuthMeGet<TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
           TError,
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetCurrentUserInfoApiV1AuthMeGet<
-  TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentUserInfoApiV1AuthMeGet<TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
           TError,
           Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetCurrentUserInfoApiV1AuthMeGet<
-  TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetCurrentUserInfoApiV1AuthMeGet<TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Current User Info
  */
 
-export function useGetCurrentUserInfoApiV1AuthMeGet<
-  TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getGetCurrentUserInfoApiV1AuthMeGetQueryOptions(options);
+export function useGetCurrentUserInfoApiV1AuthMeGet<TData = Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_current_user_info_api_v1_auth_me_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getGetCurrentUserInfoApiV1AuthMeGetQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
 
 /**
  * Logs out the current user by clearing the refresh token cookie. The access token will naturally expire soon.
@@ -560,296 +361,165 @@ export function useGetCurrentUserInfoApiV1AuthMeGet<
 - This is a common and secure way to handle logout in JWT-based authentication systems.
  * @summary Logout
  */
-export const logout_api_v1_auth_logout_get = (signal?: AbortSignal) => {
-  return customFetcher<void>({
-    url: `/api/v1/auth/logout`,
-    method: "GET",
-    signal,
-  });
-};
+export const logout_api_v1_auth_logout_get = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customFetcher<void>(
+      {url: `/api/v1/auth/logout`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
 
 export const getLogoutApiV1AuthLogoutGetInfiniteQueryKey = () => {
-  return ["infinite", `/api/v1/auth/logout`] as const;
-};
+    return [
+    'infinite', `/api/v1/auth/logout`
+    ] as const;
+    }
 
 export const getLogoutApiV1AuthLogoutGetQueryKey = () => {
-  return [`/api/v1/auth/logout`] as const;
-};
+    return [
+    `/api/v1/auth/logout`
+    ] as const;
+    }
 
-export const getLogoutApiV1AuthLogoutGetInfiniteQueryOptions = <
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-  >,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseInfiniteQueryOptions<
-      Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
+    
+export const getLogoutApiV1AuthLogoutGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>>, }
+) => {
 
-  const queryKey =
-    queryOptions?.queryKey ?? getLogoutApiV1AuthLogoutGetInfiniteQueryKey();
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-  > = ({ signal }) => logout_api_v1_auth_logout_get(signal);
+  const queryKey =  queryOptions?.queryKey ?? getLogoutApiV1AuthLogoutGetInfiniteQueryKey();
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type LogoutApiV1AuthLogoutGetInfiniteQueryResult = NonNullable<
-  Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
->;
-export type LogoutApiV1AuthLogoutGetInfiniteQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>> = ({ signal }) => logout_api_v1_auth_logout_get(signal);
 
-export function useLogoutApiV1AuthLogoutGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-  >,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LogoutApiV1AuthLogoutGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>>
+export type LogoutApiV1AuthLogoutGetInfiniteQueryError = unknown
+
+
+export function useLogoutApiV1AuthLogoutGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>>, TError = unknown>(
+  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
           TError,
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useLogoutApiV1AuthLogoutGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLogoutApiV1AuthLogoutGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
           TError,
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useLogoutApiV1AuthLogoutGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLogoutApiV1AuthLogoutGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Logout
  */
 
-export function useLogoutApiV1AuthLogoutGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getLogoutApiV1AuthLogoutGetInfiniteQueryOptions(options);
+export function useLogoutApiV1AuthLogoutGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getLogoutApiV1AuthLogoutGetInfiniteQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getLogoutApiV1AuthLogoutGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getLogoutApiV1AuthLogoutGetQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-  > = ({ signal }) => logout_api_v1_auth_logout_get(signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+export const getLogoutApiV1AuthLogoutGetQueryOptions = <TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>>, }
+) => {
 
-export type LogoutApiV1AuthLogoutGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
->;
-export type LogoutApiV1AuthLogoutGetQueryError = unknown;
+const {query: queryOptions} = options ?? {};
 
-export function useLogoutApiV1AuthLogoutGet<
-  TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+  const queryKey =  queryOptions?.queryKey ?? getLogoutApiV1AuthLogoutGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>> = ({ signal }) => logout_api_v1_auth_logout_get(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LogoutApiV1AuthLogoutGetQueryResult = NonNullable<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>>
+export type LogoutApiV1AuthLogoutGetQueryError = unknown
+
+
+export function useLogoutApiV1AuthLogoutGet<TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
           TError,
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useLogoutApiV1AuthLogoutGet<
-  TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLogoutApiV1AuthLogoutGet<TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
           TError,
           Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useLogoutApiV1AuthLogoutGet<
-  TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLogoutApiV1AuthLogoutGet<TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Logout
  */
 
-export function useLogoutApiV1AuthLogoutGet<
-  TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getLogoutApiV1AuthLogoutGetQueryOptions(options);
+export function useLogoutApiV1AuthLogoutGet<TData = Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof logout_api_v1_auth_logout_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getLogoutApiV1AuthLogoutGetQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
+

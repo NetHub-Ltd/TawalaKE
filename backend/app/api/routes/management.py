@@ -12,13 +12,42 @@ from app.crud.organization import organization_crud
 from app.core.mailer import mailer
 from app.core.redis_client import limiter
 from fastapi_cache.decorator import cache
-
+from sqlalchemy import update
+from app.utils.logging import logger
 
 
 router = APIRouter()
 
 # --- Redis Cache Durations ---
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
+
+
+@router.post("/patch-organization-id")
+async def patch_organization_id(db: SessionDep, email: EmailStr):
+    # stmt = update(Staff).where(Staff.organization_id == None).values(organization_id=Staff.tenant_id)
+    stmt = select(Staff).where(Staff.email == email)
+    result = (await db.exec(stmt)).first()
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Staff with email {email} not found.",
+        )
+
+    logger.info(f"Found staff: {result.email}, organization_id: {result.organization_id}, tenant_id: {result.tenant_id}")
+    
+    if result.organization_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Staff with email {email} already has an organization_id.",
+        )
+
+    result.organization_id = result.tenant_id
+
+    await db.commit()
+    # refresh result
+    await db.refresh(result)
+    return result
 
 
 @router.get("/test-email")

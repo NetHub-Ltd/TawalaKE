@@ -4,9 +4,14 @@ import { auth } from "@/auth";
 // fetch staff using organization id
 export async function GET() {
     const session = await auth();
-    const organizationId = session?.user.tenant_id
+    const organizationId = session?.user.organization_id
     if (!session?.accessToken) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+
+    if(!organizationId){
+        return NextResponse.json({error: "Organization Id is required", status: 400})
     }
 
 

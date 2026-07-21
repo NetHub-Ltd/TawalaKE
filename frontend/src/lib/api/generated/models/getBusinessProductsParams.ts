@@ -6,6 +6,24 @@
  */
 
 export type GetBusinessProductsParams = {
-  skip?: number;
-  limit?: number;
+/**
+ * Current page number
+ * @minimum 1
+ */
+page?: number;
+/**
+ * Number of rows per page
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+/**
+ * Model column attribute name to sort by
+ */
+sort_by?: string | null;
+/**
+ * Sort direction order
+ * @pattern ^(asc|desc)$
+ */
+sort_order?: string;
 };

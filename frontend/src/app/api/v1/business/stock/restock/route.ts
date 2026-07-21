@@ -28,8 +28,11 @@ export async function POST(req: NextRequest) {
   });
 
   const data = await res.json();
+  console.log("response data for restock", data)
     if (!data.status) {
       return NextResponse.json({ error: data.message }, { status: res.status });
     }
+
+    
     return NextResponse.json(data, { status: res.status });
 }

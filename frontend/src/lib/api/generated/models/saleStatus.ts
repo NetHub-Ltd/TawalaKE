@@ -5,13 +5,14 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type SaleStatus = (typeof SaleStatus)[keyof typeof SaleStatus];
+export type SaleStatus = typeof SaleStatus[keyof typeof SaleStatus];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SaleStatus = {
-  PENDING_PAYMENT: "PENDING_PAYMENT",
-  COMPLETED: "COMPLETED",
-  REFUNDED: "REFUNDED",
-  PARTIALLY_REFUNDED: "PARTIALLY_REFUNDED",
-  DISPUTED: "DISPUTED",
+  PENDING_PAYMENT: 'PENDING_PAYMENT',
+  COMPLETED: 'COMPLETED',
+  REFUNDED: 'REFUNDED',
+  PARTIALLY_REFUNDED: 'PARTIALLY_REFUNDED',
+  DISPUTED: 'DISPUTED',
 } as const;

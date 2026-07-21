@@ -4,8 +4,8 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ProductAuditRequestNotes } from "./productAuditRequestNotes";
-import type { ProductAuditRequestReferenceType } from "./productAuditRequestReferenceType";
+import type { ProductAuditRequestNotes } from './productAuditRequestNotes';
+import type { ProductAuditRequestReferenceType } from './productAuditRequestReferenceType';
 
 export interface ProductAuditRequest {
   /** The item row profile undergoing physical count verification. */

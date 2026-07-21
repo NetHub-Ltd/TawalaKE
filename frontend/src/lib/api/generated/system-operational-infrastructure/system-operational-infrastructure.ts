@@ -4,7 +4,10 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -18,289 +21,176 @@ import type {
   UseInfiniteQueryOptions,
   UseInfiniteQueryResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
-import { customFetcher } from "../../fetcher";
+import { customFetcher } from '../../fetcher';
+
+
+
 
 /**
  * @summary Health Check
  */
-export const health_check_health_get = (signal?: AbortSignal) => {
-  return customFetcher<unknown>({ url: `/health`, method: "GET", signal });
-};
+export const health_check_health_get = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customFetcher<unknown>(
+      {url: `/health`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
 
 export const getHealthCheckHealthGetInfiniteQueryKey = () => {
-  return ["infinite", `/health`] as const;
-};
+    return [
+    'infinite', `/health`
+    ] as const;
+    }
 
 export const getHealthCheckHealthGetQueryKey = () => {
-  return [`/health`] as const;
-};
+    return [
+    `/health`
+    ] as const;
+    }
 
-export const getHealthCheckHealthGetInfiniteQueryOptions = <
-  TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseInfiniteQueryOptions<
-      Awaited<ReturnType<typeof health_check_health_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
+    
+export const getHealthCheckHealthGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>>, }
+) => {
 
-  const queryKey =
-    queryOptions?.queryKey ?? getHealthCheckHealthGetInfiniteQueryKey();
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof health_check_health_get>>
-  > = ({ signal }) => health_check_health_get(signal);
+  const queryKey =  queryOptions?.queryKey ?? getHealthCheckHealthGetInfiniteQueryKey();
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<ReturnType<typeof health_check_health_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type HealthCheckHealthGetInfiniteQueryResult = NonNullable<
-  Awaited<ReturnType<typeof health_check_health_get>>
->;
-export type HealthCheckHealthGetInfiniteQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof health_check_health_get>>> = ({ signal }) => health_check_health_get(signal);
 
-export function useHealthCheckHealthGetInfinite<
-  TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type HealthCheckHealthGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof health_check_health_get>>>
+export type HealthCheckHealthGetInfiniteQueryError = unknown
+
+
+export function useHealthCheckHealthGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>, TError = unknown>(
+  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof health_check_health_get>>,
           TError,
           Awaited<ReturnType<typeof health_check_health_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useHealthCheckHealthGetInfinite<
-  TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useHealthCheckHealthGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof health_check_health_get>>,
           TError,
           Awaited<ReturnType<typeof health_check_health_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useHealthCheckHealthGetInfinite<
-  TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useHealthCheckHealthGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Health Check
  */
 
-export function useHealthCheckHealthGetInfinite<
-  TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getHealthCheckHealthGetInfiniteQueryOptions(options);
+export function useHealthCheckHealthGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof health_check_health_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getHealthCheckHealthGetInfiniteQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getHealthCheckHealthGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof health_check_health_get>>,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof health_check_health_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getHealthCheckHealthGetQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof health_check_health_get>>
-  > = ({ signal }) => health_check_health_get(signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof health_check_health_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+export const getHealthCheckHealthGetQueryOptions = <TData = Awaited<ReturnType<typeof health_check_health_get>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>>, }
+) => {
 
-export type HealthCheckHealthGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof health_check_health_get>>
->;
-export type HealthCheckHealthGetQueryError = unknown;
+const {query: queryOptions} = options ?? {};
 
-export function useHealthCheckHealthGet<
-  TData = Awaited<ReturnType<typeof health_check_health_get>>,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+  const queryKey =  queryOptions?.queryKey ?? getHealthCheckHealthGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof health_check_health_get>>> = ({ signal }) => health_check_health_get(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type HealthCheckHealthGetQueryResult = NonNullable<Awaited<ReturnType<typeof health_check_health_get>>>
+export type HealthCheckHealthGetQueryError = unknown
+
+
+export function useHealthCheckHealthGet<TData = Awaited<ReturnType<typeof health_check_health_get>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof health_check_health_get>>,
           TError,
           Awaited<ReturnType<typeof health_check_health_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useHealthCheckHealthGet<
-  TData = Awaited<ReturnType<typeof health_check_health_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useHealthCheckHealthGet<TData = Awaited<ReturnType<typeof health_check_health_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof health_check_health_get>>,
           TError,
           Awaited<ReturnType<typeof health_check_health_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useHealthCheckHealthGet<
-  TData = Awaited<ReturnType<typeof health_check_health_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useHealthCheckHealthGet<TData = Awaited<ReturnType<typeof health_check_health_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Health Check
  */
 
-export function useHealthCheckHealthGet<
-  TData = Awaited<ReturnType<typeof health_check_health_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof health_check_health_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getHealthCheckHealthGetQueryOptions(options);
+export function useHealthCheckHealthGet<TData = Awaited<ReturnType<typeof health_check_health_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof health_check_health_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getHealthCheckHealthGetQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
+

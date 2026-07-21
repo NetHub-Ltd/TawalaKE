@@ -4,14 +4,14 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { DocumentType } from "./documentType";
-import type { SellerSnapshot } from "./sellerSnapshot";
-import type { BuyerSnapshot } from "./buyerSnapshot";
-import type { FinancialsSnapshot } from "./financialsSnapshot";
-import type { ItemSnapshot } from "./itemSnapshot";
-import type { PaymentSnapshot } from "./paymentSnapshot";
-import type { FinancialDocumentSnapshotSchemaSummary } from "./financialDocumentSnapshotSchemaSummary";
-import type { DisputeAuditSnapshot } from "./disputeAuditSnapshot";
+import type { DocumentType } from './documentType';
+import type { SellerSnapshot } from './sellerSnapshot';
+import type { BuyerSnapshot } from './buyerSnapshot';
+import type { FinancialsSnapshot } from './financialsSnapshot';
+import type { ItemSnapshot } from './itemSnapshot';
+import type { PaymentSnapshot } from './paymentSnapshot';
+import type { FinancialDocumentSnapshotSchemaSummary } from './financialDocumentSnapshotSchemaSummary';
+import type { DisputeAuditSnapshot } from './disputeAuditSnapshot';
 
 export interface FinancialDocumentSnapshotSchema {
   document_id: string;

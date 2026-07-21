@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ApiResponseListStaffResponseData } from "./apiResponseListStaffResponseData";
+import type { ApiResponseListStaffResponseData } from './apiResponseListStaffResponseData';
 
 export interface ApiResponseListStaffResponse {
   status: boolean;

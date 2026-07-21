@@ -4,8 +4,8 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ValidationErrorLocItem } from "./validationErrorLocItem";
-import type { ValidationErrorCtx } from "./validationErrorCtx";
+import type { ValidationErrorLocItem } from './validationErrorLocItem';
+import type { ValidationErrorCtx } from './validationErrorCtx';
 
 export interface ValidationError {
   loc: ValidationErrorLocItem[];

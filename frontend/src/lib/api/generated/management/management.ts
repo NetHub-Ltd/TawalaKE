@@ -4,7 +4,10 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -18,1761 +21,844 @@ import type {
   UseInfiniteQueryOptions,
   UseInfiniteQueryResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
   GetSalesApiV1ManagementSalesGetParams,
   HTTPValidationError,
-  SendTestEmailApiV1ManagementTestEmailGetParams,
-} from ".././models";
+  SendTestEmailApiV1ManagementTestEmailGetParams
+} from '.././models';
 
-import { customFetcher } from "../../fetcher";
+import { customFetcher } from '../../fetcher';
+
+
+
 
 /**
  * @summary Send Test Email
  */
 export const send_test_email_api_v1_management_test_email_get = (
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  signal?: AbortSignal
+    params: SendTestEmailApiV1ManagementTestEmailGetParams,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/management/test-email`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/management/test-email`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
 
-export const getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryKey = (
-  params?: SendTestEmailApiV1ManagementTestEmailGetParams
+
+
+export const getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryKey = (params?: SendTestEmailApiV1ManagementTestEmailGetParams,) => {
+    return [
+    'infinite', `/api/v1/management/test-email`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getSendTestEmailApiV1ManagementTestEmailGetQueryKey = (params?: SendTestEmailApiV1ManagementTestEmailGetParams,) => {
+    return [
+    `/api/v1/management/test-email`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>>, TError = HTTPValidationError>(params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>>, }
 ) => {
-  return [
-    "infinite",
-    `/api/v1/management/test-email`,
-    ...(params ? [params] : []),
-  ] as const;
-};
 
-export const getSendTestEmailApiV1ManagementTestEmailGetQueryKey = (
-  params?: SendTestEmailApiV1ManagementTestEmailGetParams
-) => {
-  return [
-    `/api/v1/management/test-email`,
-    ...(params ? [params] : []),
-  ] as const;
-};
+const {query: queryOptions} = options ?? {};
 
-export const getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryOptions = <
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  }
-) => {
-  const { query: queryOptions } = options ?? {};
+  const queryKey =  queryOptions?.queryKey ?? getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryKey(params);
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryKey(params);
+  
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  > = ({ signal }) =>
-    send_test_email_api_v1_management_test_email_get(params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>> = ({ signal }) => send_test_email_api_v1_management_test_email_get(params, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<
-      ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-    >,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+      
 
-export type SendTestEmailApiV1ManagementTestEmailGetInfiniteQueryResult =
-  NonNullable<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  >;
-export type SendTestEmailApiV1ManagementTestEmailGetInfiniteQueryError =
-  HTTPValidationError;
+      
 
-export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SendTestEmailApiV1ManagementTestEmailGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>>
+export type SendTestEmailApiV1ManagementTestEmailGetInfiniteQueryError = HTTPValidationError
+
+
+export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >,
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >,
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Send Test Email
  */
 
-export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryOptions(
-      params,
-      options
-    );
+export function useSendTestEmailApiV1ManagementTestEmailGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getSendTestEmailApiV1ManagementTestEmailGetInfiniteQueryOptions(params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getSendTestEmailApiV1ManagementTestEmailGetQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  }
+
+
+
+export const getSendTestEmailApiV1ManagementTestEmailGetQueryOptions = <TData = Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError = HTTPValidationError>(params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getSendTestEmailApiV1ManagementTestEmailGetQueryKey(params);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
-  > = ({ signal }) =>
-    send_test_email_api_v1_management_test_email_get(params, signal);
+  const queryKey =  queryOptions?.queryKey ?? getSendTestEmailApiV1ManagementTestEmailGetQueryKey(params);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<
-      ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-    >,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type SendTestEmailApiV1ManagementTestEmailGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
->;
-export type SendTestEmailApiV1ManagementTestEmailGetQueryError =
-  HTTPValidationError;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>> = ({ signal }) => send_test_email_api_v1_management_test_email_get(params, signal);
 
-export function useSendTestEmailApiV1ManagementTestEmailGet<
-  TData = Awaited<
-    ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SendTestEmailApiV1ManagementTestEmailGetQueryResult = NonNullable<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>>
+export type SendTestEmailApiV1ManagementTestEmailGetQueryError = HTTPValidationError
+
+
+export function useSendTestEmailApiV1ManagementTestEmailGet<TData = Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >,
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSendTestEmailApiV1ManagementTestEmailGet<
-  TData = Awaited<
-    ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSendTestEmailApiV1ManagementTestEmailGet<TData = Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >,
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useSendTestEmailApiV1ManagementTestEmailGet<
-  TData = Awaited<
-    ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSendTestEmailApiV1ManagementTestEmailGet<TData = Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Send Test Email
  */
 
-export function useSendTestEmailApiV1ManagementTestEmailGet<
-  TData = Awaited<
-    ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: SendTestEmailApiV1ManagementTestEmailGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof send_test_email_api_v1_management_test_email_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getSendTestEmailApiV1ManagementTestEmailGetQueryOptions(
-    params,
-    options
-  );
+export function useSendTestEmailApiV1ManagementTestEmailGet<TData = Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError = HTTPValidationError>(
+ params: SendTestEmailApiV1ManagementTestEmailGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof send_test_email_api_v1_management_test_email_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getSendTestEmailApiV1ManagementTestEmailGetQueryOptions(params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
 
 /**
  * @summary Get Organizations
  */
 export const get_organizations_api_v1_management_org_get = (
-  signal?: AbortSignal
+    
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/management/org`,
-    method: "GET",
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/management/org`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
 
 export const getGetOrganizationsApiV1ManagementOrgGetInfiniteQueryKey = () => {
-  return ["infinite", `/api/v1/management/org`] as const;
-};
+    return [
+    'infinite', `/api/v1/management/org`
+    ] as const;
+    }
 
 export const getGetOrganizationsApiV1ManagementOrgGetQueryKey = () => {
-  return [`/api/v1/management/org`] as const;
-};
+    return [
+    `/api/v1/management/org`
+    ] as const;
+    }
 
-export const getGetOrganizationsApiV1ManagementOrgGetInfiniteQueryOptions = <
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  >,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseInfiniteQueryOptions<
-      Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
+    
+export const getGetOrganizationsApiV1ManagementOrgGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>>, }
+) => {
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetOrganizationsApiV1ManagementOrgGetInfiniteQueryKey();
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  > = ({ signal }) => get_organizations_api_v1_management_org_get(signal);
+  const queryKey =  queryOptions?.queryKey ?? getGetOrganizationsApiV1ManagementOrgGetInfiniteQueryKey();
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type GetOrganizationsApiV1ManagementOrgGetInfiniteQueryResult =
-  NonNullable<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  >;
-export type GetOrganizationsApiV1ManagementOrgGetInfiniteQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>> = ({ signal }) => get_organizations_api_v1_management_org_get(signal);
 
-export function useGetOrganizationsApiV1ManagementOrgGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  >,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOrganizationsApiV1ManagementOrgGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>>
+export type GetOrganizationsApiV1ManagementOrgGetInfiniteQueryError = unknown
+
+
+export function useGetOrganizationsApiV1ManagementOrgGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>>, TError = unknown>(
+  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >,
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetOrganizationsApiV1ManagementOrgGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrganizationsApiV1ManagementOrgGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >,
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetOrganizationsApiV1ManagementOrgGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrganizationsApiV1ManagementOrgGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Organizations
  */
 
-export function useGetOrganizationsApiV1ManagementOrgGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetOrganizationsApiV1ManagementOrgGetInfiniteQueryOptions(options);
+export function useGetOrganizationsApiV1ManagementOrgGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getGetOrganizationsApiV1ManagementOrgGetInfiniteQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getGetOrganizationsApiV1ManagementOrgGetQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof get_organizations_api_v1_management_org_get>
-  >,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetOrganizationsApiV1ManagementOrgGetQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
-  > = ({ signal }) => get_organizations_api_v1_management_org_get(signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+export const getGetOrganizationsApiV1ManagementOrgGetQueryOptions = <TData = Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>>, }
+) => {
 
-export type GetOrganizationsApiV1ManagementOrgGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
->;
-export type GetOrganizationsApiV1ManagementOrgGetQueryError = unknown;
+const {query: queryOptions} = options ?? {};
 
-export function useGetOrganizationsApiV1ManagementOrgGet<
-  TData = Awaited<
-    ReturnType<typeof get_organizations_api_v1_management_org_get>
-  >,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+  const queryKey =  queryOptions?.queryKey ?? getGetOrganizationsApiV1ManagementOrgGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>> = ({ signal }) => get_organizations_api_v1_management_org_get(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOrganizationsApiV1ManagementOrgGetQueryResult = NonNullable<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>>
+export type GetOrganizationsApiV1ManagementOrgGetQueryError = unknown
+
+
+export function useGetOrganizationsApiV1ManagementOrgGet<TData = Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >,
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetOrganizationsApiV1ManagementOrgGet<
-  TData = Awaited<
-    ReturnType<typeof get_organizations_api_v1_management_org_get>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrganizationsApiV1ManagementOrgGet<TData = Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >,
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof get_organizations_api_v1_management_org_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetOrganizationsApiV1ManagementOrgGet<
-  TData = Awaited<
-    ReturnType<typeof get_organizations_api_v1_management_org_get>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOrganizationsApiV1ManagementOrgGet<TData = Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Organizations
  */
 
-export function useGetOrganizationsApiV1ManagementOrgGet<
-  TData = Awaited<
-    ReturnType<typeof get_organizations_api_v1_management_org_get>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetOrganizationsApiV1ManagementOrgGetQueryOptions(options);
+export function useGetOrganizationsApiV1ManagementOrgGet<TData = Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_organizations_api_v1_management_org_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getGetOrganizationsApiV1ManagementOrgGetQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
 
 /**
  * @summary Get Stores
  */
 export const get_stores_api_v1_management_stores_get = (
-  signal?: AbortSignal
+    
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/management/stores`,
-    method: "GET",
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/management/stores`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
 
 export const getGetStoresApiV1ManagementStoresGetInfiniteQueryKey = () => {
-  return ["infinite", `/api/v1/management/stores`] as const;
-};
+    return [
+    'infinite', `/api/v1/management/stores`
+    ] as const;
+    }
 
 export const getGetStoresApiV1ManagementStoresGetQueryKey = () => {
-  return [`/api/v1/management/stores`] as const;
-};
+    return [
+    `/api/v1/management/stores`
+    ] as const;
+    }
 
-export const getGetStoresApiV1ManagementStoresGetInfiniteQueryOptions = <
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-  >,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseInfiniteQueryOptions<
-      Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
+    
+export const getGetStoresApiV1ManagementStoresGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>>, }
+) => {
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetStoresApiV1ManagementStoresGetInfiniteQueryKey();
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-  > = ({ signal }) => get_stores_api_v1_management_stores_get(signal);
+  const queryKey =  queryOptions?.queryKey ?? getGetStoresApiV1ManagementStoresGetInfiniteQueryKey();
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type GetStoresApiV1ManagementStoresGetInfiniteQueryResult = NonNullable<
-  Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
->;
-export type GetStoresApiV1ManagementStoresGetInfiniteQueryError = unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>> = ({ signal }) => get_stores_api_v1_management_stores_get(signal);
 
-export function useGetStoresApiV1ManagementStoresGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-  >,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetStoresApiV1ManagementStoresGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>>
+export type GetStoresApiV1ManagementStoresGetInfiniteQueryError = unknown
+
+
+export function useGetStoresApiV1ManagementStoresGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>>, TError = unknown>(
+  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
           TError,
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetStoresApiV1ManagementStoresGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoresApiV1ManagementStoresGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
           TError,
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetStoresApiV1ManagementStoresGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoresApiV1ManagementStoresGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Stores
  */
 
-export function useGetStoresApiV1ManagementStoresGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetStoresApiV1ManagementStoresGetInfiniteQueryOptions(options);
+export function useGetStoresApiV1ManagementStoresGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getGetStoresApiV1ManagementStoresGetInfiniteQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getGetStoresApiV1ManagementStoresGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ?? getGetStoresApiV1ManagementStoresGetQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-  > = ({ signal }) => get_stores_api_v1_management_stores_get(signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+export const getGetStoresApiV1ManagementStoresGetQueryOptions = <TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>>, }
+) => {
 
-export type GetStoresApiV1ManagementStoresGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
->;
-export type GetStoresApiV1ManagementStoresGetQueryError = unknown;
+const {query: queryOptions} = options ?? {};
 
-export function useGetStoresApiV1ManagementStoresGet<
-  TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+  const queryKey =  queryOptions?.queryKey ?? getGetStoresApiV1ManagementStoresGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>> = ({ signal }) => get_stores_api_v1_management_stores_get(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetStoresApiV1ManagementStoresGetQueryResult = NonNullable<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>>
+export type GetStoresApiV1ManagementStoresGetQueryError = unknown
+
+
+export function useGetStoresApiV1ManagementStoresGet<TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
           TError,
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetStoresApiV1ManagementStoresGet<
-  TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoresApiV1ManagementStoresGet<TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
           TError,
           Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetStoresApiV1ManagementStoresGet<
-  TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoresApiV1ManagementStoresGet<TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Stores
  */
 
-export function useGetStoresApiV1ManagementStoresGet<
-  TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetStoresApiV1ManagementStoresGetQueryOptions(options);
+export function useGetStoresApiV1ManagementStoresGet<TData = Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_stores_api_v1_management_stores_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getGetStoresApiV1ManagementStoresGetQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
 
 /**
  * @summary Get All Products
  */
 export const get_all_products_api_v1_management_all_products_get = (
-  signal?: AbortSignal
+    
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/management/all-products`,
-    method: "GET",
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/management/all-products`, method: 'GET', signal
+    },
+      );
+    }
+  
 
-export const getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryKey =
-  () => {
-    return ["infinite", `/api/v1/management/all-products`] as const;
-  };
+
+
+export const getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryKey = () => {
+    return [
+    'infinite', `/api/v1/management/all-products`
+    ] as const;
+    }
 
 export const getGetAllProductsApiV1ManagementAllProductsGetQueryKey = () => {
-  return [`/api/v1/management/all-products`] as const;
-};
+    return [
+    `/api/v1/management/all-products`
+    ] as const;
+    }
 
-export const getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryOptions =
-  <
-    TData = InfiniteData<
-      Awaited<
-        ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-      >
-    >,
-    TError = unknown
-  >(options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  }) => {
-    const { query: queryOptions } = options ?? {};
+    
+export const getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>>, TError = unknown>( options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>>, }
+) => {
 
-    const queryKey =
-      queryOptions?.queryKey ??
-      getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryKey();
+const {query: queryOptions} = options ?? {};
 
-    const queryFn: QueryFunction<
-      Awaited<
-        ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-      >
-    > = ({ signal }) =>
-      get_all_products_api_v1_management_all_products_get(signal);
+  const queryKey =  queryOptions?.queryKey ?? getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryKey();
 
-    return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-      Awaited<
-        ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-      >,
-      TError,
-      TData
-    > & { queryKey: DataTag<QueryKey, TData, TError> };
-  };
+  
 
-export type GetAllProductsApiV1ManagementAllProductsGetInfiniteQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >
-  >;
-export type GetAllProductsApiV1ManagementAllProductsGetInfiniteQueryError =
-  unknown;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>> = ({ signal }) => get_all_products_api_v1_management_all_products_get(signal);
 
-export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >
-  >,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAllProductsApiV1ManagementAllProductsGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>>
+export type GetAllProductsApiV1ManagementAllProductsGetInfiniteQueryError = unknown
+
+
+export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>>, TError = unknown>(
+  options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >,
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >,
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get All Products
  */
 
-export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryOptions(options);
+export function useGetAllProductsApiV1ManagementAllProductsGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>>, TError = unknown>(
+  options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getGetAllProductsApiV1ManagementAllProductsGetInfiniteQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getGetAllProductsApiV1ManagementAllProductsGetQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-  >,
-  TError = unknown
->(options?: {
-  query?: Partial<
-    UseQueryOptions<
-      Awaited<
-        ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-      >,
-      TError,
-      TData
-    >
-  >;
-}) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetAllProductsApiV1ManagementAllProductsGetQueryKey();
 
-  const queryFn: QueryFunction<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >
-  > = ({ signal }) =>
-    get_all_products_api_v1_management_all_products_get(signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+export const getGetAllProductsApiV1ManagementAllProductsGetQueryOptions = <TData = Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>>, }
+) => {
 
-export type GetAllProductsApiV1ManagementAllProductsGetQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-    >
-  >;
-export type GetAllProductsApiV1ManagementAllProductsGetQueryError = unknown;
+const {query: queryOptions} = options ?? {};
 
-export function useGetAllProductsApiV1ManagementAllProductsGet<
-  TData = Awaited<
-    ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-  >,
-  TError = unknown
->(
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+  const queryKey =  queryOptions?.queryKey ?? getGetAllProductsApiV1ManagementAllProductsGetQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>> = ({ signal }) => get_all_products_api_v1_management_all_products_get(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAllProductsApiV1ManagementAllProductsGetQueryResult = NonNullable<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>>
+export type GetAllProductsApiV1ManagementAllProductsGetQueryError = unknown
+
+
+export function useGetAllProductsApiV1ManagementAllProductsGet<TData = Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >,
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetAllProductsApiV1ManagementAllProductsGet<
-  TData = Awaited<
-    ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllProductsApiV1ManagementAllProductsGet<TData = Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >,
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_all_products_api_v1_management_all_products_get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetAllProductsApiV1ManagementAllProductsGet<
-  TData = Awaited<
-    ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllProductsApiV1ManagementAllProductsGet<TData = Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get All Products
  */
 
-export function useGetAllProductsApiV1ManagementAllProductsGet<
-  TData = Awaited<
-    ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-  >,
-  TError = unknown
->(
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof get_all_products_api_v1_management_all_products_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetAllProductsApiV1ManagementAllProductsGetQueryOptions(options);
+export function useGetAllProductsApiV1ManagementAllProductsGet<TData = Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_all_products_api_v1_management_all_products_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getGetAllProductsApiV1ManagementAllProductsGetQueryOptions(options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
 
 /**
  * @summary Get Sales
  */
 export const get_sales_api_v1_management_sales_get = (
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  signal?: AbortSignal
+    params?: GetSalesApiV1ManagementSalesGetParams,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/management/sales`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/management/sales`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
 
-export const getGetSalesApiV1ManagementSalesGetInfiniteQueryKey = (
-  params?: GetSalesApiV1ManagementSalesGetParams
+
+
+export const getGetSalesApiV1ManagementSalesGetInfiniteQueryKey = (params?: GetSalesApiV1ManagementSalesGetParams,) => {
+    return [
+    'infinite', `/api/v1/management/sales`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getGetSalesApiV1ManagementSalesGetQueryKey = (params?: GetSalesApiV1ManagementSalesGetParams,) => {
+    return [
+    `/api/v1/management/sales`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetSalesApiV1ManagementSalesGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>>, TError = HTTPValidationError>(params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>>, }
 ) => {
-  return [
-    "infinite",
-    `/api/v1/management/sales`,
-    ...(params ? [params] : []),
-  ] as const;
-};
 
-export const getGetSalesApiV1ManagementSalesGetQueryKey = (
-  params?: GetSalesApiV1ManagementSalesGetParams
-) => {
-  return [`/api/v1/management/sales`, ...(params ? [params] : [])] as const;
-};
+const {query: queryOptions} = options ?? {};
 
-export const getGetSalesApiV1ManagementSalesGetInfiniteQueryOptions = <
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    >;
-  }
-) => {
-  const { query: queryOptions } = options ?? {};
+  const queryKey =  queryOptions?.queryKey ?? getGetSalesApiV1ManagementSalesGetInfiniteQueryKey(params);
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetSalesApiV1ManagementSalesGetInfiniteQueryKey(params);
+  
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-  > = ({ signal }) => get_sales_api_v1_management_sales_get(params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>> = ({ signal }) => get_sales_api_v1_management_sales_get(params, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+      
 
-export type GetSalesApiV1ManagementSalesGetInfiniteQueryResult = NonNullable<
-  Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
->;
-export type GetSalesApiV1ManagementSalesGetInfiniteQueryError =
-  HTTPValidationError;
+      
 
-export function useGetSalesApiV1ManagementSalesGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params: undefined | GetSalesApiV1ManagementSalesGetParams,
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSalesApiV1ManagementSalesGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>>
+export type GetSalesApiV1ManagementSalesGetInfiniteQueryError = HTTPValidationError
+
+
+export function useGetSalesApiV1ManagementSalesGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>>, TError = HTTPValidationError>(
+ params: undefined |  GetSalesApiV1ManagementSalesGetParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
           TError,
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetSalesApiV1ManagementSalesGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSalesApiV1ManagementSalesGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>>, TError = HTTPValidationError>(
+ params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
           TError,
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetSalesApiV1ManagementSalesGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSalesApiV1ManagementSalesGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>>, TError = HTTPValidationError>(
+ params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Sales
  */
 
-export function useGetSalesApiV1ManagementSalesGetInfinite<
-  TData = InfiniteData<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-  >,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getGetSalesApiV1ManagementSalesGetInfiniteQueryOptions(
-    params,
-    options
-  );
+export function useGetSalesApiV1ManagementSalesGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>>, TError = HTTPValidationError>(
+ params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getGetSalesApiV1ManagementSalesGetInfiniteQueryOptions(params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getGetSalesApiV1ManagementSalesGetQueryOptions = <
-  TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    >;
-  }
+
+
+
+export const getGetSalesApiV1ManagementSalesGetQueryOptions = <TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError = HTTPValidationError>(params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getGetSalesApiV1ManagementSalesGetQueryKey(params);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-  > = ({ signal }) => get_sales_api_v1_management_sales_get(params, signal);
+  const queryKey =  queryOptions?.queryKey ?? getGetSalesApiV1ManagementSalesGetQueryKey(params);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type GetSalesApiV1ManagementSalesGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
->;
-export type GetSalesApiV1ManagementSalesGetQueryError = HTTPValidationError;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>> = ({ signal }) => get_sales_api_v1_management_sales_get(params, signal);
 
-export function useGetSalesApiV1ManagementSalesGet<
-  TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-  TError = HTTPValidationError
->(
-  params: undefined | GetSalesApiV1ManagementSalesGetParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSalesApiV1ManagementSalesGetQueryResult = NonNullable<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>>
+export type GetSalesApiV1ManagementSalesGetQueryError = HTTPValidationError
+
+
+export function useGetSalesApiV1ManagementSalesGet<TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError = HTTPValidationError>(
+ params: undefined |  GetSalesApiV1ManagementSalesGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
           TError,
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetSalesApiV1ManagementSalesGet<
-  TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSalesApiV1ManagementSalesGet<TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError = HTTPValidationError>(
+ params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
           TError,
           Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetSalesApiV1ManagementSalesGet<
-  TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSalesApiV1ManagementSalesGet<TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError = HTTPValidationError>(
+ params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Sales
  */
 
-export function useGetSalesApiV1ManagementSalesGet<
-  TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-  TError = HTTPValidationError
->(
-  params?: GetSalesApiV1ManagementSalesGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getGetSalesApiV1ManagementSalesGetQueryOptions(
-    params,
-    options
-  );
+export function useGetSalesApiV1ManagementSalesGet<TData = Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError = HTTPValidationError>(
+ params?: GetSalesApiV1ManagementSalesGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_sales_api_v1_management_sales_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getGetSalesApiV1ManagementSalesGetQueryOptions(params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
+

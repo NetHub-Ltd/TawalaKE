@@ -4,12 +4,12 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ProductUpdateLabel } from "./productUpdateLabel";
-import type { ProductUpdateSellingPrice } from "./productUpdateSellingPrice";
-import type { ProductUpdateStock } from "./productUpdateStock";
-import type { ProductUpdateTrackStock } from "./productUpdateTrackStock";
-import type { ProductUpdateCategory } from "./productUpdateCategory";
-import type { ProductUpdateAttributes } from "./productUpdateAttributes";
+import type { ProductUpdateLabel } from './productUpdateLabel';
+import type { ProductUpdateSellingPrice } from './productUpdateSellingPrice';
+import type { ProductUpdateStock } from './productUpdateStock';
+import type { ProductUpdateTrackStock } from './productUpdateTrackStock';
+import type { ProductUpdateCategory } from './productUpdateCategory';
+import type { ProductUpdateAttributes } from './productUpdateAttributes';
 
 export interface ProductUpdate {
   label?: ProductUpdateLabel;

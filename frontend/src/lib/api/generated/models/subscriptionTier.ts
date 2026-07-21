@@ -5,13 +5,13 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type SubscriptionTier =
-  (typeof SubscriptionTier)[keyof typeof SubscriptionTier];
+export type SubscriptionTier = typeof SubscriptionTier[keyof typeof SubscriptionTier];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SubscriptionTier = {
-  BASIC: "BASIC",
-  NDOVU: "NDOVU",
-  ENTERPRISE: "ENTERPRISE",
-  TRIAL: "TRIAL",
+  BASIC: 'BASIC',
+  NDOVU: 'NDOVU',
+  ENTERPRISE: 'ENTERPRISE',
+  TRIAL: 'TRIAL',
 } as const;

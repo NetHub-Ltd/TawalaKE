@@ -5,11 +5,12 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
+export type DocumentType = typeof DocumentType[keyof typeof DocumentType];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const DocumentType = {
-  INVOICE: "INVOICE",
-  RECEIPT: "RECEIPT",
-  CREDIT_NOTE: "CREDIT_NOTE",
+  INVOICE: 'INVOICE',
+  RECEIPT: 'RECEIPT',
+  CREDIT_NOTE: 'CREDIT_NOTE',
 } as const;

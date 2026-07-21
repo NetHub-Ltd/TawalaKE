@@ -5,12 +5,13 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+export type PaymentMethod = typeof PaymentMethod[keyof typeof PaymentMethod];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PaymentMethod = {
-  CASH: "CASH",
-  MPESA: "MPESA",
-  INVOICE: "INVOICE",
-  CARD: "CARD",
+  CASH: 'CASH',
+  MPESA: 'MPESA',
+  INVOICE: 'INVOICE',
+  CARD: 'CARD',
 } as const;

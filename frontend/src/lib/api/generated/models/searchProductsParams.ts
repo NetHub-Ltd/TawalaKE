@@ -6,11 +6,11 @@
  */
 
 export type SearchProductsParams = {
-  search_query: string;
-  business_id?: string | null;
-  tenant_id?: string | null;
-  category?: string | null;
-  active?: boolean | null;
-  skip?: number;
-  limit?: number;
+search_query: string;
+business_id?: string | null;
+tenant_id?: string | null;
+category?: string | null;
+active?: boolean | null;
+skip?: number;
+limit?: number;
 };

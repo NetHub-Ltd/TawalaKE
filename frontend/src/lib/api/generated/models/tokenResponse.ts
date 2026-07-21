@@ -4,9 +4,9 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { TokenResponseRefreshToken } from "./tokenResponseRefreshToken";
-import type { TokenResponseIdToken } from "./tokenResponseIdToken";
-import type { TokenResponseExpiresAt } from "./tokenResponseExpiresAt";
+import type { TokenResponseRefreshToken } from './tokenResponseRefreshToken';
+import type { TokenResponseIdToken } from './tokenResponseIdToken';
+import type { TokenResponseExpiresAt } from './tokenResponseExpiresAt';
 
 export interface TokenResponse {
   access_token: string;

@@ -4,9 +4,9 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BuyerSnapshotCustomerId } from "./buyerSnapshotCustomerId";
-import type { BuyerSnapshotPhone } from "./buyerSnapshotPhone";
-import type { BuyerSnapshotEmail } from "./buyerSnapshotEmail";
+import type { BuyerSnapshotCustomerId } from './buyerSnapshotCustomerId';
+import type { BuyerSnapshotPhone } from './buyerSnapshotPhone';
+import type { BuyerSnapshotEmail } from './buyerSnapshotEmail';
 
 export interface BuyerSnapshot {
   customer_id?: BuyerSnapshotCustomerId;
