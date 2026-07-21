@@ -6,7 +6,7 @@ from app.api.deps import SessionDep
 from app.models.models import Staff, StaffRole
 from app.schemas.schemas import StaffCreateIn
 # Assuming you use pwd_context or passlib for hashing (adjust your import path accordingly)
-from app.core.security import hash_password 
+from app.core.security import security
 
 router = APIRouter()
 
@@ -35,7 +35,7 @@ async def create_staff_member(payload: StaffCreateIn, db: SessionDep):
             tenant_id=payload.tenant_id,
             email=payload.email,
             full_name=payload.full_name,
-            hashed_password=hash_password(payload.password),  # Replaced with hashed_pwd in production
+            hashed_password=security.hash_password(payload.password),  # Replaced with hashed_pwd in production
             role=payload.role,
             active=True
         )

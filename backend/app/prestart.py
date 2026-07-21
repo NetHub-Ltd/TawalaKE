@@ -2,7 +2,7 @@ import asyncio
 from sqlmodel import select
 from app.core.config import settings
 from app.core.session import AsyncSessionLocal
-from app.core.security import hash_password
+from app.core.security import security
 from app.utils.logging import logger
 from app.models.models import (
     Organization, 
@@ -77,7 +77,7 @@ async def create_admin_tenant(payload: TenantCreate = data) -> None:
 
             # Step 4: Securely Provision the Primary Staff Account as the System OWNER
             logger.info("👤 Hashing admin authorization credentials and constructing staff records...")
-            hashed_pwd = hash_password(settings.admin_password)
+            hashed_pwd = security.hash_password(settings.admin_password)
             
             admin_staff = Staff(
                 email=payload.email,

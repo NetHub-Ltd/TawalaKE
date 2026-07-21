@@ -106,6 +106,7 @@ class Organization(BaseMixin, table=True):
     tax_number: Optional[str] = Field(default=None)      # KRA PIN
     logo_url: Optional[str] = Field(default=None)
     active: bool = Field(index=True, default=True)
+    onboarding: Optional[bool] = Field(default=False)
 
 
 # =========================================================

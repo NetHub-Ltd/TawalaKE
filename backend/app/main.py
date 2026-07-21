@@ -6,6 +6,8 @@
 # from starlette.middleware.cors import CORSMiddleware
 # from slowapi import _rate_limit_exceeded_handler
 # from slowapi.errors import RateLimitExceeded
+# from fastapi_cache import FastAPICache
+# from fastapi_cache.backends.redis import RedisBackend
 
 # from app.api.api_router import api_router
 # from app.core.config import settings
@@ -15,8 +17,6 @@
 # from app.prestart import create_admin_tenant
 # from app.utils.helpers import utc_now
 
-# from app.core.redis_client import redis_manager # now this uses fastapi_cache
-
 
 # @asynccontextmanager
 # async def lifespan(app: FastAPI):
@@ -24,7 +24,6 @@
 #         f"Starting {settings.app_name} | "
 #         f"Version: {settings.app_version} | "
 #         f"Environment: {settings.environment} | "
-#         f"System Time: {utc_now()}"
 #     )
 
 #     # --------------------------------------------------------------
@@ -42,13 +41,18 @@
 #         raise RuntimeError("Database unavailable. Aborting startup.") from e
 
 #     # --------------------------------------------------------------
-#     # 2. Redis State Initialization
+#     # 2. Redis State Initialization & Route Cache Wiring
 #     # --------------------------------------------------------------
 #     try:
 #         logger.info("Initializing Redis connection pool...")
 #         # Warm up the async pool connection on startup
-#         _ = redis_manager.get_async_client()
+#         redis_client = redis_manager.get_async_client()
 #         logger.info("Redis client connected successfully.")
+        
+#         # Initialize fastapi-cache2 using your single bytes-compatible client pool
+#         logger.info("Initializing FastAPI Route Cache layer...")
+#         FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
+#         logger.info("FastAPI Route Cache layer successfully wired.")
 #     except Exception as e:
 #         logger.critical(f"Redis initialization failed: {str(e)}")
 #         raise RuntimeError("Cache layer unavailable. Aborting startup.") from e
@@ -157,21 +161,39 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("Database unavailable. Aborting startup.") from e
 
     # --------------------------------------------------------------
-    # 2. Redis State Initialization & Route Cache Wiring
+    # 2. Redis State & Read/Write Readiness Verification
     # --------------------------------------------------------------
     try:
         logger.info("Initializing Redis connection pool...")
-        # Warm up the async pool connection on startup
         redis_client = redis_manager.get_async_client()
-        logger.info("Redis client connected successfully.")
         
+        # Actively verify connection capability by executing a full round-trip operation
+        logger.info("Verifying Redis read/write capability...")
+        test_key = f"startup:probe:{int(utc_now().timestamp())}"
+        test_value = "ready"
+        
+        # Set a low TTL (10s) so it doesn't linger even if deletion failed
+        await redis_client.set(test_key, test_value, ex=10)
+        retrieved_value = await redis_client.get(test_key)
+        
+        if retrieved_value is not None:
+            # If decode_responses=False, it returns bytes b'ready'
+            decoded_value = retrieved_value.decode("utf-8") if isinstance(retrieved_value, bytes) else retrieved_value
+            if decoded_value == test_value:
+                await redis_client.delete(test_key)
+                logger.info("Redis connectivity and read/write verified successfully.")
+            else:
+                raise ValueError("Retrieved data did not match verification string.")
+        else:
+            raise ValueError("Redis returned None for verification key.")
+
         # Initialize fastapi-cache2 using your single bytes-compatible client pool
         logger.info("Initializing FastAPI Route Cache layer...")
         FastAPICache.init(RedisBackend(redis_client), prefix="fastapi-cache")
         logger.info("FastAPI Route Cache layer successfully wired.")
     except Exception as e:
-        logger.critical(f"Redis initialization failed: {str(e)}")
-        raise RuntimeError("Cache layer unavailable. Aborting startup.") from e
+        logger.critical(f"Redis integration test failed: {str(e)}")
+        raise RuntimeError("Cache layer/Redis integration unavailable. Aborting startup.") from e
     
     yield
     

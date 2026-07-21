@@ -5,7 +5,6 @@ from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sa
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace
 from app.schemas.schemas import TenantResponse, TenantCreate
 from sqlmodel import select
-from app.core.security import hash_password
 from pydantic import EmailStr
 from app.models.models import Product, Business
 from uuid import UUID

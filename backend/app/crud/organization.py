@@ -8,7 +8,7 @@ from sqlmodel import select, update
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from fastapi import HTTPException as HttpException
 from uuid import UUID
-from app.core.security import hash_password
+from app.core.security import security
 from fastapi import HTTPException
 
 
@@ -51,7 +51,7 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
                     email=tenant.email,
                     tenant_id=tenant.id,
                     role=StaffRole.OWNER,
-                    hashed_password=hash_password(password)  # to be updated later
+                    hashed_password=security.hash_password(password)  # to be updated later
                 )
                 db.add(owner)
 
@@ -126,7 +126,7 @@ class OrganizationCrud(BaseCRUD[Organization, TenantCreate, TenantUpdate]):
             organization_id=organization_id,
             tenant_id=organization_id,
             role=StaffRole.CASHIER,  # default role for new staff, can be updated later
-            hashed_password=hash_password(password) if password else "TEMP_DISABLED"
+            hashed_password=security.hash_password(password)
         )
         db.add(staff)
         await db.commit()
