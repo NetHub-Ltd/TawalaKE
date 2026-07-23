@@ -1,69 +1,3 @@
-// import { NextResponse, NextRequest } from "next/server";
-// import { auth } from "@/auth";
-
-// const API_BASE = process.env.BACKEND_URL;
-
-// export async function GET(request: NextRequest) {
-//   const session = await auth();
-//   if (!session || !session.accessToken) {
-//     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-//   }
-
-//   // 1. Extract and validate primary lookup parameters
-//   const { searchParams } = new URL(request.url);
-//   const business_id = searchParams.get("business_id");
-//   const product_id = searchParams.get("product_id");
-
-//   if (!business_id) {
-//     return NextResponse.json({ error: "Business ID not provided" }, { status: 400 });
-//   }
-
-//   console.debug("Processing request for business:", business_id);
-
-//   // 2. Build target URL with pagination support
-//   let targetUrl: string;
-
-//   if (product_id) {
-//     // Single product retrieval requires no pagination matrix
-//     targetUrl = `${API_BASE}/products/${product_id}`;
-//   } else {
-//     // Multi-product retrieval requires pagination forwarders
-//     const skip = searchParams.get("skip") || "0";
-//     const limit = searchParams.get("limit") || "50";
-    
-//     // Appends parameters exactly matching the FastAPI parameter expectations
-//     targetUrl = `${API_BASE}/products/multi/${business_id}?skip=${skip}&limit=${limit}`;
-//   }
-
-//   try {
-//     const res = await fetch(targetUrl, {
-//       method: "GET",
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `Bearer ${session.accessToken}`,
-//       },
-//     });
-
-//     const data = await res.json();
-    
-//     if (!data.status) {
-//       return NextResponse.json({ error: data.message }, { status: res.status });
-//     }
-
-//     console.debug(`Successfully proxied products matrix for business: ${business_id}`);
-    
-//     // Return data payload matching the ApiResponse structure expected by the client component
-//     return NextResponse.json(data.data, { status: res.status });
-//   } catch (error) {
-//     console.error("Proxy layer network failure:", error);
-//     return NextResponse.json(
-//       { error: "Internal Gateway Communication Failure" },
-//       { status: 502 }
-//     );
-//   }
-// }
-
-
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 
@@ -114,6 +48,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+
     const res = await fetch(targetUrl, {
       method: "GET",
       headers: {
@@ -128,7 +63,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: data.message }, { status: res.status });
     }
 
-    console.debug(`Successfully proxied records envelope for business: ${business_id}`);
+    console.debug(`Successfully proxied records envelope for business: ${business_id}: `);
     
     // Return the complete payload structure including data items and pagination metadata
     return NextResponse.json(
