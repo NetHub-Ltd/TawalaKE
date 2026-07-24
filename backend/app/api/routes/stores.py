@@ -126,6 +126,8 @@ async def restock_product(
     data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
     await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
 
+    logger.info(f"restock response: {data}")
+
     return ApiResponse(
         status=True,
         status_code=200,
@@ -145,6 +147,8 @@ async def audit_product_stock(
     """
     data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
     await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
+
+    logger.info(f"stock-audit response: {data}")
 
     return ApiResponse(
         status=True,
