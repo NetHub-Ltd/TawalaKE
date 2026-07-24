@@ -11,7 +11,7 @@ export default defineConfig({
       client: "react-query",
       mode: "tags-split",
 
-      prettier: true,
+      // prettier: true,
 
       override: {
         mutator: {
