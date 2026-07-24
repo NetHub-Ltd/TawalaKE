@@ -1,8 +1,3 @@
-**Here's the updated and fully rewritten `README.md` for Tawala:**
-
----
-
-```markdown
 # Tawala
 
 **Tawala biashara yako.**  
@@ -47,11 +42,11 @@ To become the go-to business operating system for Kenyan SMEs by providing simpl
 
 ## Pricing Plans
 
-| Plan          | Monthly Price     | Best For                          |
-|---------------|-------------------|-----------------------------------|
-| **Basic**     | KSh 1,490        | Single small shops                |
-| **Ndovu**     | **KSh 3,990**    | Growing businesses (Recommended)  |
-| **Enterprise**| KSh 9,990+       | Complex & multi-branch operations |
+| Plan | Monthly Price | Best For |
+| :--- | :--- | :--- |
+| **Basic** | KSh 1,490 | Single small shops |
+| **Ndovu** | **KSh 3,990** | Growing businesses (Recommended) |
+| **Enterprise** | KSh 9,990+ | Complex & multi-branch operations |
 
 **14-day free trial** on the Ndovu plan.
 
@@ -96,48 +91,3 @@ tawala/
 │   ├── marketing.md
 │   └── README.md
 └── .env.example
-```
-
----
-
-## 🚦 Getting Started
-
-### Backend Setup
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Copy environment variables
-cp .env.example .env
-```
-
-### Frontend Setup (Coming Soon)
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
----
-
-## 📄 Documentation
-
-- [`docs/tawala.md`](./docs/tawala.md) — Product Specification
-- [`docs/billing.md`](./docs/billing.md) — Pricing & Feature Limits
-- [`docs/marketing.md`](./docs/marketing.md) — Marketing Messages
-
----
-
-## Mission
-
-To empower Kenyan businesses with simple, reliable technology so they can run their biashara with confidence and control.
-
-**Tawala biashara yako.**
-
----
-
-**Built with focus on real Kenyan business needs.**
