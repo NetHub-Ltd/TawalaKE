@@ -117,7 +117,7 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: AuthUser # Injected authenticated user metadata,
+    current_staff: AuthUser,
     redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
