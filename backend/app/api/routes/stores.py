@@ -113,29 +113,51 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
 
 
 
-@router.post("/restock")
+@router.post("/restock", response_model=ApiResponse[ProductResponse])
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: AuthUser # Injected authenticated user metadata
+    current_staff: AuthUser,
+    redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
     Increments product inventory based on an incoming supply.
     Maintains an atomic history snapshot balance.
     """
-    return await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
+    data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
+    await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
 
-@router.post("/stock-audit", status_code=200)
+    logger.info(f"restock response: {data}")
+
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Success",
+        data=data
+    )
+
+@router.post("/stock-audit", status_code=200, response_model=ApiResponse[ProductResponse])
 async def audit_product_stock(
     payload: ProductAuditRequest,
     db: SessionDep,
-    user: AuthUser
+    user: AuthUser,
+    redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    return await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
+    data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
+
+    logger.info(f"stock-audit response: {data}")
+
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Success",
+        data=data
+    )
 
 
 @router.post("/new-sale", status_code=200, response_model=SaleResponse)

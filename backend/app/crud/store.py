@@ -189,6 +189,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             if product and product.track_stock:
                 previous_stock_level = product.stock
                 product.stock -= item.quantity
+                product.popularity_score += 0.1
                 db.add(product)
 
                 history = StockHistory(
@@ -386,7 +387,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             }
         }
     
-    async def add_new_stock(self, db: AsyncSession, payload: ProductRestockRequest, current_user) -> StockHistory:
+    async def add_new_stock(self, db: AsyncSession, payload: ProductRestockRequest, current_user) -> Product:
         """
         Executes a secure inbound inventory restock operation.
         Increments physical item volumes and updates catalog cost/selling margins 
