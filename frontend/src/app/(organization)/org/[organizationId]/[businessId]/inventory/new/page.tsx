@@ -1,11 +1,10 @@
-// src/app/products/[id]/new/page.tsx
+// src/app/products/[id]/new/page.tsx (or wherever it is)
 
 import { AssetFormWrapper } from "@/features/inventory/AssetFormWrapper";
 
 interface PageProps {
   params: Promise<{
     businessId: string;
-    organizationId: string;
   }>;
 }
 
@@ -14,7 +13,7 @@ export default async function NewProductPage({ params }: PageProps) {
   const businessId = resolvedParams.businessId;
 
   return (
-    <div className="w-full mx-auto ">
+    <div className="w-full mx-auto">
       <AssetFormWrapper businessId={businessId} />
     </div>
   );
