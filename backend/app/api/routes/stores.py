@@ -113,7 +113,7 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
 
 
 
-@router.post("/restock")
+@router.post("/restock", response_model=ApiResponse[ProductResponse])
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
@@ -123,9 +123,17 @@ async def restock_product(
     Increments product inventory based on an incoming supply.
     Maintains an atomic history snapshot balance.
     """
-    return await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
+    data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
+    await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
 
-@router.post("/stock-audit", status_code=200)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Success",
+        data=data
+    )
+
+@router.post("/stock-audit", status_code=200, response_model=ApiResponse[ProductResponse])
 async def audit_product_stock(
     payload: ProductAuditRequest,
     db: SessionDep,
@@ -135,7 +143,15 @@ async def audit_product_stock(
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    return await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
+    data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
+
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Success",
+        data=data
+    )
 
 
 @router.post("/new-sale", status_code=200, response_model=SaleResponse)
