@@ -124,6 +124,7 @@ class ProductResponse(BaseResponseSchema):
     track_stock: bool
     last_stock_take: Optional[datetime] = None
     stock: float
+    popularity_score: float
     active: bool
     category: str
     attributes: BaseAttributes

@@ -117,7 +117,8 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: AuthUser # Injected authenticated user metadata
+    current_staff: AuthUser # Injected authenticated user metadata,
+    redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
     Increments product inventory based on an incoming supply.
@@ -139,7 +140,8 @@ async def restock_product(
 async def audit_product_stock(
     payload: ProductAuditRequest,
     db: SessionDep,
-    user: AuthUser
+    user: AuthUser,
+    redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
     Reconciles physical counter reality audits with system database balances.
