@@ -6,7 +6,7 @@
  */
 
 export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams = {
-  sale_id?: string;
-  limit?: number;
-  offset?: number;
+sale_id?: string;
+limit?: number;
+offset?: number;
 };

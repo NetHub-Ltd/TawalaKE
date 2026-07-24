@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BusinessResponseOrganizationId } from "./businessResponseOrganizationId";
+import type { BusinessResponseOrganizationId } from './businessResponseOrganizationId';
 
 export interface BusinessResponse {
   name: string;

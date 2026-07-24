@@ -4,10 +4,10 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { PaymentMethod } from "./paymentMethod";
-import type { FinalizeCheckoutInPaymentReference } from "./finalizeCheckoutInPaymentReference";
-import type { FinalizeCheckoutInCustomerName } from "./finalizeCheckoutInCustomerName";
-import type { FinalizeCheckoutInCustomerPhone } from "./finalizeCheckoutInCustomerPhone";
+import type { PaymentMethod } from './paymentMethod';
+import type { FinalizeCheckoutInPaymentReference } from './finalizeCheckoutInPaymentReference';
+import type { FinalizeCheckoutInCustomerName } from './finalizeCheckoutInCustomerName';
+import type { FinalizeCheckoutInCustomerPhone } from './finalizeCheckoutInCustomerPhone';
 
 export interface FinalizeCheckoutIn {
   sale_id: string;

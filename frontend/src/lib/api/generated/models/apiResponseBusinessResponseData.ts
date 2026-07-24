@@ -4,6 +4,6 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BusinessResponse } from "./businessResponse";
+import type { BusinessResponse } from './businessResponse';
 
 export type ApiResponseBusinessResponseData = BusinessResponse | null;

@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { SaleStatus } from "./saleStatus";
+import type { SaleStatus } from './saleStatus';
 
 export interface SaleResponse {
   id: string;

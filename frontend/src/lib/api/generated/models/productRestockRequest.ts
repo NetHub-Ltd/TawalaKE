@@ -4,11 +4,11 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ProductRestockRequestBuyingPrice } from "./productRestockRequestBuyingPrice";
-import type { ProductRestockRequestSellingPrice } from "./productRestockRequestSellingPrice";
-import type { ProductRestockRequestReferenceId } from "./productRestockRequestReferenceId";
-import type { ProductRestockRequestReferenceType } from "./productRestockRequestReferenceType";
-import type { ProductRestockRequestNotes } from "./productRestockRequestNotes";
+import type { ProductRestockRequestBuyingPrice } from './productRestockRequestBuyingPrice';
+import type { ProductRestockRequestSellingPrice } from './productRestockRequestSellingPrice';
+import type { ProductRestockRequestReferenceId } from './productRestockRequestReferenceId';
+import type { ProductRestockRequestReferenceType } from './productRestockRequestReferenceType';
+import type { ProductRestockRequestNotes } from './productRestockRequestNotes';
 
 export interface ProductRestockRequest {
   /** The target product inventory variant to update. */

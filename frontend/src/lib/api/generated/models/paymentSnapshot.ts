@@ -4,8 +4,8 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { PaymentMethod } from "./paymentMethod";
-import type { PaymentSnapshotReference } from "./paymentSnapshotReference";
+import type { PaymentMethod } from './paymentMethod';
+import type { PaymentSnapshotReference } from './paymentSnapshotReference';
 
 export interface PaymentSnapshot {
   payment_id: string;

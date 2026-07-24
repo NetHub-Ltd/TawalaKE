@@ -6,5 +6,5 @@
  */
 
 export type SendTestEmailApiV1ManagementTestEmailGetParams = {
-  email: string;
+email: string;
 };

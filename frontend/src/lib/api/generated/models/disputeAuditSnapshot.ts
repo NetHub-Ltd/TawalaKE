@@ -4,9 +4,9 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { SaleStatus } from "./saleStatus";
-import type { DisputeAuditSnapshotOriginalDocumentHash } from "./disputeAuditSnapshotOriginalDocumentHash";
-import type { DisputeAuditSnapshotNotes } from "./disputeAuditSnapshotNotes";
+import type { SaleStatus } from './saleStatus';
+import type { DisputeAuditSnapshotOriginalDocumentHash } from './disputeAuditSnapshotOriginalDocumentHash';
+import type { DisputeAuditSnapshotNotes } from './disputeAuditSnapshotNotes';
 
 export interface DisputeAuditSnapshot {
   parent_sale_id: string;

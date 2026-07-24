@@ -4,10 +4,10 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { SellerSnapshotAddress } from "./sellerSnapshotAddress";
-import type { SellerSnapshotPhone } from "./sellerSnapshotPhone";
-import type { SellerSnapshotTaxNumber } from "./sellerSnapshotTaxNumber";
-import type { CashierSnapshot } from "./cashierSnapshot";
+import type { SellerSnapshotAddress } from './sellerSnapshotAddress';
+import type { SellerSnapshotPhone } from './sellerSnapshotPhone';
+import type { SellerSnapshotTaxNumber } from './sellerSnapshotTaxNumber';
+import type { CashierSnapshot } from './cashierSnapshot';
 
 export interface SellerSnapshot {
   business_id: string;

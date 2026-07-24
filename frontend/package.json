@@ -21,12 +21,13 @@
     "jspdf": "^4.2.1",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^1.14.0",
-    "next": "16.2.3",
+    "next": "^16.2.11",
     "next-auth": "^5.0.0-beta.31",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.75.0",
     "react-qr-code": "^2.2.0",
+    "sharp": "^0.35.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
@@ -40,9 +41,14 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "openapi-zod-client": "^1.18.3",
-    "orval": "^7.13.2",
-    "postcss": "^8.5.15",
+    "orval": "^8.22.0",
+    "postcss": "^8.5.22",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "js-yaml": "^4.3.0",
+    "postcss": "^8.5.22",
+    "sharp": "^0.35.3"
   }
 }

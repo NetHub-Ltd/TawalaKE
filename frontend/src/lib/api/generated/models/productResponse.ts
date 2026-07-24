@@ -4,13 +4,15 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BaseAttributes } from "./baseAttributes";
+import type { ProductResponseLastStockTake } from './productResponseLastStockTake';
+import type { BaseAttributes } from './baseAttributes';
 
 export interface ProductResponse {
   id: string;
   label: string;
   selling_price: number;
   track_stock: boolean;
+  last_stock_take?: ProductResponseLastStockTake;
   stock: number;
   active: boolean;
   category: string;

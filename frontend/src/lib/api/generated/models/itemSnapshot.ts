@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ItemSnapshotCostPriceAtSale } from "./itemSnapshotCostPriceAtSale";
+import type { ItemSnapshotCostPriceAtSale } from './itemSnapshotCostPriceAtSale';
 
 export interface ItemSnapshot {
   item_id: string;

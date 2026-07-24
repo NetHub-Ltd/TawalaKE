@@ -4,6 +4,6 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { StaffResponse } from "./staffResponse";
+import type { StaffResponse } from './staffResponse';
 
 export type ApiResponseListStaffResponseData = StaffResponse[] | null;

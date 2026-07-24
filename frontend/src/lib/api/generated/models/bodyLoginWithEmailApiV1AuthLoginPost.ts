@@ -4,9 +4,9 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BodyLoginWithEmailApiV1AuthLoginPostGrantType } from "./bodyLoginWithEmailApiV1AuthLoginPostGrantType";
-import type { BodyLoginWithEmailApiV1AuthLoginPostClientId } from "./bodyLoginWithEmailApiV1AuthLoginPostClientId";
-import type { BodyLoginWithEmailApiV1AuthLoginPostClientSecret } from "./bodyLoginWithEmailApiV1AuthLoginPostClientSecret";
+import type { BodyLoginWithEmailApiV1AuthLoginPostGrantType } from './bodyLoginWithEmailApiV1AuthLoginPostGrantType';
+import type { BodyLoginWithEmailApiV1AuthLoginPostClientId } from './bodyLoginWithEmailApiV1AuthLoginPostClientId';
+import type { BodyLoginWithEmailApiV1AuthLoginPostClientSecret } from './bodyLoginWithEmailApiV1AuthLoginPostClientSecret';
 
 export interface BodyLoginWithEmailApiV1AuthLoginPost {
   grant_type?: BodyLoginWithEmailApiV1AuthLoginPostGrantType;

@@ -6,5 +6,5 @@
  */
 
 export type GetStaffByTenantApiV1OrganizationsStaffOrganizationIdGetParams = {
-  business_id?: string;
+business_id?: string;
 };
