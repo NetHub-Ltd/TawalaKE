@@ -4,9 +4,9 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BaseAttributesUnitOfMeasure } from "./baseAttributesUnitOfMeasure";
-import type { BaseAttributesBuyingPrice } from "./baseAttributesBuyingPrice";
-import type { BaseAttributesSku } from "./baseAttributesSku";
+import type { BaseAttributesUnitOfMeasure } from './baseAttributesUnitOfMeasure';
+import type { BaseAttributesBuyingPrice } from './baseAttributesBuyingPrice';
+import type { BaseAttributesSku } from './baseAttributesSku';
 
 /**
  * MASTER ATTRIBUTE REGISTRY

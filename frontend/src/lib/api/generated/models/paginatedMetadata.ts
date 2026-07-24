@@ -5,6 +5,9 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type FetchStaffWithIdApiV1BusinessGetStaffGetParams = {
-staff_id: string;
-};
+export interface PaginatedMetadata {
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+}

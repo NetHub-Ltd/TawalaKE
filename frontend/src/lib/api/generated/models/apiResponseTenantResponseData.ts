@@ -4,6 +4,6 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { TenantResponse } from "./tenantResponse";
+import type { TenantResponse } from './tenantResponse';
 
 export type ApiResponseTenantResponseData = TenantResponse | null;

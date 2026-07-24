@@ -4,7 +4,11 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery
+} from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
@@ -21,8 +25,8 @@ import type {
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
-  UseQueryResult,
-} from "@tanstack/react-query";
+  UseQueryResult
+} from '@tanstack/react-query';
 
 import type {
   ApiResponse,
@@ -39,10 +43,13 @@ import type {
   ProductRestockRequest,
   SaleResponse,
   StaffCreateIn,
-  StaffResponse,
-} from ".././models";
+  StaffResponse
+} from '.././models';
 
-import { customFetcher } from "../../fetcher";
+import { customFetcher } from '../../fetcher';
+
+
+
 
 /**
  * Create a new business within a specified tenant.
@@ -65,108 +72,67 @@ newly created business details.
  * @summary Create Business
  */
 export const create_business_api_v1_business_register_business_post = (
-  businessBase: BusinessBase,
-  signal?: AbortSignal
+    businessBase: BusinessBase,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<ApiResponseBusinessResponse>({
-    url: `/api/v1/business/register-business`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: businessBase,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<ApiResponseBusinessResponse>(
+      {url: `/api/v1/business/register-business`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: businessBase, signal
+    },
+      );
+    }
+  
 
-export const getCreateBusinessApiV1BusinessRegisterBusinessPostMutationOptions =
-  <TError = HTTPValidationError, TContext = unknown>(options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof create_business_api_v1_business_register_business_post
-        >
-      >,
-      TError,
-      { data: BusinessBase },
-      TContext
-    >;
-  }): UseMutationOptions<
-    Awaited<
-      ReturnType<typeof create_business_api_v1_business_register_business_post>
-    >,
-    TError,
-    { data: BusinessBase },
-    TContext
-  > => {
-    const mutationKey = ["createBusinessApiV1BusinessRegisterBusinessPost"];
-    const { mutation: mutationOptions } = options
-      ? options.mutation &&
-        "mutationKey" in options.mutation &&
-        options.mutation.mutationKey
-        ? options
-        : { ...options, mutation: { ...options.mutation, mutationKey } }
-      : { mutation: { mutationKey } };
 
-    const mutationFn: MutationFunction<
-      Awaited<
-        ReturnType<
-          typeof create_business_api_v1_business_register_business_post
-        >
-      >,
-      { data: BusinessBase }
-    > = (props) => {
-      const { data } = props ?? {};
+export const getCreateBusinessApiV1BusinessRegisterBusinessPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof create_business_api_v1_business_register_business_post>>, TError,{data: BusinessBase}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof create_business_api_v1_business_register_business_post>>, TError,{data: BusinessBase}, TContext> => {
 
-      return create_business_api_v1_business_register_business_post(data);
-    };
+const mutationKey = ['createBusinessApiV1BusinessRegisterBusinessPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-    return { mutationFn, ...mutationOptions };
-  };
+      
 
-export type CreateBusinessApiV1BusinessRegisterBusinessPostMutationResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof create_business_api_v1_business_register_business_post>
-    >
-  >;
-export type CreateBusinessApiV1BusinessRegisterBusinessPostMutationBody =
-  BusinessBase;
-export type CreateBusinessApiV1BusinessRegisterBusinessPostMutationError =
-  HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof create_business_api_v1_business_register_business_post>>, {data: BusinessBase}> = (props) => {
+          const {data} = props ?? {};
+
+          return  create_business_api_v1_business_register_business_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateBusinessApiV1BusinessRegisterBusinessPostMutationResult = NonNullable<Awaited<ReturnType<typeof create_business_api_v1_business_register_business_post>>>
+    export type CreateBusinessApiV1BusinessRegisterBusinessPostMutationBody = BusinessBase
+    export type CreateBusinessApiV1BusinessRegisterBusinessPostMutationError = HTTPValidationError
+
+    /**
  * @summary Create Business
  */
-export const useCreateBusinessApiV1BusinessRegisterBusinessPost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof create_business_api_v1_business_register_business_post
-        >
-      >,
-      TError,
-      { data: BusinessBase },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<
-    ReturnType<typeof create_business_api_v1_business_register_business_post>
-  >,
-  TError,
-  { data: BusinessBase },
-  TContext
-> => {
-  const mutationOptions =
-    getCreateBusinessApiV1BusinessRegisterBusinessPostMutationOptions(options);
+export const useCreateBusinessApiV1BusinessRegisterBusinessPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof create_business_api_v1_business_register_business_post>>, TError,{data: BusinessBase}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof create_business_api_v1_business_register_business_post>>,
+        TError,
+        {data: BusinessBase},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getCreateBusinessApiV1BusinessRegisterBusinessPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Updates the details of an existing business entity identified by its unique
 business ID. This function interacts with the database session to locate the
 target business record and applies the provided update payload to modify its
@@ -181,119 +147,68 @@ maintaining database integrity.
 :rtype: Business
  * @summary Update Business
  */
-export const update_business_api_v1_business_update_business__business_id__patch =
-  (businessId: string, businessUpdate: BusinessUpdate) => {
-    return customFetcher<ApiResponseBusinessResponse>({
-      url: `/api/v1/business/update-business/${businessId}`,
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      data: businessUpdate,
-    });
-  };
-
-export const getUpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationOptions =
-  <TError = HTTPValidationError, TContext = unknown>(options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof update_business_api_v1_business_update_business__business_id__patch
-        >
-      >,
-      TError,
-      { businessId: string; data: BusinessUpdate },
-      TContext
-    >;
-  }): UseMutationOptions<
-    Awaited<
-      ReturnType<
-        typeof update_business_api_v1_business_update_business__business_id__patch
-      >
-    >,
-    TError,
-    { businessId: string; data: BusinessUpdate },
-    TContext
-  > => {
-    const mutationKey = [
-      "updateBusinessApiV1BusinessUpdateBusinessBusinessIdPatch",
-    ];
-    const { mutation: mutationOptions } = options
-      ? options.mutation &&
-        "mutationKey" in options.mutation &&
-        options.mutation.mutationKey
-        ? options
-        : { ...options, mutation: { ...options.mutation, mutationKey } }
-      : { mutation: { mutationKey } };
-
-    const mutationFn: MutationFunction<
-      Awaited<
-        ReturnType<
-          typeof update_business_api_v1_business_update_business__business_id__patch
-        >
-      >,
-      { businessId: string; data: BusinessUpdate }
-    > = (props) => {
-      const { businessId, data } = props ?? {};
-
-      return update_business_api_v1_business_update_business__business_id__patch(
-        businessId,
-        data
+export const update_business_api_v1_business_update_business__business_id__patch = (
+    businessId: string,
+    businessUpdate: BusinessUpdate,
+ ) => {
+      
+      
+      return customFetcher<ApiResponseBusinessResponse>(
+      {url: `/api/v1/business/update-business/${businessId}`, method: 'PATCH',
+      headers: {'Content-Type': 'application/json', },
+      data: businessUpdate
+    },
       );
-    };
+    }
+  
 
-    return { mutationFn, ...mutationOptions };
-  };
 
-export type UpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationResult =
-  NonNullable<
-    Awaited<
-      ReturnType<
-        typeof update_business_api_v1_business_update_business__business_id__patch
-      >
-    >
-  >;
-export type UpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationBody =
-  BusinessUpdate;
-export type UpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationError =
-  HTTPValidationError;
+export const getUpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof update_business_api_v1_business_update_business__business_id__patch>>, TError,{businessId: string;data: BusinessUpdate}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof update_business_api_v1_business_update_business__business_id__patch>>, TError,{businessId: string;data: BusinessUpdate}, TContext> => {
 
-/**
+const mutationKey = ['updateBusinessApiV1BusinessUpdateBusinessBusinessIdPatch'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof update_business_api_v1_business_update_business__business_id__patch>>, {businessId: string;data: BusinessUpdate}> = (props) => {
+          const {businessId,data} = props ?? {};
+
+          return  update_business_api_v1_business_update_business__business_id__patch(businessId,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationResult = NonNullable<Awaited<ReturnType<typeof update_business_api_v1_business_update_business__business_id__patch>>>
+    export type UpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationBody = BusinessUpdate
+    export type UpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationError = HTTPValidationError
+
+    /**
  * @summary Update Business
  */
-export const useUpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatch = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof update_business_api_v1_business_update_business__business_id__patch
-        >
-      >,
-      TError,
-      { businessId: string; data: BusinessUpdate },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<
-    ReturnType<
-      typeof update_business_api_v1_business_update_business__business_id__patch
-    >
-  >,
-  TError,
-  { businessId: string; data: BusinessUpdate },
-  TContext
-> => {
-  const mutationOptions =
-    getUpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationOptions(
-      options
-    );
+export const useUpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatch = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof update_business_api_v1_business_update_business__business_id__patch>>, TError,{businessId: string;data: BusinessUpdate}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof update_business_api_v1_business_update_business__business_id__patch>>,
+        TError,
+        {businessId: string;data: BusinessUpdate},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getUpdateBusinessApiV1BusinessUpdateBusinessBusinessIdPatchMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Deletes a client business entity by its unique identifier. This endpoint removes
 the business entity from the database and returns a successful response if the
 operation completes successfully.
@@ -308,917 +223,437 @@ operation completes successfully.
  * @summary Delete Client
  */
 export const delete_client_api_v1_business_delete__business_id__delete = (
-  businessId: string
-) => {
-  return customFetcher<ApiResponse>({
-    url: `/api/v1/business/delete/${businessId}`,
-    method: "DELETE",
-  });
-};
-
-export const getDeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationOptions =
-  <TError = HTTPValidationError, TContext = unknown>(options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof delete_client_api_v1_business_delete__business_id__delete
-        >
-      >,
-      TError,
-      { businessId: string },
-      TContext
-    >;
-  }): UseMutationOptions<
-    Awaited<
-      ReturnType<
-        typeof delete_client_api_v1_business_delete__business_id__delete
-      >
-    >,
-    TError,
-    { businessId: string },
-    TContext
-  > => {
-    const mutationKey = ["deleteClientApiV1BusinessDeleteBusinessIdDelete"];
-    const { mutation: mutationOptions } = options
-      ? options.mutation &&
-        "mutationKey" in options.mutation &&
-        options.mutation.mutationKey
-        ? options
-        : { ...options, mutation: { ...options.mutation, mutationKey } }
-      : { mutation: { mutationKey } };
-
-    const mutationFn: MutationFunction<
-      Awaited<
-        ReturnType<
-          typeof delete_client_api_v1_business_delete__business_id__delete
-        >
-      >,
-      { businessId: string }
-    > = (props) => {
-      const { businessId } = props ?? {};
-
-      return delete_client_api_v1_business_delete__business_id__delete(
-        businessId
+    businessId: string,
+ ) => {
+      
+      
+      return customFetcher<ApiResponse>(
+      {url: `/api/v1/business/delete/${businessId}`, method: 'DELETE'
+    },
       );
-    };
+    }
+  
 
-    return { mutationFn, ...mutationOptions };
-  };
 
-export type DeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationResult =
-  NonNullable<
-    Awaited<
-      ReturnType<
-        typeof delete_client_api_v1_business_delete__business_id__delete
-      >
-    >
-  >;
+export const getDeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof delete_client_api_v1_business_delete__business_id__delete>>, TError,{businessId: string}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof delete_client_api_v1_business_delete__business_id__delete>>, TError,{businessId: string}, TContext> => {
 
-export type DeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationError =
-  HTTPValidationError;
+const mutationKey = ['deleteClientApiV1BusinessDeleteBusinessIdDelete'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-/**
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof delete_client_api_v1_business_delete__business_id__delete>>, {businessId: string}> = (props) => {
+          const {businessId} = props ?? {};
+
+          return  delete_client_api_v1_business_delete__business_id__delete(businessId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationResult = NonNullable<Awaited<ReturnType<typeof delete_client_api_v1_business_delete__business_id__delete>>>
+    
+    export type DeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationError = HTTPValidationError
+
+    /**
  * @summary Delete Client
  */
-export const useDeleteClientApiV1BusinessDeleteBusinessIdDelete = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof delete_client_api_v1_business_delete__business_id__delete
-        >
-      >,
-      TError,
-      { businessId: string },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<
-    ReturnType<typeof delete_client_api_v1_business_delete__business_id__delete>
-  >,
-  TError,
-  { businessId: string },
-  TContext
-> => {
-  const mutationOptions =
-    getDeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationOptions(options);
+export const useDeleteClientApiV1BusinessDeleteBusinessIdDelete = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof delete_client_api_v1_business_delete__business_id__delete>>, TError,{businessId: string}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof delete_client_api_v1_business_delete__business_id__delete>>,
+        TError,
+        {businessId: string},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getDeleteClientApiV1BusinessDeleteBusinessIdDeleteMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Increments product inventory based on an incoming supply.
 Maintains an atomic history snapshot balance.
  * @summary Restock Product
  */
 export const restock_product_api_v1_business_restock_post = (
-  productRestockRequest: ProductRestockRequest,
-  signal?: AbortSignal
+    productRestockRequest: ProductRestockRequest,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/business/restock`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: productRestockRequest,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/business/restock`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: productRestockRequest, signal
+    },
+      );
+    }
+  
 
-export const getRestockProductApiV1BusinessRestockPostMutationOptions = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>,
-    TError,
-    { data: ProductRestockRequest },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>,
-  TError,
-  { data: ProductRestockRequest },
-  TContext
-> => {
-  const mutationKey = ["restockProductApiV1BusinessRestockPost"];
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>,
-    { data: ProductRestockRequest }
-  > = (props) => {
-    const { data } = props ?? {};
+export const getRestockProductApiV1BusinessRestockPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>, TError,{data: ProductRestockRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>, TError,{data: ProductRestockRequest}, TContext> => {
 
-    return restock_product_api_v1_business_restock_post(data);
-  };
+const mutationKey = ['restockProductApiV1BusinessRestockPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-  return { mutationFn, ...mutationOptions };
-};
+      
 
-export type RestockProductApiV1BusinessRestockPostMutationResult = NonNullable<
-  Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>
->;
-export type RestockProductApiV1BusinessRestockPostMutationBody =
-  ProductRestockRequest;
-export type RestockProductApiV1BusinessRestockPostMutationError =
-  HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>, {data: ProductRestockRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  restock_product_api_v1_business_restock_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestockProductApiV1BusinessRestockPostMutationResult = NonNullable<Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>>
+    export type RestockProductApiV1BusinessRestockPostMutationBody = ProductRestockRequest
+    export type RestockProductApiV1BusinessRestockPostMutationError = HTTPValidationError
+
+    /**
  * @summary Restock Product
  */
-export const useRestockProductApiV1BusinessRestockPost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>,
-      TError,
-      { data: ProductRestockRequest },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>,
-  TError,
-  { data: ProductRestockRequest },
-  TContext
-> => {
-  const mutationOptions =
-    getRestockProductApiV1BusinessRestockPostMutationOptions(options);
+export const useRestockProductApiV1BusinessRestockPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>, TError,{data: ProductRestockRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof restock_product_api_v1_business_restock_post>>,
+        TError,
+        {data: ProductRestockRequest},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getRestockProductApiV1BusinessRestockPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * Reconciles physical counter reality audits with system database balances.
 Calculates the inventory variance delta and tracks loss anomalies.
  * @summary Audit Product Stock
  */
 export const audit_product_stock_api_v1_business_stock_audit_post = (
-  productAuditRequest: ProductAuditRequest,
-  signal?: AbortSignal
+    productAuditRequest: ProductAuditRequest,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/business/stock-audit`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: productAuditRequest,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/business/stock-audit`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: productAuditRequest, signal
+    },
+      );
+    }
+  
 
-export const getAuditProductStockApiV1BusinessStockAuditPostMutationOptions = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<
-      ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>
-    >,
-    TError,
-    { data: ProductAuditRequest },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<
-    ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>
-  >,
-  TError,
-  { data: ProductAuditRequest },
-  TContext
-> => {
-  const mutationKey = ["auditProductStockApiV1BusinessStockAuditPost"];
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<
-      ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>
-    >,
-    { data: ProductAuditRequest }
-  > = (props) => {
-    const { data } = props ?? {};
+export const getAuditProductStockApiV1BusinessStockAuditPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>>, TError,{data: ProductAuditRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>>, TError,{data: ProductAuditRequest}, TContext> => {
 
-    return audit_product_stock_api_v1_business_stock_audit_post(data);
-  };
+const mutationKey = ['auditProductStockApiV1BusinessStockAuditPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-  return { mutationFn, ...mutationOptions };
-};
+      
 
-export type AuditProductStockApiV1BusinessStockAuditPostMutationResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>
-    >
-  >;
-export type AuditProductStockApiV1BusinessStockAuditPostMutationBody =
-  ProductAuditRequest;
-export type AuditProductStockApiV1BusinessStockAuditPostMutationError =
-  HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>>, {data: ProductAuditRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  audit_product_stock_api_v1_business_stock_audit_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AuditProductStockApiV1BusinessStockAuditPostMutationResult = NonNullable<Awaited<ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>>>
+    export type AuditProductStockApiV1BusinessStockAuditPostMutationBody = ProductAuditRequest
+    export type AuditProductStockApiV1BusinessStockAuditPostMutationError = HTTPValidationError
+
+    /**
  * @summary Audit Product Stock
  */
-export const useAuditProductStockApiV1BusinessStockAuditPost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>
-      >,
-      TError,
-      { data: ProductAuditRequest },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<
-    ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>
-  >,
-  TError,
-  { data: ProductAuditRequest },
-  TContext
-> => {
-  const mutationOptions =
-    getAuditProductStockApiV1BusinessStockAuditPostMutationOptions(options);
+export const useAuditProductStockApiV1BusinessStockAuditPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>>, TError,{data: ProductAuditRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof audit_product_stock_api_v1_business_stock_audit_post>>,
+        TError,
+        {data: ProductAuditRequest},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getAuditProductStockApiV1BusinessStockAuditPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * @summary Create Pending Sale
  */
 export const create_pending_sale_api_v1_business_new_sale_post = (
-  initializeCheckoutRequest: InitializeCheckoutRequest,
-  signal?: AbortSignal
+    initializeCheckoutRequest: InitializeCheckoutRequest,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<SaleResponse>({
-    url: `/api/v1/business/new-sale`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: initializeCheckoutRequest,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<SaleResponse>(
+      {url: `/api/v1/business/new-sale`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: initializeCheckoutRequest, signal
+    },
+      );
+    }
+  
 
-export const getCreatePendingSaleApiV1BusinessNewSalePostMutationOptions = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<
-      ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>
-    >,
-    TError,
-    { data: InitializeCheckoutRequest },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>,
-  TError,
-  { data: InitializeCheckoutRequest },
-  TContext
-> => {
-  const mutationKey = ["createPendingSaleApiV1BusinessNewSalePost"];
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<
-      ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>
-    >,
-    { data: InitializeCheckoutRequest }
-  > = (props) => {
-    const { data } = props ?? {};
+export const getCreatePendingSaleApiV1BusinessNewSalePostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>, TError,{data: InitializeCheckoutRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>, TError,{data: InitializeCheckoutRequest}, TContext> => {
 
-    return create_pending_sale_api_v1_business_new_sale_post(data);
-  };
+const mutationKey = ['createPendingSaleApiV1BusinessNewSalePost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-  return { mutationFn, ...mutationOptions };
-};
+      
 
-export type CreatePendingSaleApiV1BusinessNewSalePostMutationResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>
-    >
-  >;
-export type CreatePendingSaleApiV1BusinessNewSalePostMutationBody =
-  InitializeCheckoutRequest;
-export type CreatePendingSaleApiV1BusinessNewSalePostMutationError =
-  HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>, {data: InitializeCheckoutRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  create_pending_sale_api_v1_business_new_sale_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePendingSaleApiV1BusinessNewSalePostMutationResult = NonNullable<Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>>
+    export type CreatePendingSaleApiV1BusinessNewSalePostMutationBody = InitializeCheckoutRequest
+    export type CreatePendingSaleApiV1BusinessNewSalePostMutationError = HTTPValidationError
+
+    /**
  * @summary Create Pending Sale
  */
-export const useCreatePendingSaleApiV1BusinessNewSalePost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>
-      >,
-      TError,
-      { data: InitializeCheckoutRequest },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>,
-  TError,
-  { data: InitializeCheckoutRequest },
-  TContext
-> => {
-  const mutationOptions =
-    getCreatePendingSaleApiV1BusinessNewSalePostMutationOptions(options);
+export const useCreatePendingSaleApiV1BusinessNewSalePost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>, TError,{data: InitializeCheckoutRequest}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof create_pending_sale_api_v1_business_new_sale_post>>,
+        TError,
+        {data: InitializeCheckoutRequest},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getCreatePendingSaleApiV1BusinessNewSalePostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * @summary Get Pending Sales
  */
 export const get_pending_sales_api_v1_business_get_sales__business_id__get = (
-  businessId: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  signal?: AbortSignal
+    businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<SaleResponse[]>({
-    url: `/api/v1/business/get-sales/${businessId}`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<SaleResponse[]>(
+      {url: `/api/v1/business/get-sales/${businessId}`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
 
-export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryKey =
-  (
-    businessId?: string,
-    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams
-  ) => {
+
+
+export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryKey = (businessId?: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,) => {
     return [
-      "infinite",
-      `/api/v1/business/get-sales/${businessId}`,
-      ...(params ? [params] : []),
+    'infinite', `/api/v1/business/get-sales/${businessId}`, ...(params ? [params]: [])
     ] as const;
-  };
+    }
 
-export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryKey = (
-  businessId?: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams
+export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryKey = (businessId?: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,) => {
+    return [
+    `/api/v1/business/get-sales/${businessId}`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>>, TError = HTTPValidationError>(businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>>, }
 ) => {
-  return [
-    `/api/v1/business/get-sales/${businessId}`,
-    ...(params ? [params] : []),
-  ] as const;
-};
 
-export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryOptions =
-  <
-    TData = InfiniteData<
-      Awaited<
-        ReturnType<
-          typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-        >
-      >
-    >,
-    TError = HTTPValidationError
-  >(
-    businessId: string,
-    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-    options?: {
-      query?: Partial<
-        UseInfiniteQueryOptions<
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >,
-          TError,
-          TData
-        >
-      >;
-    }
-  ) => {
-    const { query: queryOptions } = options ?? {};
+const {query: queryOptions} = options ?? {};
 
-    const queryKey =
-      queryOptions?.queryKey ??
-      getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryKey(
-        businessId,
-        params
-      );
+  const queryKey =  queryOptions?.queryKey ?? getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryKey(businessId,params);
 
-    const queryFn: QueryFunction<
-      Awaited<
-        ReturnType<
-          typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-        >
-      >
-    > = ({ signal }) =>
-      get_pending_sales_api_v1_business_get_sales__business_id__get(
-        businessId,
-        params,
-        signal
-      );
+  
 
-    return {
-      queryKey,
-      queryFn,
-      enabled: !!businessId,
-      ...queryOptions,
-    } as UseInfiniteQueryOptions<
-      Awaited<
-        ReturnType<
-          typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-        >
-      >,
-      TError,
-      TData
-    > & { queryKey: DataTag<QueryKey, TData, TError> };
-  };
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>> = ({ signal }) => get_pending_sales_api_v1_business_get_sales__business_id__get(businessId,params, signal);
 
-export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<
-        typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-      >
-    >
-  >;
-export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryError =
-  HTTPValidationError;
+      
 
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<
-        typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-      >
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params: undefined | GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+   return  { queryKey, queryFn, enabled: !!(businessId), ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>>
+export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryError = HTTPValidationError
+
+
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>>, TError = HTTPValidationError>(
+ businessId: string,
+    params: undefined |  GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >,
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<
-        typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-      >
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>>, TError = HTTPValidationError>(
+ businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >,
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<
-        typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-      >
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>>, TError = HTTPValidationError>(
+ businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Pending Sales
  */
 
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<
-        typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-      >
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryOptions(
-      businessId,
-      params,
-      options
-    );
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>>, TError = HTTPValidationError>(
+ businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetInfiniteQueryOptions(businessId,params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryOptions =
-  <
-    TData = Awaited<
-      ReturnType<
-        typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-      >
-    >,
-    TError = HTTPValidationError
-  >(
-    businessId: string,
-    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-    options?: {
-      query?: Partial<
-        UseQueryOptions<
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >,
-          TError,
-          TData
-        >
-      >;
-    }
-  ) => {
-    const { query: queryOptions } = options ?? {};
 
-    const queryKey =
-      queryOptions?.queryKey ??
-      getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryKey(
-        businessId,
-        params
-      );
 
-    const queryFn: QueryFunction<
-      Awaited<
-        ReturnType<
-          typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-        >
-      >
-    > = ({ signal }) =>
-      get_pending_sales_api_v1_business_get_sales__business_id__get(
-        businessId,
-        params,
-        signal
-      );
 
-    return {
-      queryKey,
-      queryFn,
-      enabled: !!businessId,
-      ...queryOptions,
-    } as UseQueryOptions<
-      Awaited<
-        ReturnType<
-          typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-        >
-      >,
-      TError,
-      TData
-    > & { queryKey: DataTag<QueryKey, TData, TError> };
-  };
+export const getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryOptions = <TData = Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError = HTTPValidationError>(businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>>, }
+) => {
 
-export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<
-        typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-      >
-    >
-  >;
-export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryError =
-  HTTPValidationError;
+const {query: queryOptions} = options ?? {};
 
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<
-  TData = Awaited<
-    ReturnType<
-      typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params: undefined | GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+  const queryKey =  queryOptions?.queryKey ?? getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryKey(businessId,params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>> = ({ signal }) => get_pending_sales_api_v1_business_get_sales__business_id__get(businessId,params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(businessId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>>
+export type GetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryError = HTTPValidationError
+
+
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<TData = Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError = HTTPValidationError>(
+ businessId: string,
+    params: undefined |  GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >,
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<
-  TData = Awaited<
-    ReturnType<
-      typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<TData = Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError = HTTPValidationError>(
+ businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >,
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<
-  TData = Awaited<
-    ReturnType<
-      typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<TData = Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError = HTTPValidationError>(
+ businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Pending Sales
  */
 
-export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<
-  TData = Awaited<
-    ReturnType<
-      typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-    >
-  >,
-  TError = HTTPValidationError
->(
-  businessId: string,
-  params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof get_pending_sales_api_v1_business_get_sales__business_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryOptions(
-      businessId,
-      params,
-      options
-    );
+export function useGetPendingSalesApiV1BusinessGetSalesBusinessIdGet<TData = Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError = HTTPValidationError>(
+ businessId: string,
+    params?: GetPendingSalesApiV1BusinessGetSalesBusinessIdGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof get_pending_sales_api_v1_business_get_sales__business_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getGetPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryOptions(businessId,params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
 
 /**
  * Finalizes the sale (payment + stock deduction) and returns immediately.
@@ -1226,1049 +661,459 @@ Document (Receipt/Invoice) generation runs in the background.
  * @summary Checkout Sale
  */
 export const checkout_sale_api_v1_business_checkout_post = (
-  finalizeCheckoutIn: FinalizeCheckoutIn,
-  signal?: AbortSignal
+    finalizeCheckoutIn: FinalizeCheckoutIn,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<unknown>({
-    url: `/api/v1/business/checkout`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: finalizeCheckoutIn,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<unknown>(
+      {url: `/api/v1/business/checkout`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: finalizeCheckoutIn, signal
+    },
+      );
+    }
+  
 
-export const getCheckoutSaleApiV1BusinessCheckoutPostMutationOptions = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>,
-    TError,
-    { data: FinalizeCheckoutIn },
-    TContext
-  >;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>,
-  TError,
-  { data: FinalizeCheckoutIn },
-  TContext
-> => {
-  const mutationKey = ["checkoutSaleApiV1BusinessCheckoutPost"];
-  const { mutation: mutationOptions } = options
-    ? options.mutation &&
-      "mutationKey" in options.mutation &&
-      options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey } };
 
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>,
-    { data: FinalizeCheckoutIn }
-  > = (props) => {
-    const { data } = props ?? {};
+export const getCheckoutSaleApiV1BusinessCheckoutPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>, TError,{data: FinalizeCheckoutIn}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>, TError,{data: FinalizeCheckoutIn}, TContext> => {
 
-    return checkout_sale_api_v1_business_checkout_post(data);
-  };
+const mutationKey = ['checkoutSaleApiV1BusinessCheckoutPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-  return { mutationFn, ...mutationOptions };
-};
+      
 
-export type CheckoutSaleApiV1BusinessCheckoutPostMutationResult = NonNullable<
-  Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>
->;
-export type CheckoutSaleApiV1BusinessCheckoutPostMutationBody =
-  FinalizeCheckoutIn;
-export type CheckoutSaleApiV1BusinessCheckoutPostMutationError =
-  HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>, {data: FinalizeCheckoutIn}> = (props) => {
+          const {data} = props ?? {};
+
+          return  checkout_sale_api_v1_business_checkout_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CheckoutSaleApiV1BusinessCheckoutPostMutationResult = NonNullable<Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>>
+    export type CheckoutSaleApiV1BusinessCheckoutPostMutationBody = FinalizeCheckoutIn
+    export type CheckoutSaleApiV1BusinessCheckoutPostMutationError = HTTPValidationError
+
+    /**
  * @summary Checkout Sale
  */
-export const useCheckoutSaleApiV1BusinessCheckoutPost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>,
-      TError,
-      { data: FinalizeCheckoutIn },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>,
-  TError,
-  { data: FinalizeCheckoutIn },
-  TContext
-> => {
-  const mutationOptions =
-    getCheckoutSaleApiV1BusinessCheckoutPostMutationOptions(options);
+export const useCheckoutSaleApiV1BusinessCheckoutPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>, TError,{data: FinalizeCheckoutIn}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof checkout_sale_api_v1_business_checkout_post>>,
+        TError,
+        {data: FinalizeCheckoutIn},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getCheckoutSaleApiV1BusinessCheckoutPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * @summary Register And Assign Staff
  */
 export const register_and_assign_staff_api_v1_business_assign_staff_post = (
-  staffCreateIn: StaffCreateIn,
-  signal?: AbortSignal
+    staffCreateIn: StaffCreateIn,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<StaffResponse>({
-    url: `/api/v1/business/assign-staff`,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    data: staffCreateIn,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<StaffResponse>(
+      {url: `/api/v1/business/assign-staff`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: staffCreateIn, signal
+    },
+      );
+    }
+  
 
-export const getRegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationOptions =
-  <TError = HTTPValidationError, TContext = unknown>(options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof register_and_assign_staff_api_v1_business_assign_staff_post
-        >
-      >,
-      TError,
-      { data: StaffCreateIn },
-      TContext
-    >;
-  }): UseMutationOptions<
-    Awaited<
-      ReturnType<
-        typeof register_and_assign_staff_api_v1_business_assign_staff_post
-      >
-    >,
-    TError,
-    { data: StaffCreateIn },
-    TContext
-  > => {
-    const mutationKey = ["registerAndAssignStaffApiV1BusinessAssignStaffPost"];
-    const { mutation: mutationOptions } = options
-      ? options.mutation &&
-        "mutationKey" in options.mutation &&
-        options.mutation.mutationKey
-        ? options
-        : { ...options, mutation: { ...options.mutation, mutationKey } }
-      : { mutation: { mutationKey } };
 
-    const mutationFn: MutationFunction<
-      Awaited<
-        ReturnType<
-          typeof register_and_assign_staff_api_v1_business_assign_staff_post
-        >
-      >,
-      { data: StaffCreateIn }
-    > = (props) => {
-      const { data } = props ?? {};
+export const getRegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register_and_assign_staff_api_v1_business_assign_staff_post>>, TError,{data: StaffCreateIn}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof register_and_assign_staff_api_v1_business_assign_staff_post>>, TError,{data: StaffCreateIn}, TContext> => {
 
-      return register_and_assign_staff_api_v1_business_assign_staff_post(data);
-    };
+const mutationKey = ['registerAndAssignStaffApiV1BusinessAssignStaffPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
 
-    return { mutationFn, ...mutationOptions };
-  };
+      
 
-export type RegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationResult =
-  NonNullable<
-    Awaited<
-      ReturnType<
-        typeof register_and_assign_staff_api_v1_business_assign_staff_post
-      >
-    >
-  >;
-export type RegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationBody =
-  StaffCreateIn;
-export type RegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationError =
-  HTTPValidationError;
 
-/**
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof register_and_assign_staff_api_v1_business_assign_staff_post>>, {data: StaffCreateIn}> = (props) => {
+          const {data} = props ?? {};
+
+          return  register_and_assign_staff_api_v1_business_assign_staff_post(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationResult = NonNullable<Awaited<ReturnType<typeof register_and_assign_staff_api_v1_business_assign_staff_post>>>
+    export type RegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationBody = StaffCreateIn
+    export type RegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationError = HTTPValidationError
+
+    /**
  * @summary Register And Assign Staff
  */
-export const useRegisterAndAssignStaffApiV1BusinessAssignStaffPost = <
-  TError = HTTPValidationError,
-  TContext = unknown
->(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<
-        ReturnType<
-          typeof register_and_assign_staff_api_v1_business_assign_staff_post
-        >
-      >,
-      TError,
-      { data: StaffCreateIn },
-      TContext
-    >;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<
-    ReturnType<
-      typeof register_and_assign_staff_api_v1_business_assign_staff_post
-    >
-  >,
-  TError,
-  { data: StaffCreateIn },
-  TContext
-> => {
-  const mutationOptions =
-    getRegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationOptions(
-      options
-    );
+export const useRegisterAndAssignStaffApiV1BusinessAssignStaffPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof register_and_assign_staff_api_v1_business_assign_staff_post>>, TError,{data: StaffCreateIn}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof register_and_assign_staff_api_v1_business_assign_staff_post>>,
+        TError,
+        {data: StaffCreateIn},
+        TContext
+      > => {
 
-  return useMutation(mutationOptions, queryClient);
-};
-/**
+      const mutationOptions = getRegisterAndAssignStaffApiV1BusinessAssignStaffPostMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    /**
  * @summary Fetch Staff With Id
  */
 export const fetch_staff_with_id_api_v1_business_get_staff_get = (
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  signal?: AbortSignal
+    params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
+ signal?: AbortSignal
 ) => {
-  return customFetcher<StaffResponse>({
-    url: `/api/v1/business/get-staff`,
-    method: "GET",
-    params,
-    signal,
-  });
-};
+      
+      
+      return customFetcher<StaffResponse>(
+      {url: `/api/v1/business/get-staff`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
 
-export const getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryKey = (
-  params?: FetchStaffWithIdApiV1BusinessGetStaffGetParams
+
+
+export const getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryKey = (params?: FetchStaffWithIdApiV1BusinessGetStaffGetParams,) => {
+    return [
+    'infinite', `/api/v1/business/get-staff`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+export const getFetchStaffWithIdApiV1BusinessGetStaffGetQueryKey = (params?: FetchStaffWithIdApiV1BusinessGetStaffGetParams,) => {
+    return [
+    `/api/v1/business/get-staff`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>>, TError = HTTPValidationError>(params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>>, }
 ) => {
-  return [
-    "infinite",
-    `/api/v1/business/get-staff`,
-    ...(params ? [params] : []),
-  ] as const;
-};
 
-export const getFetchStaffWithIdApiV1BusinessGetStaffGetQueryKey = (
-  params?: FetchStaffWithIdApiV1BusinessGetStaffGetParams
-) => {
-  return [`/api/v1/business/get-staff`, ...(params ? [params] : [])] as const;
-};
+const {query: queryOptions} = options ?? {};
 
-export const getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryOptions = <
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  }
-) => {
-  const { query: queryOptions } = options ?? {};
+  const queryKey =  queryOptions?.queryKey ?? getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryKey(params);
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryKey(params);
+  
 
-  const queryFn: QueryFunction<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  > = ({ signal }) =>
-    fetch_staff_with_id_api_v1_business_get_staff_get(params, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>> = ({ signal }) => fetch_staff_with_id_api_v1_business_get_staff_get(params, signal);
 
-  return { queryKey, queryFn, ...queryOptions } as UseInfiniteQueryOptions<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+      
 
-export type FetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  >;
-export type FetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryError =
-  HTTPValidationError;
+      
 
-export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type FetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>>
+export type FetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryError = HTTPValidationError
+
+
+export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >,
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >,
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Fetch Staff With Id
  */
 
-export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryOptions(
-      params,
-      options
-    );
+export function useFetchStaffWithIdApiV1BusinessGetStaffGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
+  const queryOptions = getFetchStaffWithIdApiV1BusinessGetStaffGetInfiniteQueryOptions(params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
 
-export const getFetchStaffWithIdApiV1BusinessGetStaffGetQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  }
+
+
+
+export const getFetchStaffWithIdApiV1BusinessGetStaffGetQueryOptions = <TData = Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError = HTTPValidationError>(params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>>, }
 ) => {
-  const { query: queryOptions } = options ?? {};
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getFetchStaffWithIdApiV1BusinessGetStaffGetQueryKey(params);
+const {query: queryOptions} = options ?? {};
 
-  const queryFn: QueryFunction<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >
-  > = ({ signal }) =>
-    fetch_staff_with_id_api_v1_business_get_staff_get(params, signal);
+  const queryKey =  queryOptions?.queryKey ?? getFetchStaffWithIdApiV1BusinessGetStaffGetQueryKey(params);
 
-  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-    Awaited<
-      ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-    >,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+  
 
-export type FetchStaffWithIdApiV1BusinessGetStaffGetQueryResult = NonNullable<
-  Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>
->;
-export type FetchStaffWithIdApiV1BusinessGetStaffGetQueryError =
-  HTTPValidationError;
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>> = ({ signal }) => fetch_staff_with_id_api_v1_business_get_staff_get(params, signal);
 
-export function useFetchStaffWithIdApiV1BusinessGetStaffGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type FetchStaffWithIdApiV1BusinessGetStaffGetQueryResult = NonNullable<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>>
+export type FetchStaffWithIdApiV1BusinessGetStaffGetQueryError = HTTPValidationError
+
+
+export function useFetchStaffWithIdApiV1BusinessGetStaffGet<TData = Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >,
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchStaffWithIdApiV1BusinessGetStaffGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchStaffWithIdApiV1BusinessGetStaffGet<TData = Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >,
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>,
           TError,
-          Awaited<
-            ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchStaffWithIdApiV1BusinessGetStaffGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchStaffWithIdApiV1BusinessGetStaffGet<TData = Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Fetch Staff With Id
  */
 
-export function useFetchStaffWithIdApiV1BusinessGetStaffGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-  >,
-  TError = HTTPValidationError
->(
-  params: FetchStaffWithIdApiV1BusinessGetStaffGetParams,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions = getFetchStaffWithIdApiV1BusinessGetStaffGetQueryOptions(
-    params,
-    options
-  );
+export function useFetchStaffWithIdApiV1BusinessGetStaffGet<TData = Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError = HTTPValidationError>(
+ params: FetchStaffWithIdApiV1BusinessGetStaffGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_staff_with_id_api_v1_business_get_staff_get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getFetchStaffWithIdApiV1BusinessGetStaffGetQueryOptions(params,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
 
 /**
  * Fetches a list of receipts for a given business, with optional pagination.
  * @summary Fetch Receipts
  */
 export const fetch_receipts_api_v1_business_receipts__sale_id__get = (
-  saleId: string,
-  signal?: AbortSignal
-) => {
-  return customFetcher<FinancialDocumentSnapshotSchema>({
-    url: `/api/v1/business/receipts/${saleId}`,
-    method: "GET",
-    signal,
-  });
-};
-
-export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryKey = (
-  saleId?: string
-) => {
-  return ["infinite", `/api/v1/business/receipts/${saleId}`] as const;
-};
-
-export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryKey = (
-  saleId?: string
-) => {
-  return [`/api/v1/business/receipts/${saleId}`] as const;
-};
-
-export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryOptions =
-  <
-    TData = InfiniteData<
-      Awaited<
-        ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-      >
-    >,
-    TError = HTTPValidationError
-  >(
     saleId: string,
-    options?: {
-      query?: Partial<
-        UseInfiniteQueryOptions<
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >,
-          TError,
-          TData
-        >
-      >;
-    }
-  ) => {
-    const { query: queryOptions } = options ?? {};
-
-    const queryKey =
-      queryOptions?.queryKey ??
-      getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryKey(saleId);
-
-    const queryFn: QueryFunction<
-      Awaited<
-        ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-      >
-    > = ({ signal }) =>
-      fetch_receipts_api_v1_business_receipts__sale_id__get(saleId, signal);
-
-    return {
-      queryKey,
-      queryFn,
-      enabled: !!saleId,
-      ...queryOptions,
-    } as UseInfiniteQueryOptions<
-      Awaited<
-        ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-      >,
-      TError,
-      TData
-    > & { queryKey: DataTag<QueryKey, TData, TError> };
-  };
-
-export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >
-  >;
-export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryError =
-  HTTPValidationError;
-
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options: {
-    query: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >,
-          TError,
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
-        UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >,
-          TError,
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-/**
- * @summary Fetch Receipts
- */
-
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<
-  TData = InfiniteData<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options?: {
-    query?: Partial<
-      UseInfiniteQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseInfiniteQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryOptions(
-      saleId,
-      options
-    );
-
-  const query = useInfiniteQuery(
-    queryOptions,
-    queryClient
-  ) as UseInfiniteQueryResult<TData, TError> & {
-    queryKey: DataTag<QueryKey, TData, TError>;
-  };
-
-  query.queryKey = queryOptions.queryKey;
-
-  return query;
-}
-
-export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryOptions = <
-  TData = Awaited<
-    ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  }
+ signal?: AbortSignal
 ) => {
-  const { query: queryOptions } = options ?? {};
+      
+      
+      return customFetcher<FinancialDocumentSnapshotSchema>(
+      {url: `/api/v1/business/receipts/${saleId}`, method: 'GET', signal
+    },
+      );
+    }
+  
 
-  const queryKey =
-    queryOptions?.queryKey ??
-    getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryKey(saleId);
 
-  const queryFn: QueryFunction<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >
-  > = ({ signal }) =>
-    fetch_receipts_api_v1_business_receipts__sale_id__get(saleId, signal);
 
-  return {
-    queryKey,
-    queryFn,
-    enabled: !!saleId,
-    ...queryOptions,
-  } as UseQueryOptions<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >,
-    TError,
-    TData
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
-};
+export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryKey = (saleId?: string,) => {
+    return [
+    'infinite', `/api/v1/business/receipts/${saleId}`
+    ] as const;
+    }
 
-export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryResult =
-  NonNullable<
-    Awaited<
-      ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-    >
-  >;
-export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryError =
-  HTTPValidationError;
+export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryKey = (saleId?: string,) => {
+    return [
+    `/api/v1/business/receipts/${saleId}`
+    ] as const;
+    }
 
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options: {
-    query: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+    
+export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>>, TError = HTTPValidationError>(saleId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryKey(saleId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>> = ({ signal }) => fetch_receipts_api_v1_business_receipts__sale_id__get(saleId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(saleId), ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>>
+export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryError = HTTPValidationError
+
+
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>>, TError = HTTPValidationError>(
+ saleId: string, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >,
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): DefinedUseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    > &
-      Pick<
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>>, TError = HTTPValidationError>(
+ saleId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >,
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>,
           TError,
-          Awaited<
-            ReturnType<
-              typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-            >
-          >
-        >,
-        "initialData"
-      >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-};
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>>, TError = HTTPValidationError>(
+ saleId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Fetch Receipts
  */
 
-export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<
-  TData = Awaited<
-    ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>
-  >,
-  TError = HTTPValidationError
->(
-  saleId: string,
-  options?: {
-    query?: Partial<
-      UseQueryOptions<
-        Awaited<
-          ReturnType<
-            typeof fetch_receipts_api_v1_business_receipts__sale_id__get
-          >
-        >,
-        TError,
-        TData
-      >
-    >;
-  },
-  queryClient?: QueryClient
-): UseQueryResult<TData, TError> & {
-  queryKey: DataTag<QueryKey, TData, TError>;
-} {
-  const queryOptions =
-    getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryOptions(saleId, options);
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfinite<TData = InfiniteData<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>>, TError = HTTPValidationError>(
+ saleId: string, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-    TData,
-    TError
-  > & { queryKey: DataTag<QueryKey, TData, TError> };
+  const queryOptions = getFetchReceiptsApiV1BusinessReceiptsSaleIdGetInfiniteQueryOptions(saleId,options)
 
-  query.queryKey = queryOptions.queryKey;
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
 
   return query;
 }
+
+
+
+
+export const getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryOptions = <TData = Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError = HTTPValidationError>(saleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryKey(saleId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>> = ({ signal }) => fetch_receipts_api_v1_business_receipts__sale_id__get(saleId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(saleId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>>
+export type FetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryError = HTTPValidationError
+
+
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<TData = Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError = HTTPValidationError>(
+ saleId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>,
+          TError,
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<TData = Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError = HTTPValidationError>(
+ saleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>,
+          TError,
+          Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<TData = Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError = HTTPValidationError>(
+ saleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Fetch Receipts
+ */
+
+export function useFetchReceiptsApiV1BusinessReceiptsSaleIdGet<TData = Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError = HTTPValidationError>(
+ saleId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof fetch_receipts_api_v1_business_receipts__sale_id__get>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getFetchReceiptsApiV1BusinessReceiptsSaleIdGetQueryOptions(saleId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+

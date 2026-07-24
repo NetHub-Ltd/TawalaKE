@@ -5,12 +5,13 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type StaffRole = (typeof StaffRole)[keyof typeof StaffRole];
+export type StaffRole = typeof StaffRole[keyof typeof StaffRole];
+
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const StaffRole = {
-  OWNER: "OWNER",
-  MANAGER: "MANAGER",
-  CASHIER: "CASHIER",
-  ADMIN: "ADMIN",
+  OWNER: 'OWNER',
+  MANAGER: 'MANAGER',
+  CASHIER: 'CASHIER',
+  ADMIN: 'ADMIN',
 } as const;

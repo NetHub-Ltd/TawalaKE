@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ValidationError } from "./validationError";
+import type { ValidationError } from './validationError';
 
 export interface HTTPValidationError {
   detail?: ValidationError[];

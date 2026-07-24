@@ -5,6 +5,6 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type FetchStaffWithIdApiV1BusinessGetStaffGetParams = {
-staff_id: string;
-};
+export interface BusinessBase {
+  name: string;
+}

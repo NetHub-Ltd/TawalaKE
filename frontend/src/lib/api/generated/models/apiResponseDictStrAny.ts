@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ApiResponseDictStrAnyData } from "./apiResponseDictStrAnyData";
+import type { ApiResponseDictStrAnyData } from './apiResponseDictStrAnyData';
 
 export interface ApiResponseDictStrAny {
   status: boolean;

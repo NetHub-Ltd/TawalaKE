@@ -4,8 +4,8 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ProductCreateCategory } from "./productCreateCategory";
-import type { BaseAttributes } from "./baseAttributes";
+import type { ProductCreateCategory } from './productCreateCategory';
+import type { BaseAttributes } from './baseAttributes';
 
 export interface ProductCreate {
   business_id: string;

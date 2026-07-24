@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { CartItemIn } from "./cartItemIn";
+import type { CartItemIn } from './cartItemIn';
 
 export interface InitializeCheckoutRequest {
   business_id: string;

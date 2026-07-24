@@ -5,7 +5,6 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type GetBusinessesByTenantApiV1OrganizationsStoresOrganizationIdGetParams =
-  {
-    active?: boolean;
-  };
+export type GetBusinessesByTenantApiV1OrganizationsStoresOrganizationIdGetParams = {
+active?: boolean;
+};

@@ -4,7 +4,7 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BusinessUpdateName } from "./businessUpdateName";
+import type { BusinessUpdateName } from './businessUpdateName';
 
 export interface BusinessUpdate {
   name?: BusinessUpdateName;

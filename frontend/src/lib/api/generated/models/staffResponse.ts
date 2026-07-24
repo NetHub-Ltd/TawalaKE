@@ -4,9 +4,9 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { StaffResponseOrganizationId } from "./staffResponseOrganizationId";
-import type { StaffResponseBusinessId } from "./staffResponseBusinessId";
-import type { StaffRole } from "./staffRole";
+import type { StaffResponseOrganizationId } from './staffResponseOrganizationId';
+import type { StaffResponseBusinessId } from './staffResponseBusinessId';
+import type { StaffRole } from './staffRole';
 
 export interface StaffResponse {
   id: string;

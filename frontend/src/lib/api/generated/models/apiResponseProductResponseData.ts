@@ -4,6 +4,6 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { ProductResponse } from "./productResponse";
+import type { ProductResponse } from './productResponse';
 
 export type ApiResponseProductResponseData = ProductResponse | null;

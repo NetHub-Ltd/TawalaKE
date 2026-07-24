@@ -4,6 +4,6 @@
  * Nethub POS MVP
  * OpenAPI spec version: v0.0.1
  */
-import type { BaseAttributes } from "./baseAttributes";
+import type { BaseAttributes } from './baseAttributes';
 
 export type ProductUpdateAttributes = BaseAttributes | null;

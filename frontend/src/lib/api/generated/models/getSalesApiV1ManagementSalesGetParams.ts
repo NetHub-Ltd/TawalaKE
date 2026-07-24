@@ -6,5 +6,5 @@
  */
 
 export type GetSalesApiV1ManagementSalesGetParams = {
-  business_id?: string;
+business_id?: string;
 };

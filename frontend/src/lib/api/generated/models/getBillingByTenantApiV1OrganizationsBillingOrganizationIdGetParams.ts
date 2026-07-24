@@ -5,7 +5,6 @@
  * OpenAPI spec version: v0.0.1
  */
 
-export type GetBillingByTenantApiV1OrganizationsBillingOrganizationIdGetParams =
-  {
-    active?: boolean;
-  };
+export type GetBillingByTenantApiV1OrganizationsBillingOrganizationIdGetParams = {
+active?: boolean;
+};
