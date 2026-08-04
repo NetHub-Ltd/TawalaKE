@@ -13,22 +13,13 @@ export default async function GlobalOrgRootPage() {
 
   const staffData = session.user as unknown as StaffResponse;
 
-  // Guard: Block disabled staff records instantly
-  if (!staffData.active) {
-    redirect("/login?error=account_deactivated");
-  }
-
   // 2. Resolve Multi-Tenant & Migration Boundaries
-  const resolvedOrgId = staffData.organization_id || staffData.tenant_id;
+  const resolvedOrgId = staffData.organization_id
 
-  // 🚀 SUCCESS ROUTE: If they are healthy and have an org, forward them immediately 
-  // to your server-side Decision Page. No layout overhead or visual flashes.
   if (resolvedOrgId) {
     redirect(`/org/${resolvedOrgId}`);
   }
 
-  // 3. FALLBACK STATE: Active account but missing an organization framework match.
-  // Bound perfectly to native tokens mapped down from your global design variables.
   return (
     <div className="min-h-screen bg-surface px-6 py-12 flex items-center justify-center">
       <main className="w-full max-w-4xl" id="main-content">

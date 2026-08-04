@@ -34,6 +34,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Move reactCompiler out of experimental
+  // Specify exact allowed origins (including port if non-default)
+  allowedDevOrigins: [
+    "127.0.0.1:3000",
+    "localhost:3000",
+    "127.0.0.1",
+  ],
   reactCompiler: true,
 
   images: {

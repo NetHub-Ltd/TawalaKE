@@ -1,141 +1,4 @@
-// "use client";
-
-// import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-// import axios from "axios";
-// import { toast } from "sonner";
-// import { ProductResponse, ProductCreate } from "@/lib/api/generated/models";
-
-// // Define the updated structured layout returned by our Next.js Route Handler proxy
-// interface PaginatedMetadata {
-//   total: number;
-//   page: number;
-//   size: number;
-//   pages: number;
-// }
-
-// interface PaginatedProxyResponse {
-//   data: ProductResponse[];
-//   pagination: PaginatedMetadata;
-// }
-
-// /**
-//  * Custom hook to handle multi-tenant product data fetching, pagination matrices, and mutations.
-//  * Supports page-indexed tracking alongside dynamic sort attributes.
-//  */
-// export function useProducts(
-//   businessId: string, 
-//   productId?: string,
-//   page: number = 1,
-//   limit: number = 50,
-//   sortBy?: string,
-//   sortOrder: "asc" | "desc" = "desc"
-// ) {
-//   const queryClient = useQueryClient();
-
-//   const CACHE_CONFIG = {
-//     staleTime: 1000 * 60 * 5, // 5 minutes fresh cache visibility matrix
-//     gcTime: 1000 * 60 * 15,
-//   };
-
-//   // Build a highly deterministic cache key containing pagination and sorting state matrices
-//   const queryKey = productId 
-//     ? ["product", businessId, productId] 
-//     : ["products", businessId, { page, limit, sortBy, sortOrder }];
-
-//   const productsQuery = useQuery({
-//     queryKey,
-//     queryFn: async () => {
-//       if (productId) {
-//         const url = `/api/v1/products?business_id=${businessId}&product_id=${productId}`;
-//         const res = await axios.get<ProductResponse>(url);
-//         return res.data;
-//       }
-
-//       // Construct matching query parameters to feed our refined Next.js Route Handler
-//       const params = new URLSearchParams({
-//         business_id: businessId,
-//         page: page.toString(),
-//         limit: limit.toString(),
-//         sort_order: sortOrder,
-//       });
-
-//       if (sortBy) {
-//         params.append("sort_by", sortBy);
-//       }
-
-//       const url = `/api/v1/products?${params.toString()}`;
-//       const res = await axios.get<PaginatedProxyResponse>(url);
-//       return res.data;
-//     },
-//     enabled: !!businessId,
-//     ...CACHE_CONFIG,
-//   });
-
-//   /**
-//    * Manual refresh capability that targets both current exact listing pages 
-//    * and broad collection matrices cleanly without forcing global state resets.
-//    */
-//   const refresh = async () => {
-//     await queryClient.invalidateQueries({ queryKey: ["products", businessId] });
-//     if (productId) {
-//       await queryClient.invalidateQueries({ queryKey: ["product", businessId, productId] });
-//     }
-//   };
-
-//   // --- MUTATIONS ---
-//   const updateProduct = useMutation({
-//     mutationFn: async (update: Partial<ProductResponse>) => {
-//       const { data } = await axios.patch("/api/v1/products", update);
-//       return data;
-//     },
-//     onSuccess: async () => {
-//       await refresh();
-//       toast.success("Product updated");
-//     },
-//   });
-
-//   const createProduct = useMutation({
-//     mutationFn: async (newProduct: Partial<ProductCreate>) => {
-//       const { data } = await axios.post("/api/v1/products", newProduct);
-//       return data;
-//     },
-//     onSuccess: async () => {
-//       await refresh();
-//       toast.success("Product added successfully");
-//     },
-//   });
-
-//   const deleteProduct = useMutation({
-//     mutationFn: async (targetId: string) => {
-//       const { data } = await axios.delete(`/api/v1/products`, { data: { product_id: targetId } });
-//       return data;
-//     },
-//     onSuccess: async () => {
-//       await refresh();
-//       toast.success("Product removed successfully");
-//     },
-//   });
-
-//   const queryData = productsQuery.data;
-
-//   // Determine if response is single item or paginated dataset package
-//   const isPaginatedResponse = queryData && typeof queryData === "object" && "pagination" in queryData;
-
-//   return {
-//     products: isPaginatedResponse ? (queryData as PaginatedProxyResponse).data : [],
-//     pagination: isPaginatedResponse ? (queryData as PaginatedProxyResponse).pagination : undefined,
-//     product: !isPaginatedResponse && queryData ? (queryData as ProductResponse) : undefined,
-//     isLoading: productsQuery.isLoading,
-//     isError: productsQuery.isError,
-//     isFetching: productsQuery.isFetching,
-//     createProduct,
-//     updateProduct,
-//     deleteProduct,
-//     refresh,
-//     queryClient,
-//   };
-// }
-
+// Parent File Import: features/products/components/ProductCatalogView.tsx (or any feature component importing useProducts)
 "use client";
 
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
@@ -143,30 +6,18 @@ import axios from "axios";
 import { toast } from "sonner";
 import { ProductResponse, ProductCreate } from "@/lib/api/generated/models";
 
-interface PaginatedMetadata {
+export interface PaginatedMetadata {
   total: number;
   page: number;
   size: number;
   pages: number;
 }
 
-interface PaginatedProxyResponse {
+export interface PaginatedProxyResponse {
   data: ProductResponse[];
   pagination: PaginatedMetadata;
 }
 
-/**
- * Custom hook to handle multi-tenant product data fetching, search, pagination matrices, and mutations.
- * Supports page-indexed tracking alongside dynamic search queries and sort attributes.
- *
- * @param businessId Required multi-tenant business context identifier
- * @param productId Optional single product identifier for detail queries
- * @param page Current pagination page index (1-based)
- * @param limit Page size boundary constraint
- * @param sortBy Attribute field target for SQL ordering
- * @param sortOrder Directional sorting ("asc" | "desc")
- * @param search Optional search string for server-side ILIKE querying
- */
 export function useProducts(
   businessId: string,
   productId?: string,
@@ -181,11 +32,10 @@ export function useProducts(
   const isSearchMode = !productId && trimmedSearch.length > 0;
 
   const CACHE_CONFIG = {
-    staleTime: 1000 * 60 * 5, // 5 minutes fresh cache visibility
-    gcTime: 1000 * 60 * 15,   // 15 minutes garbage collection threshold
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
   };
 
-  // Deterministic, hierarchical query keys for precise invalidation and cache scoping
   const queryKey = productId
     ? ["products", businessId, "detail", productId]
     : [
@@ -198,7 +48,6 @@ export function useProducts(
   const productsQuery = useQuery({
     queryKey,
     queryFn: async () => {
-      // 1. Single Product Detail Request
       if (productId) {
         const params = new URLSearchParams({
           business_id: businessId,
@@ -208,7 +57,6 @@ export function useProducts(
         return res.data;
       }
 
-      // 2. Paginated Search or Standard Listing Request
       const params = new URLSearchParams({
         business_id: businessId,
         page: page.toString(),
@@ -235,14 +83,10 @@ export function useProducts(
     ...CACHE_CONFIG,
   });
 
-  /**
-   * Invalidates all product queries (lists, searches, details) associated with the current business context.
-   */
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ["products", businessId] });
   };
 
-  // --- MUTATIONS ---
   const updateProduct = useMutation({
     mutationFn: async (update: Partial<ProductResponse>) => {
       const { data } = await axios.patch<ProductResponse>("/api/v1/products", update);
@@ -296,22 +140,57 @@ export function useProducts(
     },
   });
 
-  const queryData = productsQuery.data;
-  const isPaginatedResponse = Boolean(
-    queryData && typeof queryData === "object" && "pagination" in queryData
-  );
+  const rawData = productsQuery.data as unknown as Record<string, unknown> | undefined;
+
+  // Defensive array extraction: maintains compatibility regardless of client expectation
+  const resolvedProducts: ProductResponse[] = (() => {
+    if (!rawData) return [];
+    if (Array.isArray(rawData)) return rawData as ProductResponse[];
+    if (Array.isArray(rawData.data)) return rawData.data as ProductResponse[];
+    if (Array.isArray(rawData.records)) return rawData.records as ProductResponse[];
+    return [];
+  })();
+
+  // Defensive pagination extraction: supports both nested object & top-level total callers
+  const resolvedPagination: PaginatedMetadata | undefined = (() => {
+    if (rawData && typeof rawData === "object" && "pagination" in rawData && rawData.pagination) {
+      return rawData.pagination as PaginatedMetadata;
+    }
+    if (rawData && typeof rawData.total === "number") {
+      return {
+        total: rawData.total as number,
+        page,
+        size: limit,
+        pages: Math.ceil((rawData.total as number) / limit) || 1,
+      };
+    }
+    return undefined;
+  })();
 
   return {
-    products: isPaginatedResponse ? (queryData as PaginatedProxyResponse).data : [],
-    pagination: isPaginatedResponse ? (queryData as PaginatedProxyResponse).pagination : undefined,
-    product: !isPaginatedResponse && queryData ? (queryData as ProductResponse) : undefined,
+    // Primary datasets
+    products: resolvedProducts,
+    data: resolvedProducts, // Backwards-compatible alias for callers destructuring 'data'
+    pagination: resolvedPagination,
+    total: resolvedPagination?.total ?? 0, // Backwards-compatible direct scalar access
+
+    // Detail mode product
+    product: !Array.isArray(rawData) && rawData && !("data" in rawData) && !("records" in rawData)
+      ? (rawData as unknown as ProductResponse)
+      : undefined,
+
+    // Query state indicators
     isLoading: productsQuery.isLoading,
     isError: productsQuery.isError,
     isFetching: productsQuery.isFetching,
+    error: productsQuery.error,
+
+    // Operational methods
+    refresh,
+    refetch: productsQuery.refetch, // Backwards-compatible alias for callers using TanStack 'refetch'
     createProduct,
     updateProduct,
     deleteProduct,
-    refresh,
     queryClient,
   };
 }

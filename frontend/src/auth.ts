@@ -1,90 +1,85 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin, type User, type Session } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import { JWT } from "next-auth/jwt";
 import { jwtDecode } from "jwt-decode";
 
-interface JWTTokenStructure {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-  error: string | null;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    role: string;
-    tenant_id: string;
-    organization_id: string;
-    business_id: string;
-    active: boolean;
-  };
+// ---------------------------------------------------------------------------
+// 1. Custom Auth Errors for Precise Client-Side Error Propagation
+// ---------------------------------------------------------------------------
+export class InvalidCredentialsError extends CredentialsSignin {
+  code = "invalid_credentials";
 }
 
-/**
- * Connects with your FastAPI backend node to swap a stale or expiring
- * access token for a fresh cryptographic key pair.
- */
-async function refreshAccessToken(token: any): Promise<any> {
-  try {
-    console.warn(`Initiating token rotation sequence for user: ${token.user?.email}`);
+export class MissingOrganizationError extends CredentialsSignin {
+  code = "missing_organization";
+}
 
+export class ProfileFetchError extends CredentialsSignin {
+  code = "profile_fetch_failed";
+}
+
+export class NetworkAuthError extends CredentialsSignin {
+  code = "network_auth_error";
+}
+
+// ---------------------------------------------------------------------------
+// 2. Resilient Token Rotation Service
+// ---------------------------------------------------------------------------
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+  try {
     if (!token.refreshToken) {
-      throw new Error("Refresh token missing from cookie storage snapshot");
+      throw new Error("Missing refresh token context");
     }
 
     const response = await fetch(`${process.env.BACKEND_URL}/auth/refresh`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        refresh_token: token.refreshToken,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: token.refreshToken }),
+      cache: "no-store",
     });
 
     if (!response.ok) {
-      const logDetails = await response.text().catch(() => "No response body");
-      throw new Error(`FastAPI rejected token rotation. Status: ${response.status}. Reason: ${logDetails}`);
+      const details = await response.text().catch(() => "No error payload");
+      throw new Error(`Token refresh rejected by backend: ${response.status} ${details}`);
     }
 
     const newTokens = await response.json();
-    
+
     if (!newTokens.access_token) {
-      throw new Error("FastAPI response payload is missing 'access_token'");
+      throw new Error("Backend refresh payload missing 'access_token'");
     }
 
-    // Safely parse expiration from the new token's internal payload
-    const decoded: any = jwtDecode(newTokens.access_token);
-    const expiresAt = decoded.exp * 1000;
-
-    console.log(`[auth] Token rotation successful. Next expiration window: ${new Date(expiresAt).toISOString()}`);
+    const decoded: { exp?: number } = jwtDecode(newTokens.access_token);
+    const expiresAt = decoded.exp ? decoded.exp * 1000 : Date.now() + 15 * 60 * 1000;
 
     return {
       ...token,
       accessToken: newTokens.access_token,
-      // Fallback to existing refresh token if FastAPI doesn't cycle it out
       refreshToken: newTokens.refresh_token ?? token.refreshToken,
-      expiresAt: expiresAt,
-      error: null, 
+      expiresAt,
+      error: null,
     };
-  } catch (error: any) {
-    console.error("[auth] Critical session rotation failure:", error.message);
-    
+  } catch (error) {
+    console.error("[Auth Engine] Token rotation failure:", error);
     return {
       ...token,
-      // Flag session corruption to trigger automated purging down inside proxy.ts
       error: "RefreshTokenError",
     };
   }
 }
 
+// ---------------------------------------------------------------------------
+// 3. Main Auth.js Engine Configuration
+// ---------------------------------------------------------------------------
 export const { handlers, auth, signIn, signOut } = NextAuth({
   debug: process.env.NODE_ENV === "development",
-  session: { 
+  session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days absolute lifecycle ceiling
+    maxAge: 30 * 24 * 60 * 60, // 30-day absolute ceiling
   },
   pages: {
     signIn: "/login",
+    error: "/login",
   },
   providers: [
     Credentials({
@@ -95,188 +90,102 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
 
-      // async authorize(credentials) {
-      //   if (!credentials?.email || !credentials?.password) {
-      //     throw new Error("Credentials mapping parameters are incomplete");
-      //   }
+      async authorize(credentials): Promise<User | null> {
+        if (!credentials?.email || !credentials?.password) {
+          throw new InvalidCredentialsError();
+        }
 
-      //   // 1. Authenticate with your FastAPI login endpoint
-      //   const response = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/x-www-form-urlencoded",
-      //     },
-      //     body: new URLSearchParams({
-      //       grant_type: "password",
-      //       username: credentials.email as string,
-      //       password: credentials.password as string,
-      //     }),
-      //   });
+        let loginResponse: Response;
+        try {
+          loginResponse = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              grant_type: "password",
+              username: credentials.email as string,
+              password: credentials.password as string,
+            }),
+            cache: "no-store",
+          });
+        } catch {
+          throw new NetworkAuthError();
+        }
 
-      //   if (!response.ok) {
-      //     const errorPayload = await response.json().catch(() => ({}));
-      //     throw new Error(errorPayload.detail || "Invalid access credentials supplied");
-      //   }
+        if (!loginResponse.ok) {
+          throw new InvalidCredentialsError();
+        }
 
-      //   const tokens = await response.json();
-      //   console.log("Token Response Captured:", tokens);
+        const tokens = await loginResponse.json();
 
-      //   // 2. Extract profile details via the Bearer token context
-      //   const profileResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //       Authorization: `Bearer ${tokens.access_token}`,
-      //     },
-      //   });
+        if (!tokens.access_token) {
+          throw new InvalidCredentialsError();
+        }
 
-      //   if (!profileResponse.ok) {
-      //     throw new Error("Unable to retrieve operational profile identity metadata");
-      //   }
-        
-      //   const profile = await profileResponse.json();
-      //   console.log("user profile", profile)
+        let profileResponse: Response;
+        try {
+          profileResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${tokens.access_token}`,
+            },
+            cache: "no-store",
+          });
+        } catch {
+          throw new NetworkAuthError();
+        }
 
-      //   // 🔥 CRITICAL PRODUCTION FIX: Parse FastAPI's ISO String format into precise Unix milliseconds
-      //   const expiresAt = Date.parse(tokens.expires_at);
+        if (!profileResponse.ok) {
+          throw new ProfileFetchError();
+        }
 
-      //   if (isNaN(expiresAt)) {
-      //     console.error("[auth] Warning: FastAPI returned an invalid date format. Falling back to JWT decode.");
-      //     const decoded: any = jwtDecode(tokens.access_token);
-      //     return { ...profile, accessToken: tokens.access_token, refreshToken: tokens.refresh_token, expiresAt: decoded.exp * 1000 };
-      //   }
+        const profile = await profileResponse.json();
 
-      //   return {
-      //     id: profile.id,
-      //     email: profile.email,
-      //     name: profile.full_name,
-      //     // role: "OWNER", // Temporally overide for testing
-      //     role: profile.role || "OWNER",
-      //     tenant_id: profile.tenant_id,
-      //     organization_id: profile.organization_id,
-      //     business_id: profile.business_id,
-      //     active: profile.active,
-      //     accessToken: tokens.access_token,
-      //     refreshToken: tokens.refresh_token,
-      //     expiresAt: expiresAt,
-      //   };
-      // },
+        // Strict Business Rule Guard: Reject missing or null organization IDs
+        if (!profile.organization_id) {
+          throw new MissingOrganizationError();
+        }
 
-      async authorize(credentials) {
-  console.log("=== AUTHORIZE START ===", { email: credentials?.email });
+        // Resilient Fallback Resolution for Role Schema Variations
+        const resolvedRole =
+          profile.role ||
+          profile.role_name ||
+          (Array.isArray(profile.roles) ? profile.roles[0] : null);
 
-  if (!credentials?.email || !credentials?.password) {
-    throw new Error("Missing credentials");
-  }
+        if (!resolvedRole) {
+          console.warn("[Auth Engine] Warning: No role specified in user profile payload.");
+        }
 
-  try {
-    // 1. Login
-    const loginResponse = await fetch(`${process.env.BACKEND_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "password",
-        username: credentials.email as string,
-        password: credentials.password as string,
-      }),
-    });
+        let expiresAt = Date.parse(tokens.expires_at);
+        if (isNaN(expiresAt)) {
+          const decoded: { exp?: number } = jwtDecode(tokens.access_token);
+          expiresAt = decoded.exp ? decoded.exp * 1000 : Date.now() + 15 * 60 * 1000;
+        }
 
-    console.log("Login response status:", loginResponse.status);
-
-    if (!loginResponse.ok) {
-      const errorText = await loginResponse.text();
-      console.error("Login failed body:", errorText);
-      throw new Error("Invalid credentials");
-    }
-
-    const tokens = await loginResponse.json();
-    console.log("✅ Tokens received:", {
-      hasAccessToken: !!tokens.access_token,
-      hasRefreshToken: !!tokens.refresh_token,
-      expires_at: tokens.expires_at,
-    });
-
-    // 2. Get profile
-    const profileResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${tokens.access_token}`,
+        return {
+          id: String(profile.id),
+          email: profile.email,
+          name: profile.full_name || profile.name || profile.email,
+          role: resolvedRole || "user",
+          organization_id: profile.organization_id,
+          accessToken: tokens.access_token,
+          refreshToken: tokens.refresh_token,
+          expiresAt,
+        };
       },
-    });
-
-    console.log("Profile response status:", profileResponse.status);
-
-    if (!profileResponse.ok) {
-      const errorText = await profileResponse.text();
-      console.error("Profile fetch failed:", errorText);
-      throw new Error(`Profile fetch failed: ${profileResponse.status}`);
-    }
-
-    const profile = await profileResponse.json();
-    console.log("✅ Profile received:", profile);
-
-    // 3. Handle expiration
-    let expiresAt = Date.parse(tokens.expires_at);
-    if (isNaN(expiresAt)) {
-      console.warn("Invalid expires_at, falling back to JWT decode");
-      const decoded: any = jwtDecode(tokens.access_token);
-      expiresAt = decoded.exp * 1000;
-    }
-
-    console.log("✅ Authorize successful - returning user");
-
-    return {
-      id: profile.id,
-      email: profile.email,
-      name: profile.full_name,
-      role: profile.role || "OWNER",
-      tenant_id: profile.tenant_id,
-      organization_id: profile.organization_id,
-      business_id: profile.business_id,
-      active: profile.active,
-      accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token,
-      expiresAt,
-    };
-  } catch (error: any) {
-    console.error("🚨 AUTHORIZE ERROR:", error.message);
-    console.error("Error stack:", error.stack);
-    throw error;   // re-throw so Auth.js shows the error
-  }
-},
     }),
   ],
 
   callbacks: {
-    // Callback 1: The Gatekeeper (Security verification on initial login)
-    // async signIn({ user }) {
-    //   const u = user as any;
-    //   if (u) {
-    //     if (u.active === false) {
-    //       console.warn(`[auth] Blocked entry for deactivated account profile: ${u.email}`);
-    //       return false
-    //     }
-    //     if (!u.tenant_id && u.role) {
-    //       console.error(`[auth] Owner login rejected due to missing organizational bounds: ${u.email}`);
-    //       return false;
-    //     }
-    //   }
-    //   return true;
-    // },
+    async signIn({ user }) {
+      if (!user || !(user as User).organization_id) {
+        throw new MissingOrganizationError();
+      }
+      return true;
+    },
 
-    // Callback 2: The Redirection Shield (Prevents Open Redirection Vulnerabilities)
-    // async redirect({ url, baseUrl }) {
-    //   if (url.startsWith("/")) return `${baseUrl}${url}`;
-    //   else if (new URL(url).origin === baseUrl) return url;
-    //   return `${baseUrl}/org`;
-    // },
-
-    // Callback 3: The Cryptographic JWT State Processor
-    async jwt({ token, user, account }) {
-      // Execute exclusively during the initial sign-in phase
+    async jwt({ token, user, account }): Promise<JWT> {
       if (user && account?.provider === "credentials") {
-        const u = user as any;
-        console.log(`[auth] Building session cookie tokens for worker identifier: ${u.email}`);
-        
+        const u = user as User;
         return {
           ...token,
           accessToken: u.accessToken,
@@ -288,44 +197,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: u.email,
             name: u.name,
             role: u.role,
-            tenant_id: u.tenant_id,
             organization_id: u.organization_id,
-            business_id: u.business_id,
-            active: u.active,
           },
         };
       }
 
-      // Proactive Check: Evaluate expiration using our safety buffer window
-      // TODO
-      const bufferWindowMs = 60 * 1000; 
-      const tokenHasExpired = Date.now() + bufferWindowMs > (token.expiresAt as number);
+      const bufferMs = 60 * 1000;
+      const isExpired = Date.now() + bufferMs > (token.expiresAt ?? 0);
 
-      if (tokenHasExpired) {
+      if (isExpired) {
         return await refreshAccessToken(token);
       }
+
       return token;
     },
 
-    async session({ session, token }: { session: any; token: any }) {
+    async session({ session, token }: { session: Session; token: JWT }): Promise<Session> {
       if (token && session.user) {
-        // Map authorization credentials and operational error signals down to the thread
-        (session as any).accessToken = token.accessToken;
-        (session as any).refreshToken = token.refreshToken;
-        (session as any).error = token.error;
+        session.accessToken = token.accessToken;
+        session.refreshToken = token.refreshToken;
+        session.error = token.error;
 
         if (token.user) {
           session.user.id = token.user.id;
-          session.user.role = token.user.role;  
-          session.user.tenant_id = token.user.tenant_id;
-          session.user.organization_id = token.user.organization_id;
-          session.user.business_id = token.user.business_id;
-          session.user.active = token.user.active;
-          session.user.name = token.user.name;
           session.user.email = token.user.email;
+          session.user.name = token.user.name;
+          session.user.role = token.user.role;
+          session.user.organization_id = token.user.organization_id;
         }
       }
-      
+
       return session;
     },
   },
