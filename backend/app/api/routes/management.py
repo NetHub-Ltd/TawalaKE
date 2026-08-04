@@ -13,13 +13,35 @@ from app.crud.organization import organization_crud
 from app.core.mailer import mailer
 from app.core.redis_client import limiter
 from fastapi_cache.decorator import cache
-
+from sqlalchemy import update
 
 
 router = APIRouter()
 
 # --- Redis Cache Durations ---
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
+
+
+@router.post("/patch-organization-id")
+async def patch_organization_id(db: SessionDep):
+    stmt = (
+        update(Staff)
+        .where(
+            Staff.tenant_id.is_not(None),
+            Staff.organization_id.is_(None),
+        )
+        .values(organization_id=Staff.tenant_id)
+    )
+
+    result = await db.exec(stmt)
+    await db.commit()
+
+    logger.info(f"Patched {result.rowcount} staff records.")
+
+    return {
+        "success": True,
+        "updated": result.rowcount,
+    }
 
 
 @router.get("/test-email")
