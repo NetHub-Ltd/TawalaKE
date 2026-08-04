@@ -22,7 +22,7 @@ COPY requirements.txt ./
 # 4. Install dependencies + Gunicorn/Uvicorn manually
 # We use 'pip install .' if you have a build-backend,
 # or just install the requirements manually for speed.
-RUN pip install --no-cache-dir -r requirements.txt gunicorn
+RUN pip install --no-cache-dir -r requirements.txt
 #RUN #pip install --no-cache-dir .
 
 # 5. Copy your source folders specifically

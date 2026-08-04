@@ -24,25 +24,31 @@ CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
 
 @router.post("/patch-organization-id")
-async def patch_organization_id(db: SessionDep):
-    stmt = (
-        update(Staff)
-        .where(
-            Staff.tenant_id.is_not(None),
-            Staff.organization_id.is_(None),
+async def patch_organization_id(db: SessionDep, email: EmailStr):
+    # stmt = update(Staff).where(Staff.organization_id == None).values(organization_id=Staff.tenant_id)
+    stmt = select(Staff).where(Staff.organization_id == email)
+    result = (await db.exec(stmt).first())
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Staff with email {email} not found.",
         )
-        .values(organization_id=Staff.tenant_id)
-    )
 
-    result = await db.exec(stmt)
+    logger.info(f"Found staff: {result.email}, organization_id: {result.organization_id}, tenant_id: {result.tenant_id}")
+    
+    if result.organization_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Staff with email {email} already has an organization_id.",
+        )
+
+    result.organization_id = result.tenant_id
+
     await db.commit()
-
-    logger.info(f"Patched {result.rowcount} staff records.")
-
-    return {
-        "success": True,
-        "updated": result.rowcount,
-    }
+    # refresh result
+    await db.refresh(result)
+    return result
 
 
 @router.get("/test-email")
