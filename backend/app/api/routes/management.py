@@ -26,7 +26,7 @@ CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 @router.post("/patch-organization-id")
 async def patch_organization_id(db: SessionDep, email: EmailStr):
     # stmt = update(Staff).where(Staff.organization_id == None).values(organization_id=Staff.tenant_id)
-    stmt = select(Staff).where(Staff.organization_id == email)
+    stmt = select(Staff).where(Staff.email == email)
     result = (await db.exec(stmt)).first()
 
     if not result:
