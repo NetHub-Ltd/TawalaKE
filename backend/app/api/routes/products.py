@@ -99,32 +99,6 @@ async def get_products(
         )
     )
 
-# --- API Routes ---
-
-# @router.get("/multi/{business_id}", response_model=ApiResponse[List[ProductResponse]], operation_id="getBusinessProducts")
-# @limiter.limit("100/minute")  # Fine-tuned limit for high-frequency POS screens/pickers
-# @cache(expire=CACHE_TTL_SEC, namespace="products", key_builder=universal_key_builder)  # 👈 Wired generic key patterns
-# async def get_products(
-#     request: Request,
-#     db: SessionDep, 
-#     business_id: UUID, 
-#     skip: int = 0, 
-#     limit: int = 50,
-#     redis_client: AsyncRedis = Depends(get_redis)  # Maintained injection to prevent breaking route dependency trees
-# ):
-#     """
-#     GET /products/multi/{business_id}
-
-#     PURPOSE:
-#     --------
-#     Fetch a paginated list of products scoped to a specific business identifier.
-#     """
-#     if not business_id:
-#         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Business ID is required")
-    
-#     db_objs = await product_crud.fetch_business_products(business_id=business_id, db=db, limit=limit, skip=skip)
-#     return ApiResponse(status=True, status_code=200, message="Success", data=db_objs)
-
 
 @router.get("/search", response_model=ApiResponse[Dict[str, Any]], operation_id="searchProducts")
 @limiter.limit("60/minute")  # Fine-tuned lookup limit to shield database search resources
