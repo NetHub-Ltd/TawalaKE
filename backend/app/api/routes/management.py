@@ -27,7 +27,7 @@ CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 async def patch_organization_id(db: SessionDep, email: EmailStr):
     # stmt = update(Staff).where(Staff.organization_id == None).values(organization_id=Staff.tenant_id)
     stmt = select(Staff).where(Staff.organization_id == email)
-    result = (await db.exec(stmt).first())
+    result = (await db.exec(stmt)).first()
 
     if not result:
         raise HTTPException(
