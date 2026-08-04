@@ -14,6 +14,7 @@ from app.core.mailer import mailer
 from app.core.redis_client import limiter
 from fastapi_cache.decorator import cache
 from sqlalchemy import update
+from app.utils.logging import logger
 
 
 router = APIRouter()
