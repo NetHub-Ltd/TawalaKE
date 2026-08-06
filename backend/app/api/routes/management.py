@@ -14,40 +14,13 @@ from app.core.redis_client import limiter
 from fastapi_cache.decorator import cache
 from sqlalchemy import update
 from app.utils.logging import logger
+from app.crud.store import store_crud
 
 
 router = APIRouter()
 
 # --- Redis Cache Durations ---
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
-
-
-@router.post("/patch-organization-id")
-async def patch_organization_id(db: SessionDep, email: EmailStr):
-    # stmt = update(Staff).where(Staff.organization_id == None).values(organization_id=Staff.tenant_id)
-    stmt = select(Staff).where(Staff.email == email)
-    result = (await db.exec(stmt)).first()
-
-    if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Staff with email {email} not found.",
-        )
-
-    logger.info(f"Found staff: {result.email}, organization_id: {result.organization_id}, tenant_id: {result.tenant_id}")
-    
-    if result.organization_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Staff with email {email} already has an organization_id.",
-        )
-
-    result.organization_id = result.tenant_id
-
-    await db.commit()
-    # refresh result
-    await db.refresh(result)
-    return result
 
 
 @router.get("/test-email")
@@ -96,3 +69,11 @@ async def get_sales(request: Request, db: SessionDep, business_id: UUID = None):
         stmt = stmt.where(Sale.business_id == business_id)
     sales = (await db.exec(stmt)).all()
     return sales
+
+
+# @router.get("/get-business-anlytics")
+# @limiter.limit("5/minute")
+# @cache(expire=CACHE_TTL_SEC, namespace="analytics", key_builder=universal_key_builder)
+# async def get_business_analytics(request: Request, db: SessionDep, business_id: UUID):
+#     sales = await store_crud.get_business_analytics(db=db, business_id=business_id)
+#     return sales

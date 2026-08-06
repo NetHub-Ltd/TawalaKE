@@ -117,8 +117,8 @@ class Subscription(BaseMixin, table=True):
     """Subscription plan for an organization/tenant"""
     __tablename__ = "subscriptions"
 
-    tenant_id: UUID = Field(foreign_key="tenants.id", index=True, ondelete="CASCADE")
-    organization_id: UUID = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
+    # tenant_id: UUID = Field(foreign_key="tenants.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
 
     tier: SubscriptionTier = Field(
         sa_column=Column(SAEnum(SubscriptionTier, name="subscription_tier_enum")),
@@ -148,6 +148,7 @@ class StaffBusinessAssignment(BaseMixin, table=True):
     __tablename__ = "staff_business_assignments"
     staff_id: UUID = Field(foreign_key="staff.id", primary_key=True, ondelete="CASCADE")
     business_id: UUID = Field(foreign_key="businesses.id", primary_key=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
 
     role: StaffRole = Field(                                      # ← Moved here
         sa_column=Column(SAEnum(StaffRole, name="staff_role_enum")),
@@ -164,7 +165,7 @@ class Staff(BaseMixin, table=True):
 
     email: str = Field(index=True, unique=True)
     full_name: str = Field(max_length=100)
-    hashed_password: str
+    hashed_password: Optional[str] = Field(default=None)
     pin_hash: Optional[str] = Field(default=None)
     pin_salt: Optional[str] = Field(default=None)
     phone: Optional[str] = Field(default=None)
@@ -191,8 +192,8 @@ class Business(BaseMixin, table=True):
     __tablename__ = "businesses"
 
     tenant_id: UUID = Field(index=True)
-    organization_id: Optional[UUID] = Field(default=None, index=True)
-    # organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
+    # organization_id: Optional[UUID] = Field(default=None, index=True)
+    organization_id: Optional[UUID] = Field(foreign_key='organizations.id', index=True, ondelete="CASCADE")
 
     name: str = Field(index=True)
     tax_rate: Optional[float] = Field(default=0.0)
@@ -224,7 +225,8 @@ class Product(BaseMixin, table=True):
     __tablename__ = "products"
 
     tenant_id: Optional[UUID] = Field(default=None, index=True)
-    organization_id: Optional[UUID] = Field(default=None, index=True)
+    # organization_id: Optional[UUID] = Field(default=None, index=True)
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
 
     label: str = Field(index=True)
@@ -261,7 +263,7 @@ class StockHistory(BaseMixin, table=True):
     balancing audits, and financial snapshots within a business tenant.
     """
     __tablename__ = "stock_history"
-
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
     product_id: UUID = Field(
         foreign_key="products.id", 
         index=True, 
@@ -426,6 +428,7 @@ class Sale(BaseMixin, table=True):
     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
     cashier_id: UUID = Field(foreign_key="staff.id", index=True)
     customer_id: Optional[UUID] = Field(default=None, foreign_key="customers.id")
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
 
     currency: str = Field(default="KES", max_length=5)
     
@@ -465,7 +468,7 @@ class Payment(BaseMixin, table=True):
     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
     sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
     amount: float
-    
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
     method: PaymentMethod = Field(
         sa_column=Column(SAEnum(PaymentMethod, name="payment_method_enum"))
     )
@@ -483,6 +486,7 @@ class SaleItem(BaseMixin, table=True):
     __tablename__ = "sale_items"
 
     sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
     product_id: UUID = Field(index=True)
     sku: str = Field(max_length=50, index=True)
     name: str = Field(max_length=150)
@@ -495,6 +499,7 @@ class SaleItem(BaseMixin, table=True):
 
     # Link back to the parent sale container
     sale: Sale = Relationship(back_populates="items")
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
     financial_document_id: Optional[UUID] = Field(
         default=None, 
         foreign_key="financial_documents.id", 
@@ -510,10 +515,12 @@ class FinancialDocument(BaseMixin, table=True):
     """
     __tablename__ = "financial_documents"
 
+    organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
+
     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
     sale_id: UUID = Field(foreign_key="sales.id", index=True, unique=True, ondelete="CASCADE")
     customer_id: Optional[UUID] = Field(default=None, foreign_key="customers.id", index=True)
-
+    # organization_id: Optional[UUID] = Field(foreign_key="organizations.id", index=True, ondelete="CASCADE")
     document_type: DocumentType = Field(default=DocumentType.RECEIPT, index=True)
     document_number: str = Field(unique=True, index=True, max_length=50)
     

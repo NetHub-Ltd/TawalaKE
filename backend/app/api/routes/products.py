@@ -54,7 +54,6 @@ async def get_products(
     size: int = Query(default=50, ge=1, le=100, alias="limit", description="Number of rows per page"),
     sort_by: Optional[str] = Query(default=None, description="Model column attribute name to sort by"),
     sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="Sort direction order"),
-    sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="Sort direction order"),
     redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
@@ -148,7 +147,6 @@ async def search_products(
 async def get_product_detail(
     request: Request, 
     product_id: UUID, 
-    db: SessionDep
     db: SessionDep
 ):
     """
