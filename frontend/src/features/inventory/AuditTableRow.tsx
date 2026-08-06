@@ -1,30 +1,49 @@
 "use client";
 
-import React, { useState, useId, useCallback } from "react";
-import { useForm, UseFormRegister, FieldErrors } from "react-hook-form";
-import { Check, AlertTriangle, Loader2, Save } from "lucide-react";
-import { ProductResponse } from "@/lib/api/generated/models";
+import React, { useState, useId, useCallback, useMemo } from "react";
+import { useForm, UseFormRegister, FieldErrors, SubmitHandler } from "react-hook-form";
+import {
+  Check,
+  AlertTriangle,
+  Loader2,
+  Save,
+  CalendarCheck,
+  CalendarX,
+  Clock,
+  ShieldOff,
+} from "lucide-react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+// Import generated API entity directly to prevent type structural mismatches (TS2322)
+import type { ProductResponse } from "@/lib/api/generated/models/productResponse";
 
 // =========================================================
-// Configuration & Domain Data Types
+// Class Name Merging Utility
 // =========================================================
 
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
+}
+
+// =========================================================
+// Domain Data Contracts & Types
+// =========================================================
+
+/** RHF Internal Form Values */
 export interface AuditFormData {
   quantity: number;
   reason_code: string;
   notes: string;
 }
 
-interface AuditTableRowProps {
-  product: ProductResponse;
-  businessId: string;
-  onSaveSuccess: (payload: {
-    product_id: string;
-    business_id: string;
-    quantity: number;
-    reason_code: string;
-    notes: string;
-  }) => Promise<void>;
+/** Payload submitted upon stock take persistence */
+export interface AuditSavePayload {
+  product_id: string;
+  business_id: string;
+  quantity: number;
+  reason_code: string;
+  notes: string;
 }
 
 export interface AuditReasonCode {
@@ -32,33 +51,108 @@ export interface AuditReasonCode {
   label: string;
 }
 
-export const AUDIT_REASON_CODES: AuditReasonCode[] = [
+export const AUDIT_REASON_CODES: ReadonlyArray<AuditReasonCode> = [
   { value: "THEFT_SHOPLIFTING", label: "Theft or Shoplifting" },
   { value: "DAMAGED_IN_STORE", label: "Damaged / Broken Shelf Inventory" },
   { value: "EXPIRED_STOCK", label: "Expired Stock Tracking" },
   { value: "DATA_ENTRY_ERROR", label: "Historical Data Entry Mistake" },
-];
+] as const;
 
 // =========================================================
-// Core Row System Controller
+// Status Telemetry Helpers
+// =========================================================
+
+export type AuditAlertState = "untracked" | "green" | "amber" | "red";
+
+export function getAuditAlertState(
+  trackStock: boolean,
+  lastStockTake?: string | Date | null
+): AuditAlertState {
+  if (!trackStock) return "untracked";
+  if (!lastStockTake) return "red";
+
+  const auditDate =
+    typeof lastStockTake === "string" ? new Date(lastStockTake) : lastStockTake;
+
+  if (isNaN(auditDate.getTime())) return "red";
+
+  const now = new Date();
+  const isSameMonthAndYear =
+    auditDate.getFullYear() === now.getFullYear() &&
+    auditDate.getMonth() === now.getMonth();
+
+  return isSameMonthAndYear ? "green" : "amber";
+}
+
+export function formatAuditDate(lastStockTake?: string | Date | null): string {
+  if (!lastStockTake) return "N/A";
+  const dateObj =
+    typeof lastStockTake === "string" ? new Date(lastStockTake) : lastStockTake;
+  if (isNaN(dateObj.getTime())) return "N/A";
+
+  return new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  }).format(dateObj);
+}
+
+// =========================================================
+// Public Component API Interface
+// =========================================================
+
+export interface AuditTableRowProps {
+  /** Generated backend Product entity */
+  product: ProductResponse;
+  /** Unique tenant business identifier */
+  businessId: string;
+  /** Callback fired upon audit resolution */
+  onSaveSuccess: (payload: AuditSavePayload) => Promise<void>;
+  /** Optional container class overrides */
+  className?: string;
+}
+
+// =========================================================
+// Core Component: AuditTableRow
 // =========================================================
 
 export const AuditTableRow: React.FC<AuditTableRowProps> = ({
   product,
   businessId,
   onSaveSuccess,
+  className,
 }) => {
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const quantityInputId = useId();
   const reasonSelectId = useId();
   const notesInputId = useId();
   const errorAlertId = useId();
 
-  // Robust field resolution with fallbacks across data schema variations
   const bookStock = product.stock ?? 0;
+  const trackStock = Boolean(product.track_stock);
 
+  const alertState = useMemo(
+    () => getAuditAlertState(trackStock, product.last_stock_take),
+    [trackStock, product.last_stock_take]
+  );
+
+  const leftBorderClass = useMemo(() => {
+    switch (alertState) {
+      case "green":
+        return "border-l-6 border-l-green-500";
+      case "amber":
+        return "border-l-6 border-l-amber-500";
+      case "red":
+        return "border-l-6 border-l-red-500";
+      case "untracked":
+      default:
+        return "border-l-6 border-l-slate-400 dark:border-l-slate-600";
+    }
+  }, [alertState]);
+
+  // Pure React Hook Form initialization without zodResolver
   const {
     register,
     handleSubmit,
@@ -73,33 +167,25 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
     },
   });
 
-  const currentInputQuantity = watch("quantity");
-  const physicalCount = Number(currentInputQuantity) || 0;
-  const variance = physicalCount - bookStock;
-  const hasVariance = variance !== 0;
+  const watchedQuantity = watch("quantity");
+  const currentQty = typeof watchedQuantity === "number" && !isNaN(watchedQuantity) ? watchedQuantity : bookStock;
+  const variance = currentQty - bookStock;
+  const isVariancePresent = trackStock && variance !== 0;
 
-  const onSubmit = useCallback(
-    async (data: AuditFormData) => {
-      if (hasVariance && (!data.reason_code || data.notes.trim().length < 5)) {
-        setStatus("error");
-        setErrorMessage(
-          "Variance detected. Reason code and descriptive notes (min 5 characters) are required."
-        );
-        return;
-      }
-
+  const onSubmit: SubmitHandler<AuditFormData> = useCallback(
+    async (data) => {
       try {
         setStatus("saving");
         setErrorMessage("");
 
-        const finalPayload = {
+        const finalPayload: AuditSavePayload = {
           product_id: product.id,
           business_id: businessId,
           quantity: data.quantity,
-          reason_code: hasVariance ? data.reason_code : "SYSTEM_MATCH",
-          notes: hasVariance
+          reason_code: isVariancePresent ? data.reason_code : "SYSTEM_MATCH",
+          notes: isVariancePresent
             ? data.notes
-            : "Physical count matched system balance baseline context perfectly.",
+            : "Physical count matched ledger stock balance.",
         };
 
         await onSaveSuccess(finalPayload);
@@ -111,11 +197,11 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
         const message =
           err instanceof Error
             ? err.message
-            : "Failed to commit inventory adjustments.";
+            : "Failed to persist inventory count adjustment.";
         setErrorMessage(message);
       }
     },
-    [businessId, hasVariance, onSaveSuccess, product.id, reset]
+    [businessId, isVariancePresent, onSaveSuccess, product.id, reset]
   );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -126,21 +212,21 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
   };
 
   const getRowStyles = () => {
-    if (status === "success" && !hasVariance) return "bg-emerald-500/5 border-emerald-500/20";
-    if (hasVariance) return "bg-amber-500/5 border-amber-500/20";
+    if (status === "success" && !isVariancePresent)
+      return "bg-green-500/5 border-green-500/20";
+    if (isVariancePresent) return "bg-amber-500/5 border-amber-500/20";
     return "border-border/40 hover:bg-surface/40";
   };
 
   return (
     <>
-      {/* Main Table Row */}
-      <tr className={`border-b transition-colors duration-200 ${getRowStyles()}`}>
-        {/* Core Product Identity Block */}
-        <td className="px-6 py-4 align-middle">
-          <ProductIdentity product={product} />
+      <tr className={cn("border-b transition-colors duration-200", getRowStyles(), className)}>
+        {/* Product Details Block */}
+        <td className={cn("px-6 py-4 align-middle", leftBorderClass)}>
+          <ProductIdentity product={product} alertState={alertState} />
         </td>
 
-        {/* System Ledger Book Balance Display */}
+        {/* System Ledger Stock Display */}
         <td className="px-4 py-4 align-middle">
           <div className="flex flex-col justify-center">
             <span className="font-mono font-medium text-xs text-muted bg-surface/80 border border-border/60 px-3 py-2 rounded-lg text-center w-full min-h-[44px] flex items-center justify-center">
@@ -149,7 +235,7 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
           </div>
         </td>
 
-        {/* Physical Audit Stock Input Control */}
+        {/* Physical Stock Count Input with RHF Internal Rules */}
         <td className="px-4 py-4 align-middle">
           <div className="flex flex-col justify-center">
             <input
@@ -158,51 +244,53 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
               step="any"
               onFocus={(e) => e.target.select()}
               onKeyDown={handleKeyDown}
-              disabled={status === "saving"}
+              disabled={status === "saving" || !trackStock}
               aria-invalid={!!errors.quantity}
-              aria-label={`Physical count for ${product.label || "item"}`}
+              aria-describedby={errors.quantity ? `${quantityInputId}-error` : undefined}
+              aria-label={`Physical count for ${product.label ?? "Product"}`}
               {...register("quantity", {
                 required: "Physical quantity is required",
                 valueAsNumber: true,
-                validate: (value) => !isNaN(value) || "Quantity must be a valid number",
-                min: {
-                  value: 0,
-                  message: "Stock cannot fall below zero",
-                },
+                validate: (val) =>
+                  (!isNaN(val) && val >= 0) || "Stock quantity cannot fall below zero",
               })}
-              className="w-full font-mono text-xs font-semibold px-3 py-2 min-h-[44px] bg-card border border-border/60 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-surface disabled:text-muted transition-all shadow-sm"
+              className={cn(
+                "w-full font-mono text-xs font-semibold px-3 py-2 min-h-[44px] bg-card border border-border/60 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:bg-surface disabled:text-muted transition-all shadow-sm",
+                !trackStock && "cursor-not-allowed opacity-60"
+              )}
             />
             {errors.quantity && (
-              <p className="text-brand-primary text-[10px] font-bold mt-1">
+              <p id={`${quantityInputId}-error`} role="alert" className="text-red-500 text-[10px] font-bold mt-1">
                 {errors.quantity.message}
               </p>
             )}
           </div>
         </td>
 
-        {/* Dynamic Telemetry Variance Badges */}
+        {/* Variance Telemetry Badges */}
         <td className="px-4 py-4 align-middle">
-          <VarianceBadge variance={variance} />
+          <VarianceBadge variance={variance} trackStock={trackStock} />
         </td>
 
-        {/* Action Button Segment */}
+        {/* Actions Segment */}
         <td className="px-6 py-4 align-middle text-right">
           <div className="flex items-center justify-end">
             {status === "saving" ? (
-              <div className="min-h-[44px] min-w-[44px] flex items-center justify-center">
+              <div className="min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Saving count">
                 <Loader2 className="w-5 h-5 text-brand-primary animate-spin" />
               </div>
             ) : (
               <button
                 type="button"
                 onClick={handleSubmit(onSubmit)}
-                disabled={!isDirty && status !== "error"}
-                aria-label={`Save stock count for ${product.label || "item"}`}
-                className={`min-h-[44px] min-w-[44px] px-4 inline-flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all ${
-                  isDirty
+                disabled={(!isDirty && status !== "error") || !trackStock}
+                aria-label={`Save stock count for ${product.label ?? "Product"}`}
+                className={cn(
+                  "min-h-[44px] min-w-[44px] px-4 inline-flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all",
+                  isDirty && trackStock
                     ? "bg-foreground text-card border-transparent hover:opacity-90 active:scale-95 cursor-pointer shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
                     : "bg-surface/50 text-muted border-border/40 cursor-not-allowed"
-                }`}
+                )}
               >
                 <Save className="w-4 h-4" /> Save
               </button>
@@ -211,28 +299,29 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
         </td>
       </tr>
 
-      {/* Accountability Drawer Row (Triggered on Variance) */}
-      {hasVariance && (
+      {/* Accountability Drawer Row */}
+      {isVariancePresent && (
         <tr className="bg-surface/30 border-b border-border/40">
-          <td colSpan={5} className="px-6 py-4">
+          <td colSpan={5} className={cn("px-6 py-4", leftBorderClass)}>
             <AccountabilityFields
               register={register}
               errors={errors}
-              hasVariance={hasVariance}
               reasonSelectId={reasonSelectId}
               notesInputId={notesInputId}
               onKeyDown={handleKeyDown}
               isSaving={status === "saving"}
+              isVariancePresent={isVariancePresent}
+              trackStock={trackStock}
             />
           </td>
         </tr>
       )}
 
-      {/* System Warning Message Row Area */}
+      {/* Error Alert Banner */}
       {status === "error" && errorMessage && (
-        <tr id={errorAlertId} className="bg-brand-primary/10 border-b border-brand-primary/20">
-          <td colSpan={5} className="px-6 py-2.5">
-            <p className="text-xs font-bold text-brand-primary uppercase tracking-wide flex items-center gap-2">
+        <tr id={errorAlertId} role="alert" aria-live="polite" className="bg-red-500/10 border-b border-red-500/20">
+          <td colSpan={5} className={cn("px-6 py-2.5", leftBorderClass)}>
+            <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wide flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </p>
@@ -249,27 +338,73 @@ export const AuditTableRow: React.FC<AuditTableRowProps> = ({
 
 interface ProductIdentityProps {
   product: ProductResponse;
+  alertState: AuditAlertState;
 }
 
-const ProductIdentity: React.FC<ProductIdentityProps> = ({ product }) => {
-  const name = product.label || "Unnamed Product";
-  const sku = product.attributes?.sku || "NO_SKU";
-  const category = product.category || "General";
-  const uom = product.attributes?.unit_of_measure || "Units";
+const ProductIdentity: React.FC<ProductIdentityProps> = ({ product, alertState }) => {
+  const name = product.label ?? "Unnamed Product";
+  const category = product.category ?? "General";
+  const uom = product.attributes?.unit_of_measure ?? "Units";
+  const formattedDate = formatAuditDate(product.last_stock_take);
+
+  const alertBadge = useMemo(() => {
+    switch (alertState) {
+      case "green":
+        return {
+          label: "Audited This Month",
+          color: "text-green-600 dark:text-green-400 bg-green-500/10 border-green-500/20",
+          icon: <CalendarCheck className="w-3 h-3 stroke-[2.5]" />,
+        };
+      case "amber":
+        return {
+          label: "Audit Due (>1 Mo)",
+          color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
+          icon: <Clock className="w-3 h-3 stroke-[2.5]" />,
+        };
+      case "red":
+        return {
+          label: "Never Audited / Overdue",
+          color: "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20",
+          icon: <CalendarX className="w-3 h-3 stroke-[2.5]" />,
+        };
+      case "untracked":
+      default:
+        return {
+          label: "Stock Untracked",
+          color: "text-slate-500 bg-slate-500/10 border-slate-500/20",
+          icon: <ShieldOff className="w-3 h-3 stroke-[2.5]" />,
+        };
+    }
+  }, [alertState]);
 
   return (
-    <div className="flex flex-col">
-      <h4 className="font-semibold text-xs text-foreground tracking-tight line-clamp-1">{name}</h4>
-      <p className="text-[10px] text-muted font-medium uppercase tracking-wider mt-1 flex flex-wrap items-center gap-1.5">
-        <span className="font-mono font-bold">SKU: {sku}</span>
-        <span className="text-border" aria-hidden="true">
-          &bull;
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h4 className="font-semibold text-xs text-foreground tracking-tight line-clamp-1">
+          {name}
+        </h4>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider shrink-0",
+            alertBadge.color
+          )}
+          title={`Status: ${alertBadge.label}`}
+        >
+          {alertBadge.icon}
+          <span>{alertBadge.label}</span>
         </span>
+      </div>
+
+      <p className="text-[10px] text-muted font-medium uppercase tracking-wider flex flex-wrap items-center gap-1.5">
         <span>{category}</span>
         <span className="text-border" aria-hidden="true">
           &bull;
         </span>
         <span>{uom}</span>
+        <span className="text-border" aria-hidden="true">
+          &bull;
+        </span>
+        <span className="font-mono">Last Audited: {formattedDate}</span>
       </p>
     </div>
   );
@@ -281,12 +416,21 @@ const ProductIdentity: React.FC<ProductIdentityProps> = ({ product }) => {
 
 interface VarianceBadgeProps {
   variance: number;
+  trackStock: boolean;
 }
 
-const VarianceBadge: React.FC<VarianceBadgeProps> = ({ variance }) => {
+const VarianceBadge: React.FC<VarianceBadgeProps> = ({ variance, trackStock }) => {
+  if (!trackStock) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-500 bg-slate-500/10 border border-slate-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
+        <ShieldOff className="w-3.5 h-3.5" /> N/A (Untracked)
+      </span>
+    );
+  }
+
   if (variance === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-500/10 border border-green-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
         <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Match
       </span>
     );
@@ -294,12 +438,15 @@ const VarianceBadge: React.FC<VarianceBadgeProps> = ({ variance }) => {
 
   const isSurplus = variance > 0;
   const trackingStyles = isSurplus
-    ? "text-blue-600 bg-blue-500/10 border-blue-500/20"
-    : "text-rose-600 bg-rose-500/10 border-rose-500/20";
+    ? "text-blue-600 dark:text-blue-400 bg-blue-500/10 border-blue-500/20"
+    : "text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider ${trackingStyles}`}
+      className={cn(
+        "inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wider",
+        trackingStyles
+      )}
     >
       <AlertTriangle className="w-3.5 h-3.5" />
       {isSurplus ? `+${variance.toFixed(2)} Surplus` : `${variance.toFixed(2)} Shrink`}
@@ -308,31 +455,32 @@ const VarianceBadge: React.FC<VarianceBadgeProps> = ({ variance }) => {
 };
 
 // =========================================================
-// Sub-Component: Accountability Fields
+// Sub-Component: Accountability Fields (Pure RHF Rules)
 // =========================================================
 
 interface AccountabilityFieldsProps {
   register: UseFormRegister<AuditFormData>;
   errors: FieldErrors<AuditFormData>;
-  hasVariance: boolean;
   reasonSelectId: string;
   notesInputId: string;
   onKeyDown: (e: React.KeyboardEvent) => void;
   isSaving: boolean;
+  isVariancePresent: boolean;
+  trackStock: boolean;
 }
 
 const AccountabilityFields: React.FC<AccountabilityFieldsProps> = ({
   register,
   errors,
-  hasVariance,
   reasonSelectId,
   notesInputId,
   onKeyDown,
   isSaving,
+  isVariancePresent,
+  trackStock,
 }) => {
   return (
     <div className="flex flex-col md:flex-row gap-4 animate-in fade-in slide-in-from-top-1 duration-200">
-      {/* Reason Select */}
       <div className="flex-1 md:max-w-xs">
         <label
           htmlFor={reasonSelectId}
@@ -344,9 +492,14 @@ const AccountabilityFields: React.FC<AccountabilityFieldsProps> = ({
           id={reasonSelectId}
           disabled={isSaving}
           aria-invalid={!!errors.reason_code}
+          aria-describedby={errors.reason_code ? `${reasonSelectId}-error` : undefined}
           {...register("reason_code", {
-            validate: (v) =>
-              !hasVariance || v !== "" || "Please select an audit justification code.",
+            validate: (value) => {
+              if (trackStock && isVariancePresent && (!value || value.trim() === "")) {
+                return "Please select an audit justification code.";
+              }
+              return true;
+            },
           })}
           className="w-full text-xs font-medium px-3 py-2 min-h-[44px] bg-card border border-border/60 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer disabled:opacity-50"
         >
@@ -358,13 +511,12 @@ const AccountabilityFields: React.FC<AccountabilityFieldsProps> = ({
           ))}
         </select>
         {errors.reason_code && (
-          <p className="text-brand-primary text-[10px] font-bold mt-1">
+          <p id={`${reasonSelectId}-error`} role="alert" className="text-red-500 text-[10px] font-bold mt-1">
             {errors.reason_code.message}
           </p>
         )}
       </div>
 
-      {/* Notes Input */}
       <div className="flex-1">
         <label
           htmlFor={notesInputId}
@@ -379,16 +531,19 @@ const AccountabilityFields: React.FC<AccountabilityFieldsProps> = ({
           onKeyDown={onKeyDown}
           placeholder="Provide operational context explaining this variance discrepancy..."
           aria-invalid={!!errors.notes}
+          aria-describedby={errors.notes ? `${notesInputId}-error` : undefined}
           {...register("notes", {
-            validate: (v) =>
-              !hasVariance ||
-              v.trim().length >= 5 ||
-              "Descriptive notes must contain at least 5 complete characters.",
+            validate: (value) => {
+              if (trackStock && isVariancePresent && (!value || value.trim().length < 5)) {
+                return "Descriptive notes must contain at least 5 characters.";
+              }
+              return true;
+            },
           })}
           className="w-full text-xs px-3 py-2 min-h-[44px] bg-card border border-border/60 rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary font-medium shadow-sm placeholder:text-muted/60 disabled:opacity-50"
         />
         {errors.notes && (
-          <p className="text-brand-primary text-[10px] font-bold mt-1">
+          <p id={`${notesInputId}-error`} role="alert" className="text-red-500 text-[10px] font-bold mt-1">
             {errors.notes.message}
           </p>
         )}

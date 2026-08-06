@@ -111,11 +111,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new NetworkAuthError();
         }
 
+        // console.log("login request", loginResponse)
+
         if (!loginResponse.ok) {
+          console.error("we encountered an error when trying to authenticate", loginResponse.statusText)
           throw new InvalidCredentialsError();
         }
 
         const tokens = await loginResponse.json();
+        // console.log("Login Response", tokens);
 
         if (!tokens.access_token) {
           throw new InvalidCredentialsError();
@@ -134,11 +138,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new NetworkAuthError();
         }
 
+        console.debug("[AUTH] user profile fetch response", profileResponse)
+
         if (!profileResponse.ok) {
           throw new ProfileFetchError();
         }
 
         const profile = await profileResponse.json();
+        console.log("Fetched user profile", profile)
 
         // Strict Business Rule Guard: Reject missing or null organization IDs
         if (!profile.organization_id) {
@@ -146,10 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Resilient Fallback Resolution for Role Schema Variations
-        const resolvedRole =
-          profile.role ||
-          profile.role_name ||
-          (Array.isArray(profile.roles) ? profile.roles[0] : null);
+        const resolvedRole = profile.role
 
         if (!resolvedRole) {
           console.warn("[Auth Engine] Warning: No role specified in user profile payload.");
@@ -164,8 +168,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return {
           id: String(profile.id),
           email: profile.email,
-          name: profile.full_name || profile.name || profile.email,
-          role: resolvedRole || "user",
+          name: profile.full_name,
+          role: resolvedRole,
           organization_id: profile.organization_id,
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,

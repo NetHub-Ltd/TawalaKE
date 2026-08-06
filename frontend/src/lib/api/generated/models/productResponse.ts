@@ -12,7 +12,7 @@ export interface ProductResponse {
   label: string;
   selling_price: number;
   track_stock: boolean;
-  last_stock_take?: ProductResponseLastStockTake;
+  last_stock_take?: string;
   stock: number;
   active: boolean;
   category: string;
