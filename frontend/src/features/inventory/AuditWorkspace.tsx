@@ -1,8 +1,15 @@
+
 // "use client";
 
-// import React, { useState, useEffect, useId, useTransition, useMemo, useCallback } from "react";
+// import React, {
+//   useState,
+//   useEffect,
+//   useId,
+//   useTransition,
+//   useMemo,
+//   useCallback,
+// } from "react";
 // import Link from "next/link";
-// import { useQueryClient } from "@tanstack/react-query";
 // import {
 //   Loader2,
 //   AlertCircle,
@@ -25,37 +32,29 @@
 // }
 
 // export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) => {
-//   const queryClient = useQueryClient();
 //   const { organizationId } = useBusinessContext();
 //   const rowsPerPageSelectId = useId();
 //   const [isPending, startTransition] = useTransition();
 
-//   // State Management: Controlled search term vs. network debounced term
+//   // Controlled UI search input state vs. network-query debounced search term
 //   const [searchTerm, setSearchTerm] = useState<string>("");
 //   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
 //   const [page, setPage] = useState<number>(1);
 //   const [limit, setLimit] = useState<number>(20);
 
-//   // Debounce Engine: Delays network query by 350ms to prevent request thrashing
+//   // Debounce Engine: Delays network query by 300ms to prevent request thrashing & optimize INP
 //   useEffect(() => {
 //     const handler = setTimeout(() => {
 //       startTransition(() => {
 //         setDebouncedSearch(searchTerm);
-//         setPage(1); // Reset to page 1 on new search keyword
+//         setPage(1); // Reset pagination cursor on keyword shift
 //       });
-//     }, 350);
+//     }, 300);
 
 //     return () => clearTimeout(handler);
 //   }, [searchTerm]);
 
-//   // Reset pagination on limit modification
-//   useEffect(() => {
-//     startTransition(() => {
-//       setPage(1);
-//     });
-//   }, [limit]);
-
-//   // Server-paginated product query call
+//   // Server-paginated product catalog hook
 //   const {
 //     products,
 //     pagination,
@@ -73,82 +72,91 @@
 //     debouncedSearch
 //   );
 
-//   // Direct array extraction with safe fallback to eliminate render black-holes
+//   // Direct array extraction with strict fallback to eliminate rendering exceptions
 //   const productsList = useMemo<ProductResponse[]>(() => {
 //     return Array.isArray(products) ? products : [];
 //   }, [products]);
 
 //   // Pagination telemetry bounds calculations
 //   const totalRecords = pagination?.total ?? productsList.length;
-//   const totalPages = pagination?.pages ?? Math.max(1, Math.ceil(totalRecords / limit));
-//   const currentPage = pagination?.page ?? page;
+//   const totalPages = Math.max(1, pagination?.pages ?? Math.ceil(totalRecords / limit));
+//   const currentPage = Math.min(Math.max(1, pagination?.page ?? page), totalPages);
 
 //   const startRecord = totalRecords === 0 ? 0 : (currentPage - 1) * limit + 1;
 //   const endRecord = Math.min(currentPage * limit, totalRecords);
 
-//   // Event Normalizer: Prevents [object Object] serialization when string/event is emitted
+//   // Event Normalizer: Prevents [object Object] stringification on input changes
 //   const handleSearchInput = useCallback((input: string | React.ChangeEvent<HTMLInputElement>) => {
 //     const value = typeof input === "string" ? input : input.target.value;
 //     setSearchTerm(value);
 //   }, []);
 
-//   const handleRowSave = async (payload: {
-//     product_id: string;
-//     business_id: string;
-//     quantity: number;
-//     reason_code: string;
-//     notes: string;
-//   }) => {
-//     const res = await fetch("/api/v1/business/stock/audit", {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//       },
-//       body: JSON.stringify(payload),
-//     });
+//   // Row Mutation Committer with explicit async network boundary
+//   const handleRowSave = useCallback(
+//     async (payload: {
+//       product_id: string;
+//       business_id: string;
+//       quantity: number;
+//       reason_code: string;
+//       notes: string;
+//     }) => {
+//       const res = await fetch("/api/v1/business/stock/audit", {
+//         method: "POST",
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//         body: JSON.stringify(payload),
+//       });
 
-//     if (!res.ok) {
-//       const errorData = await res.json().catch(() => ({}));
-//       throw new Error(errorData?.detail || "Failed to update stock records.");
-//     }
+//       if (!res.ok) {
+//         const errorData = await res.json().catch(() => ({}));
+//         throw new Error(errorData?.detail || "Failed to commit stock audit record.");
+//       }
 
-//     await refresh();
-//   };
+//       await refresh();
+//     },
+//     [refresh]
+//   );
 
 //   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 //     const newLimit = Number(e.target.value);
 //     startTransition(() => {
 //       setLimit(newLimit);
+//       setPage(1);
 //     });
 //   };
 
 //   const handlePageChange = (newPage: number) => {
+//     if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
 //     startTransition(() => {
 //       setPage(newPage);
 //     });
 //   };
 
-//   // Structured Data Schema for WebApp Inventory Workspace
-//   const jsonLdSchema = {
-//     "@context": "https://schema.org",
-//     "@type": "WebApplication",
-//     name: "NetHub Inventory Audit Workspace",
-//     applicationCategory: "BusinessApplication",
-//     operatingSystem: "All",
-//     browserRequirements: "Requires HTML5 features",
-//   };
+//   // Structured Data Schema for WebApp Workspace SEO Context
+//   const jsonLdSchema = useMemo(
+//     () => ({
+//       "@context": "https://schema.org",
+//       "@type": "WebApplication",
+//       name: "NetHub Inventory Audit Workspace",
+//       applicationCategory: "BusinessApplication",
+//       operatingSystem: "All",
+//       browserRequirements: "Requires HTML5 features",
+//     }),
+//     []
+//   );
 
 //   return (
 //     <main
 //       id="main-content"
-//       className="w-full flex flex-col overflow-hidden select-none font-sans antialiased"
+//       className="w-full flex flex-col overflow-hidden font-sans antialiased"
 //     >
 //       <script
 //         type="application/ld+json"
 //         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSchema) }}
 //       />
 
-//       {/* Page Header */}
+//       {/* Workspace Header */}
 //       <header className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 shrink-0 border-b border-border/40">
 //         <div>
 //           <h1 className="text-lg font-bold text-foreground tracking-tight">Stock Take Audit</h1>
@@ -171,9 +179,9 @@
 //       <section
 //         aria-label="Audit Worksheet Data"
 //         aria-busy={isLoading || isFetching || isPending}
-//         className="mt-4 bg-card border border-border/60 rounded-[1.5rem] shadow-lift flex flex-col overflow-hidden min-h-[500px]"
+//         className="mt-4 bg-card border border-border/60 rounded-[1.5rem] shadow-sm flex flex-col overflow-hidden min-h-[500px]"
 //       >
-//         {/* Table Controls Bar */}
+//         {/* Worksheet Controls Bar */}
 //         <div className="p-4 bg-surface/20 border-b border-border/40 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
 //           <ProductSearchBar
 //             onSearch={handleSearchInput}
@@ -209,7 +217,7 @@
 //           </div>
 //         </div>
 
-//         {/* State Container: Loading / Error / Data */}
+//         {/* State Container: Loading / Error / Tabular Content */}
 //         {isLoading ? (
 //           <div className="flex-1 flex flex-col items-center justify-center p-12 gap-3 min-h-[350px]">
 //             <Loader2
@@ -272,7 +280,8 @@
 //                   </tr>
 //                 ) : (
 //                   productsList.map((product: ProductResponse, index: number) => {
-//                     const keyId = product.id || (product as unknown as { product_id?: string }).product_id || `prod-${index}`;
+//                     const keyId = product.id
+
 //                     return (
 //                       <AuditTableRow
 //                         key={keyId}
@@ -280,6 +289,7 @@
 //                         businessId={businessId}
 //                         onSaveSuccess={handleRowSave}
 //                       />
+                      
 //                     );
 //                   })
 //                 )}
@@ -288,7 +298,7 @@
 //           </div>
 //         )}
 
-//         {/* Navigation Footer */}
+//         {/* Pagination Controls Footer */}
 //         <footer className="p-3 bg-surface/30 border-t border-border/40 shrink-0 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
 //           <div className="text-[11px] font-medium text-muted tabular-nums">
 //             Showing <span className="font-bold text-foreground">{startRecord}</span> to{" "}
@@ -304,7 +314,7 @@
 //             <button
 //               type="button"
 //               onClick={() => handlePageChange(1)}
-//               disabled={currentPage === 1 || isFetching || isPending}
+//               disabled={currentPage <= 1 || isFetching || isPending}
 //               className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-foreground disabled:opacity-30 disabled:pointer-events-none hover:bg-surface transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
 //               aria-label="First page"
 //             >
@@ -313,8 +323,8 @@
 
 //             <button
 //               type="button"
-//               onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-//               disabled={currentPage === 1 || isFetching || isPending}
+//               onClick={() => handlePageChange(currentPage - 1)}
+//               disabled={currentPage <= 1 || isFetching || isPending}
 //               className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-foreground disabled:opacity-30 disabled:pointer-events-none hover:bg-surface transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
 //               aria-label="Previous page"
 //             >
@@ -323,7 +333,7 @@
 
 //             <button
 //               type="button"
-//               onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+//               onClick={() => handlePageChange(currentPage + 1)}
 //               disabled={currentPage >= totalPages || isFetching || isPending}
 //               className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border border-border/60 bg-background text-foreground disabled:opacity-30 disabled:pointer-events-none hover:bg-surface transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
 //               aria-label="Next page"
@@ -347,7 +357,6 @@
 //   );
 // };
 
-
 "use client";
 
 import React, {
@@ -369,18 +378,51 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 import { AuditTableRow } from "@/features/inventory/AuditTableRow";
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { ProductSearchBar } from "@/features/store/products/components/ProductSearchBar";
-import { ProductResponse } from "@/lib/api/generated/models";
+import type { ProductResponse } from "@/lib/api/generated/models";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
-interface AuditWorkspaceProps {
-  businessId: string;
+// =========================================================
+// Utility Function
+// =========================================================
+
+/**
+ * Merges Tailwind CSS classes safely using clsx and tailwind-merge.
+ */
+function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
 }
 
-export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) => {
+// =========================================================
+// Component Interfaces
+// =========================================================
+
+export interface AuditWorkspaceProps {
+  /** Unique tenant business identifier */
+  businessId: string;
+  /** Optional container style overrides */
+  className?: string;
+}
+
+// =========================================================
+// Main Component: AuditWorkspace
+// =========================================================
+
+/**
+ * AuditWorkspace Component
+ * 
+ * Manages inventory reconciliation worksheet rendering server-paginated products,
+ * search debouncing, and mapped row spacing.
+ */
+export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({
+  businessId,
+  className,
+}) => {
   const { organizationId } = useBusinessContext();
   const rowsPerPageSelectId = useId();
   const [isPending, startTransition] = useTransition();
@@ -391,7 +433,7 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(20);
 
-  // Debounce Engine: Delays network query by 300ms to prevent request thrashing & optimize INP
+  // Debounce Engine: Delays network query by 300ms to optimize responsiveness
   useEffect(() => {
     const handler = setTimeout(() => {
       startTransition(() => {
@@ -434,7 +476,7 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
   const startRecord = totalRecords === 0 ? 0 : (currentPage - 1) * limit + 1;
   const endRecord = Math.min(currentPage * limit, totalRecords);
 
-  // Event Normalizer: Prevents [object Object] stringification on input changes
+  // Event Normalizer: Handles string inputs or standard input events cleanly
   const handleSearchInput = useCallback((input: string | React.ChangeEvent<HTMLInputElement>) => {
     const value = typeof input === "string" ? input : input.target.value;
     setSearchTerm(value);
@@ -498,7 +540,7 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
   return (
     <main
       id="main-content"
-      className="w-full flex flex-col overflow-hidden font-sans antialiased"
+      className={cn("w-full flex flex-col overflow-hidden font-sans antialiased", className)}
     >
       <script
         type="application/ld+json"
@@ -613,7 +655,7 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/30 bg-card/10">
+              <tbody className="bg-card/10">
                 {productsList.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-16 text-center">
@@ -629,18 +671,26 @@ export const AuditWorkspace: React.FC<AuditWorkspaceProps> = ({ businessId }) =>
                   </tr>
                 ) : (
                   productsList.map((product: ProductResponse, index: number) => {
-                    const keyId =
-                      product.id ||
-                      (product as unknown as { product_id?: string }).product_id ||
-                      `audit-row-${businessId}-${index}`;
+                    const keyId = product.id;
+                    const isLast = index === productsList.length - 1;
 
                     return (
-                      <AuditTableRow
-                        key={keyId}
-                        product={product}
-                        businessId={businessId}
-                        onSaveSuccess={handleRowSave}
-                      />
+                      <React.Fragment key={keyId}>
+                        <AuditTableRow
+                          product={product}
+                          businessId={businessId}
+                          onSaveSuccess={handleRowSave}
+                        />
+                        {/* Accessible visual vertical spacing row between product entries */}
+                        {!isLast && (
+                          <tr
+                            aria-hidden="true"
+                            className="h-3 bg-transparent border-none select-none pointer-events-none"
+                          >
+                            <td colSpan={5} className="p-0 border-none bg-transparent" />
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })
                 )}
