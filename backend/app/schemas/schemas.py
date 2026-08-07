@@ -219,7 +219,16 @@ class TenantUpdate(BaseModel):
 
 class TenantResponse(TenantBase):
     id: UUID
+    name: str
     active: bool
+    address: str
+    created_at: datetime
+
+class OrganizationResponse(TenantBase):
+    id: UUID
+    name: str
+    active: bool
+    address: str
     created_at: datetime
 
 
@@ -312,7 +321,7 @@ class StaffResponse(BaseModel):
     full_name: str
     role: StaffRole
     active: bool
-    assigned_businesses: Optional[List[MiniStoreResponse]] = None  # Eagerly loaded list of businesses the staff member is assigned to
+    # assigned_businesses: Optional[List[MiniStoreResponse]] = None  # Eagerly loaded list of businesses the staff member is assigned to
     # store: Optional[BusinessResponse] = None # this can be a list on businesses if a staff member is assigned to multiple businesses
 
 
