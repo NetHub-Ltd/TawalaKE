@@ -1,47 +1,43 @@
 FROM python:3.12-slim
 
-# 1. Environment setup
-
+# Environment
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    UV_PROJECT_ENVIRONMENT=system
 
 WORKDIR /app
 
-# 2. Install system dependencies (needed for some python packages like psycopg2)
+# System dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev \
+        curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-# 3. Install uv
-
+# Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
 ENV PATH="/root/.local/bin:${PATH}"
 
-# 4. Copy dependency files
-
+# Install Python dependencies
 COPY pyproject.toml uv.lock ./
 
-# 5. Install dependencies
+RUN uv sync \
+    --frozen \
+    --no-install-project \
+    --no-dev
 
-# RUN uv sync --frozen --no-dev
-RUN uv sync --frozen --no-install-project --no-dev
-
-# 6. Copy your source folders
-
+# Copy application
 COPY app/ ./app
-
-COPY entrypoint.sh ./entrypoint.sh
-COPY alembic.ini ./alembic.ini
 COPY alembic ./alembic
-
-# 7. Final touches
+COPY alembic.ini ./
+COPY entrypoint.sh ./
 
 RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
+
 ENTRYPOINT ["./entrypoint.sh"]
