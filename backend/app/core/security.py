@@ -1,4 +1,3 @@
-
 # import os
 # import uuid
 # import secrets
@@ -6,19 +5,17 @@
 # from enum import Enum
 # from typing import Optional, Dict, Any, List, Union
 
-# from alembic.migration import select
-# from fastapi import security
+# from fastapi import HTTPException, status, Depends
+# from fastapi.security import SecurityScopes, OAuth2PasswordBearer
 # from jose import JWTError, jwt
 # from passlib.context import CryptContext
 # from pydantic import BaseModel, EmailStr, Field
-# from fastapi import HTTPException, status, Depends
-# from fastapi.security import SecurityScopes, OAuth2PasswordBearer
 # from redis.asyncio import Redis as AsyncRedis
 # from sqlalchemy.orm import selectinload
 # from sqlmodel import select
-# from app.models.models import Staff
 # from sqlmodel.ext.asyncio.session import AsyncSession
 
+# from app.models.models import Staff
 # from app.core.config import settings
 # from app.utils.helpers import utc_now
 # from app.utils.logging import logger
@@ -26,31 +23,51 @@
 
 # # ========================= ENUMS & SCOPES MAP =========================
 # class StaffRole(str, Enum):
-#     OWNER = "owner"
-#     MANAGER = "manager"
-#     CASHIER = "cashier"
+#     OWNER = "OWNER"
+#     MANAGER = "MANAGER"
+#     CASHIER = "CASHIER"
+
+#     @classmethod
+#     def _missing_(cls, value: object) -> Optional["StaffRole"]:
+#         """Case-insensitive Enum lookup fallback for legacy or lowercased DB roles."""
+#         if isinstance(value, str):
+#             for member in cls:
+#                 if member.value.lower() == value.lower():
+#                     return member
+#         return None
 
 
-# # Scope definitions for fine-grained authorization across endpoints
+# # Granular scopes mapped across Products, Sales, Stock, Staff, and Org resources
 # ROLE_SCOPES: Dict[StaffRole, List[str]] = {
 #     StaffRole.OWNER: [
 #         "org:admin",
 #         "business:read", "business:write", "business:delete",
 #         "staff:read", "staff:write", "staff:delete",
+#         # Products
 #         "products:read", "products:write", "products:delete",
+#         # Sales
 #         "sales:read", "sales:write", "sales:void",
+#         # Stock / Inventory
+#         "stock:read", "stock:write", "stock:adjust",
 #         "reports:read"
 #     ],
 #     StaffRole.MANAGER: [
 #         "business:read", "business:write",
 #         "staff:read",
+#         # Products
 #         "products:read", "products:write",
+#         # Sales
 #         "sales:read", "sales:write",
+#         # Stock / Inventory
+#         "stock:read", "stock:write", "stock:adjust",
 #         "reports:read"
 #     ],
 #     StaffRole.CASHIER: [
+#         # Products & Sales
 #         "products:read",
-#         "sales:read", "sales:write"
+#         "sales:read", "sales:write",
+#         # Stock (Cashier needs read access to check availability during checkout)
+#         "stock:read"
 #     ]
 # }
 
@@ -83,7 +100,7 @@
 #     exp: int
 #     iat: int
 #     type: str = "access"
-#     scopes: List[str] = []
+#     scopes: List[str] = Field(default_factory=list)
 
 
 # # ========================= SECURITY SERVICE CLASS =========================
@@ -151,13 +168,15 @@
 #     ) -> Token:
 #         """
 #         Creates access, refresh, and id tokens for a user session.
-#         Calculates scopes based on the user's role and maps business assignment.
+#         Calculates granular scopes from ROLE_SCOPES based on the user's StaffRole.
 #         """
-#         role_str = user_data["role"]
+#         role_str = str(user_data["role"]).strip().upper()
+        
 #         try:
 #             role_enum = StaffRole(role_str)
 #             scopes = ROLE_SCOPES.get(role_enum, [])
 #         except ValueError:
+#             logger.warning(f"Unrecognized role string encountered during token creation: {role_str}")
 #             scopes = []
 
 #         base_claims = {
@@ -203,7 +222,7 @@
 #     ) -> TokenData:
 #         """
 #         Verifies signature, expiration, and token type.
-#         If a Redis client is supplied, checks for JTI blacklisting to block replayed tokens.
+#         If an AsyncRedis client is supplied, checks for JTI blacklisting to block replayed tokens.
 #         """
 #         try:
 #             payload = jwt.decode(
@@ -250,12 +269,15 @@
 #                 headers={"WWW-Authenticate": "Bearer"}
 #             )
 
-#     # authenticate a user
-#     async def authenticate(self, email: EmailStr, password: str, db: AsyncSession):
-#         stmt = (select(Staff).where(
-#             Staff.email == email.lower().strip(),
-#             Staff.active == True
-#         ).options(selectinload(Staff.assigned_businesses))
+#     async def authenticate(self, email: EmailStr, password: str, db: AsyncSession) -> Token:
+#         """Authenticates active staff credentials and returns signed tokens."""
+#         stmt = (
+#             select(Staff)
+#             .where(
+#                 Staff.email == email.lower().strip(),
+#                 Staff.active == True
+#             )
+#             .options(selectinload(Staff.assigned_businesses))
 #         )
 #         staff = (await db.exec(stmt)).first()
 
@@ -266,20 +288,21 @@
 #                 headers={"WWW-Authenticate": "Bearer"},
 #             )
 
-            
 #         # Resolve primary assigned business ID for transitional period
 #         assigned_business_id = None
 #         if staff.assigned_businesses:
 #             assigned_business_id = str(staff.assigned_businesses[0].id)
 
+#         role_value = staff.role.value if hasattr(staff.role, "value") else str(staff.role)
+
 #         user_data = {
 #             "sub": str(staff.id),
 #             "organization_id": str(staff.tenant_id),
-#             "role": staff.role.value if hasattr(staff.role, "value") else str(staff.role),
+#             "role": role_value,
 #         }
 
-#         tokens: Token = security.create_tokens(user_data, business_id=assigned_business_id)
-#         return tokens
+#         # Fixed: Called method on self instead of undefined module variable 'security'
+#         return self.create_tokens(user_data, business_id=assigned_business_id)
 
 #     async def rotate_refresh_token(
 #         self,
@@ -291,6 +314,7 @@
 #         in Redis for its remaining TTL before issuing a new token set.
 #         """
 #         token_data = await self.verify_token(old_refresh_token, "refresh", redis_client)
+#         logger.info(f"Rotating refresh token for staff {token_data.sub}, JTI: {token_data.jti}")
 
 #         # Blacklist the old refresh token JTI in Redis
 #         now_ts = int(utc_now().timestamp())
@@ -307,6 +331,7 @@
 #             "organization_id": token_data.organization_id,
 #             "role": token_data.role,
 #         }
+#         logger.info(f"Creating new tokens for staff {user_data['sub']}")
 #         return self.create_tokens(user_data, business_id=token_data.business_id)
 
 #     # ------------------------------------------------------------------
@@ -320,10 +345,11 @@
 #     ) -> str:
 #         """
 #         Generates a high-entropy opaque reset token stored inside Redis 
-#         with a strict TTL. Returns the plain token string for emailing via Resend.
+#         with a strict TTL. Returns the plain token string for emailing.
 #         """
 #         reset_token = secrets.token_urlsafe(32)
 #         redis_key = f"auth:reset:{reset_token}"
+#         logger.info(f"key: {redis_key}")
 #         await redis_client.set(
 #             redis_key,
 #             str(staff_id),
@@ -367,11 +393,12 @@
 # def require_scopes(required_scopes: List[str]):
 #     """
 #     Dependency factory for protecting route handlers with fine-grained scopes.
-#     Validates token presence, decodes claims, and verifies required permissions.
+#     Validates token presence, verifies Redis blacklist status, and checks required permissions.
 #     """
 #     async def scope_checker(
 #         security_scopes: SecurityScopes,
-#         token: str = Depends(oauth2_scheme)
+#         token: str = Depends(oauth2_scheme),
+#         redis_client: Optional[AsyncRedis] = None
 #     ) -> TokenData:
 #         if not token:
 #             raise HTTPException(
@@ -380,11 +407,18 @@
 #                 headers={"WWW-Authenticate": "Bearer"}
 #             )
 
-#         # Decode token directly via service
-#         token_data = await security_service.verify_token(token, expected_type="access")
+#         # Decode and verify token (including optional Redis blacklist check)
+#         token_data = await security.verify_token(
+#             token,
+#             expected_type="access",
+#             redis_client=redis_client
+#         )
 
-#         # Verify whether token contains all scopes required by the route
-#         for required_scope in required_scopes:
+#         # Combine route factory scopes with FastAPI's native SecurityScopes (if declared)
+#         all_required = set(required_scopes).union(set(security_scopes.scopes))
+
+#         # Check whether token contains all required scopes
+#         for required_scope in all_required:
 #             if required_scope not in token_data.scopes:
 #                 logger.warning(
 #                     f"Forbidden access attempt by staff {token_data.sub}. Missing scope: {required_scope}"
@@ -397,6 +431,8 @@
 #         return token_data
 
 #     return scope_checker
+
+
 import os
 import uuid
 import secrets
@@ -422,13 +458,18 @@ from app.utils.logging import logger
 
 # ========================= ENUMS & SCOPES MAP =========================
 class StaffRole(str, Enum):
+    """Staff roles used for authorization and scope resolution."""
+
     OWNER = "OWNER"
     MANAGER = "MANAGER"
     CASHIER = "CASHIER"
 
     @classmethod
     def _missing_(cls, value: object) -> Optional["StaffRole"]:
-        """Case-insensitive Enum lookup fallback for legacy or lowercased DB roles."""
+        """
+        Case-insensitive Enum lookup fallback for legacy or lowercased DB roles.
+        Returns the matching member or None (which causes ValueError in the constructor).
+        """
         if isinstance(value, str):
             for member in cls:
                 if member.value.lower() == value.lower():
@@ -436,7 +477,8 @@ class StaffRole(str, Enum):
         return None
 
 
-# Granular scopes mapped across Products, Sales, Stock, Staff, and Org resources
+# Granular scopes mapped across Products, Sales, Stock, Staff, and Org resources.
+# Keep this map in sync with the actual permissions enforced by require_scopes().
 ROLE_SCOPES: Dict[StaffRole, List[str]] = {
     StaffRole.OWNER: [
         "org:admin",
@@ -448,7 +490,7 @@ ROLE_SCOPES: Dict[StaffRole, List[str]] = {
         "sales:read", "sales:write", "sales:void",
         # Stock / Inventory
         "stock:read", "stock:write", "stock:adjust",
-        "reports:read"
+        "reports:read",
     ],
     StaffRole.MANAGER: [
         "business:read", "business:write",
@@ -459,29 +501,32 @@ ROLE_SCOPES: Dict[StaffRole, List[str]] = {
         "sales:read", "sales:write",
         # Stock / Inventory
         "stock:read", "stock:write", "stock:adjust",
-        "reports:read"
+        "reports:read",
     ],
     StaffRole.CASHIER: [
         # Products & Sales
         "products:read",
         "sales:read", "sales:write",
         # Stock (Cashier needs read access to check availability during checkout)
-        "stock:read"
-    ]
+        "stock:read",
+    ],
 }
 
 
-# OAuth2 Scheme declaration for FastAPI Swagger UI compatibility
+# OAuth2 Scheme declaration for FastAPI Swagger UI compatibility.
+# auto_error=False lets us raise our own consistent HTTPException.
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl="/api/v1/auth/login",
     scheme_name="OAuth2PasswordBearer",
     description="Email + Password Login",
-    auto_error=False
+    auto_error=False,
 )
 
 
 # ========================= DATA SCHEMAS =========================
 class Token(BaseModel):
+    """Response model returned by login and refresh endpoints."""
+
     access_token: str
     refresh_token: Optional[str] = None
     id_token: Optional[str] = None
@@ -489,6 +534,12 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
+    """
+    Strongly-typed representation of the claims inside a verified JWT.
+    All fields that can appear in the payload are declared here so that
+    TokenData(**payload) is safe and IDE-friendly.
+    """
+
     sub: str
     organization_id: str
     business_id: Optional[str] = None
@@ -504,18 +555,27 @@ class TokenData(BaseModel):
 
 # ========================= SECURITY SERVICE CLASS =========================
 class SecurityService:
+    """
+    Central security helper responsible for:
+    - Password / PIN hashing (Argon2)
+    - JWT creation, verification and rotation
+    - Opaque password-reset tokens stored in Redis
+    - Fine-grained scope-based authorization
+    """
+
     def __init__(self) -> None:
+        # Argon2 is the recommended modern password hashing algorithm.
         self.pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
     # ------------------------------------------------------------------
     # 1. HASHING & PASSWORDS
     # ------------------------------------------------------------------
     def hash_password(self, password: str) -> str:
-        """Hashes a plain text password using Argon2."""
+        """Hashes a plain-text password using Argon2."""
         return self.pwd_context.hash(password)
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Verifies a plain text password against an Argon2 hash."""
+        """Verifies a plain-text password against an Argon2 hash."""
         return self.pwd_context.verify(plain_password, hashed_password)
 
     def generate_pin_salt(self) -> str:
@@ -523,7 +583,10 @@ class SecurityService:
         return secrets.token_hex(16)
 
     def hash_pin(self, pin: str, salt: str) -> str:
-        """Hashes a 4-digit PIN combined with a unique salt."""
+        """
+        Hashes a 4-digit PIN combined with a unique salt.
+        Raises ValueError if the PIN is not exactly 4 digits.
+        """
         if not pin.isdigit() or len(pin) != 4:
             raise ValueError("PIN must be exactly 4 digits.")
         return self.pwd_context.hash(salt + pin)
@@ -542,72 +605,89 @@ class SecurityService:
         data: Dict[str, Any],
         expires_delta: timedelta,
         token_type: str,
-        scopes: List[str]
+        scopes: List[str],
     ) -> str:
-        """Private helper to encode a JWT payload with standard claims."""
+        """
+        Private helper that encodes a JWT payload with standard claims.
+
+        - Always stores exp / iat as integer Unix timestamps (avoids jose datetime quirks).
+        - Drops any claim whose value is None so the JWT never contains explicit nulls.
+        - Adds a fresh jti for replay protection / blacklisting.
+        """
         to_encode = data.copy()
         now = utc_now()
         expire = now + expires_delta
 
-        to_encode.update({
-            "exp": expire,
-            "iat": now,
-            "iss": settings.issuer,
-            "aud": settings.audience,
-            "type": token_type,
-            "jti": str(uuid.uuid4()),
-            "scopes": scopes
-        })
+        to_encode.update(
+            {
+                "exp": int(expire.timestamp()),
+                "iat": int(now.timestamp()),
+                "iss": settings.issuer,
+                "aud": settings.audience,
+                "type": token_type,
+                "jti": str(uuid.uuid4()),
+                "scopes": scopes,
+            }
+        )
+        # Remove None values – cleaner JWT and avoids downstream null-handling issues
+        to_encode = {k: v for k, v in to_encode.items() if v is not None}
+
         return jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
 
     def create_tokens(
         self,
         user_data: Dict[str, Any],
-        business_id: Optional[str] = None
+        business_id: Optional[str] = None,
     ) -> Token:
         """
-        Creates access, refresh, and id tokens for a user session.
-        Calculates granular scopes from ROLE_SCOPES based on the user's StaffRole.
+        Creates a full token set (access + refresh + id) for a user session.
+
+        Scopes are derived from ROLE_SCOPES using the staff role.
+        An unrecognized role results in an empty scope list (and a warning log).
         """
         role_str = str(user_data["role"]).strip().upper()
-        
-        try:
-            role_enum = StaffRole(role_str)
-            scopes = ROLE_SCOPES.get(role_enum, [])
-        except ValueError:
-            logger.warning(f"Unrecognized role string encountered during token creation: {role_str}")
-            scopes = []
 
-        base_claims = {
+        # StaffRole._missing_ makes this tolerant of legacy / mixed-case values
+        role_enum = StaffRole(role_str)
+        scopes = ROLE_SCOPES.get(role_enum, []) if role_enum is not None else []
+
+        if not scopes:
+            logger.warning(
+                f"No scopes resolved for role '{role_str}' – issued tokens will be useless"
+            )
+
+        base_claims: Dict[str, Any] = {
             "sub": str(user_data["sub"]),
             "organization_id": str(user_data["organization_id"]),
-            "business_id": str(business_id) if business_id else None,
             "role": role_str,
         }
+        # Only include business_id when it is actually present
+        if business_id:
+            base_claims["business_id"] = str(business_id)
 
         access_token = self._create_token(
             base_claims,
             timedelta(minutes=settings.access_token_expire_minutes),
             "access",
-            scopes
+            scopes,
         )
         refresh_token = self._create_token(
             base_claims,
             timedelta(days=settings.refresh_token_expire_days),
             "refresh",
-            scopes
+            scopes,
         )
         id_token = self._create_token(
             base_claims,
             timedelta(minutes=settings.access_token_expire_minutes),
             "id",
-            scopes
+            scopes,
         )
 
         return Token(
             access_token=access_token,
             refresh_token=refresh_token,
-            id_token=id_token
+            id_token=id_token,
         )
 
     # ------------------------------------------------------------------
@@ -617,11 +697,13 @@ class SecurityService:
         self,
         token: str,
         expected_type: str = "access",
-        redis_client: Optional[AsyncRedis] = None
+        redis_client: Optional[AsyncRedis] = None,
     ) -> TokenData:
         """
-        Verifies signature, expiration, and token type.
-        If an AsyncRedis client is supplied, checks for JTI blacklisting to block replayed tokens.
+        Verifies signature, expiration, audience, issuer and token type.
+
+        When an AsyncRedis client is supplied, also checks the JTI blacklist
+        to prevent replay of revoked tokens.
         """
         try:
             payload = jwt.decode(
@@ -630,19 +712,19 @@ class SecurityService:
                 algorithms=[settings.algorithm],
                 audience=settings.audience,
                 issuer=settings.issuer,
-                options={"verify_signature": True}
+                options={"verify_signature": True},
             )
 
             if payload.get("type") != expected_type:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=f"Invalid token type. Expected '{expected_type}'",
-                    headers={"WWW-Authenticate": "Bearer"}
+                    headers={"WWW-Authenticate": "Bearer"},
                 )
 
             token_data = TokenData(**payload)
 
-            # Replay Attack Check against Redis Blacklist
+            # Replay-attack / revocation check
             if redis_client is not None and token_data.jti:
                 is_blacklisted = await redis_client.get(f"auth:blacklist:{token_data.jti}")
                 if is_blacklisted:
@@ -650,31 +732,40 @@ class SecurityService:
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="Token has been revoked or already used.",
-                        headers={"WWW-Authenticate": "Bearer"}
+                        headers={"WWW-Authenticate": "Bearer"},
                     )
 
             return token_data
 
         except jwt.ExpiredSignatureError:
+            logger.info("JWT verification failed: Token has expired")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired.",
-                headers={"WWW-Authenticate": "Bearer"}
+                headers={"WWW-Authenticate": "Bearer"},
             )
-        except jwt.JWTError as e:
+        except JWTError as e:
+            logger.info(f"JWT verification failed: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid authentication token: {str(e)}",
-                headers={"WWW-Authenticate": "Bearer"}
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
-    async def authenticate(self, email: EmailStr, password: str, db: AsyncSession) -> Token:
-        """Authenticates active staff credentials and returns signed tokens."""
+    async def authenticate(
+        self,
+        email: EmailStr,
+        password: str,
+        db: AsyncSession,
+    ) -> Token:
+        """
+        Authenticates active staff credentials and returns a fresh token set.
+        """
         stmt = (
             select(Staff)
             .where(
                 Staff.email == email.lower().strip(),
-                Staff.active == True
+                Staff.active == True,  # noqa: E712
             )
             .options(selectinload(Staff.assigned_businesses))
         )
@@ -687,8 +778,8 @@ class SecurityService:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Resolve primary assigned business ID for transitional period
-        assigned_business_id = None
+        # Resolve primary assigned business ID (transitional – may be None)
+        assigned_business_id: Optional[str] = None
         if staff.assigned_businesses:
             assigned_business_id = str(staff.assigned_businesses[0].id)
 
@@ -700,28 +791,49 @@ class SecurityService:
             "role": role_value,
         }
 
-        # Fixed: Called method on self instead of undefined module variable 'security'
         return self.create_tokens(user_data, business_id=assigned_business_id)
 
     async def rotate_refresh_token(
         self,
         old_refresh_token: str,
-        redis_client: AsyncRedis
+        redis_client: AsyncRedis,
     ) -> Token:
         """
-        Rotates a refresh token safely by blacklisting the old token's JTI 
-        in Redis for its remaining TTL before issuing a new token set.
-        """
-        token_data = await self.verify_token(old_refresh_token, "refresh", redis_client)
+        Safely rotates a refresh token:
+        1. Verifies the old token (including blacklist check).
+        2. Blacklists the old JTI for its remaining lifetime.
+        3. Issues a completely new token set (new JTIs).
 
-        # Blacklist the old refresh token JTI in Redis
+        Raises 500 if redis_client is missing – rotation without blacklisting
+        would be insecure.
+        """
+        if redis_client is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Redis client is required for secure token rotation",
+            )
+
+        token_data = await self.verify_token(
+            old_refresh_token, expected_type="refresh", redis_client=redis_client
+        )
+        logger.info(
+            f"Rotating refresh token for staff {token_data.sub}, JTI: {token_data.jti}"
+        )
+
+        # Blacklist the old refresh token for its remaining TTL
         now_ts = int(utc_now().timestamp())
-        ttl_remaining = token_data.exp - now_ts
+        ttl_remaining = max(0, token_data.exp - now_ts)
+
         if ttl_remaining > 0:
             await redis_client.set(
                 f"auth:blacklist:{token_data.jti}",
                 "revoked",
-                ex=ttl_remaining
+                ex=ttl_remaining,
+            )
+        else:
+            # Token is already expired – no need to blacklist, but log for observability
+            logger.warning(
+                f"Refresh token already expired (JTI {token_data.jti}) – skipping blacklist"
             )
 
         user_data = {
@@ -729,6 +841,7 @@ class SecurityService:
             "organization_id": token_data.organization_id,
             "role": token_data.role,
         }
+        logger.info(f"Issuing new token set for staff {user_data['sub']}")
         return self.create_tokens(user_data, business_id=token_data.business_id)
 
     # ------------------------------------------------------------------
@@ -738,29 +851,29 @@ class SecurityService:
         self,
         staff_id: Union[str, uuid.UUID],
         redis_client: AsyncRedis,
-        expire_minutes: int = 15
+        expire_minutes: int = 15,
     ) -> str:
         """
-        Generates a high-entropy opaque reset token stored inside Redis 
-        with a strict TTL. Returns the plain token string for emailing.
+        Generates a high-entropy opaque reset token stored in Redis with a
+        strict TTL. Returns the plain token string that should be emailed.
         """
         reset_token = secrets.token_urlsafe(32)
         redis_key = f"auth:reset:{reset_token}"
-        logger.info(f"key: {redis_key}")
+        logger.info(f"Created password-reset key: {redis_key}")
         await redis_client.set(
             redis_key,
             str(staff_id),
-            ex=expire_minutes * 60
+            ex=expire_minutes * 60,
         )
         return reset_token
 
     async def verify_and_consume_password_reset_token(
         self,
         reset_token: str,
-        redis_client: AsyncRedis
+        redis_client: AsyncRedis,
     ) -> str:
         """
-        Validates and immediately deletes a password reset token from Redis to enforce single-use.
+        Validates and immediately deletes a password-reset token (single-use).
         Returns the associated staff_id string.
         """
         redis_key = f"auth:reset:{reset_token}"
@@ -769,18 +882,22 @@ class SecurityService:
         if not staff_id_bytes:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired password reset token."
+                detail="Invalid or expired password reset token.",
             )
 
-        # Convert bytes to string if needed
-        staff_id = staff_id_bytes.decode("utf-8") if isinstance(staff_id_bytes, bytes) else str(staff_id_bytes)
-        
+        # redis-py may return bytes or str depending on decode_responses setting
+        staff_id = (
+            staff_id_bytes.decode("utf-8")
+            if isinstance(staff_id_bytes, bytes)
+            else str(staff_id_bytes)
+        )
+
         # Enforce single-use by immediate deletion
         await redis_client.delete(redis_key)
         return staff_id
 
 
-# Instantiate global thread-safe security service instance
+# Global thread-safe instance used throughout the application
 security = SecurityService()
 
 
@@ -789,40 +906,46 @@ security = SecurityService()
 # ------------------------------------------------------------------
 def require_scopes(required_scopes: List[str]):
     """
-    Dependency factory for protecting route handlers with fine-grained scopes.
-    Validates token presence, verifies Redis blacklist status, and checks required permissions.
+    Dependency factory that protects route handlers with fine-grained scopes.
+
+    - Verifies the Bearer token (signature, expiry, type, blacklist).
+    - Ensures the token contains every scope listed in `required_scopes`
+      plus any scopes declared via FastAPI's SecurityScopes.
+    - Expects a Redis client to be injectable via Depends(get_redis).
+      Adjust the Depends(...) line if your Redis dependency has a different name.
     """
+
     async def scope_checker(
         security_scopes: SecurityScopes,
         token: str = Depends(oauth2_scheme),
-        redis_client: Optional[AsyncRedis] = None
+        # IMPORTANT: replace `get_redis` with your actual Redis dependency
+        redis_client: AsyncRedis = Depends(get_redis),  # type: ignore[name-defined]
     ) -> TokenData:
         if not token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Authentication credentials were not provided.",
-                headers={"WWW-Authenticate": "Bearer"}
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Decode and verify token (including optional Redis blacklist check)
         token_data = await security.verify_token(
             token,
             expected_type="access",
-            redis_client=redis_client
+            redis_client=redis_client,
         )
 
-        # Combine route factory scopes with FastAPI's native SecurityScopes (if declared)
+        # Union of factory-supplied scopes and any scopes declared on the route
         all_required = set(required_scopes).union(set(security_scopes.scopes))
 
-        # Check whether token contains all required scopes
         for required_scope in all_required:
             if required_scope not in token_data.scopes:
                 logger.warning(
-                    f"Forbidden access attempt by staff {token_data.sub}. Missing scope: {required_scope}"
+                    f"Forbidden access attempt by staff {token_data.sub}. "
+                    f"Missing scope: {required_scope}"
                 )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail=f"Insufficient permissions. Missing scope: '{required_scope}'"
+                    detail=f"Insufficient permissions. Missing scope: '{required_scope}'",
                 )
 
         return token_data

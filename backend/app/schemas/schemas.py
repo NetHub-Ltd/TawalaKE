@@ -243,6 +243,11 @@ class BusinessResponse(BusinessBase):
     active: bool
     created_at: datetime
 
+class MiniStoreResponse(BaseModel):
+    name: str
+    id: UUID
+    
+
 
 T = TypeVar("T")
 
@@ -300,13 +305,15 @@ class StaffCreateIn(BaseModel):
 
 class StaffResponse(BaseModel):
     id: UUID
-    tenant_id: UUID
+    # tenant_id: UUID
     organization_id: Optional[UUID] = None
-    business_id: Optional[UUID] = None
+    # business_id: Optional[UUID] = None
     email: EmailStr
     full_name: str
     role: StaffRole
     active: bool
+    assigned_businesses: Optional[List[MiniStoreResponse]] = None  # Eagerly loaded list of businesses the staff member is assigned to
+    # store: Optional[BusinessResponse] = None # this can be a list on businesses if a staff member is assigned to multiple businesses
 
 
 class DateRangeQuery(BaseModel):

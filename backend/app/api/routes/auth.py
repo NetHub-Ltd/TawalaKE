@@ -2,7 +2,7 @@ import datetime
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, BackgroundTasks, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -100,27 +100,21 @@ async def refresh_token(
     request: Request,
     response: Response,
     redis: RedisDep,
-    body: Optional[RefreshTokenRequest] = None,
+    refresh_token: str = Body(..., embed=True),
+    # body: Optional[RefreshTokenRequest] = None,
 ):
     """
     Rotates refresh tokens cleanly. Accepts refresh token from HttpOnly cookie first,
     falling back to JSON body if provided. Blacklists old JTI in Redis to prevent replay attacks.
     """
-    token_str = request.cookies.get("refresh_token")
+    # Optional safety: strip any accidental "Bearer " or whitespace
+    clean = refresh_token.strip()
+    if clean.lower().startswith("bearer "):
+        clean = clean[7:].strip()
     
-    if not token_str and body and body.refresh_token:
-        token_str = body.refresh_token
-
-    if not token_str:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token missing from request cookie and body.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
     try:
         new_tokens = await security.rotate_refresh_token(
-            old_refresh_token=token_str,
+            old_refresh_token=clean,
             redis_client=redis
         )
         set_refresh_cookie(response, new_tokens.refresh_token)
@@ -186,39 +180,6 @@ async def request_password_reset(
         "message": "If an active account exists for that email, a password reset link has been dispatched."
     }
 
-
-# @router.post("/password-reset/request", response_model=MessageResponse)
-# @limiter.limit("3/minute")  # Prevent email enumeration and spamming
-# async def request_password_reset(
-#     request: Request,
-#     body: PasswordResetRequest,
-#     db: SessionDep,
-#     redis: RedisDep,
-# ):
-#     """
-#     Generates a 15-minute high-entropy reset token stored in Redis.
-#     Always returns 200 OK to prevent email enumeration vulnerabilities.
-#     """
-#     email_clean = body.email.lower().strip()
-#     stmt = select(Staff).where(Staff.email == email_clean, Staff.active == True)
-#     staff = (await db.exec(stmt)).first()
-
-#     if staff:
-#         reset_token = await security.create_password_reset_token(
-#             staff_id=staff.id,
-#             redis_client=redis,
-#             expire_minutes=15
-#         )
-        
-#         # Dispatch email asynchronously via your existing Resend integration
-#         # e.g., await send_password_reset_email(email=staff.email, token=reset_token)
-#         logger.info(f"🔑 Password reset token generated for user {staff.id}: {reset_token}")
-
-#     return MessageResponse(
-#         message="If an active account exists with that email, a password reset link has been dispatched."
-#     )
-
-
 @router.post("/password-reset/confirm", response_model=MessageResponse)
 async def confirm_password_reset(
     body: PasswordResetConfirm,
@@ -254,6 +215,9 @@ async def confirm_password_reset(
 @router.get("/me", response_model=StaffResponse)
 async def get_current_user_info(current_user: CurrentStaff):
     """Returns the authenticated staff member's profile."""
+
+    # logger.info(f"Fetching profile for authenticated user: {current_user.email} With business ID: {current_user.assigned_businesses}")
+    
     return current_user
 
 
