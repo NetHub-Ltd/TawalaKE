@@ -1,5 +1,5 @@
 [project]
-name = "Tawala_Backend"
+name = "backend"
 version = "v0.0.12"
 description = "Tawala is a Businenss Management System"
 readme = "README.md"
