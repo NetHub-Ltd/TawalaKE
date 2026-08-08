@@ -12,6 +12,7 @@ from app.crud.business import business_crud
 from fastapi_cache.decorator import cache
 from app.schemas.org import OrgCreate, OrgUpdate, OrgResponse
 from app.schemas.staff import StaffOnboard
+from app.core.redis_client import limiter
 
 # Directly utilizing your provided dependency definitions
 from app.api.deps import SessionDep, get_redis, AsyncRedis,universal_key_builder, purge_cache_namespace
@@ -33,7 +34,8 @@ async def create_tenant(request: Request, db: SessionDep, payload: StaffOnboard,
     )
 
 @router.patch("/update-org", status_code=201, response_model=ApiResponse[OrgResponse])
-async def updates_organization(organization_id: UUID, db: SessionDep, user: AuthUser, payload: OrgUpdate):
+@limiter.limit("20/minute")
+async def updates_organization(request: Request, organization_id: UUID, db: SessionDep, user: AuthUser, payload: OrgUpdate, redis_client: AsyncRedis = Depends(get_redis)):
     # only owner can perfom this operation
     if user.role != StaffRole.OWNER and organization_id == user.organization_id:
         raise HTTPException(status_code=403, detail="Not Authorized to perform this action!")
@@ -46,6 +48,9 @@ async def updates_organization(organization_id: UUID, db: SessionDep, user: Auth
     new_org = await organization_crud.update(db=db ,db_obj=org, obj_in=payload)
     await db.commit()
     await db.refresh(new_org)
+
+    await purge_cache_namespace(redis_client, namespace="organizations", business_id=new_org.id)
+
     return ApiResponse(
         status=True,
         message="Organization Updated Succesfully",
@@ -74,8 +79,9 @@ async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: Au
 @cache(expire=CACHE_TTL_SEC, namespace="stores", key_builder=universal_key_builder) 
 async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
     
-    # if organization_id != user.organization_id:
-    #     raise HTTPException(status_code=403, detail="You dont have access to perform this action")
+    if organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
+        
     businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
     return ApiResponse(
         status=True,
@@ -85,9 +91,8 @@ async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: 
     )
 
 @router.get('/staff/{organization_id}', response_model=ApiResponse[List[StaffResponse]])
-@cache(expire=CACHE_TTL_SEC, namespace="staff", key_builder=universal_key_builder)
+@cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
 async def get_staff_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None):
-    
     
     staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
     return ApiResponse(
