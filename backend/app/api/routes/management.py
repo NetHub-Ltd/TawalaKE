@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from pydantic import EmailStr
 from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
-from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale
+from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace
 from app.schemas.schemas import TenantResponse, TenantCreate
 from sqlmodel import select
@@ -69,6 +69,14 @@ async def get_sales(request: Request, db: SessionDep, business_id: UUID = None):
         stmt = stmt.where(Sale.business_id == business_id)
     sales = (await db.exec(stmt)).all()
     return sales
+
+@router.get("/billing-plans")
+@limiter.limit("20/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
+async def get_billing_plans(request: Request, db: SessionDep):
+    stmt = select(Plan)
+    results = (await db.exec(stmt)).all()
+    return results
 
 
 # @router.get("/get-business-anlytics")
