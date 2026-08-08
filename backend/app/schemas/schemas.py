@@ -266,6 +266,8 @@ class ApiResponse(BaseModel, Generic[T]):
     message: str
     data: Optional[T] = None
 
+    model_config = ConfigDict(from_attributes=True)  # sometimes help
+
 # =========================================================
 # FORWARD REF FIXES
 # =========================================================

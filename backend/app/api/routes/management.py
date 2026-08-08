@@ -3,7 +3,7 @@ from pydantic import EmailStr
 from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
 from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace
-from app.schemas.schemas import TenantResponse, TenantCreate
+from app.schemas.schemas import TenantResponse, TenantCreate, ApiResponse
 from sqlmodel import select
 from pydantic import EmailStr
 from app.models.models import Product, Business
@@ -15,7 +15,8 @@ from fastapi_cache.decorator import cache
 from sqlalchemy import update
 from app.utils.logging import logger
 from app.crud.store import store_crud
-
+from app.schemas.plans import PlanRead
+from typing import List
 
 router = APIRouter()
 
@@ -70,13 +71,28 @@ async def get_sales(request: Request, db: SessionDep, business_id: UUID = None):
     sales = (await db.exec(stmt)).all()
     return sales
 
-@router.get("/billing-plans")
+@router.get("/billing-plans", response_model=ApiResponse[List[PlanRead]])
 @limiter.limit("20/minute")
 @cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
 async def get_billing_plans(request: Request, db: SessionDep):
-    stmt = select(Plan)
-    results = (await db.exec(stmt)).all()
-    return results
+    try:
+        stmt = select(Plan)
+        results = (await db.exec(stmt)).all()
+
+
+        # Explicit conversion – this usually fixes the validation error
+        # plans = [PlanRead.model_validate(plan) for plan in results]
+
+        return ApiResponse(
+            status=True,
+            status_code=200,
+            message="Plans retrieved succesfully",
+            data=results
+        )   
+
+    except ValidationError as e:
+        logger.error(f"We couldn't validate the data {e}")
+        return HTTPException(status_code=500, detail="An error occured, please try again later")
 
 
 # @router.get("/get-business-anlytics")
