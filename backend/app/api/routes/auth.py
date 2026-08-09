@@ -217,7 +217,6 @@ async def get_current_user_info(current_user: CurrentStaff):
     """Returns the authenticated staff member's profile."""
 
     # logger.info(f"Fetching profile for authenticated user: {current_user.email} With business ID: {current_user.assigned_businesses}")
-    
     return current_user
 
 

@@ -130,6 +130,13 @@ async def get_current_user(
             )
 
         # logger.info(f"Authenticated user: {staff.email} (ID: {staff.assigned_businesses})")
+        if not staff.assigned_businesses:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User has no assigned businesses",
+            )
+
+        # staff.business_id = staff.assigned_businesses[0].id  # Assign the first business ID for context
         return staff
 
     except HTTPException:
