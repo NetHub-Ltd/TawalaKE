@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1040" height="1212" viewBox="0 0 1040 1212"
+     fill="none">
+  <!-- Exact-color vector reconstruction of the supplied artwork.
+       White areas from the source are represented as transparent cut-outs. -->
+
+  <!-- Left teal block + its internal cut-out -->
+  <path fill="#003F4E" fill-rule="evenodd" d="
+    M 56 103
+    L 466 103
+    L 466 298
+    L 359 406
+    L 56 404
+    Z
+
+    M 157 304
+    L 157 204
+    L 365 205
+    L 365 241
+    C 365 258, 357 270, 348 277
+    C 337 289, 322 299, 307 305
+    Z
+  "/>
+
+  <!-- Right/top teal structure + central stem -->
+  <path fill="#003F4E" fill-rule="evenodd" d="
+    M 568 103
+    L 978 103
+    L 979 406
+    L 628 406
+    C 604 406, 586 417, 575 435
+    C 568 447, 566 462, 566 480
+    L 566 992
+    L 601 962
+    L 668 1032
+    L 520 1179
+    L 466 1124
+    L 466 415
+    L 577 305
+    L 875 305
+    L 874 204
+    L 568 204
+    Z
+  "/>
+
+  <!-- Left terracotta panel + transparent cut-out -->
+  <path fill="#C1705B" fill-rule="evenodd" d="
+    M 56 507
+    L 362 507
+    L 362 1024
+    L 56 724
+    Z
+
+    M 159 606
+    L 263 607
+    L 262 783
+    L 159 681
+    Z
+  "/>
+
+  <!-- Right terracotta panel + transparent cut-out -->
+  <path fill="#C1705B" fill-rule="evenodd" d="
+    M 669 507
+    L 979 507
+    L 979 721
+    L 740 959
+    L 669 889
+    Z
+
+    M 771 607
+    L 875 607
+    L 875 680
+    L 771 783
+    Z
+  "/>
+</svg>

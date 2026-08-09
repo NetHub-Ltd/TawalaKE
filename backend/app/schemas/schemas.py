@@ -322,7 +322,6 @@ class StaffResponse(BaseModel):
     role: StaffRole
     active: bool
     assigned_businesses: Optional[List[MiniStoreResponse]] = []  # Eagerly loaded list of businesses the staff member is assigned to
-    # store: Optional[BusinessResponse] = None # this can be a list on businesses if a staff member is assigned to multiple businesses
 
 
 class DateRangeQuery(BaseModel):
