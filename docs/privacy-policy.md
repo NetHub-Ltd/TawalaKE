@@ -3,7 +3,7 @@
 **Effective Date:** 9 August 2026  
 **Last Updated:** 9 August 2026
 
-Tawala ("Tawala", "we", "us", or "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, store, share, and protect personal data when you use our Business Management System and related services (the "Service").
+Tawala is a Business Management System operated by **Nethub** (“Nethub”, “we”, “us”, or “our”), a company registered in Kenya. This Privacy Policy explains how we collect, use, store, share, and protect personal data when you use the Tawala platform and related services (the “Service”).
 
 This Policy is issued in accordance with the **Data Protection Act, 2019** of Kenya and other applicable laws.
 
@@ -11,36 +11,35 @@ This Policy is issued in accordance with the **Data Protection Act, 2019** of Ke
 
 ## 1. Who We Are
 
-Tawala is a business management platform that provides tools for sales, inventory, invoicing, staff management, and related business operations.
+**Legal Entity:** Nethub  
+**Product:** Tawala Business Management System  
 
 For the purposes of the Data Protection Act, 2019:
 
-- **Data Controller:** Tawala (for account and platform data)
-- **Data Processor:** Tawala (when processing data on behalf of our customers/businesses)
+- Nethub acts as a **Data Controller** for account data, billing data, platform analytics, service improvement, and aggregated business insights.
+- Nethub acts as a **Data Processor** when processing Customer Data purely to deliver the core Service on behalf of our customers.
 
 **Contact Details:**  
-Email: privacy@tawala.co.ke  
-Physical Address: [Insert your registered address]  
-Data Protection Officer (if appointed): [Name / Email]
+Email: privacy@nethub.co.ke  
+Website: https://nethub.co.ke  
+Physical Address: [Insert your registered Kenyan address]
 
 ---
 
 ## 2. Data We Collect
 
-We collect the following categories of data:
-
 ### 2.1 Account & Identity Data
 - Full name
 - Email address
 - Phone number
-- Business name and registration details
-- Password (stored in hashed form)
-- Staff PINs (hashed and salted)
+- Business name and details
+- Password (stored hashed)
+- Staff PINs (stored hashed and salted)
 
-### 2.2 Business & Operational Data
-- Sales transactions
+### 2.2 Business & Operational Data (Customer Data)
+- Sales and transaction records
 - Invoices and receipts
-- Product and inventory records
+- Product, service, and inventory data
 - Customer records (names, phone numbers, emails)
 - Staff records
 - Expense records
@@ -53,8 +52,8 @@ We collect the following categories of data:
 - Approximate location (derived from IP)
 
 ### 2.4 Payment Data
-- Mobile money (M-Pesa) transaction references
-- Card payment references (we do not store full card details)
+- M-Pesa and other payment references
+- We do not store full card details
 
 ---
 
@@ -62,16 +61,35 @@ We collect the following categories of data:
 
 We process personal data for the following purposes:
 
-| Purpose                              | Legal Basis (Kenya DPA)              |
-|--------------------------------------|--------------------------------------|
-| Providing and maintaining the Service | Contractual necessity                |
-| Account creation and authentication  | Contractual necessity                 |
-| Billing and subscription management  | Contractual necessity                 |
-| Customer support                     | Legitimate interests / Contract      |
-| Improving the Service                | Legitimate interests                 |
-| Security and fraud prevention        | Legitimate interests / Legal obligation |
-| Compliance with legal obligations    | Legal obligation                     |
-| Marketing (only with consent)        | Consent                              |
+### 3.1 Core Service Delivery
+- Providing, maintaining, and supporting the Tawala platform
+- Account creation, authentication, and access management
+- Billing and subscription management
+- Customer support
+
+### 3.2 Service Improvement & Artificial Intelligence
+We may use Customer Data (including transaction and usage data) to:
+- Operate, analyse, and improve the Tawala platform
+- Train and improve our machine learning and artificial intelligence models
+- Develop new features and enhance performance, security, and usability
+
+### 3.3 Aggregated and Anonymised Insights
+We may create aggregated, anonymised, or de-identified datasets. Once data can no longer reasonably identify an individual or a specific business, we may use it for:
+- Analytics and benchmarking
+- Research and product development
+- Business development purposes
+
+### 3.4 Relevant Business Opportunities
+We may use aggregated or anonymised sales and category insights to identify potential supply opportunities and present relevant offers from wholesalers, distributors, or other business partners to our customers.
+
+**We do not sell Personal Identifiable Information (PII).**  
+We do not share PII with third parties for their independent marketing without a lawful basis.
+
+### 3.5 Legal Bases (Kenya Data Protection Act, 2019)
+- Performance of a contract
+- Legitimate interests (service improvement, security, aggregated insights, and relevant business opportunities)
+- Legal obligation
+- Consent (where required)
 
 ---
 
@@ -79,11 +97,11 @@ We process personal data for the following purposes:
 
 We may share data with:
 
-- **Payment providers** (e.g. M-Pesa, card processors) for billing
-- **Cloud infrastructure providers** that host our servers
-- **Analytics and monitoring tools** (in anonymised or aggregated form where possible)
-- **Professional advisers** (lawyers, auditors) under confidentiality
-- **Government authorities** when required by law
+- Payment providers (e.g. M-Pesa, card processors)
+- Cloud infrastructure and hosting providers
+- Professional advisers under confidentiality
+- Government authorities when required by law
+- Vetted business partners only in aggregated or anonymised form for relevant supply opportunities
 
 We do **not** sell personal data.
 
@@ -91,70 +109,62 @@ We do **not** sell personal data.
 
 ## 5. Cross-Border Data Transfers
 
-Your data is primarily stored and processed in Kenya or in countries that offer adequate data protection. Where data is transferred outside Kenya, we ensure appropriate safeguards are in place (such as standard contractual clauses or adequacy decisions).
+Your data is primarily processed in Kenya or in jurisdictions with adequate protection. Where data is transferred outside Kenya, we apply appropriate safeguards in accordance with the Data Protection Act, 2019.
 
 ---
 
 ## 6. Data Retention
 
-We retain data only for as long as necessary:
-
-- Active account data: for the life of the account
-- After account termination: up to 30 days (then deleted or anonymised)
-- Financial and transaction records: retained as required by Kenyan tax and commercial laws (typically 5–7 years)
-- Backup data: securely deleted according to our backup rotation policy
+- Active account data: retained for the life of the account
+- After termination: available for export for 30 days, then deleted or anonymised
+- Financial and transaction records: retained as required by Kenyan tax and commercial laws
+- Aggregated/anonymised data: may be retained indefinitely
 
 ---
 
-## 7. Your Rights Under the Data Protection Act, 2019
+## 7. Your Rights
 
-You have the right to:
+Under the Data Protection Act, 2019, you have the right to:
 
 - Access your personal data
 - Request correction of inaccurate data
-- Request deletion of your data (subject to legal retention requirements)
+- Request deletion (subject to legal retention requirements)
 - Object to certain processing
 - Request restriction of processing
 - Data portability
-- Withdraw consent at any time (where processing is based on consent)
+- Withdraw consent where processing is based on consent
 
-To exercise any of these rights, contact us at **privacy@tawala.co.ke**.
+To exercise these rights, contact us at **privacy@nethub.co.ke**.
 
-You also have the right to lodge a complaint with the **Office of the Data Protection Commissioner** (ODPC) in Kenya.
-
----
-
-## 8. Security Measures
-
-We implement appropriate technical and organisational measures, including:
-
-- Encryption of data in transit (TLS)
-- Hashed and salted passwords and PINs
-- Role-based access control
-- Regular security assessments
-- Audit logging of sensitive actions
+You may also lodge a complaint with the **Office of the Data Protection Commissioner (ODPC)** in Kenya.
 
 ---
 
-## 9. Cookies and Tracking
+## 8. Security
 
-We use essential cookies for authentication and session management. We may use limited analytics cookies to improve the Service. You can control cookies through your browser settings.
+We implement appropriate technical and organisational measures, including encryption in transit, hashed credentials, role-based access control, audit logging, and regular security reviews.
+
+---
+
+## 9. Cookies
+
+We use essential cookies for authentication and session management, and limited analytics cookies to improve the Service.
 
 ---
 
 ## 10. Children’s Privacy
 
-The Service is not directed at individuals under 18 years of age. We do not knowingly collect personal data from children.
+The Service is not directed at individuals under 18 years of age.
 
 ---
 
 ## 11. Changes to This Policy
 
-We may update this Privacy Policy from time to time. We will notify you of significant changes via email or through the Service.
+We may update this Privacy Policy from time to time. Significant changes will be communicated via email or through the Service.
 
 ---
 
-## 12. Contact Us
+## 12. Contact
 
-For any privacy-related questions or requests:  
-**Email:** privacy@tawala.co.ke
+**Email:** privacy@nethub.co.ke  
+**Website:** https://nethub.co.ke
