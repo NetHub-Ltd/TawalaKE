@@ -189,7 +189,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             if product and product.track_stock:
                 previous_stock_level = product.stock
                 product.stock -= item.quantity
-                product.popularity_score += 0.1
+                # product.popularity_score += 0.1
+                # hot fix to patch issue # 72
+                if product.popularity_score is None:
+                    product.popularity_score = 0.1
+                else:
+                    product.popularity_score += 0.1
                 db.add(product)
 
                 history = StockHistory(
