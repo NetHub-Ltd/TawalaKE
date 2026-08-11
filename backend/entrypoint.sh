@@ -2,7 +2,7 @@
 set -e
 
 echo "Running database migrations..."
-alembic upgrade head
+uv run alembic upgrade head
 
 echo "Starting Application..."
-exec fastapi run --host 0.0.0.0 --port 8000
+exec uv run fastapi run --host 0.0.0.0 --port 8000
