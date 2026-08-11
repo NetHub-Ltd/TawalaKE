@@ -17,6 +17,7 @@ from app.utils.logging import logger
 from app.crud.store import store_crud
 from app.schemas.plans import PlanRead
 from typing import List, Optional
+from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 
@@ -134,7 +135,35 @@ async def get_staff_business_assignments(request: Request, db: SessionDep, busin
 @router.get("/staff")
 @limiter.limit("5/minute")
 @cache(expire=CACHE_TTL_SEC, namespace="staff", key_builder=universal_key_builder)
-async def get_staff(request: Request, db: SessionDep, business_id: UUID):
-    stmt = select(Staff)
+async def get_staff(request: Request, db: SessionDep):
+    stmt = (
+                select(Staff)
+                .options(selectinload(Staff.assigned_businesses))
+            )
     staff_members = (await db.exec(stmt)).all()
     return staff_members
+
+
+@router.get("/patch-staff-assignments")
+@limiter.limit("5/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="staff-assignments", key_builder=universal_key_builder)
+async def get_staff_assignments(request: Request, db: SessionDep, staff_id: UUID):
+    stmt = select(Staff).where(Staff.id == staff_id).options(selectinload(Staff.assigned_businesses))
+    staff_member = (await db.exec(stmt)).first()
+
+    if not staff_member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+    stmt_assignments = select(StaffBusinessAssignment).where(StaffBusinessAssignment.staff_id == staff_id)
+    assignments = (await db.exec(stmt_assignments)).all()
+
+    # update the orgnization id
+    for assignment in assignments:
+        stmt_org = select(Organization).where(Organization.id == assignment.organization_id)
+        organization = (await db.exec(stmt_org)).first()
+        if organization:
+            assignment.organization_id = organization.id
+            await db.commit()
+
+    await db.refresh(staff_member)
+    return staff_member.assigned_businesses
