@@ -106,6 +106,7 @@ class ProductCreate(BaseModel):
     label: str
     selling_price: float
     stock: float
+    popularity_score: Optional[float] = 0.0
     category: Optional[str] = "General"
     attributes: BaseAttributes = Field(default_factory=BaseAttributes)
 
@@ -219,7 +220,16 @@ class TenantUpdate(BaseModel):
 
 class TenantResponse(TenantBase):
     id: UUID
+    name: str
     active: bool
+    address: str
+    created_at: datetime
+
+class OrganizationResponse(TenantBase):
+    id: UUID
+    name: str
+    active: bool
+    address: str
     created_at: datetime
 
 
@@ -243,6 +253,11 @@ class BusinessResponse(BusinessBase):
     active: bool
     created_at: datetime
 
+class MiniStoreResponse(BaseModel):
+    name: str
+    id: UUID
+    
+
 
 T = TypeVar("T")
 
@@ -251,6 +266,8 @@ class ApiResponse(BaseModel, Generic[T]):
     status_code: int
     message: str
     data: Optional[T] = None
+
+    model_config = ConfigDict(from_attributes=True)  # sometimes help
 
 # =========================================================
 # FORWARD REF FIXES
@@ -300,13 +317,12 @@ class StaffCreateIn(BaseModel):
 
 class StaffResponse(BaseModel):
     id: UUID
-    tenant_id: UUID
     organization_id: Optional[UUID] = None
-    business_id: Optional[UUID] = None
     email: EmailStr
     full_name: str
     role: StaffRole
     active: bool
+    assigned_businesses: Optional[List[MiniStoreResponse]] = []  # Eagerly loaded list of businesses the staff member is assigned to
 
 
 class DateRangeQuery(BaseModel):

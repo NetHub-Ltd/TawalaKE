@@ -64,10 +64,10 @@ export default async function TerminalLayout({
           {/* INTERNAL ISOLATED CONTENT VIEWPORT */}
           <main 
             id="main-content" 
-            className="flex-1 min-w-0 min-h-0 relative bg-background"
+            className="flex-1 min-w-0 min-h-0 relative"
           >
             {/* SCROLLABLE VIEWPORT FRAME */}
-            <div className="absolute inset-0 overflow-y-auto overscroll-contain focus:outline-none px-6 py-6">
+            <div className="absolute inset-0 overflow-y-auto overscroll-contain focus:outline-none">
               {children}
             </div>
           </main>

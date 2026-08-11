@@ -53,7 +53,7 @@ async def get_products(
     page: int = Query(default=1, ge=1, description="Current page number"),
     size: int = Query(default=50, ge=1, le=100, alias="limit", description="Number of rows per page"),
     sort_by: Optional[str] = Query(default=None, description="Model column attribute name to sort by"),
-    sort_order: str = Query(default="desc", regex="^(asc|desc)$", description="Sort direction order"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="Sort direction order"),
     redis_client: AsyncRedis = Depends(get_redis)
 ):
     """
@@ -98,7 +98,6 @@ async def get_products(
             pages=pages
         )
     )
-
 
 @router.get("/search", response_model=ApiResponse[Dict[str, Any]], operation_id="searchProducts")
 @limiter.limit("60/minute")  # Fine-tuned lookup limit to shield database search resources
@@ -149,7 +148,7 @@ async def get_product_detail(
     request: Request, 
     product_id: UUID, 
     db: SessionDep,
-    redis_client: AsyncRedis = Depends(get_redis)  # Maintained injection to prevent breaking route dependency trees
+    business_id: Optional[UUID] = None,
 ):
     """
     GET /products/{product_id}

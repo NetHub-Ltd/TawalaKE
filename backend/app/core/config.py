@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     email_from_support: str = "NetHub Support <support@nethub.co.ke>"
     email_from_tawala: str = "Tawala System <tawala@nethub.co.ke>"
     email_from_marketing: str = "NetHub Updates <newsletter@nethub.co.ke>"
+    frontend_url: str = "preview.nethub.co.ke"
 
     redis_url: str
 

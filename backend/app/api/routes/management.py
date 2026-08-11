@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from pydantic import EmailStr
 from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
-from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale
+from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan, SaleAnalyticsSummary
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace
-from app.schemas.schemas import TenantResponse, TenantCreate
+from app.schemas.schemas import TenantResponse, TenantCreate, ApiResponse
 from sqlmodel import select
-from app.core.security import hash_password
 from pydantic import EmailStr
 from app.models.models import Product, Business
 from uuid import UUID
@@ -15,40 +14,14 @@ from app.core.redis_client import limiter
 from fastapi_cache.decorator import cache
 from sqlalchemy import update
 from app.utils.logging import logger
-
+from app.crud.store import store_crud
+from app.schemas.plans import PlanRead
+from typing import List, Optional
 
 router = APIRouter()
 
 # --- Redis Cache Durations ---
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
-
-
-@router.post("/patch-organization-id")
-async def patch_organization_id(db: SessionDep, email: EmailStr):
-    # stmt = update(Staff).where(Staff.organization_id == None).values(organization_id=Staff.tenant_id)
-    stmt = select(Staff).where(Staff.email == email)
-    result = (await db.exec(stmt)).first()
-
-    if not result:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Staff with email {email} not found.",
-        )
-
-    logger.info(f"Found staff: {result.email}, organization_id: {result.organization_id}, tenant_id: {result.tenant_id}")
-    
-    if result.organization_id is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Staff with email {email} already has an organization_id.",
-        )
-
-    result.organization_id = result.tenant_id
-
-    await db.commit()
-    # refresh result
-    await db.refresh(result)
-    return result
 
 
 @router.get("/test-email")
@@ -97,3 +70,38 @@ async def get_sales(request: Request, db: SessionDep, business_id: UUID = None):
         stmt = stmt.where(Sale.business_id == business_id)
     sales = (await db.exec(stmt)).all()
     return sales
+
+@router.get("/billing-plans", response_model=ApiResponse[List[PlanRead]])
+@limiter.limit("20/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
+async def get_billing_plans(request: Request, db: SessionDep):
+    try:
+        stmt = select(Plan)
+        results = (await db.exec(stmt)).all()
+
+
+        # Explicit conversion – this usually fixes the validation error
+        # plans = [PlanRead.model_validate(plan) for plan in results]
+
+        return ApiResponse(
+            status=True,
+            status_code=200,
+            message="Plans retrieved succesfully",
+            data=results
+        )   
+
+    except ValidationError as e:
+        logger.error(f"We couldn't validate the data {e}")
+        return HTTPException(status_code=500, detail="An error occured, please try again later")
+
+
+@router.get("/get-business-anlytics")
+@limiter.limit("5/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="analytics", key_builder=universal_key_builder)
+async def get_business_analytics(request: Request, db: SessionDep, organization_id: Optional[UUID] = None, 
+business_id: Optional[UUID] = None):
+    # sales = await store_crud.get_business_analytics(db=db, business_id=business_id)
+    # return sales
+    stmt = select(SaleAnalyticsSummary)
+    results = (await db.exec(stmt)).all()
+    return results

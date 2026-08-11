@@ -1,74 +1,85 @@
+// app/org/page.tsx
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { StaffResponse } from "@/lib/api/generated/models/staffResponse";
+import { Suspense } from "react";
+import { OrgDecisionLoading } from "@/features/org/components/OrgDecisionLoading";
+import { OrgDecisionError } from "@/features/org/components/OrgDecisionError";
+import { OrgNoSession } from "@/features/org/components/OrgNoSession";
 
-export default async function GlobalOrgRootPage() {
-  // 1. Fetch server-side session via Auth.js v5 universal engine
+type ResolveResult =
+  | { type: "no-session" }
+  | { type: "no-org" }
+  | { type: "success"; orgId: string; businessId: string };
+
+async function resolveOrganization(): Promise<ResolveResult> {
   const session = await auth();
 
-  // Guard: Redirect to login if unauthenticated
-  if (!session?.user) {
-    redirect("/login");
+  // 1. No valid session
+  if (!session?.user || session.error || !session.accessToken) {
+    return { type: "no-session" };
   }
 
-  const staffData = session.user as unknown as StaffResponse;
+  try {
+    // 2. Fetch the full staff profile using the token from the session
+    const res = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      // Important: don't cache this – we need fresh data
+      cache: "no-store",
+    });
 
-  // 2. Resolve Multi-Tenant & Migration Boundaries
-  const resolvedOrgId = staffData.organization_id
+    if (!res.ok) {
+      // Token might be expired or invalid
+      return { type: "no-session" };
+    }
 
-  if (resolvedOrgId) {
-    redirect(`/org/${resolvedOrgId}`);
+    const fullStaffData = await res.json();
+
+    const resolvedOrgId = fullStaffData.organization_id;
+    const resolvedBusinessId = fullStaffData.assigned_businesses?.[0]?.id;
+
+    // 3. Missing organization or business context
+    if (!resolvedOrgId || !resolvedBusinessId) {
+      return { type: "no-org" };
+    }
+
+    // 4. Happy path
+    return {
+      type: "success",
+      orgId: resolvedOrgId,
+      businessId: resolvedBusinessId,
+    };
+  } catch (error) {
+    console.error("[OrgResolution] Failed to resolve organization:", error);
+    // Network / unexpected error → treat as no-org so user can recover
+    return { type: "no-org" };
   }
+}
 
+export default function OrgPage() {
   return (
-    <div className="min-h-screen bg-surface px-6 py-12 flex items-center justify-center">
-      <main className="w-full max-w-4xl" id="main-content">
-        
-        {/* Reassuring Core Status Board Card relying purely on global custom property styles */}
-        <section className="card-layered p-8 md:p-12 text-center flex flex-col items-center justify-center" aria-labelledby="welcome-heading">
-          
-          {/* Large Success Check Ring utilizing native brand token channels */}
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-brand-accent/10 text-brand-accent animate-pulse">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="h-10 w-10" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-            </svg>
-          </div>
-
-          {/* Greeting Unit executing semantic structural layout guidelines */}
-          <header className="mb-6">
-            <h1 id="welcome-heading" className="text-h2">
-              Hello, <span className="text-gradient font-black">{staffData.full_name || session.user.name}</span>!
-            </h1>
-            <p className="mt-2 text-brand-accent font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
-              Pending Tenant Assignment
-            </p>
-          </header>
-
-          {/* Warm Reassurance Message styled purely through system variables */}
-          <div className="max-w-2xl space-y-4 text-muted border-b border-border/40 pb-8">
-            <p>
-              Your authentication was successful and your identity verification credentials are valid within the network layer.
-            </p>
-            <p>
-              However, your operator profile is not currently linked to an active corporate organization branch context. To initialize your station dashboard, a manager or administrator must assign your team profile to a store division inside their console.
-            </p>
-          </div>
-
-          {/* Action Call for clean exit utilizing clean tracking text formatting properties */}
-          <div className="mt-6">
-            <a 
-              href="/login?error=context_resolution_timeout" 
-              className="font-bold text-muted hover:text-foreground transition-colors uppercase tracking-wider underline underline-offset-4"
-            >
-              Return to Authentication Portal
-            </a>
-          </div>
-
-          {/* Screen boundary lock to explicitly prevent visual overflow or layout shifts */}
-          <div className="sr-only">End of context exception screen</div>
-        </section>
-
-      </main>
-    </div>
+    <Suspense fallback={<OrgDecisionLoading />}>
+      <OrgDecisionWrapper />
+    </Suspense>
   );
+}
+
+async function OrgDecisionWrapper() {
+  const result = await resolveOrganization();
+
+  switch (result.type) {
+    case "no-session":
+      return <OrgNoSession />;
+
+    case "no-org":
+      return <OrgDecisionError />;
+
+    case "success":
+      // This redirect happens on the server – user never sees the page
+      redirect(
+        `/org/${result.orgId}/${result.businessId}/overview`
+      );
+  }
 }

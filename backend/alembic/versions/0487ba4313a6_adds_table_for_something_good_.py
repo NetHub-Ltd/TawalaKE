@@ -1,4 +1,4 @@
-"""adds d:\Tawala\backend\venv\Scripts\activate.bat
+"""adds
 
 Revision ID: 0487ba4313a6
 Revises: ae466c892daa

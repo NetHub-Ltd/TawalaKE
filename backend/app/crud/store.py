@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from pydantic import BaseModel, Field
 
 from app.crud.base import BaseCRUD
-from app.core.security import hash_password 
+from app.core.security import security
 from app.models.models import (
     Business, StaffBusinessAssignment, Staff, StockHistory, 
     StockMovementType, Product, Sale, SaleItem, FinancialDocument, 

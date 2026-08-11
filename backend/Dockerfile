@@ -1,44 +1,43 @@
 FROM python:3.12-slim
 
-# 1. Environment setup
-# Set PYTHONPATH to /app so 'import app' works from anywhere
+# Environment
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    UV_PROJECT_ENVIRONMENT=system
 
 WORKDIR /app
 
-# 2. Install system dependencies (needed for some python packages like psycopg2)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libpq-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# System dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        gcc \
+        libpq-dev \
+        curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# 3. Copy dependency files
-# Even without poetry, pip can read pyproject.toml
-COPY requirements.txt ./
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 4. Install dependencies + Gunicorn/Uvicorn manually
-# We use 'pip install .' if you have a build-backend,
-# or just install the requirements manually for speed.
-RUN pip install --no-cache-dir -r requirements.txt
-#RUN #pip install --no-cache-dir .
+ENV PATH="/root/.local/bin:${PATH}"
 
-# 5. Copy your source folders specifically
-# Matching your manual copy logic
+# Install Python dependencies
+COPY pyproject.toml uv.lock ./
+
+RUN uv sync \
+    --frozen \
+    --no-install-project \
+    --no-dev
+
+# Copy application
 COPY app/ ./app
-# COPY fastapi ./fastapi
-# COPY realms ./realms
-# COPY scripts ./scripts
-COPY entrypoint.sh ./entrypoint.sh
-COPY alembic.ini ./alembic.ini
 COPY alembic ./alembic
+COPY alembic.ini ./
+COPY entrypoint.sh ./
 
-# 6. Final touches
 RUN chmod +x entrypoint.sh
+
 EXPOSE 8000
 
-# Using dots for the module path, not slashes!
-#CMD ["gunicorn", "-w", "2", "-k", "uvicorn.workers.UvicornWorker", "app.main:app", "--bind", "0.0.0.0:8000"]
 ENTRYPOINT ["./entrypoint.sh"]
