@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from pydantic import EmailStr
 from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
-from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan, SaleAnalyticsSummary
+from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan, SaleAnalyticsSummary, StaffBusinessAssignment
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace
 from app.schemas.schemas import TenantResponse, TenantCreate, ApiResponse
 from sqlmodel import select
@@ -105,3 +105,36 @@ business_id: Optional[UUID] = None):
     stmt = select(SaleAnalyticsSummary)
     results = (await db.exec(stmt)).all()
     return results
+
+
+@router.post("/purge-cache")
+async def purge_cache(request: Request, redis_client: AsyncRedis = Depends(get_redis),
+                      namespace: str = "", **identifiers):
+    """
+    Purges targeted cache matrices cleanly across any namespace.
+    Usage: POST /purge-cache?namespace=products&business_id=uuid
+    """
+    if not namespace:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Namespace is required for cache purge.")
+    
+    await purge_cache_namespace(redis_client, namespace, **identifiers)
+    return {"status": "success", "message": f"Cache purged for namespace: {namespace} with identifiers: {identifiers}"}
+
+
+# return everything in staff and staffbusinessassignment tables for a given business_id
+@router.get("/staff-business-assignments")
+@limiter.limit("5/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="staff-business-assignments", key_builder=universal_key_builder)
+async def get_staff_business_assignments(request: Request, db: SessionDep, business_id: UUID):
+    stmt = select(StaffBusinessAssignment)
+    assignments = (await db.exec(stmt)).all()
+    return assignments
+
+
+@router.get("/staff")
+@limiter.limit("5/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="staff", key_builder=universal_key_builder)
+async def get_staff(request: Request, db: SessionDep, business_id: UUID):
+    stmt = select(Staff)
+    staff_members = (await db.exec(stmt)).all()
+    return staff_members

@@ -129,7 +129,7 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # logger.info(f"Authenticated user: {staff.email} (ID: {staff.assigned_businesses})")
+        logger.info(f"Authenticated user: {staff.email} (ID: {staff.assigned_businesses})")
         if not staff.assigned_businesses:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
