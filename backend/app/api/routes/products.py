@@ -147,7 +147,8 @@ async def search_products(
 async def get_product_detail(
     request: Request, 
     product_id: UUID, 
-    db: SessionDep
+    db: SessionDep,
+    business_id: Optional[UUID] = None,
 ):
     """
     GET /products/{product_id}

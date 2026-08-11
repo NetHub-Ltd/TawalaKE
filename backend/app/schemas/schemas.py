@@ -106,6 +106,7 @@ class ProductCreate(BaseModel):
     label: str
     selling_price: float
     stock: float
+    popularity_score: Optional[float] = 0.0
     category: Optional[str] = "General"
     attributes: BaseAttributes = Field(default_factory=BaseAttributes)
 

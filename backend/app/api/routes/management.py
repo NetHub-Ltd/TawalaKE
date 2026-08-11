@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Request
 from pydantic import EmailStr
 from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
-from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan
+from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan, SaleAnalyticsSummary
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace
 from app.schemas.schemas import TenantResponse, TenantCreate, ApiResponse
 from sqlmodel import select
@@ -16,7 +16,7 @@ from sqlalchemy import update
 from app.utils.logging import logger
 from app.crud.store import store_crud
 from app.schemas.plans import PlanRead
-from typing import List
+from typing import List, Optional
 
 router = APIRouter()
 
@@ -95,9 +95,13 @@ async def get_billing_plans(request: Request, db: SessionDep):
         return HTTPException(status_code=500, detail="An error occured, please try again later")
 
 
-# @router.get("/get-business-anlytics")
-# @limiter.limit("5/minute")
-# @cache(expire=CACHE_TTL_SEC, namespace="analytics", key_builder=universal_key_builder)
-# async def get_business_analytics(request: Request, db: SessionDep, business_id: UUID):
-#     sales = await store_crud.get_business_analytics(db=db, business_id=business_id)
-#     return sales
+@router.get("/get-business-anlytics")
+@limiter.limit("5/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="analytics", key_builder=universal_key_builder)
+async def get_business_analytics(request: Request, db: SessionDep, organization_id: Optional[UUID] = None, 
+business_id: Optional[UUID] = None):
+    # sales = await store_crud.get_business_analytics(db=db, business_id=business_id)
+    # return sales
+    stmt = select(SaleAnalyticsSummary)
+    results = (await db.exec(stmt)).all()
+    return results
