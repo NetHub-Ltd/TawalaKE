@@ -3,7 +3,7 @@ from pydantic import EmailStr
 from app.api.deps import SessionDep, AuthUser, get_redis, AsyncRedis
 from app.models.models import Tenant, Staff, StaffRole, Organization, Tenant, Sale, Plan, SaleAnalyticsSummary, StaffBusinessAssignment
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace
-from app.schemas.schemas import TenantResponse, TenantCreate, ApiResponse
+from app.schemas.schemas import StaffResponse, TenantResponse, TenantCreate, ApiResponse
 from sqlmodel import select
 from pydantic import EmailStr
 from app.models.models import Product, Business
@@ -108,7 +108,6 @@ business_id: Optional[UUID] = None):
     return results
 
 
-
 # return everything in staff and staffbusinessassignment tables for a given business_id
 @router.get("/staff-business-assignments")
 async def get_staff_business_assignments(request: Request, db: SessionDep):
@@ -117,38 +116,68 @@ async def get_staff_business_assignments(request: Request, db: SessionDep):
     return assignments
 
 
-@router.get("/all-staff")
+@router.get("/all-staff", response_model=List[StaffResponse])
 async def get_staff(request: Request, db: SessionDep):
     stmt = (select(Staff).options(selectinload(Staff.assigned_businesses)))
     staff_members = (await db.exec(stmt)).all()
     return staff_members
 
 
+# @router.post("/patch-staff-assignments")
+# async def get_staff_assignments(request: Request, db: SessionDep, staff_id: UUID):
+#     stmt = (
+#                 select(Staff)
+#                 .where(Staff.id == staff_id)
+#                 .options(selectinload(Staff.assigned_businesses))
+#             )
+#     staff_member = (await db.exec(stmt)).first()
+
+#     if not staff_member:
+#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+
+#     logger.info(f"Staff member found: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
+
+#     stmt_assignments = select(StaffBusinessAssignment).where(StaffBusinessAssignment.staff_id == staff_member.id)
+#     assignments = (await db.exec(stmt_assignments)).all()
+
+#     # update the orgnization id
+#     for assignment in assignments:
+#         stmt_org = select(Organization).where(Organization.id == assignment.organization_id)
+#         organization = (await db.exec(stmt_org)).first()
+#         if organization:
+#             assignment.organization_id = organization.id
+#             await db.commit()
+
+#     await db.refresh(staff_member)
+#     logger.info(f"Refreshed staff member: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
+#     return staff_member.assigned_businesses
+
+
 @router.post("/patch-staff-assignments")
-async def get_staff_assignments(request: Request, db: SessionDep, staff_id: UUID):
-    stmt = (
-                select(Staff)
-                .where(Staff.id == staff_id)
-                .options(selectinload(Staff.assigned_businesses))
+async def patch_staff_assignments(
+    request: Request,
+    db: SessionDep,
+):
+    staff_members = (await db.exec(select(Staff))).all()
+
+    for staff_member in staff_members:
+        stmt_assignments = select(StaffBusinessAssignment).where(
+            StaffBusinessAssignment.staff_id == staff_member.id
+        )
+        assignments = (await db.exec(stmt_assignments)).all()
+
+        for assignment in assignments:
+            stmt_org = select(Organization).where(
+                Organization.id == assignment.organization_id
             )
-    staff_member = (await db.exec(stmt)).first()
+            organization = (await db.exec(stmt_org)).first()
 
-    if not staff_member:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
+            if organization:
+                assignment.organization_id = organization.id
 
-    logger.info(f"Staff member found: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
+    await db.commit()
 
-    stmt_assignments = select(StaffBusinessAssignment).where(StaffBusinessAssignment.staff_id == staff_member.id)
-    assignments = (await db.exec(stmt_assignments)).all()
-
-    # update the orgnization id
-    for assignment in assignments:
-        stmt_org = select(Organization).where(Organization.id == assignment.organization_id)
-        organization = (await db.exec(stmt_org)).first()
-        if organization:
-            assignment.organization_id = organization.id
-            await db.commit()
-
-    await db.refresh(staff_member)
-    logger.info(f"Refreshed staff member: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
-    return staff_member.assigned_businesses
+    return {
+        "message": "Staff assignments patched successfully",
+        "staff_count": len(staff_members),
+    }
