@@ -108,53 +108,37 @@ business_id: Optional[UUID] = None):
     return results
 
 
-@router.post("/purge-cache")
-async def purge_cache(request: Request, redis_client: AsyncRedis = Depends(get_redis),
-                      namespace: str = "", **identifiers):
-    """
-    Purges targeted cache matrices cleanly across any namespace.
-    Usage: POST /purge-cache?namespace=products&business_id=uuid
-    """
-    if not namespace:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Namespace is required for cache purge.")
-    
-    await purge_cache_namespace(redis_client, namespace, **identifiers)
-    return {"status": "success", "message": f"Cache purged for namespace: {namespace} with identifiers: {identifiers}"}
-
 
 # return everything in staff and staffbusinessassignment tables for a given business_id
 @router.get("/staff-business-assignments")
-@limiter.limit("5/minute")
-@cache(expire=CACHE_TTL_SEC, namespace="staff-business-assignments", key_builder=universal_key_builder)
-async def get_staff_business_assignments(request: Request, db: SessionDep, business_id: UUID):
+async def get_staff_business_assignments(request: Request, db: SessionDep):
     stmt = select(StaffBusinessAssignment)
     assignments = (await db.exec(stmt)).all()
     return assignments
 
 
-@router.get("/staff")
-@limiter.limit("5/minute")
-@cache(expire=CACHE_TTL_SEC, namespace="staff", key_builder=universal_key_builder)
+@router.get("/all-staff")
 async def get_staff(request: Request, db: SessionDep):
-    stmt = (
-                select(Staff)
-                .options(selectinload(Staff.assigned_businesses))
-            )
+    stmt = (select(Staff).options(selectinload(Staff.assigned_businesses)))
     staff_members = (await db.exec(stmt)).all()
     return staff_members
 
 
-@router.get("/patch-staff-assignments")
-@limiter.limit("5/minute")
-@cache(expire=CACHE_TTL_SEC, namespace="staff-assignments", key_builder=universal_key_builder)
+@router.post("/patch-staff-assignments")
 async def get_staff_assignments(request: Request, db: SessionDep, staff_id: UUID):
-    stmt = select(Staff).where(Staff.id == staff_id).options(selectinload(Staff.assigned_businesses))
+    stmt = (
+                select(Staff)
+                .where(Staff.id == staff_id)
+                .options(selectinload(Staff.assigned_businesses))
+            )
     staff_member = (await db.exec(stmt)).first()
 
     if not staff_member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
 
-    stmt_assignments = select(StaffBusinessAssignment).where(StaffBusinessAssignment.staff_id == staff_id)
+    logger.info(f"Staff member found: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
+
+    stmt_assignments = select(StaffBusinessAssignment).where(StaffBusinessAssignment.staff_id == staff_member.id)
     assignments = (await db.exec(stmt_assignments)).all()
 
     # update the orgnization id
@@ -166,4 +150,5 @@ async def get_staff_assignments(request: Request, db: SessionDep, staff_id: UUID
             await db.commit()
 
     await db.refresh(staff_member)
+    logger.info(f"Refreshed staff member: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
     return staff_member.assigned_businesses
