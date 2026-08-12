@@ -365,393 +365,449 @@
 //   );
 // }
 
-"use client";
+// "use client";
 
-import React, { useMemo, useState } from "react";
-import Link from "next/link";
-import { useBusinessContext } from "@/features/business/hooks/useBusiness";
-import { useSalesAnalytics } from "@/features/analytics/hooks/useSalesAnalytics";
-import type { AnalyticsRange } from "@/features/analytics/types";
-import { formatKES } from "@/features/analytics/lib/mapAnalytics";
-import {
-  Zap,
-  Users,
-  Layers,
-  ArrowRight,
-  CalendarDays,
-  Loader2,
-  TrendingUp,
-  ShoppingBag,
-  Receipt,
-  Percent,
-  RotateCcw,
-  Wallet,
-} from "lucide-react";
+// import React, { useMemo, useState } from "react";
+// import Link from "next/link";
+// import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+// import { useSalesAnalytics } from "@/features/analytics/hooks/useSalesAnalytics";
+// import type { AnalyticsRange } from "@/features/analytics/types";
+// import { formatKES } from "@/features/analytics/lib/mapAnalytics";
+// import {
+//   Zap,
+//   Users,
+//   Layers,
+//   ArrowRight,
+//   CalendarDays,
+//   Loader2,
+//   TrendingUp,
+//   ShoppingBag,
+//   Receipt,
+//   Percent,
+//   RotateCcw,
+//   Wallet,
+// } from "lucide-react";
 
-const RANGE_OPTIONS: { value: AnalyticsRange; label: string }[] = [
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "3d", label: "3 days" },
-  { value: "7d", label: "7 days" },
-  { value: "month", label: "Month" },
-];
+// const RANGE_OPTIONS: { value: AnalyticsRange; label: string }[] = [
+//   { value: "today", label: "Today" },
+//   { value: "yesterday", label: "Yesterday" },
+//   { value: "3d", label: "3 days" },
+//   { value: "7d", label: "7 days" },
+//   { value: "month", label: "Month" },
+// ];
 
-function ChangePill({ value }: { value: number }) {
-  const positive = value >= 0;
-  return (
-    <span
-      className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-        positive
-          ? "text-brand-accent bg-brand-accent/5"
-          : "text-rose-500 bg-rose-500/5"
-      }`}
-    >
-      {positive ? "+" : ""}
-      {value.toFixed(1)}%
-    </span>
-  );
-}
+// function ChangePill({ value }: { value: number }) {
+//   const positive = value >= 0;
+//   return (
+//     <span
+//       className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+//         positive
+//           ? "text-brand-accent bg-brand-accent/5"
+//           : "text-rose-500 bg-rose-500/5"
+//       }`}
+//     >
+//       {positive ? "+" : ""}
+//       {value.toFixed(1)}%
+//     </span>
+//   );
+// }
+
+// export default function OverviewPage() {
+//   const { businessId, organizationId } = useBusinessContext();
+//   const [range, setRange] = useState<AnalyticsRange>("7d");
+
+//   const normalizedBusinessId = Array.isArray(businessId)
+//     ? businessId[0]
+//     : businessId || "";
+//   const normalizedOrgId = Array.isArray(organizationId)
+//     ? organizationId[0]
+//     : organizationId || "";
+
+//   const {
+//     isLoading,
+//     isError,
+//     error,
+//     isFetching,
+//     current,
+//     previous,
+//     revenueChange,
+//     ordersChange,
+//     aovChange,
+//     weekSeries,
+//     refetch,
+//   } = useSalesAnalytics(normalizedBusinessId, range);
+
+//   const discountRate =
+//     current.gross > 0 ? (current.discounts / current.gross) * 100 : 0;
+//   const refundRate =
+//     current.revenue > 0 ? (current.refunds / current.revenue) * 100 : 0;
+//   const netAfterRefunds = current.revenue - current.refunds;
+
+//   const metrics = useMemo(
+//     () => [
+//       {
+//         label: "Net revenue",
+//         value: formatKES(current.revenue),
+//         hint: "Collected total",
+//         change: revenueChange,
+//         icon: TrendingUp,
+//         accent: "text-brand-accent bg-brand-accent/10 border-brand-accent/20",
+//       },
+//       {
+//         label: "Gross sales",
+//         value: formatKES(current.gross),
+//         hint: "Before discounts",
+//         change: percentFrom(current.gross, previous.gross),
+//         icon: Wallet,
+//         accent:
+//           "text-brand-primary bg-brand-primary/10 border-brand-primary/20",
+//       },
+//       {
+//         label: "Orders",
+//         value: current.orders.toLocaleString(),
+//         hint: "Completed sales",
+//         change: ordersChange,
+//         icon: ShoppingBag,
+//         accent:
+//           "text-brand-secondary bg-brand-secondary/10 border-brand-secondary/20",
+//       },
+//       {
+//         label: "Avg. ticket",
+//         value: formatKES(current.aov),
+//         hint: "Revenue ÷ orders",
+//         change: aovChange,
+//         icon: Receipt,
+//         accent: "text-amber-500 bg-amber-500/10 border-amber-500/20",
+//       },
+//       {
+//         label: "Tax collected",
+//         value: formatKES(current.tax),
+//         hint: "VAT / tax total",
+//         change: percentFrom(current.tax, previous.tax),
+//         icon: Receipt,
+//         accent: "text-muted bg-muted/10 border-border/40",
+//       },
+//       {
+//         label: "Discounts",
+//         value: formatKES(current.discounts),
+//         hint:
+//           current.gross > 0
+//             ? `${discountRate.toFixed(1)}% of gross`
+//             : "No gross sales",
+//         change: percentFrom(current.discounts, previous.discounts),
+//         icon: Percent,
+//         accent: "text-amber-600 bg-amber-500/10 border-amber-500/20",
+//       },
+//       {
+//         label: "Refunds",
+//         value: formatKES(current.refunds),
+//         hint:
+//           current.revenue > 0
+//             ? `${refundRate.toFixed(1)}% of revenue`
+//             : "No revenue",
+//         change: percentFrom(current.refunds, previous.refunds),
+//         icon: RotateCcw,
+//         accent: "text-rose-500 bg-rose-500/10 border-rose-500/20",
+//       },
+//       {
+//         label: "Net after refunds",
+//         value: formatKES(netAfterRefunds),
+//         hint: "Revenue − refunds",
+//         change: percentFrom(
+//           netAfterRefunds,
+//           previous.revenue - previous.refunds
+//         ),
+//         icon: TrendingUp,
+//         accent: "text-brand-accent bg-brand-accent/10 border-brand-accent/20",
+//       },
+//     ],
+//     [
+//       current,
+//       previous,
+//       revenueChange,
+//       ordersChange,
+//       aovChange,
+//       discountRate,
+//       refundRate,
+//       netAfterRefunds,
+//     ]
+//   );
+
+//   const quickActions = useMemo(
+//     () => [
+//       {
+//         title: "Quick sale",
+//         href: `/org/${normalizedOrgId}/${normalizedBusinessId}/terminal`,
+//         icon: Zap,
+//       },
+//       {
+//         title: "Staff",
+//         href: `/org/${normalizedOrgId}/${normalizedBusinessId}/staff`,
+//         icon: Users,
+//       },
+//       {
+//         title: "History",
+//         href: `/org/${normalizedOrgId}/${normalizedBusinessId}/sale-history`,
+//         icon: Layers,
+//       },
+//     ],
+//     [normalizedOrgId, normalizedBusinessId]
+//   );
+
+//   const { graphPoints, areaPoints } = useMemo(() => {
+//     const max = Math.max(...weekSeries.map((p) => p.revenue), 1);
+//     const n = weekSeries.length || 1;
+//     const pts = weekSeries.map((p, i) => {
+//       const x = n === 1 ? 180 : (i / (n - 1)) * 360;
+//       const y = 110 - (p.revenue / max) * 100;
+//       return `${x},${y}`;
+//     });
+//     const line = pts.join(" ");
+//     return {
+//       graphPoints: line || "0,110 360,110",
+//       areaPoints: `0,120 ${line} 360,120`,
+//     };
+//   }, [weekSeries]);
+
+//   if (isLoading) {
+//     return (
+//       <div className="w-full h-full flex items-center justify-center gap-2 text-muted">
+//         <Loader2 size={18} className="animate-spin" />
+//         <span className="text-sm">Loading analytics…</span>
+//       </div>
+//     );
+//   }
+
+//   if (isError) {
+//     return (
+//       <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
+//         <p className="text-sm font-medium text-foreground">
+//           Couldn’t load analytics
+//         </p>
+//         <p className="text-xs text-muted max-w-sm">
+//           {error instanceof Error ? error.message : "Something went wrong"}
+//         </p>
+//         <button
+//           onClick={() => refetch()}
+//           className="h-9 px-4 rounded-xl bg-brand-primary text-white text-sm font-medium"
+//         >
+//           Try again
+//         </button>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="w-full h-full flex flex-col min-h-0 gap-5 p-4 overflow-y-auto no-scrollbar text-foreground">
+//       {/* Range + compact actions */}
+//       <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
+//         <div className="flex flex-wrap items-center gap-2">
+//           {RANGE_OPTIONS.map((opt) => (
+//             <button
+//               key={opt.value}
+//               type="button"
+//               onClick={() => setRange(opt.value)}
+//               className={`h-8 px-3 rounded-full text-xs font-medium transition ${
+//                 range === opt.value
+//                   ? "bg-brand-primary text-white"
+//                   : "bg-card border border-border/50 text-muted hover:text-foreground"
+//               }`}
+//             >
+//               {opt.label}
+//             </button>
+//           ))}
+//           {isFetching && (
+//             <Loader2 size={14} className="animate-spin text-muted" />
+//           )}
+//         </div>
+
+//         <div className="flex items-center gap-2">
+//           {quickActions.map((action) => {
+//             const Icon = action.icon;
+//             return (
+//               <Link
+//                 key={action.href}
+//                 href={action.href}
+//                 className="h-8 px-3 rounded-full bg-card border border-border/50 text-xs font-medium text-muted hover:text-foreground hover:border-brand-primary/30 flex items-center gap-1.5 transition"
+//               >
+//                 <Icon size={14} />
+//                 {action.title}
+//               </Link>
+//             );
+//           })}
+//         </div>
+//       </div>
+
+//       {/* Full metric grid — every payload field + derived */}
+//       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
+//         {metrics.map((m) => {
+//           const Icon = m.icon;
+//           return (
+//             <div
+//               key={m.label}
+//               className="p-4 bg-card border border-border/40 rounded-2xl flex flex-col gap-3"
+//             >
+//               <div className="flex items-start justify-between gap-2">
+//                 <div>
+//                   <p className="text-[11px] font-medium text-muted">{m.label}</p>
+//                   <p className="text-sm font-semibold text-foreground font-mono mt-1 tabular-nums">
+//                     {m.value}
+//                   </p>
+//                 </div>
+//                 <div
+//                   className={`h-9 w-9 rounded-xl border flex items-center justify-center shrink-0 ${m.accent}`}
+//                 >
+//                   <Icon size={16} />
+//                 </div>
+//               </div>
+//               <div className="flex items-center justify-between gap-2">
+//                 <p className="text-[10px] text-muted/80 truncate">{m.hint}</p>
+//                 <ChangePill value={m.change} />
+//               </div>
+//             </div>
+//           );
+//         })}
+//       </section>
+
+//       {/* Chart */}
+//       <section className="flex-1 min-h-[240px] bg-card border border-border/40 rounded-[1.5rem] p-5 flex flex-col">
+//         <div className="flex items-start justify-between gap-3 mb-2">
+//           <div>
+//             <div className="flex items-center gap-1.5 text-xs font-medium text-brand-primary">
+//               <CalendarDays size={14} className="text-brand-accent" />
+//               Last 7 days revenue
+//             </div>
+//             <p className="text-[11px] text-muted mt-1">
+//               {weekSeries.every((d) => d.revenue === 0)
+//                 ? "No completed sales in the last 7 days."
+//                 : `${formatKES(
+//                     weekSeries.reduce((s, d) => s + d.revenue, 0)
+//                   )} total · ${weekSeries.reduce((s, d) => s + (d.revenue > 0 ? 1 : 0), 0)} active days`}
+//             </p>
+//           </div>
+//         </div>
+
+//         <div className="flex-1 min-h-[140px] relative">
+//           <svg
+//             viewBox="0 0 360 120"
+//             className="w-full h-full overflow-visible"
+//             preserveAspectRatio="none"
+//           >
+//             <defs>
+//               <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+//                 <stop
+//                   offset="0%"
+//                   stopColor="var(--brand-accent, #10b981)"
+//                   stopOpacity="0.25"
+//                 />
+//                 <stop
+//                   offset="100%"
+//                   stopColor="var(--brand-accent, #10b981)"
+//                   stopOpacity="0"
+//                 />
+//               </linearGradient>
+//             </defs>
+//             <line
+//               x1="0"
+//               y1="30"
+//               x2="360"
+//               y2="30"
+//               stroke="var(--border)"
+//               strokeWidth="0.5"
+//               strokeDasharray="4 4"
+//               opacity="0.35"
+//             />
+//             <line
+//               x1="0"
+//               y1="75"
+//               x2="360"
+//               y2="75"
+//               stroke="var(--border)"
+//               strokeWidth="0.5"
+//               strokeDasharray="4 4"
+//               opacity="0.35"
+//             />
+//             <polygon points={areaPoints} fill="url(#chartGradient)" />
+//             <polyline
+//               fill="none"
+//               stroke="var(--brand-accent, #10b981)"
+//               strokeWidth="2"
+//               strokeLinecap="round"
+//               strokeLinejoin="round"
+//               points={graphPoints}
+//             />
+//           </svg>
+//         </div>
+
+//         <div className="pt-3 border-t border-border/40 flex justify-between text-[10px] text-muted font-mono">
+//           {weekSeries.map((d) => (
+//             <span key={d.date} className="text-center">
+//               {d.label}
+//             </span>
+//           ))}
+//         </div>
+//       </section>
+//     </div>
+//   );
+// }
+
+// function percentFrom(current: number, previous: number) {
+//   if (previous === 0) return current > 0 ? 100 : 0;
+//   return ((current - previous) / previous) * 100;
+// }
+
+import { TrendingUp, Zap } from "lucide-react";
 
 export default function OverviewPage() {
-  const { businessId, organizationId } = useBusinessContext();
-  const [range, setRange] = useState<AnalyticsRange>("7d");
-
-  const normalizedBusinessId = Array.isArray(businessId)
-    ? businessId[0]
-    : businessId || "";
-  const normalizedOrgId = Array.isArray(organizationId)
-    ? organizationId[0]
-    : organizationId || "";
-
-  const {
-    isLoading,
-    isError,
-    error,
-    isFetching,
-    current,
-    previous,
-    revenueChange,
-    ordersChange,
-    aovChange,
-    weekSeries,
-    refetch,
-  } = useSalesAnalytics(normalizedBusinessId, range);
-
-  const discountRate =
-    current.gross > 0 ? (current.discounts / current.gross) * 100 : 0;
-  const refundRate =
-    current.revenue > 0 ? (current.refunds / current.revenue) * 100 : 0;
-  const netAfterRefunds = current.revenue - current.refunds;
-
-  const metrics = useMemo(
-    () => [
-      {
-        label: "Net revenue",
-        value: formatKES(current.revenue),
-        hint: "Collected total",
-        change: revenueChange,
-        icon: TrendingUp,
-        accent: "text-brand-accent bg-brand-accent/10 border-brand-accent/20",
-      },
-      {
-        label: "Gross sales",
-        value: formatKES(current.gross),
-        hint: "Before discounts",
-        change: percentFrom(current.gross, previous.gross),
-        icon: Wallet,
-        accent:
-          "text-brand-primary bg-brand-primary/10 border-brand-primary/20",
-      },
-      {
-        label: "Orders",
-        value: current.orders.toLocaleString(),
-        hint: "Completed sales",
-        change: ordersChange,
-        icon: ShoppingBag,
-        accent:
-          "text-brand-secondary bg-brand-secondary/10 border-brand-secondary/20",
-      },
-      {
-        label: "Avg. ticket",
-        value: formatKES(current.aov),
-        hint: "Revenue ÷ orders",
-        change: aovChange,
-        icon: Receipt,
-        accent: "text-amber-500 bg-amber-500/10 border-amber-500/20",
-      },
-      {
-        label: "Tax collected",
-        value: formatKES(current.tax),
-        hint: "VAT / tax total",
-        change: percentFrom(current.tax, previous.tax),
-        icon: Receipt,
-        accent: "text-muted bg-muted/10 border-border/40",
-      },
-      {
-        label: "Discounts",
-        value: formatKES(current.discounts),
-        hint:
-          current.gross > 0
-            ? `${discountRate.toFixed(1)}% of gross`
-            : "No gross sales",
-        change: percentFrom(current.discounts, previous.discounts),
-        icon: Percent,
-        accent: "text-amber-600 bg-amber-500/10 border-amber-500/20",
-      },
-      {
-        label: "Refunds",
-        value: formatKES(current.refunds),
-        hint:
-          current.revenue > 0
-            ? `${refundRate.toFixed(1)}% of revenue`
-            : "No revenue",
-        change: percentFrom(current.refunds, previous.refunds),
-        icon: RotateCcw,
-        accent: "text-rose-500 bg-rose-500/10 border-rose-500/20",
-      },
-      {
-        label: "Net after refunds",
-        value: formatKES(netAfterRefunds),
-        hint: "Revenue − refunds",
-        change: percentFrom(
-          netAfterRefunds,
-          previous.revenue - previous.refunds
-        ),
-        icon: TrendingUp,
-        accent: "text-brand-accent bg-brand-accent/10 border-brand-accent/20",
-      },
-    ],
-    [
-      current,
-      previous,
-      revenueChange,
-      ordersChange,
-      aovChange,
-      discountRate,
-      refundRate,
-      netAfterRefunds,
-    ]
-  );
-
-  const quickActions = useMemo(
-    () => [
-      {
-        title: "Quick sale",
-        href: `/org/${normalizedOrgId}/${normalizedBusinessId}/terminal`,
-        icon: Zap,
-      },
-      {
-        title: "Staff",
-        href: `/org/${normalizedOrgId}/${normalizedBusinessId}/staff`,
-        icon: Users,
-      },
-      {
-        title: "History",
-        href: `/org/${normalizedOrgId}/${normalizedBusinessId}/sale-history`,
-        icon: Layers,
-      },
-    ],
-    [normalizedOrgId, normalizedBusinessId]
-  );
-
-  const { graphPoints, areaPoints } = useMemo(() => {
-    const max = Math.max(...weekSeries.map((p) => p.revenue), 1);
-    const n = weekSeries.length || 1;
-    const pts = weekSeries.map((p, i) => {
-      const x = n === 1 ? 180 : (i / (n - 1)) * 360;
-      const y = 110 - (p.revenue / max) * 100;
-      return `${x},${y}`;
-    });
-    const line = pts.join(" ");
-    return {
-      graphPoints: line || "0,110 360,110",
-      areaPoints: `0,120 ${line} 360,120`,
-    };
-  }, [weekSeries]);
-
-  if (isLoading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center gap-2 text-muted">
-        <Loader2 size={18} className="animate-spin" />
-        <span className="text-sm">Loading analytics…</span>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
-        <p className="text-sm font-medium text-foreground">
-          Couldn’t load analytics
-        </p>
-        <p className="text-xs text-muted max-w-sm">
-          {error instanceof Error ? error.message : "Something went wrong"}
-        </p>
-        <button
-          onClick={() => refetch()}
-          className="h-9 px-4 rounded-xl bg-brand-primary text-white text-sm font-medium"
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="w-full h-full flex flex-col min-h-0 gap-5 p-4 overflow-y-auto no-scrollbar text-foreground">
-      {/* Range + compact actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex flex-wrap items-center gap-2">
-          {RANGE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setRange(opt.value)}
-              className={`h-8 px-3 rounded-full text-xs font-medium transition ${
-                range === opt.value
-                  ? "bg-brand-primary text-white"
-                  : "bg-card border border-border/50 text-muted hover:text-foreground"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-          {isFetching && (
-            <Loader2 size={14} className="animate-spin text-muted" />
-          )}
+    <div className="w-full h-full min-h-screen flex items-center justify-center bg-background p-6">
+      <div className="w-full max-w-xl text-center">
+        <div className="mx-auto mb-6 h-16 w-16 rounded-2xl bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center">
+          <TrendingUp
+            size={28}
+            className="text-brand-accent"
+          />
         </div>
 
-        <div className="flex items-center gap-2">
-          {quickActions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="h-8 px-3 rounded-full bg-card border border-border/50 text-xs font-medium text-muted hover:text-foreground hover:border-brand-primary/30 flex items-center gap-1.5 transition"
-              >
-                <Icon size={14} />
-                {action.title}
-              </Link>
-            );
-          })}
+        <div className="inline-flex items-center rounded-full border border-brand-primary/10 bg-brand-primary/5 px-3 py-1 mb-5">
+          <span className="text-[11px] font-medium text-brand-primary">
+            Coming soon
+          </span>
         </div>
-      </div>
 
-      {/* Full metric grid — every payload field + derived */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
-        {metrics.map((m) => {
-          const Icon = m.icon;
-          return (
-            <div
-              key={m.label}
-              className="p-4 bg-card border border-border/40 rounded-2xl flex flex-col gap-3"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[11px] font-medium text-muted">{m.label}</p>
-                  <p className="text-sm font-semibold text-foreground font-mono mt-1 tabular-nums">
-                    {m.value}
-                  </p>
-                </div>
-                <div
-                  className={`h-9 w-9 rounded-xl border flex items-center justify-center shrink-0 ${m.accent}`}
-                >
-                  <Icon size={16} />
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] text-muted/80 truncate">{m.hint}</p>
-                <ChangePill value={m.change} />
-              </div>
-            </div>
-          );
-        })}
-      </section>
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
+          Your business insights are on the way
+        </h1>
 
-      {/* Chart */}
-      <section className="flex-1 min-h-[240px] bg-card border border-border/40 rounded-[1.5rem] p-5 flex flex-col">
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium text-brand-primary">
-              <CalendarDays size={14} className="text-brand-accent" />
-              Last 7 days revenue
+        <p className="mt-4 text-sm sm:text-base leading-6 text-muted max-w-md mx-auto">
+          We’re putting the finishing touches on your analytics experience.
+          Soon, you’ll be able to see your sales, revenue, orders, and business
+          performance all in one place.
+        </p>
+
+        <div className="mt-8 mx-auto max-w-md rounded-2xl border border-border/50 bg-card p-4 text-left">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 h-8 w-8 rounded-lg bg-brand-accent/10 flex items-center justify-center shrink-0">
+              <Zap size={15} className="text-brand-accent" />
             </div>
-            <p className="text-[11px] text-muted mt-1">
-              {weekSeries.every((d) => d.revenue === 0)
-                ? "No completed sales in the last 7 days."
-                : `${formatKES(
-                    weekSeries.reduce((s, d) => s + d.revenue, 0)
-                  )} total · ${weekSeries.reduce((s, d) => s + (d.revenue > 0 ? 1 : 0), 0)} active days`}
-            </p>
+
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Nothing is wrong with your account
+              </p>
+              <p className="mt-1 text-xs leading-5 text-muted">
+                Your business and sales data remain safe and available.
+                We’re simply taking a little more time to make this experience
+                right.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 min-h-[140px] relative">
-          <svg
-            viewBox="0 0 360 120"
-            className="w-full h-full overflow-visible"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor="var(--brand-accent, #10b981)"
-                  stopOpacity="0.25"
-                />
-                <stop
-                  offset="100%"
-                  stopColor="var(--brand-accent, #10b981)"
-                  stopOpacity="0"
-                />
-              </linearGradient>
-            </defs>
-            <line
-              x1="0"
-              y1="30"
-              x2="360"
-              y2="30"
-              stroke="var(--border)"
-              strokeWidth="0.5"
-              strokeDasharray="4 4"
-              opacity="0.35"
-            />
-            <line
-              x1="0"
-              y1="75"
-              x2="360"
-              y2="75"
-              stroke="var(--border)"
-              strokeWidth="0.5"
-              strokeDasharray="4 4"
-              opacity="0.35"
-            />
-            <polygon points={areaPoints} fill="url(#chartGradient)" />
-            <polyline
-              fill="none"
-              stroke="var(--brand-accent, #10b981)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              points={graphPoints}
-            />
-          </svg>
-        </div>
-
-        <div className="pt-3 border-t border-border/40 flex justify-between text-[10px] text-muted font-mono">
-          {weekSeries.map((d) => (
-            <span key={d.date} className="text-center">
-              {d.label}
-            </span>
-          ))}
-        </div>
-      </section>
+        <p className="mt-6 text-xs text-muted/70">
+          Thanks for your patience while we build something useful for you.
+        </p>
+      </div>
     </div>
   );
-}
-
-function percentFrom(current: number, previous: number) {
-  if (previous === 0) return current > 0 ? 100 : 0;
-  return ((current - previous) / previous) * 100;
 }
