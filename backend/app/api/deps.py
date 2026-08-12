@@ -113,7 +113,7 @@ async def get_current_user(
             expected_type="access",
             redis_client=redis
         )
-        
+
         # Query staff member with eager loading of business assignments
         stmt = (
             select(Staff)
@@ -122,6 +122,12 @@ async def get_current_user(
         )
         staff = (await db.exec(stmt)).first()
 
+        logger.info(
+            f"Staff lookup: sub={token_data.sub}, "
+            f"staff_id={staff.id if staff else None}, "
+            f"email={staff.email if staff else None}"
+        )
+
         if not staff or not staff.active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -129,7 +135,12 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        logger.info(f"Authenticated user: {staff.email} (ID: {staff.assigned_businesses})")
+        # logger.info(f"Authenticated user: {staff.email} (ID: {staff.assigned_businesses})")
+        logger.info(
+            f"Authenticated user: {staff.email} "
+            f"(ID: {staff.id}, sub: {token_data.sub}, "
+            f"assigned_businesses: {staff.assigned_businesses})"
+        )
         if not staff.assigned_businesses:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
