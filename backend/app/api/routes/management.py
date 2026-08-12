@@ -108,14 +108,6 @@ business_id: Optional[UUID] = None):
     return results
 
 
-# return everything in staff and staffbusinessassignment tables for a given business_id
-@router.get("/staff-business-assignments")
-async def get_staff_business_assignments(request: Request, db: SessionDep):
-    stmt = select(StaffBusinessAssignment)
-    assignments = (await db.exec(stmt)).all()
-    return assignments
-
-
 @router.get("/all-staff", response_model=List[StaffResponse])
 async def get_staff(request: Request, db: SessionDep):
     stmt = (select(Staff).options(selectinload(Staff.assigned_businesses)))
@@ -123,61 +115,37 @@ async def get_staff(request: Request, db: SessionDep):
     return staff_members
 
 
-# @router.post("/patch-staff-assignments")
-# async def get_staff_assignments(request: Request, db: SessionDep, staff_id: UUID):
-#     stmt = (
-#                 select(Staff)
-#                 .where(Staff.id == staff_id)
-#                 .options(selectinload(Staff.assigned_businesses))
-#             )
-#     staff_member = (await db.exec(stmt)).first()
 
-#     if not staff_member:
-#         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
-
-#     logger.info(f"Staff member found: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
-
-#     stmt_assignments = select(StaffBusinessAssignment).where(StaffBusinessAssignment.staff_id == staff_member.id)
-#     assignments = (await db.exec(stmt_assignments)).all()
-
-#     # update the orgnization id
-#     for assignment in assignments:
-#         stmt_org = select(Organization).where(Organization.id == assignment.organization_id)
-#         organization = (await db.exec(stmt_org)).first()
-#         if organization:
-#             assignment.organization_id = organization.id
-#             await db.commit()
-
-#     await db.refresh(staff_member)
-#     logger.info(f"Refreshed staff member: {staff_member.email} (ID: {staff_member.id}) with {len(staff_member.assigned_businesses)} assignments.")
-#     return staff_member.assigned_businesses
-
-
-@router.post("/patch-staff-assignments")
-async def patch_staff_assignments(
+@router.post("/assign-business-to-staff", response_model=ApiResponse[StaffResponse])
+async def assign_business_to_staff(
     request: Request,
     db: SessionDep,
+    email: EmailStr,
+    business_id: UUID,
+    role: StaffRole = StaffRole.CASHIER  # Default role if not provided
 ):
-    staff_members = (await db.exec(select(Staff))).all()
+    # Check if the staff member exists
+    staff_member = (await db.exec(select(Staff).where(Staff.email == email))).first()
+    if not staff_member:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff member not found")
 
-    for staff_member in staff_members:
-        stmt_assignments = select(StaffBusinessAssignment).where(
-            StaffBusinessAssignment.staff_id == staff_member.id
-        )
-        assignments = (await db.exec(stmt_assignments)).all()
+    # Check if the business exists
+    business = (await db.exec(select(Business).where(Business.id == business_id))).first()
+    if not business:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found")
 
-        for assignment in assignments:
-            stmt_org = select(Organization).where(
-                Organization.id == assignment.organization_id
-            )
-            organization = (await db.exec(stmt_org)).first()
-
-            if organization:
-                assignment.organization_id = organization.id
-
+    # Create a new StaffBusinessAssignment
+    assignment = StaffBusinessAssignment(staff_id=staff_member.id, business_id=business_id, role=role, organization_id=business.organization_id)
+    db.add(assignment)
     await db.commit()
+    await db.refresh(assignment)
 
-    return {
-        "message": "Staff assignments patched successfully",
-        "staff_count": len(staff_members),
-    }
+    # return the staff member with the newly assigned business
+    staff_member = (await db.exec(select(Staff).where(Staff.id == staff_member.id).options(selectinload(Staff.assigned_businesses)))).first()
+
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Business assigned to staff successfully",
+        data=staff_member
+    )
