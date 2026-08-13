@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends
+from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends, Request
 
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace, get_redis, AsyncRedis
 from app.crud.business import business_crud
@@ -13,11 +13,17 @@ from app.crud.store import store_crud
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
 from sqlmodel import select
-from app.models.models import Sale
+from app.models.models import Sale,  SaleAnalyticsSummary
 from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
 from fastapi_cache.decorator import cache
+from app.core.redis_client import limiter
+from app.schemas.analytics import DashboardAnalyticsResponse
+from app.utils.helpers import AnalyticsPeriod
 
 router = APIRouter()
+
+# --- Redis Cache Durations ---
+CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
 @router.post("/register-business", response_model=ApiResponse[BusinessResponse])
 async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase, redis_client: AsyncRedis = Depends(get_redis)):
@@ -110,7 +116,6 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
         status_code=200,
         message="Success",
     )
-
 
 
 @router.post("/restock", response_model=ApiResponse[ProductResponse])
@@ -224,11 +229,32 @@ async def fetch_staff_with_id(db: SessionDep, staff_id: UUID, user: AuthUser,):
     db_obj = StaffResponse(**staff.model_dump())
     return db_obj
 
+
 @router.get("/receipts/{sale_id}", status_code=200, response_model=FinancialDocumentSnapshotSchema)
 async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
     """
     Fetches a list of receipts for a given business, with optional pagination.
     """
-
     receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
     return receipt
+
+
+@router.get("/analytics", response_model=ApiResponse[DashboardAnalyticsResponse])
+@limiter.limit("5/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="analytics", key_builder=universal_key_builder)
+async def get_dashboard_analytics(
+    request: Request,
+    business_id: UUID,
+    db: SessionDep,
+    period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
+):
+    results = await store_crud.fetch_dashboard_analytics(
+        db, business_id=business_id, period=period
+    )
+
+    return ApiResponse(
+        status_code=200,
+        status=True,
+        message="dashboard retrieved succesfully",
+        data=results
+    )

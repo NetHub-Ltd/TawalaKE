@@ -8,14 +8,27 @@ from sqlmodel import select, desc, func, col
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from pydantic import BaseModel, Field
+from app.utils.helpers import aggregate_rows, period_windows, AnalyticsPeriod
 
 from app.crud.base import BaseCRUD
 from app.core.security import security
 from app.models.models import (
-    Business, StaffBusinessAssignment, Staff, StockHistory, 
-    StockMovementType, Product, Sale, SaleItem, FinancialDocument, 
-    DocumentType, SaleStatus, Payment, PaymentMethod, Customer, 
-    StaffRole
+    Business,
+    StaffBusinessAssignment,
+    Staff,
+    StockHistory,
+    StockMovementType,
+    Product,
+    Sale,
+    SaleItem,
+    FinancialDocument,
+    DocumentType,
+    SaleStatus,
+    Payment,
+    PaymentMethod,
+    Customer,
+    StaffRole,
+    SaleAnalyticsSummary
 )
 from app.schemas.schemas import BusinessCreate, BusinessUpdate, StaffCreateIn
 from app.schemas.business import StaffRequest, ProductAuditRequest, ProductRestockRequest
@@ -465,10 +478,75 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Database transaction conflict encountered while updating inventory levels."
             )
 
+    async def fetch_dashboard_analytics(
+        self,
+        db: AsyncSession,
+        *,
+        business_id: UUID,
+        period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
+) -> dict:
+        try:
+            cur_start, cur_end, prev_start, prev_end = period_windows(period)
+
+            # Single query: from previous_start → current_end
+            stmt = (
+                select(SaleAnalyticsSummary)
+                .where(SaleAnalyticsSummary.business_id == business_id)
+                .where(SaleAnalyticsSummary.date_dimension >= prev_start)
+                .where(SaleAnalyticsSummary.date_dimension < cur_end)
+                .where(SaleAnalyticsSummary.deleted_at.is_(None))
+                .order_by(SaleAnalyticsSummary.date_dimension.desc())
+            )
+            all_rows = (await db.exec(stmt)).all()
+
+            current_rows = [
+                r for r in all_rows
+                if cur_start <= r.date_dimension < cur_end
+            ]
+            previous_rows = [
+                r for r in all_rows
+                if prev_start <= r.date_dimension < prev_end
+            ]
+
+            current_summary = aggregate_rows(current_rows)
+            previous_summary = aggregate_rows(previous_rows)
+
+            return {
+                "period": period.value,
+                "window": {
+                    "start": cur_start.isoformat(),
+                    "end": cur_end.isoformat(),
+                },
+                "previous_window": {
+                    "start": prev_start.isoformat(),
+                    "end": prev_end.isoformat(),
+                },
+                "summary": current_summary,
+                "previous_summary": previous_summary,
+                "series": [
+                    {
+                        "date": r.date_dimension.date().isoformat(),
+                        "date_dimension": r.date_dimension.isoformat(),
+                        "gross_sales_volume": r.gross_sales_volume,
+                        "total_tax_collected": r.total_tax_collected,
+                        "total_discounts_granted": r.total_discounts_granted,
+                        "net_revenue_collected": r.net_revenue_collected,
+                        "refund_deductions_volume": r.refund_deductions_volume,
+                        "total_completed_orders_count": r.total_completed_orders_count,
+                    }
+                    for r in current_rows  # already latest → oldest from query; filter keeps order
+                ],
+            }
+        except SQLAlchemyError as e:
+            logger.error(f"Failed to fetch analytics for {business_id}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="Database read failure during analytics aggregation.",
+            )
+
 
 # Global object instance mapping injection
 store_crud = StoreCrud(Business)
-
 
 
 # {
@@ -476,7 +554,7 @@ store_crud = StoreCrud(Business)
 #   "document_number": "REC-260714-74A86EF9",
 #   "document_type": "RECEIPT",
 #   "issued_at": "2026-07-14T15:04:23Z",
-  
+
 #   "seller": {
 #     "business_id": "71e60ea3-6c97-4da0-ab9d-2444a54ba370",
 #     "business_name": "Tawala Electronics - Nairobi Branch",
@@ -489,14 +567,14 @@ store_crud = StoreCrud(Business)
 #       "role": "CASHIER"
 #     }
 #   },
-  
+
 #   "buyer": {
 #     "customer_id": "99b8283a-1123-4b68-b391-766b1e6e0278",
 #     "name": "John Doe",
 #     "phone": "+254799999999",
 #     "email": "johndoe@example.com"
 #   },
-  
+
 #   "financials": {
 #     "currency": "KES",
 #     "subtotal": 160.00,
@@ -507,7 +585,7 @@ store_crud = StoreCrud(Business)
 #     "amount_paid": 160.00,
 #     "balance_due": 0.00
 #   },
-  
+
 #   "items": [
 #     {
 #       "item_id": "112c6042-bf14-42f2-845d-acc3ec7b21d9",
@@ -523,7 +601,7 @@ store_crud = StoreCrud(Business)
 #       "cost_price_at_sale": 90.00
 #     }
 #   ],
-  
+
 #   "payments": [
 #     {
 #       "payment_id": "f83928c2-3112-4aa8-bc13-88bb9a2d8e09",
@@ -533,7 +611,7 @@ store_crud = StoreCrud(Business)
 #       "processed_at": "2026-07-14T15:04:20Z"
 #     }
 #   ],
-  
+
 #   "dispute_and_audit": {
 #     "parent_sale_id": "74a86ef9-af8b-4fc4-857f-7a7c17b7ff8a",
 #     "status": "COMPLETED",
