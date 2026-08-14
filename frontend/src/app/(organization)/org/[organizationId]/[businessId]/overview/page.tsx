@@ -3,9 +3,12 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
-import { useSalesAnalytics } from "@/features/analytics/hooks/useSalesAnalytics";
-import type { AnalyticsRange } from "@/features/analytics/types";
-import { formatKES } from "@/features/analytics/lib/mapAnalytics";
+// After — everything from the hook module
+import {
+  useSalesAnalytics,
+  formatKES,
+  type AnalyticsRange,
+} from "@/features/analytics/hooks/useSalesAnalytics";
 import {
   Zap,
   Users,
