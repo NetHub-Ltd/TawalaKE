@@ -1,79 +1,112 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { SaleAnalyticsRow, AnalyticsRange } from "../types";
-import {
-  aggregateRows,
-  filterByRange,
-  filterPreviousRange,
-  percentChange,
-} from "../lib/mapAnalytics";
 
-async function fetchSalesAnalytics(
-  businessId: string
-): Promise<SaleAnalyticsRow[]> {
-  const res = await fetch(
-    `/api/v1/org/stores/analytics`,
-    {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    }
-  );
+// ---------------------------------------------------------------------------
+// Types (match backend envelope + payload)
+// ---------------------------------------------------------------------------
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.message || "Failed to load analytics");
-  }
+/** Period values accepted by GET /api/v1/business/analytics */
+export type AnalyticsRange = "today" | "yesterday" | "3d" | "7d" | "month";
 
-  const data = await res.json();
-  // Support either a raw array or { data: [] }
-  return Array.isArray(data) ? data : data.data ?? [];
-}
+export type AnalyticsWindow = {
+  start: string;
+  end: string;
+};
 
-export function useSalesAnalytics(
-  businessId: string,
-  range: AnalyticsRange = "7d"
-) {
-  const query = useQuery({
-    queryKey: ["sales-analytics", businessId],
-    queryFn: () => fetchSalesAnalytics(businessId),
-    enabled: Boolean(businessId),
-    staleTime: 60_000,
-  });
+export type AnalyticsSummaryBlock = {
+  gross_sales_volume: number;
+  total_tax_collected: number;
+  total_discounts_granted: number;
+  net_revenue_collected: number;
+  refund_deductions_volume: number;
+  total_completed_orders_count: number;
+  average_order_value: number;
+};
 
-  const rows = query.data ?? [];
+export type AnalyticsSeriesPoint = {
+  date: string;
+  date_dimension: string;
+  gross_sales_volume: number;
+  total_tax_collected: number;
+  total_discounts_granted: number;
+  net_revenue_collected: number;
+  refund_deductions_volume: number;
+  total_completed_orders_count: number;
+};
 
-  const currentRows = filterByRange(rows, range);
-  const previousRows = filterPreviousRange(rows, range);
+/** Inner `data` object from the analytics endpoint */
+export type DashboardAnalyticsData = {
+  period: string;
+  window: AnalyticsWindow;
+  previous_window: AnalyticsWindow;
+  summary: AnalyticsSummaryBlock;
+  previous_summary: AnalyticsSummaryBlock;
+  series: AnalyticsSeriesPoint[];
+};
 
-  const current = aggregateRows(currentRows);
-  const previous = aggregateRows(previousRows);
+/**
+ * Standard API envelope:
+ * { status, status_code, message, data }
+ */
+export type DashboardAnalyticsEnvelope = {
+  status: boolean;
+  status_code: number;
+  message: string;
+  data: DashboardAnalyticsData;
+};
 
-  const revenueChange = percentChange(current.revenue, previous.revenue);
-  const ordersChange = percentChange(current.orders, previous.orders);
-  const aovChange = percentChange(current.aov, previous.aov);
+/** Shape used by Overview KPI cards */
+export type OverviewMetrics = {
+  revenue: number;
+  gross: number;
+  tax: number;
+  discounts: number;
+  refunds: number;
+  orders: number;
+  aov: number;
+};
 
-  // Always build a 7-day series for the chart (fill missing days with 0)
-  const weekRows = filterByRange(rows, "7d");
-  const weekAgg = aggregateRows(weekRows);
-  const weekSeries = buildLast7DaysSeries(weekAgg.series);
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
+/**
+ * Map backend summary → overview card metrics.
+ */
+function toOverviewMetrics(
+  s?: AnalyticsSummaryBlock | null
+): OverviewMetrics {
   return {
-    ...query,
-    current,
-    previous,
-    revenueChange,
-    ordersChange,
-    aovChange,
-    weekSeries,
+    revenue: s?.net_revenue_collected ?? 0,
+    gross: s?.gross_sales_volume ?? 0,
+    tax: s?.total_tax_collected ?? 0,
+    discounts: s?.total_discounts_granted ?? 0,
+    refunds: s?.refund_deductions_volume ?? 0,
+    orders: s?.total_completed_orders_count ?? 0,
+    aov: s?.average_order_value ?? 0,
   };
 }
 
-function buildLast7DaysSeries(
-  series: { date: string; revenue: number; orders: number }[]
-) {
-  const map = new Map(series.map((s) => [s.date, s]));
+/**
+ * Percent change between current and previous period values.
+ */
+function percentChange(current: number, previous: number): number {
+  if (previous === 0) return current > 0 ? 100 : 0;
+  return ((current - previous) / previous) * 100;
+}
+
+/**
+ * Build a continuous last-7-days chart series (missing days → 0).
+ */
+function buildLast7DaysSeries(series: AnalyticsSeriesPoint[] | undefined) {
+  const byDate = new Map(
+    (series ?? []).map((p) => [
+      p.date || p.date_dimension?.slice(0, 10) || "",
+      p.net_revenue_collected ?? 0,
+    ])
+  );
+
   const result: { date: string; label: string; revenue: number }[] = [];
   const now = new Date();
 
@@ -86,12 +119,109 @@ function buildLast7DaysSeries(
       weekday: "short",
       timeZone: "UTC",
     });
+
     result.push({
       date: key,
       label,
-      revenue: map.get(key)?.revenue ?? 0,
+      revenue: byDate.get(key) ?? 0,
     });
   }
 
   return result;
+}
+
+export function formatKES(n: number) {
+  return `KES ${Number(n || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+// ---------------------------------------------------------------------------
+// Fetch
+// ---------------------------------------------------------------------------
+
+/**
+ * Calls the Next BFF, which proxies to the FastAPI analytics endpoint.
+ * Expects envelope: { status, status_code, message, data }.
+ */
+async function fetchDashboardAnalytics(
+  businessId: string,
+  period: AnalyticsRange
+): Promise<DashboardAnalyticsData> {
+  const params = new URLSearchParams({
+    businessId,
+    period,
+  });
+
+  const res = await fetch(`/api/v1/org/stores/analytics?${params.toString()}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    credentials: "include",
+  });
+
+  const body = (await res.json().catch(() => ({}))) as
+    | DashboardAnalyticsEnvelope
+    | { error?: string; detail?: string; message?: string };
+
+  if (!res.ok) {
+    const err = body as { error?: string; detail?: string; message?: string };
+    throw new Error(
+      err.error || err.detail || err.message || "Failed to load analytics"
+    );
+  }
+
+  const envelope = body as DashboardAnalyticsEnvelope;
+
+  // Backend may still signal failure with HTTP 200 + status: false
+  if (envelope.status === false || envelope.data == null) {
+    throw new Error(envelope.message || "Analytics request failed");
+  }
+
+  return envelope.data;
+}
+
+// ---------------------------------------------------------------------------
+// Hook
+// ---------------------------------------------------------------------------
+
+/**
+ * Live dashboard analytics for a business.
+ *
+ * Returns overview-ready `current` / `previous` metrics, % changes,
+ * and a 7-day `weekSeries` for the chart.
+ */
+export function useSalesAnalytics(
+  businessId: string,
+  range: AnalyticsRange = "7d"
+) {
+  const query = useQuery({
+    queryKey: ["sales-analytics", businessId, range],
+    queryFn: () => fetchDashboardAnalytics(businessId, range),
+    enabled: Boolean(businessId),
+    staleTime: 60_000,
+  });
+
+  const data = query.data;
+
+  const current = toOverviewMetrics(data?.summary);
+  const previous = toOverviewMetrics(data?.previous_summary);
+
+  const revenueChange = percentChange(current.revenue, previous.revenue);
+  const ordersChange = percentChange(current.orders, previous.orders);
+  const aovChange = percentChange(current.aov, previous.aov);
+
+  const weekSeries = buildLast7DaysSeries(data?.series);
+
+  return {
+    ...query,
+    current,
+    previous,
+    revenueChange,
+    ordersChange,
+    aovChange,
+    weekSeries,
+    /** Full `data` object from the envelope */
+    raw: data,
+  };
 }
