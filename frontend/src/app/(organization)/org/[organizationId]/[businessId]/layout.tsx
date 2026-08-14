@@ -46,32 +46,22 @@ export default async function TerminalLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       
-      {/* MAIN APP SHELL: 
-        Changed min-h-screen to h-screen to strictly clamp the viewport bounds.
-        Added overscroll-behavior-y-none to prevent bounce-back layout painting shifts.
-      */}
       <div className="h-screen w-full flex flex-row overflow-hidden select-none overscroll-none">
-        
         {/* FIXED LEFT SIDEBAR PANEL */}
         <Sidebar businessId={businessId} organizationId={organizationId} />
 
         {/* WORKSPACE COLUMN CONTENT STREAM */}
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-          
-          {/* HEADER ROW */}
           <Header />
           
-          {/* INTERNAL ISOLATED CONTENT VIEWPORT */}
           <main 
             id="main-content" 
             className="flex-1 min-w-0 min-h-0 relative"
           >
-            {/* SCROLLABLE VIEWPORT FRAME */}
             <div className="absolute inset-0 overflow-y-auto overscroll-contain focus:outline-none">
               {children}
             </div>
           </main>
-
         </div>
       </div>
     </BusinessProvider>
