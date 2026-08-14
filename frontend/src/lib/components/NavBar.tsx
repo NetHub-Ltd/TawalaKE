@@ -280,13 +280,6 @@ export default function NavBar() {
           </div>
 
           <div className="pt-2 border-t border-border/30 space-y-1">
-            {/* <Link
-              href="/billing"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="flex items-center p-3 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider text-muted hover:text-foreground hover:bg-brand-primary/5"
-            >
-              Pricing
-            </Link> */}
             <Link
               href="/support"
               onClick={() => setIsMobileMenuOpen(false)}
