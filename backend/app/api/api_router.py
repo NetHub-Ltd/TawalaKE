@@ -11,8 +11,11 @@ api_router = APIRouter(prefix='/api/v1')
 if settings.admin_route:
     logger.info("Admin route is enabled. Including management routes.")
     api_router.include_router(
-        management.router, prefix="/management", tags=["Management"]
-    ),  # dependencies=[Depends(get_current_staff)],
+        management.router,
+        prefix="/management",
+        tags=["Management"],
+        dependencies=[Depends(get_current_staff)],
+    ),  # ,
 
 api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(organization.router, prefix="/organizations", tags=["Organization Management"])

@@ -139,7 +139,7 @@ async def get_current_user(
         logger.info(
             f"Authenticated user: {staff.email} "
             f"(ID: {staff.id}, sub: {token_data.sub}, "
-            f"assigned_businesses: {staff.assigned_businesses})"
+            f"assigned_businesses: {len(staff.assigned_businesses)})"
         )
         if not staff.assigned_businesses:
             raise HTTPException(

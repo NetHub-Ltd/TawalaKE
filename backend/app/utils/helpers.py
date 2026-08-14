@@ -53,56 +53,73 @@ def validate_and_format_kenyan_phone(phone: str, format: bool = False) -> Option
         # Return cleaned local format (with 0 prefix)
         return f"0{digits}"
 
+from datetime import datetime, timedelta, timezone
+from enum import Enum
 
-# # Caching
-# def universal_key_builder(func, namespace: str = "", *, request: Request = None, **kwargs):
-#     """
-#     A generic key builder that scales across all routes (products, categories, orders, etc.)
-#     Example key format: fastapi-cache:products:business_id=uuid:skip=0:limit=50
-#     """
-#     prefix = f"{FastAPICache.get_prefix()}:{namespace}"
-    
-#     # 1. Extract standard query/path arguments passed to the endpoint function
-#     func_kwargs = kwargs.get("kwargs", {})
-    
-#     # Filter out parameters we don't want part of the cache key (like database sessions or requests)
-#     filtered_args = {
-#         k: str(v) for k, v in func_kwargs.items() 
-#         if k not in ("db", "request", "redis_client", "response") and v is not None
-#     }
-    
-#     # 2. Sort the arguments so 'skip=0&limit=50' and 'limit=50&skip=0' generate the exact same cache key
-#     sorted_args_str = ":".join(f"{k}={v}" for k, v in sorted(filtered_args.items()))
-    
-#     # 3. Construct the clean, predictable key
-#     if sorted_args_str:
-#         return f"{prefix}:{sorted_args_str}"
-    
-#     # Fallback if the route has absolutely zero parameters
-#     return f"{prefix}:{func.__name__}"
+class AnalyticsPeriod(str, Enum):
+    TODAY = "today"
+    DAYS_3 = "3d"
+    DAYS_7 = "7d"
+    MONTH = "month"
+
+def period_windows(
+    period: AnalyticsPeriod,
+    now: datetime | None = None,
+) -> tuple[datetime, datetime, datetime, datetime]:
+    """
+    Returns (current_start, current_end, previous_start, previous_end).
+    Windows are [start, end) in UTC.
+    """
+    now = now or datetime.now(timezone.utc)
+    current_end = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) + timedelta(days=1)
+    start_of_today = current_end - timedelta(days=1)
+
+    if period == AnalyticsPeriod.TODAY:
+        current_start = start_of_today
+        previous_start = start_of_today - timedelta(days=1)
+        previous_end = start_of_today
+    elif period == AnalyticsPeriod.DAYS_3:
+        current_start = start_of_today - timedelta(days=2)
+        previous_end = current_start
+        previous_start = previous_end - timedelta(days=3)
+    elif period == AnalyticsPeriod.DAYS_7:
+        current_start = start_of_today - timedelta(days=6)
+        previous_end = current_start
+        previous_start = previous_end - timedelta(days=7)
+    elif period == AnalyticsPeriod.MONTH:
+        current_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+        # previous calendar month
+        if now.month == 1:
+            previous_start = datetime(now.year - 1, 12, 1, tzinfo=timezone.utc)
+            previous_end = datetime(now.year, 1, 1, tzinfo=timezone.utc)
+        else:
+            previous_start = datetime(now.year, now.month - 1, 1, tzinfo=timezone.utc)
+            previous_end = current_start
+    else:
+        current_start = start_of_today - timedelta(days=6)
+        previous_end = current_start
+        previous_start = previous_end - timedelta(days=7)
+
+    return current_start, current_end, previous_start, previous_end
 
 
-# async def purge_cache_namespace(redis_client: AsyncRedis, namespace: str, **identifiers):
-#     """
-#     Purges targeted cache matrices cleanly across any namespace.
-#     Usage: await purge_cache_namespace(redis_client, "products", business_id=business_id)
-#     """
-#     try:
-#         # Reconstruct the exact string prefix based on the identifier changed
-#         for key, value in identifiers.items():
-#             # Targets paths that match the exact identifier signature
-#             scan_pattern = f"fastapi-cache:{namespace}:*{key}={value}*"
-            
-#             async for match_key in redis_client.scan_iter(match=scan_pattern):
-#                 await redis_client.delete(match_key)
-                
-#         logger.info(f"Evicted stale entries for namespace: {namespace}")
-#     except Exception as e:
-#         logger.error(f"Cache eviction failed: {str(e)}")
 
+def aggregate_rows(rows) -> dict:
+    gross = sum(r.gross_sales_volume for r in rows)
+    tax = sum(r.total_tax_collected for r in rows)
+    discounts = sum(r.total_discounts_granted for r in rows)
+    revenue = sum(r.net_revenue_collected for r in rows)
+    refunds = sum(r.refund_deductions_volume for r in rows)
+    orders = sum(r.total_completed_orders_count for r in rows)
 
-# @router.get("/list/{tenant_id}")
-# @cache(expire=300, namespace="categories", key_builder=universal_key_builder)
-# async def get_categories(request: Request, db: SessionDep, tenant_id: UUID):
-#     # Generates: fastapi-cache:categories:tenant_id=<uuid>
-#     ...
+    return {
+        "gross_sales_volume": gross,
+        "total_tax_collected": tax,
+        "total_discounts_granted": discounts,
+        "net_revenue_collected": revenue,
+        "refund_deductions_volume": refunds,
+        "total_completed_orders_count": orders,
+        "average_order_value": (revenue / orders) if orders else 0.0,
+    }
+
+    
