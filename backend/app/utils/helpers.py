@@ -57,51 +57,81 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 class AnalyticsPeriod(str, Enum):
+    """Supported dashboard analytics windows."""
+
     TODAY = "today"
+    YESTERDAY = "yesterday"
     DAYS_3 = "3d"
     DAYS_7 = "7d"
     MONTH = "month"
+
 
 def period_windows(
     period: AnalyticsPeriod,
     now: datetime | None = None,
 ) -> tuple[datetime, datetime, datetime, datetime]:
     """
-    Returns (current_start, current_end, previous_start, previous_end).
-    Windows are [start, end) in UTC.
+    Build current and previous half-open windows [start, end) in UTC.
+
+    Returns:
+        (current_start, current_end, previous_start, previous_end)
+
+    Comparison rule:
+        - today      → vs yesterday
+        - yesterday  → vs the day before yesterday
+        - 3d / 7d    → vs the immediately preceding equal-length window
+        - month      → vs previous calendar month
     """
     now = now or datetime.now(timezone.utc)
-    current_end = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) + timedelta(days=1)
+
+    # End of "today" bucket = tomorrow 00:00 UTC
+    current_end = datetime(now.year, now.month, now.day, tzinfo=timezone.utc) + timedelta(
+        days=1
+    )
     start_of_today = current_end - timedelta(days=1)
 
     if period == AnalyticsPeriod.TODAY:
+        # Today vs yesterday
         current_start = start_of_today
         previous_start = start_of_today - timedelta(days=1)
         previous_end = start_of_today
+
+    elif period == AnalyticsPeriod.YESTERDAY:
+        # Yesterday vs day-before-yesterday
+        current_start = start_of_today - timedelta(days=1)
+        current_end = start_of_today
+        previous_start = current_start - timedelta(days=1)
+        previous_end = current_start
+
     elif period == AnalyticsPeriod.DAYS_3:
+        # Last 3 calendar days (including today) vs the 3 days before that
         current_start = start_of_today - timedelta(days=2)
         previous_end = current_start
         previous_start = previous_end - timedelta(days=3)
+
     elif period == AnalyticsPeriod.DAYS_7:
+        # Last 7 calendar days (including today) vs the prior 7 days
         current_start = start_of_today - timedelta(days=6)
         previous_end = current_start
         previous_start = previous_end - timedelta(days=7)
+
     elif period == AnalyticsPeriod.MONTH:
+        # This calendar month vs previous calendar month
         current_start = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
-        # previous calendar month
         if now.month == 1:
             previous_start = datetime(now.year - 1, 12, 1, tzinfo=timezone.utc)
             previous_end = datetime(now.year, 1, 1, tzinfo=timezone.utc)
         else:
             previous_start = datetime(now.year, now.month - 1, 1, tzinfo=timezone.utc)
             previous_end = current_start
+
     else:
+        # Safe fallback: same as 7d
         current_start = start_of_today - timedelta(days=6)
         previous_end = current_start
         previous_start = previous_end - timedelta(days=7)
 
     return current_start, current_end, previous_start, previous_end
-
 
 
 def aggregate_rows(rows) -> dict:

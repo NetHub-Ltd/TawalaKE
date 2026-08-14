@@ -25,38 +25,38 @@ router = APIRouter()
 # --- Redis Cache Durations ---
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
-@router.post("/register-business", response_model=ApiResponse[BusinessResponse])
-async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase, redis_client: AsyncRedis = Depends(get_redis)):
-    """
-    Create a new business within a specified tenant.
+# @router.post("/register-business", response_model=ApiResponse[BusinessResponse])
+# async def create_business(user: AuthUser, db: SessionDep, payload: BusinessBase, redis_client: AsyncRedis = Depends(get_redis)):
+#     """
+#     Create a new business within a specified tenant.
 
-    This function is responsible for creating a new business entity associated with
-    a given tenant. It retrieves the tenant by its identifier, processes the given
-    business creation payload, and registers the new business under the associated
-    tenant. Upon successful creation, it returns an API response containing the
-    newly created business details.
+#     This function is responsible for creating a new business entity associated with
+#     a given tenant. It retrieves the tenant by its identifier, processes the given
+#     business creation payload, and registers the new business under the associated
+#     tenant. Upon successful creation, it returns an API response containing the
+#     newly created business details.
 
-    :param user:
-    :param db: The database session dependency to interact with persistence layer.
-    :type db: SessionDep
-    :param payload: The business creation payload containing the necessary data
-        for creating the business entity.
-    :type payload: BusinessCreate
-    :return: An API response indicating the result of the operation, including
-        the details of the newly created business if successful.
-    :rtype: ApiResponse[BusinessResponse]
-    """
-    data = BusinessCreate(name=payload.name,tenant_id=user.tenant_id, active=True, organization_id=user.tenant_id)
-    db_obj = await business_crud.register_business(data, db=db)
+#     :param user:
+#     :param db: The database session dependency to interact with persistence layer.
+#     :type db: SessionDep
+#     :param payload: The business creation payload containing the necessary data
+#         for creating the business entity.
+#     :type payload: BusinessCreate
+#     :return: An API response indicating the result of the operation, including
+#         the details of the newly created business if successful.
+#     :rtype: ApiResponse[BusinessResponse]
+#     """
+#     data = BusinessCreate(name=payload.name,tenant_id=user.tenant_id, active=True, organization_id=user.tenant_id)
+#     db_obj = await business_crud.register_business(data, db=db)
 
-    await purge_cache_namespace(redis_client, namespace="stores", business_id=db_obj.id)
+#     await purge_cache_namespace(redis_client, namespace="stores", business_id=db_obj.id)
 
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Success",
-        data=db_obj,
-    )
+#     return ApiResponse(
+#         status=True,
+#         status_code=200,
+#         message="Success",
+#         data=db_obj,
+#     )
 #
 #
 @router.patch('/update-business/{business_id}', response_model=ApiResponse[BusinessResponse])
@@ -130,7 +130,7 @@ async def restock_product(
     Maintains an atomic history snapshot balance.
     """
     data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
-    await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=data.business_id)
 
     logger.info(f"restock response: {data}")
 
@@ -152,8 +152,8 @@ async def audit_product_stock(
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=user)
-    await purge_cache_namespace(redis_client, namespace="stores", business_id=data.business_id)
+    data =  await store_crud.audit_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="stock", business_id=data.business_id)
 
     logger.info(f"stock-audit response: {data}")
 

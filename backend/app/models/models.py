@@ -195,15 +195,7 @@ class Plan(BaseMixin, table=True):
     trial_days: int = Field(default=14)
     sort_order: int = Field(default=0)
 
-    # Flexible feature flags and hard limits
-    # Example structure:
-    # {
-    #   "max_businesses": 3,
-    #   "max_staff": 10,
-    #   "max_products": 500,
-    #   "max_invoices_per_month": 1000,
-    #   "features": ["invoicing", "stock_tracking", "analytics", "multi_currency"]
-    # }
+
     features: Dict[str, Any] = Field(
         sa_column=Column(JSONB),
         default_factory=dict,
@@ -359,6 +351,7 @@ class Business(BaseMixin, table=True):
         ondelete="CASCADE"
     )
 
+    industry: Optional[str] = Field(default="General", nullable=True)
     name: str = Field(index=True)
     tax_rate: Optional[float] = Field(default=0.0)
     address: Optional[str] = Field(default=None)
@@ -367,6 +360,7 @@ class Business(BaseMixin, table=True):
 
     # Soft-delete
     deleted_by: Optional[UUID] = Field(default=None, index=True)
+    # registered_by: Optional[UUID]
 
     config: Dict[str, Any] = Field(
         sa_column=Column(JSONB),
