@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
 # from app.models.models import SaleStatus
+from app.schemas.enums import BusinessIndustry
 
 # =========================================================
 # SYSTEM ENUMS
@@ -191,3 +192,20 @@ class FinancialDocumentSnapshotSchema(BaseModel):
     summary: dict = Field(default_factory=dict)
     
     dispute_and_audit: DisputeAuditSnapshot
+
+
+class StoreBase(BaseModel):
+    organization_id: UUID
+    industry: BusinessIndustry
+    name: str
+    phone: str
+    address: str
+    tax_rate: Optional[float] = None
+
+class StoreCreate(StoreBase):
+    pass
+
+class StoreResponse(StoreBase):
+    id: UUID
+    created_at: datetime
+

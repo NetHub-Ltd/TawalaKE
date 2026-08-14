@@ -1,4 +1,4 @@
-from app.models.models import Tenant, Organization, Business
+from app.models.models import Tenant, Organization, Business, StaffBusinessAssignment
 from app.schemas.schemas import TenantCreate, TenantUpdate
 from app.schemas.staff import StaffOnboard
 from app.crud.base import BaseCRUD
@@ -14,6 +14,7 @@ from fastapi import HTTPException
 from app.schemas.org import OrgCreate
 from app.crud.staff import staff_crud
 from app.schemas.org import OrgUpdate
+from app.schemas.store import StoreCreate
 
 
 class OrganizationCrud(BaseCRUD[Organization, OrgCreate, TenantUpdate]):
@@ -23,6 +24,32 @@ class OrganizationCrud(BaseCRUD[Organization, OrgCreate, TenantUpdate]):
     async def onboard_tenant(self, payload: StaffOnboard, db: AsyncSession) -> Organization:
         staff = await staff_crud.onboard_staff(db, payload)
         return staff
+
+    async def register_store(self, db: AsyncSession, payload: StoreCreate, current_user):
+        store = Business(
+            tenant_id=payload.organization_id,
+            organization_id=payload.organization_id,
+            industry=payload.industry,
+            name=payload.name,
+            phone=payload.phone,
+            address=payload.address,
+            tax_rate=0.0
+        )
+        db.add(store)
+        await db.flush()
+
+        assignment = StaffBusinessAssignment(
+            staff_id=current_user.id,
+            business_id=store.id,
+            organization_id=store.organization_id,
+            role=current_user.role,
+        )
+
+        db.add(assignment)
+
+        await db.commit()
+        await db.refresh(assignment)
+        return store
 
     
     async def update_org(db: AsyncSession, payload: OrgUpdate):

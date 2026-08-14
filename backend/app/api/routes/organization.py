@@ -13,6 +13,7 @@ from fastapi_cache.decorator import cache
 from app.schemas.org import OrgCreate, OrgUpdate, OrgResponse
 from app.schemas.staff import StaffOnboard
 from app.core.redis_client import limiter
+from app.schemas.store import StoreCreate, StoreResponse
 
 # Directly utilizing your provided dependency definitions
 from app.api.deps import SessionDep, get_redis, AsyncRedis,universal_key_builder, purge_cache_namespace
@@ -115,4 +116,18 @@ async def get_billing_by_tenant(organization_id: UUID, db: SessionDep, user: Aut
         status_code=200,
         message="Businesses retrieved successfully",
         data=businesses
+    )
+
+
+@router.post('/new-store', status_code=200, response_model=ApiResponse[StoreResponse])
+async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUser):
+    if user.role != "OWNER" and payload.organization != user.organization_id:
+        raise HTTPException(status_code=403, detail="You are not allowed to perform this action")
+
+    store = await organization_crud.register_store(db, payload, user)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Store created succesfully",
+        data=store
     )
