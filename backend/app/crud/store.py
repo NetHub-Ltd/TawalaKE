@@ -219,8 +219,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
         # 3. Defer/Execute product stock balances decrements
         for item in sale.items:
-            prod_stmt = select(Product).where(Product.id == item.product_id, 
-            product.business_id == item.business_id)
+            prod_stmt = select(Product).where(Product.id == item.product_id)
             prod_res = await db.exec(prod_stmt)
             product = prod_res.one_or_none()
 
