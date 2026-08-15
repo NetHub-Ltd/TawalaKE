@@ -131,7 +131,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             id=uuid4(),
             organization_id=current_user.organization_id,
             business_id=payload.business_id,
-            cashier_id=payload.current_user.id,
+            cashier_id=current_user.id,
             status=SaleStatus.PENDING_PAYMENT,
             currency="KES",
             subtotal=subtotal,
