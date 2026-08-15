@@ -83,7 +83,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         db: AsyncSession,
         *,
         payload: InitializeCheckout,
-        current_user: StaffResponse = None,
+        current_user: StaffResponse,
         tax_rate: float = 0.0,
     ) -> Sale:
         """
@@ -110,7 +110,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
             sale_items.append(
                 SaleItem(
-                    organization=current_user.organization_id,
+                    organization_id=current_user.organization_id,
                     product_id=product.id,
                     quantity=item.quantity,
                     unit_price=product.selling_price,
@@ -131,7 +131,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             id=uuid4(),
             organization_id=current_user.organization_id,
             business_id=payload.business_id,
-            cashier_id=payload.cashier_id,
+            cashier_id=payload.current_user.id,
             status=SaleStatus.PENDING_PAYMENT,
             currency="KES",
             subtotal=subtotal,

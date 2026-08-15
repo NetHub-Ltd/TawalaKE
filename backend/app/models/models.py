@@ -553,11 +553,6 @@ class Customer(BaseMixin, table=True):
         index=True,
         ondelete="CASCADE"
     )
-    # sale_id: Optional[UUID] = Field(
-    #     foreign_key="sales.id",
-    #     index=True,
-    #     ondelete="CASCADE"
-    # )
 
     name: str
     phone: Optional[str] = Field(default=None, index=True)
