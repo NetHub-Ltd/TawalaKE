@@ -1,7 +1,8 @@
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, TypeVar, Generic
 from uuid import UUID
+from datetime import date, datetime
 
-from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends, Request
+from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends, Request, status, Query
 
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace, get_redis, AsyncRedis
 from app.crud.business import business_crud
@@ -19,8 +20,37 @@ from fastapi_cache.decorator import cache
 from app.core.redis_client import limiter
 from app.schemas.analytics import DashboardAnalyticsResponse
 from app.utils.helpers import AnalyticsPeriod
+from app.schemas.sale import SaleReadWithRelations
+from pydantic import BaseModel
+from app.api.deps import (
+    SessionDep,
+    get_redis,
+    AsyncRedis,
+    universal_key_builder,
+    purge_cache_namespace,
+)
 
 router = APIRouter()
+
+
+T = TypeVar("T")
+
+
+class PaginationMeta(BaseModel):
+    """Metadata envelope for paginated list responses."""
+
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+
+class PaginatedData(BaseModel, Generic[T]):
+    """Generic pagination wrapper for payload data."""
+
+    items: List[T]
+    meta: PaginationMeta
+
 
 # --- Redis Cache Durations ---
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
@@ -122,7 +152,7 @@ async def audit_product_stock(
     data =  await store_crud.audit_stock(db=db, payload=payload, current_user=user)
     await purge_cache_namespace(redis_client, namespace="stock", business_id=data.business_id)
 
-    logger.info(f"stock-audit response: {data}")
+    # logger.info(f"stock-audit response: {data}")
 
     return ApiResponse(
         status=True,
@@ -139,14 +169,98 @@ async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep
     await db.commit()
     return record_sale
 
-@router.get('/get-sales/{business_id}')
-async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, sale_id: Optional[UUID] = None, limit: int = 20, offset: int = None):
-    # fetch sales for a business
-    if sale_id:
-        sales = await store_crud.fetch_sale_by_id(db, business_id, sale_id, user)
-        return sales
-    sales = await store_crud.fetch_sales(db, business_id, user)
-    return sales
+
+@limiter.limit("100/minute")
+@cache(expire=CACHE_TTL_SEC, namespace="sales", key_builder=universal_key_builder)
+@router.get(
+    "/sales/{business_id}",
+    response_model=ApiResponse[PaginatedData[SaleReadWithRelations]],
+    status_code=status.HTTP_200_OK,
+)
+async def get_sales(
+    request: Request,
+    business_id: UUID,
+    db: SessionDep,
+    user: AuthUser,
+    sale_id: Optional[UUID] = Query(
+        None, description="Optional UUID to fetch a specific sale"
+    ),
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    page_size: int = Query(20, ge=1, le=100, description="Records per page (Max 100)"),
+    single_date: Optional[date] = Query(
+        None, description="Exact date filter (YYYY-MM-DD)"
+    ),
+    start_date: Optional[datetime] = Query(
+        None, description="ISO 8601 start timestamp filter"
+    ),
+    end_date: Optional[datetime] = Query(
+        None, description="ISO 8601 end timestamp filter"
+    ),
+):
+    """
+    Retrieves sales for a business scoped by user role.
+    Supports pagination, specific sale lookup, single-day, and date-range filtering.
+    """
+    try:
+        # 1. Single Sale Lookup Route Logic
+        if sale_id:
+            sale = await store_crud.fetch_sale_by_id(
+                db=db, business_id=business_id, sale_id=sale_id, user=user
+            )
+            items = [sale] if sale else []
+            total = len(items)
+
+            return ApiResponse(
+                status=True,
+                status_code=200,
+                message="Sale retrieved successfully.",
+                data=PaginatedData(
+                    items=items,
+                    meta=PaginationMeta(
+                        total=total,
+                        page=1,
+                        page_size=page_size,
+                        total_pages=1 if total > 0 else 0,
+                    ),
+                ),
+            )
+
+        # 2. Paginated Query Execution
+        sales, total_count = await store_crud.fetch_sales(
+            db=db,
+            business_id=business_id,
+            user=user,
+            page=page,
+            page_size=page_size,
+            single_date=single_date,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+        total_pages = (
+            (total_count + page_size - 1) // page_size if total_count > 0 else 0
+        )
+
+        return ApiResponse(
+            status=True,
+            status_code=200,
+            message="Sales retrieved successfully.",
+            data=PaginatedData(
+                items=sales,
+                meta=PaginationMeta(
+                    total=total_count,
+                    page=page,
+                    page_size=page_size,
+                    total_pages=total_pages,
+                ),
+            ),
+        )
+
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(val_err),
+        ) from val_err
 
 
 @router.post("/checkout")

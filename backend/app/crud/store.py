@@ -2,6 +2,8 @@ from typing import Type, List, Dict, Tuple, Optional, Any, Sequence
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from fastapi import BackgroundTasks
+from app.core.security import security
+from datetime import date, datetime, time
 
 from fastapi import HTTPException, status
 from sqlmodel import select, desc, func, col
@@ -49,7 +51,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
         super().__init__(model)
 
-    
     async def get_store_products(
         self,
         db: AsyncSession,
@@ -293,7 +294,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 tenant_id=payload.tenant_id,
                 email=payload.email,
                 full_name=payload.full_name,
-                hashed_password=hash_password(payload.password) if payload.password else "",
+                hashed_password=security.hash_password(payload.password) if payload.password else "",
                 role=payload.role,
                 active=True
             )
@@ -535,7 +536,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             previous_stock = product.stock
             new_stock = payload.quantity
 
-            # If the product's organization_id is not set, assign it to the current user's organization_id, 
+            # If the product's organization_id is not set, assign it to the current user's organization_id,
             # this happens freqyuently when the product was created without an organization context
             # this used to migrate the products to an organization context instraed of using a cronjob
             if product.organization_id is None:
@@ -651,9 +652,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Database read failure during analytics aggregation.",
             )
 
-#     from typing import Optional, Sequence
-
-
+    #     from typing import Optional, Sequence
 
     def _get_sale_eager_options(self) -> Tuple:
         """Centralized eager loading options for Sale relationships."""
@@ -664,7 +663,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             selectinload(Sale.payments),
             selectinload(Sale.document),
         )
-
 
     async def fetch_sale_by_id(self,
         db: AsyncSession,
@@ -690,7 +688,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         result = await db.exec(stmt)
         return result.first()
 
-
     async def fetch_sales(self,
         db: AsyncSession,
         business_id: UUID,
@@ -710,6 +707,105 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
         results = await db.exec(stmt)
         return results.all()
+
+    async def fetch_sales(
+        self,
+        db: AsyncSession,
+        business_id: UUID,
+        user: StaffResponse,
+        *,
+        page: int = 1,
+        page_size: int = 50,
+        single_date: Optional[date] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> Tuple[Sequence[Sale], int]:
+        """
+        Fetches paginated sales for a business scoped by user role, supporting
+        single-day and date-range filters, with exception handling.
+
+        :param db: AsyncSession database connection instance.
+        :param business_id: Target business UUID.
+        :param user: Current authenticated staff member.
+        :param page: 1-indexed page number (default: 1).
+        :param page_size: Number of items per page (default: 50, capped at 100).
+        :param single_date: Exact calendar date filter.
+        :param start_date: Beginning timestamp range bound.
+        :param end_date: Ending timestamp range bound.
+        :return: Tuple of (Sequence of Sale objects, total unpaginated count).
+        """
+        # 1. Parameter Guard Rules & Validation
+        if page < 1:
+            raise ValueError("Page number must be greater than or equal to 1.")
+
+        page_size = min(max(1, page_size), 100)
+
+        if single_date and (start_date or end_date):
+            raise ValueError(
+                "Cannot combine 'single_date' with 'start_date' or 'end_date'."
+            )
+
+        if start_date and end_date and start_date > end_date:
+            raise ValueError(
+                "'start_date' cannot be chronologically later than 'end_date'."
+            )
+
+        # 2. Scope & Base Statement Construction
+        stmt = select(Sale).where(Sale.business_id == business_id)
+
+        # Security Scoping by Role
+        if user.role == StaffRole.CASHIER:
+            stmt = stmt.where(Sale.cashier_id == user.id)
+        elif user.role not in (StaffRole.OWNER, StaffRole.MANAGER):
+            raise HTTPException(status_code=403,
+                detail="Unauthorized: Insufficient permissions to view sales."
+            )
+
+        # 3. Date Filtering Logic (SARGable range comparisons preserve B-tree indexes)
+        if single_date:
+            day_start = datetime.combine(single_date, time.min)
+            day_end = datetime.combine(single_date, time.max)
+            stmt = stmt.where(Sale.created_at >= day_start, Sale.created_at <= day_end)
+        else:
+            if start_date:
+                stmt = stmt.where(Sale.created_at >= start_date)
+            if end_date:
+                stmt = stmt.where(Sale.created_at <= end_date)
+
+        try:
+            # 4. Total Unpaginated Count Query
+            count_stmt = select(func.count()).select_from(stmt.subquery())
+            count_result = await db.exec(count_stmt)
+            total_count = count_result.one() or 0
+
+            if total_count == 0:
+                return [], 0
+
+            # 5. Apply Eager Loading, Sorting, and Window Pagination
+            offset = (page - 1) * page_size
+            paginated_stmt = (
+                stmt.options(*self._get_sale_eager_options())
+                .order_by(Sale.created_at.desc())
+                .offset(offset)
+                .limit(page_size)
+            )
+
+            results = await db.exec(paginated_stmt)
+            sales = results.all()
+
+            return sales, total_count
+
+        except SQLAlchemyError as exc:
+            logger.error(
+                "Database error while querying sales for business_id=%s, user_id=%s: %s",
+                business_id,
+                user.id,
+                str(exc),
+                exc_info=True,
+            )
+            raise HTTPException(status_code=500,
+                detail="Failed to retrieve sales records from database."
+            ) from exc
 
 
 # Global object instance mapping injection
