@@ -82,7 +82,8 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         db: AsyncSession,
         *,
         payload: InitializeCheckout,
-        tax_rate: float = 0.0
+        current_user: StaffResponse = None,
+        tax_rate: float = 0.0,
     ) -> Sale:
         """
         Validates checkout initiation, accurately tracks item lines, computes totals,
@@ -108,13 +109,16 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
             sale_items.append(
                 SaleItem(
+                    organization=current_user.organization_id,
                     product_id=product.id,
                     quantity=item.quantity,
                     unit_price=product.selling_price,
                     total_price=item_total,
                     sku=product.attributes.get('sku', 'N/A'),
                     name=product.label,
-                    subtotal=subtotal
+                    subtotal=subtotal,
+                    tax_rate=0.0,
+                    cost_price_at_sale=product.selling_price
                 )
             )
 
@@ -124,6 +128,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
         sale = Sale(
             id=uuid4(),
+            organization_id=current_user.organization_id,
             business_id=payload.business_id,
             cashier_id=payload.cashier_id,
             status=SaleStatus.PENDING_PAYMENT,
@@ -132,6 +137,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             tax_rate=tax_rate,
             tax_amount=tax_amount,
             discount=0.0,
+            discount_applied=0.0,
             total_amount=total_amount,
             items=sale_items
         )
@@ -168,7 +174,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         stmt = (
             select(Sale)
             .where(Sale.id == sale_id)
-            .options(selectinload(Sale.items))
+            .options(
+                selectinload(Sale.items),
+                # selectinload(Sale.customer),
+                selectinload(Sale.cashier)
+                )
         )
         res = await db.exec(stmt)
         sale = res.one_or_none()
@@ -184,7 +194,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
         # 2. Process standard transactional payment attachment with corrected field keys
         payment = Payment(
-            id=uuid4(),
+            organization_id=sale.organization_id,
             business_id=sale.business_id,
             sale_id=sale.id,
             amount=sale.total_amount,
@@ -193,17 +203,29 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         )
         db.add(payment)
 
+        customer = Customer(
+            organization_id=sale.organization_id,
+            business_id=sale.business_id,
+            sale_id=sale.id,
+            name=payload.customer_name,
+            phone=payload.customer_phone   
+        )
+
+        db.add(customer)
+        await db.flush()
+
+        sale.customer_id = customer.id
+
         # 3. Defer/Execute product stock balances decrements
         for item in sale.items:
-            prod_stmt = select(Product).where(Product.id == item.product_id)
+            prod_stmt = select(Product).where(Product.id == item.product_id, 
+            product.business_id == item.business_id)
             prod_res = await db.exec(prod_stmt)
             product = prod_res.one_or_none()
 
             if product and product.track_stock:
                 previous_stock_level = product.stock
                 product.stock -= item.quantity
-                # product.popularity_score += 0.1
-                # hot fix to patch issue # 72
                 if product.popularity_score is None:
                     product.popularity_score = 0.1
                 else:
@@ -211,9 +233,10 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 db.add(product)
 
                 history = StockHistory(
-                    id=uuid4(),
                     product_id=product.id,
+                    organization_id=product.organization_id,
                     business_id=sale.business_id,
+                    performed_by=sale.cashier_id,
                     quantity=-item.quantity,
                     previous_stock=previous_stock_level,
                     new_stock=product.stock,
@@ -236,7 +259,17 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             # background_tasks.add_task(async_process_document_generation, sale.id)
             background_tasks.add_task(async_update_sales_analytics, sale.id)
             
-            return sale
+            # return sale
+            new_stmt = (
+            select(Sale).where(Sale.id == sale_id).options(
+                selectinload(Sale.items),
+                selectinload(Sale.customer),
+                selectinload(Sale.cashier)
+                )
+            )
+
+            new_sale = (await db.exec(new_stmt)).first()
+            return new_sale
         except IntegrityError as e:
             await db.rollback()
             logger.error(f"Uniqueness check violation during storefront finalization: {str(e)}")
