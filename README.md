@@ -44,9 +44,9 @@ To become the go-to business operating system for Kenyan SMEs by providing simpl
 
 | Plan | Monthly Price | Best For |
 | :--- | :--- | :--- |
-| **Basic** | KSh 1,490 | Single small shops |
-| **Ndovu** | **KSh 3,990** | Growing businesses (Recommended) |
-| **Enterprise** | KSh 9,990+ | Complex & multi-branch operations |
+| **Basic** | KSh 999 | Single small shops |
+| **Ndovu** | **KSh 1,999** | Growing businesses (Recommended) |
+| **Enterprise** | KSh 3999+ | Complex & multi-branch operations |
 
 **14-day free trial** on the Ndovu plan.
 
