@@ -1,4 +1,4 @@
-from typing import Type, List, Dict, Tuple, Optional, Any
+from typing import Type, List, Dict, Tuple, Optional, Any, Sequence
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 from fastapi import BackgroundTasks
@@ -49,6 +49,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
     def __init__(self, model: Type[Business]):
         super().__init__(model)
 
+    
     async def get_store_products(
         self,
         db: AsyncSession,
@@ -67,7 +68,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 .where(Product.business_id == business_id)
                 .offset(skip)
                 .limit(limit)
-                .order_by(Product.label)
+                .order_by(Product.popularity_score)
             )
             result = await db.exec(stmt)
             return result.all()
@@ -97,7 +98,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             stmt = select(Product).where(Product.id == item.product_id)
             res = await db.exec(stmt)
             product = res.one_or_none()
-            
+
             if not product:
                 logger.error(f"Checkout failure: Product ID {item.product_id} not found.")
                 raise HTTPException(
@@ -158,7 +159,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Failed to initialize transient checkout ledger."
             )
 
- 
     async def finalize_checkout(
         self,
         db: AsyncSession,
@@ -249,7 +249,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
         try:
             await db.commit()
-            
+
             # === Background Document & Analytics Generation ===
             background_tasks.add_task(
                 async_process_document_generation, 
@@ -258,7 +258,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
             # background_tasks.add_task(async_process_document_generation, sale.id)
             background_tasks.add_task(async_update_sales_analytics, sale.id)
-            
+
             # return sale
             new_stmt = (
             select(Sale).where(Sale.id == sale_id).options(
@@ -307,7 +307,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 role=payload.role
             )
             db.add(assignment)
-            
+
             await db.commit()
             return db_staff
         except Exception as error:
@@ -317,7 +317,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
                 detail="Staff account creation error."
             )
-
 
     async def get_financial_document_json(
         self,
@@ -332,14 +331,13 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         stmt = select(FinancialDocument).where(FinancialDocument.sale_id == sale_id)
         res = await db.exec(stmt)
         # Use one_or_none() directly on the SQLModel ScalarResult
-        # doc = res.one_or_none() 
+        # doc = res.one_or_none()
         doc = res.unique().one_or_none()
-        
+
         if not doc:
             return None
-        
-        return doc.document_snapshot
 
+        return doc.document_snapshot
 
     async def list_business_financial_documents_json(
         self,
@@ -437,7 +435,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 "total_stock_valuation_at_selling_price": 0.0
             }
         }
-    
+
     async def add_new_stock(self, db: AsyncSession, payload: ProductRestockRequest, current_user) -> Product:
         """
         Executes a secure inbound inventory restock operation.
@@ -463,6 +461,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             # 3. Create the historical ledger trail record
             # Automatically falls back to the current catalog price parameters if the incoming transaction lacks explicit overrides
             history_entry = StockHistory(
+                organization_id=current_user.organization_id,
                 product_id=product.id,
                 business_id=product.business_id, 
                 performed_by=current_user.id,
@@ -478,9 +477,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
 
             # 4. Mutate master product ledger catalog values directly in memory
+            if product.organization_id is None:
+                product.organization_id = current_user.organization_id
+
             product.stock = new_stock
             product.last_stock_take=utc_now()
-            
+
             # # Update purchase cost structures if valid parameters are parsed
             # if payload.buying_price is not None and payload.buying_price > 0:
             #     product.cost_price = payload.buying_price
@@ -495,7 +497,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
             # 5. Execute atomic database flush commitment
             await db.commit()
-            
+
             # Refresh the history entry row so it populates the auto-generated primary key UUID and timestamp strings
             await db.refresh(product)
             return product
@@ -533,11 +535,18 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             previous_stock = product.stock
             new_stock = payload.quantity
 
+            # If the product's organization_id is not set, assign it to the current user's organization_id, 
+            # this happens freqyuently when the product was created without an organization context
+            # this used to migrate the products to an organization context instraed of using a cronjob
+            if product.organization_id is None:
+                product.organization_id = current_user.organization_id
+
             # 3. Create the historical ledger trail record
             # Automatically falls back to the current catalog price parameters if the incoming transaction lacks explicit overrides
             history_entry = StockHistory(
                 product_id=product.id,
                 business_id=product.business_id, 
+                organization_id=product.organization_id or current_user.organization_id, # mark this for potential failure if the product is orphaned
                 performed_by=current_user.id,
                 movement_type=StockMovementType.ADJUSTMENT, 
                 quantity=payload.quantity,
@@ -553,14 +562,14 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             # 4. Mutate master product ledger catalog values directly in memory
             product.stock = new_stock
             product.last_stock_take=utc_now()
-            
+
             # Stage transactional models into the current Active Unit of Work
             db.add(product)
             db.add(history_entry)
 
             # 5. Execute atomic database flush commitment
             await db.commit()
-            
+
             # Refresh the history entry row so it populates the auto-generated primary key UUID and timestamp strings
             await db.refresh(product)
             return product
@@ -641,6 +650,66 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=500,
                 detail="Database read failure during analytics aggregation.",
             )
+
+#     from typing import Optional, Sequence
+
+
+
+    def _get_sale_eager_options(self) -> Tuple:
+        """Centralized eager loading options for Sale relationships."""
+        return (
+            selectinload(Sale.items),
+            selectinload(Sale.customer),
+            selectinload(Sale.cashier),
+            selectinload(Sale.payments),
+            selectinload(Sale.document),
+        )
+
+
+    async def fetch_sale_by_id(self,
+        db: AsyncSession,
+        business_id: UUID,
+        sale_id: UUID,
+        user: StaffResponse,
+    ) -> Optional[Sale]:
+        """
+        Fetches a single sale by ID while enforcing tenant isolation and cashier ownership RBAC.
+        Loads all declared sibling relationships eagerly.
+        """
+        stmt = select(Sale).where(Sale.id == sale_id).where(Sale.business_id == business_id)
+
+        # Role-Based Access Control
+        if user.role == StaffRole.CASHIER:
+            stmt = stmt.where(Sale.cashier_id == user.id)
+        elif user.role not in (StaffRole.OWNER, StaffRole.MANAGER):
+            return None
+
+        # Eagerly load all sibling relationships
+        stmt = stmt.options(*self._get_sale_eager_options())
+
+        result = await db.exec(stmt)
+        return result.first()
+
+
+    async def fetch_sales(self,
+        db: AsyncSession,
+        business_id: UUID,
+        user: StaffResponse,
+    ) -> Sequence[Sale]:
+        """
+        Fetches all sales for a business scoped by user role, ordered by latest updated_at.
+        """
+        stmt = select(Sale).where(Sale.business_id == business_id)
+
+        if user.role == StaffRole.CASHIER:
+            stmt = stmt.where(Sale.cashier_id == user.id)
+        elif user.role not in (StaffRole.OWNER, StaffRole.MANAGER):
+            return []
+
+        stmt = stmt.options(*self._get_sale_eager_options()).order_by(Sale.updated_at.desc())
+
+        results = await db.exec(stmt)
+        return results.all()
 
 
 # Global object instance mapping injection

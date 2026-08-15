@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Sequence
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends, Request
@@ -139,21 +139,13 @@ async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep
     await db.commit()
     return record_sale
 
-@router.get('/get-sales/{business_id}', response_model=List[SaleResponse])
-async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, sale_id: UUID = None, limit: int = 20, offset: int = None):
+@router.get('/get-sales/{business_id}')
+async def get_pending_sales(db: SessionDep, user: AuthUser, business_id: UUID, sale_id: Optional[UUID] = None, limit: int = 20, offset: int = None):
     # fetch sales for a business
-    stmt = select(Sale).where(Sale.business_id == business_id)
     if sale_id:
-        stmt = stmt.where(Sale.id == sale_id)
-    
-    if limit:
-        stmt = stmt.limit(limit)
-    if offset:
-        stmt = stmt.offset(offset)
-    
-    sales = (await db.exec(stmt)).all()
-    # if not sales:
-    #     raise HTTPException(status_code=404, detail="Sales not found")
+        sales = await store_crud.fetch_sale_by_id(db, business_id, sale_id, user)
+        return sales
+    sales = await store_crud.fetch_sales(db, business_id, user)
     return sales
 
 
