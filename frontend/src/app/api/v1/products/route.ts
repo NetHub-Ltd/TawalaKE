@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
   if (!session || !session.accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
   const body = await request.json();
   if (!body) {
     return NextResponse.json(
@@ -120,6 +121,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const body = await request.json();
+
+  console.debug("Patch request body:", body); // Debug log
   if (!body) {
     return NextResponse.json(
       { error: "Invalid request body" },
@@ -135,6 +138,8 @@ export async function PATCH(request: NextRequest) {
     body: JSON.stringify(body),
   });
   const data = await res.json();
+  console.debug("Patch response data:", data); // Debug log
+  
   if (!data.status) {
     return NextResponse.json({ error: data.message }, { status: res.status });
   }
