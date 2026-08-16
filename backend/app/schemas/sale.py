@@ -9,7 +9,8 @@ class ItemReadMinimal(BaseModel):
     # product_id: UUID
     name: str
     unit_price: float
-    quantity: int
+    # quantity: Union[int, float] = None
+    quantity: int | float | None = None
     subtotal: float
     cost_price_at_sale: Optional[float] = None
     # tax_amount: float
