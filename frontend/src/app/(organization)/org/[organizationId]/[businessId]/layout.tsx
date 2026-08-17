@@ -58,7 +58,7 @@ export default async function TerminalLayout({
             id="main-content" 
             className="flex-1 min-w-0 min-h-0 relative"
           >
-            <div className="absolute inset-0 overflow-y-auto overscroll-contain focus:outline-none">
+            <div className="absolute inset-0 px-2 overflow-y-auto overscroll-contain focus:outline-none">
               {children}
             </div>
           </main>

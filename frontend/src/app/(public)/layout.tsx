@@ -9,14 +9,14 @@ export default function PublicLayout({
   return (
     <div className="w-full h-full overflow-y-auto flex flex-col">
       {/* FIXED TOP NAVBAR */}
-      <header className="fixed top-0 left-0 right-0 h-20 bg-card border-b border-border/40 flex items-center px-6 z-50">
+      <header className="fixed top-0 left-0 right-0 h-20  bg-card border-b border-border/40 flex items-center  z-50">
         <div className="w-full">
           <NavBar />
         </div>
       </header>
       
       {/* ROUTE CONTENT SPACE */}
-      <main className="flex-1 mt-20 pb-12">
+      <main className="flex-1 h-full">
         {children}
       </main>
     </div>

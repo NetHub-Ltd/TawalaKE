@@ -140,7 +140,7 @@ export function OverviewClient({ organizationId: propOrgId, businessId: propBusi
 
   if (isError) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center min-h-[300px]">
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-center min-h-[300px]">
         <p className="text-sm font-medium text-foreground">Couldn’t load overview</p>
         <p className="text-xs text-muted max-w-sm">
           {error instanceof Error ? error.message : "Something went wrong"}
@@ -157,7 +157,7 @@ export function OverviewClient({ organizationId: propOrgId, businessId: propBusi
   }
 
   return (
-    <div className="w-full h-full flex flex-col min-h-0 gap-5 p-4 overflow-y-auto no-scrollbar text-foreground">
+    <div className="w-full h-full flex flex-col min-h-0 gap-5 overflow-y-auto no-scrollbar text-foreground">
       <h1 className="sr-only">Business Performance Overview</h1>
 
       {/* Range controls + shortcuts */}

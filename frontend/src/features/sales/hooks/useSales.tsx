@@ -1,3 +1,89 @@
+// "use client";
+
+// import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+// interface FetchSalesParams {
+//   businessId: string;
+//   saleId?: string;
+//   limit?: number;
+// }
+
+// // Exactly mirroring your backend schema
+// export interface SaleResponse {
+//   id: string;
+//   status: "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED"; // Exact string enum mapping
+//   subtotal: number;
+//   discount: number;
+//   tax_rate: number;
+//   tax_amount: number;
+//   total_amount: number;
+//   created_at: string;
+// }
+
+// /**
+//  * Normalizing API wrapper mapping parameters and handling shape transformations cleanly.
+//  */
+// const fetchSalesApi = async ({ businessId, saleId, limit = 20 }: FetchSalesParams): Promise<SaleResponse[]> => {
+//   const url = new URL(`/api/v1/org/stores/sales`, window.location.origin);
+  
+//   url.searchParams.append("business_id", businessId);
+//   url.searchParams.append("limit", limit.toString());
+  
+//   if (saleId) {
+//     url.searchParams.append("sale_id", saleId);
+//   }
+
+//   const response = await fetch(url.toString(), {
+//     method: "GET",
+//     headers: {
+//       "Content-Type": "application/json",
+//     },
+//   });
+
+//   if (!response.ok) {
+//     const errorData = await response.json().catch(() => ({}));
+//     throw new Error(errorData?.detail || "Failed to retrieve terminal sales history.");
+//   }
+
+//   const data = await response.json();
+//   console.debug("returned data", data)
+
+//   // If sale_id is provided, backend answers with a single Object {} instead of an Array []. 
+//   // We wrap it in an array here so your hook return signature remains completely consistent!
+//   return Array.isArray(data) ? data : [data];
+// };
+
+// /**
+//  * @Scribe_Audit
+//  * Architecture: Optimized TanStack stream utilizing deterministic state keys.
+//  * Data Hydration: Structured mapping accommodating shape variance between detail objects and lists.
+//  */
+// export const useSales = ({ businessId, saleId, limit = 20 }: FetchSalesParams) => {
+//   const queryClient = useQueryClient();
+
+//   const queryKey = ["business", businessId, "sales", { saleId, limit }];
+
+//   const queryInfo = useQuery({
+//     queryKey,
+//     queryFn: () => fetchSalesApi({ businessId, saleId, limit }),
+//     enabled: !!businessId, 
+//     staleTime: 1000 * 15, // 15 seconds fresh state for quick retail matching
+//     gcTime: 1000 * 60 * 5, // 5 minutes cache fallback holding tank
+//   });
+
+//   const refresh = async () => {
+//     // Invalidates all sales queries scoped under this business node
+//     await queryClient.invalidateQueries({ queryKey: ["business", businessId, "sales"] });
+//   };
+
+//   return {
+//     ...queryInfo,
+//     sales: queryInfo.data || [],
+//     refresh,
+//     error: queryInfo.error as Error | null,
+//   };
+// };
+
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,56 +94,97 @@ interface FetchSalesParams {
   limit?: number;
 }
 
-// Exactly mirroring your backend schema
 export interface SaleResponse {
   id: string;
-  status: "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED"; // Exact string enum mapping
+  status: "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED";
   subtotal: number;
   discount: number;
   tax_rate: number;
   tax_amount: number;
   total_amount: number;
   created_at: string;
+  currency?: string;
+  business?: { id: string; name: string };
+  cashier?: { id: string; full_name: string };
+  items?: {
+    name: string;
+    unit_price: number;
+    quantity: number;
+    subtotal: number;
+  }[];
+  // allow extra fields the backend may send
+  [key: string]: unknown;
 }
 
 /**
- * Normalizing API wrapper mapping parameters and handling shape transformations cleanly.
+ * Normalize any backend response into a clean SaleResponse[].
+ *
+ * Handles:
+ *  1. Sale[]                          → return as-is
+ *  2. { items: Sale[], meta }         → extract items
+ *  3. Single Sale object              → wrap in array
  */
-const fetchSalesApi = async ({ businessId, saleId, limit = 20 }: FetchSalesParams): Promise<SaleResponse[]> => {
+function normalizeSalesResponse(data: unknown): SaleResponse[] {
+  if (Array.isArray(data)) {
+    return data as SaleResponse[];
+  }
+
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+
+    // Paginated / filtered response: { items: Sale[], meta: ... }
+    if (Array.isArray(obj.items)) {
+      return obj.items as SaleResponse[];
+    }
+
+    // Single sale object
+    if (typeof obj.id === "string") {
+      return [obj as SaleResponse];
+    }
+  }
+
+  // Fallback – never return undefined/null
+  return [];
+}
+
+const fetchSalesApi = async ({
+  businessId,
+  saleId,
+  limit = 20,
+}: FetchSalesParams): Promise<SaleResponse[]> => {
   const url = new URL(`/api/v1/org/stores/sales`, window.location.origin);
-  
+
   url.searchParams.append("business_id", businessId);
   url.searchParams.append("limit", limit.toString());
-  
+
   if (saleId) {
     url.searchParams.append("sale_id", saleId);
   }
 
   const response = await fetch(url.toString(), {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
   });
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.detail || "Failed to retrieve terminal sales history.");
+    throw new Error(
+      (errorData as { detail?: string })?.detail ||
+        "Failed to retrieve terminal sales history.",
+    );
   }
 
   const data = await response.json();
+  console.debug("raw sales response", data);
 
-  // If sale_id is provided, backend answers with a single Object {} instead of an Array []. 
-  // We wrap it in an array here so your hook return signature remains completely consistent!
-  return Array.isArray(data) ? data : [data];
+  return normalizeSalesResponse(data);
 };
 
-/**
- * @Scribe_Audit
- * Architecture: Optimized TanStack stream utilizing deterministic state keys.
- * Data Hydration: Structured mapping accommodating shape variance between detail objects and lists.
- */
-export const useSales = ({ businessId, saleId, limit = 20 }: FetchSalesParams) => {
+export const useSales = ({
+  businessId,
+  saleId,
+  limit = 20,
+}: FetchSalesParams) => {
   const queryClient = useQueryClient();
 
   const queryKey = ["business", businessId, "sales", { saleId, limit }];
@@ -65,20 +192,21 @@ export const useSales = ({ businessId, saleId, limit = 20 }: FetchSalesParams) =
   const queryInfo = useQuery({
     queryKey,
     queryFn: () => fetchSalesApi({ businessId, saleId, limit }),
-    enabled: !!businessId, 
-    staleTime: 1000 * 15, // 15 seconds fresh state for quick retail matching
-    gcTime: 1000 * 60 * 5, // 5 minutes cache fallback holding tank
+    enabled: !!businessId,
+    staleTime: 1000 * 15,
+    gcTime: 1000 * 60 * 5,
   });
 
   const refresh = async () => {
-    // Invalidates all sales queries scoped under this business node
-    await queryClient.invalidateQueries({ queryKey: ["business", businessId, "sales"] });
+    await queryClient.invalidateQueries({
+      queryKey: ["business", businessId, "sales"],
+    });
   };
 
   return {
     ...queryInfo,
-    sales: queryInfo.data || [],
+    sales: queryInfo.data ?? [],
     refresh,
-    error: queryInfo.error as Error | null,
+    error: (queryInfo.error as Error) ?? null,
   };
 };

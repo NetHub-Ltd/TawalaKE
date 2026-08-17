@@ -33,7 +33,7 @@ export default function LoginPage() {
 
       <main 
         id="main-content" 
-        className="h-dvh w-full overflow-hidden flex flex-col items-center justify-between p-6 sm:p-8 relative"
+        className="h-dvh w-full overflow-hidden flex flex-col items-center justify-between relative"
       >
         {/* Minimal Header Branding */}
 
@@ -42,15 +42,15 @@ export default function LoginPage() {
           aria-label="Account Authorization"
           className="w-full max-w-md my-auto"
         >
-          <div className="card-layered p-6 sm:p-8 backdrop-blur-md">
+          <div className="card-layered sm:p-8 backdrop-blur-md">
             <LoginForm />
           </div>
         </section>
 
         {/* Minimal System Footer */}
-        <footer className="w-full max-w-md text-center text-xs text-muted pb-2">
+        {/* <footer className="w-full max-w-md text-center text-xs text-muted pb-2">
           <p>© {new Date().getFullYear()} Tawala. Encrypted & Secure.</p>
-        </footer>
+        </footer> */}
       </main>
     </>
   );

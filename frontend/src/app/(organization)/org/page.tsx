@@ -1,63 +1,119 @@
-// app/org/page.tsx
+import { Metadata } from "next";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { OrgDecisionLoading } from "@/features/org/components/OrgDecisionLoading";
 import { OrgDecisionError } from "@/features/org/components/OrgDecisionError";
 import { OrgNoSession } from "@/features/org/components/OrgNoSession";
+import { OrgCommandCenterClient } from "@/features/org/components/OrgCommandCenterClient";
+
+/* =========================================================
+   TECHNICAL SEO: METADATA ENGINE & CANONICAL LINKING
+   ========================================================= */
+export const metadata: Metadata = {
+  title: "Organization Command Center & Footprint | Tawala",
+  description:
+    "Executive hub for multi-tenant retail footprints. Manage organization settings, staff, billing, and active store terminals in Tawala.",
+  alternates: {
+    canonical: "https://tawala.io/org",
+  },
+};
+
+interface BusinessItem {
+  id: string;
+  name: string;
+  code?: string;
+  status?: string;
+}
+
+interface StaffProfileResponse {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  organization_id: string;
+  assigned_businesses?: BusinessItem[];
+}
 
 type ResolveResult =
   | { type: "no-session" }
   | { type: "no-org" }
-  | { type: "success"; orgId: string; businessId: string };
+  | { type: "redirect"; destination: string }
+  | {
+      type: "select-business";
+      orgId: string;
+      userRole: string;
+      userName: string;
+      businesses: BusinessItem[];
+    };
 
+/* =========================================================
+   SERVER-SIDE DECISION ENGINE
+   ========================================================= */
 async function resolveOrganization(): Promise<ResolveResult> {
   const session = await auth();
 
-  // 1. No valid session
   if (!session?.user || session.error || !session.accessToken) {
     return { type: "no-session" };
   }
 
   try {
-    // 2. Fetch the full staff profile using the token from the session
     const res = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
       headers: {
         Authorization: `Bearer ${session.accessToken}`,
         "Content-Type": "application/json",
       },
-      // Important: don't cache this – we need fresh data
       cache: "no-store",
     });
 
     if (!res.ok) {
-      // Token might be expired or invalid
       return { type: "no-session" };
     }
 
-    const fullStaffData = await res.json();
-
+    const fullStaffData: StaffProfileResponse = await res.json();
     const resolvedOrgId = fullStaffData.organization_id;
-    const resolvedBusinessId = fullStaffData.assigned_businesses?.[0]?.id;
+    const assignedBusinesses = fullStaffData.assigned_businesses ?? [];
+    const userRole = (
+      fullStaffData.role ||
+      session.user.role ||
+      "CASHIER"
+    ).toUpperCase();
 
-    // 3. Missing organization or business context
-    if (!resolvedOrgId || !resolvedBusinessId) {
+    if (!resolvedOrgId) {
       return { type: "no-org" };
     }
 
-    // 4. Happy path
+    const isAuthorizedToSelect = ["OWNER", "MANAGER"].includes(userRole);
+
+    // CASHIER DIRECT ROUTING: Zero decision UI
+    if (!isAuthorizedToSelect) {
+      const cashierBusinessId = assignedBusinesses[0]?.id;
+      if (!cashierBusinessId) {
+        return { type: "no-org" };
+      }
+      return {
+        type: "redirect",
+        destination: `/org/${resolvedOrgId}/${cashierBusinessId}/overview`,
+      };
+    }
+
+    // MANAGER / OWNER DECISION HUB
     return {
-      type: "success",
+      type: "select-business",
       orgId: resolvedOrgId,
-      businessId: resolvedBusinessId,
+      userRole,
+      userName: fullStaffData.name || session.user.name || "User",
+      businesses: assignedBusinesses,
     };
   } catch (error) {
-    console.error("[OrgResolution] Failed to resolve organization:", error);
-    // Network / unexpected error → treat as no-org so user can recover
+    console.error("[OrgResolution] Failed to resolve organization context:", error);
     return { type: "no-org" };
   }
 }
 
+/* =========================================================
+   REACT SERVER COMPONENT (RSC) ENTRY POINT
+   ========================================================= */
 export default function OrgPage() {
   return (
     <Suspense fallback={<OrgDecisionLoading />}>
@@ -69,17 +125,41 @@ export default function OrgPage() {
 async function OrgDecisionWrapper() {
   const result = await resolveOrganization();
 
-  switch (result.type) {
-    case "no-session":
-      return <OrgNoSession />;
-
-    case "no-org":
-      return <OrgDecisionError />;
-
-    case "success":
-      // This redirect happens on the server – user never sees the page
-      redirect(
-        `/org/${result.orgId}/${result.businessId}/overview`
-      );
+  if (result.type === "no-session") {
+    return <OrgNoSession />;
   }
+
+  if (result.type === "no-org") {
+    return <OrgDecisionError />;
+  }
+
+  if (result.type === "redirect") {
+    redirect(result.destination);
+  }
+
+  const { orgId, userRole, userName, businesses } = result;
+
+  /* Search Engine Structured Data Injection (Schema.org ItemPage) */
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemPage",
+    name: "Tawala Organization Command Center",
+    description: "Manage organization metadata, staff, billing, and store terminals.",
+    url: "https://tawala.io/org",
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <OrgCommandCenterClient
+        orgId={orgId}
+        userRole={userRole}
+        userName={userName}
+        businesses={businesses}
+      />
+    </>
+  );
 }

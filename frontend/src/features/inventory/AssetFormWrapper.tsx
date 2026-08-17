@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useProducts } from "@/features/business/hooks/useProducts";
@@ -9,32 +9,41 @@ import { ProductCreate } from "@/lib/api/generated/models/productCreate";
 
 interface AssetFormWrapperProps {
   businessId: string;
+  organizationId: string;
 }
 
-export function AssetFormWrapper({ businessId }: AssetFormWrapperProps) {
+export function AssetFormWrapper({ businessId, organizationId }: AssetFormWrapperProps) {
   const router = useRouter();
   const { createProduct } = useProducts(businessId);
 
-  const handleCreate = async (values: ProductCreate): Promise<void> => {
-    try {
-      await createProduct.mutateAsync(values);
-      toast.success(`Product "${values.label}" created successfully!`);
-    } catch (error: any) {
-      const message = error?.message || "Failed to create product";
-      toast.error(message);
-      throw error; // Let the form know it failed
-    }
-  };
+  const handleCancel = useCallback(() => {
+    router.push(`/org/${organizationId}/${businessId}/inventory`);
+  }, [router, organizationId, businessId]);
+
+  const handleCreate = useCallback(
+    async (values: ProductCreate): Promise<void> => {
+      try {
+        await createProduct.mutateAsync(values);
+        toast.success(`Product "${values.label}" created successfully!`);
+        router.push(`/org/${organizationId}/${businessId}/inventory`);
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to create product";
+        toast.error(errorMessage);
+        throw error;
+      }
+    },
+    [createProduct, router, businessId]
+  );
 
   return (
-    <main className="w-full">
-      <AssetComposer 
+    <div className="w-full">
+      <AssetComposer
         initialData={null}
-        onSubmit={handleCreate} 
-        onCancel={() => router.push(`/terminal/${businessId}/inventory`)}
+        onSubmit={handleCreate}
+        onCancel={handleCancel}
         isPending={createProduct.isPending}
-        // submitButtonText="Confirm & Create Product"
       />
-    </main>
+    </div>
   );
 }
