@@ -24,8 +24,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "OmniPOS | High-Performance Cloud Commerce",
-  description: "The enterprise-grade POS engine built for sub-second speeds and global multi-tenant scale.",
+  title: "Tawala | High-Performance Cloud Commerce",
+  description: "The enterprise-grade Business Management engine built for sub-second speeds and global multi-tenant scale.",
   metadataBase: new URL("https://tawala.nethub.co.ke"),
   alternates: { canonical: "/" },
   appleWebApp: {
@@ -47,7 +47,7 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
       suppressHydrationWarning
     >
-      <body className="h-screen w-screen bg-background text-foreground antialiased selection:bg-brand-primary/20 overflow-hidden m-0 p-0">
+      <body className="h-screen w-screen text-foreground antialiased selection:bg-brand-primary/20 overflow-hidden m-0 p-0">
         <Providers>
           
           {/* Mobile Blocker Layer */}
@@ -60,7 +60,7 @@ export default function RootLayout({
                 Display Resolution Not Supported
               </h2>
               <p className="text-[11px] text-muted max-w-xs mt-1 leading-relaxed font-medium">
-                The OmniPOS checkout platform is optimized strictly for widescreen terminal environments. Please maximize your view space or connect via a desktop workspace interface.
+                The Tawala platform is optimized strictly for widescreen terminal environments. Please maximize your view space or connect via a desktop workspace interface.
               </p>
             </div>
           </div>

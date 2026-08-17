@@ -68,8 +68,8 @@ export default function NavBar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 shadow-sm backdrop-blur-md transition-all">
+      <div className=" mx-auto px-4 ">
         <nav
           aria-label="Main Corporate Navigation"
           className="flex items-center justify-between h-20 select-none"

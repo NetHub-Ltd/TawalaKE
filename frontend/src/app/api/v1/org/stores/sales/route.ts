@@ -21,8 +21,8 @@ if(!session?.accessToken){
     }
 
     const targetUrl = sale_id 
-      ? `${process.env.BACKEND_URL}/business/get-sales/${business_id}?sale_id=${sale_id}`
-      : `${process.env.BACKEND_URL}/business/get-sales/${business_id}`;
+      ? `${process.env.BACKEND_URL}/business/sales/${business_id}?sale_id=${sale_id}`
+      : `${process.env.BACKEND_URL}/business/sales/${business_id}`;
 
     console.log("fetching sales for: ", business_id)
     const res = await fetch(targetUrl, {
@@ -39,8 +39,8 @@ if(!session?.accessToken){
     
 
     const body = await res.json()
-    console.log("fetched sale data", body)
-    return NextResponse.json(body, {status: 200})
+    console.log("fetched sale data", body.data)
+    return NextResponse.json(body.data, {status: 200})
 }
 
 

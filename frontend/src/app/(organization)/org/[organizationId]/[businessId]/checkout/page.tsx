@@ -23,7 +23,7 @@ export default async function CheckoutPage({ params, searchParams }: PageProps) 
   // Render error screen directly on the server if query params are completely missing
   if (!saleId) {
     return (
-      <div className="h-screen w-full bg-background flex flex-col items-center justify-center p-6 text-center space-y-4 font-sans antialiased">
+      <div className="h-screen w-full bg-background flex flex-col items-center justify-center text-center space-y-4 font-sans antialiased">
         <div className="h-12 w-12 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center animate-pulse">
           <AlertCircle size={20} />
         </div>

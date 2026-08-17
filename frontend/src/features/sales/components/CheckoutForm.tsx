@@ -62,6 +62,9 @@ export function CheckoutForm({
   const onSubmit = async (data: FormValues) => {
     const toastId = toast.loading("Completing sale...");
 
+  console.log("saleId prop →", saleId);          // ← check this
+  console.log("typeof saleId →", typeof saleId);
+
     const payload = {
       sale_id: saleId,
       payment_method: data.paymentMethod,
@@ -69,6 +72,8 @@ export function CheckoutForm({
       customer_name: data.customerName.trim(),
       customer_phone: data.customerPhone,
     };
+
+    console.log("Submitting sale payload", payload)
 
     try {
       const response = await fetch(`/api/v1/org/stores/sales/checkout`, {
