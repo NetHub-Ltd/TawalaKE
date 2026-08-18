@@ -58,7 +58,6 @@ class StockMovementType(str, Enum):
     STOCK_TAKE = "STOCK_TAKE"
 
 
-
 class StockTakeStatus(str, Enum):
     DRAFT = "DRAFT"
     COMPLETED = "COMPLETED"
@@ -79,6 +78,10 @@ class DocumentType(str, Enum):
 # =========================================================
 # PYDANTIC VALIDATION SCHEMAS
 # =========================================================
+class ServiceFee(BaseModel):
+    amount: Optional[int | float | None] = None
+    description: Optional[str] = None
+
 
 class CartItemIn(BaseModel):
     product_id: UUID
@@ -208,4 +211,3 @@ class StoreCreate(StoreBase):
 class StoreResponse(StoreBase):
     id: UUID
     created_at: datetime
-

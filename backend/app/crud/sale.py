@@ -19,15 +19,22 @@ class CartItemIn(BaseModel):
     product_id: UUID
     quantity: float = Field(gt=0, description="Quantity must be greater than zero")
 
+class ServiceFee(BaseModel):
+    amount: Optional[int | float | None] = None
+    description: Optional[str] = None
+
 class InitializeCheckoutRequest(BaseModel):
     business_id: UUID
-    # cashier_id: Optional[UUID] = None
+    discount: float | int | None
     items: List[CartItemIn]
+    service: ServiceFee
 
 class InitializeCheckout(BaseModel):
     business_id: UUID
     cashier_id: UUID
     items: List[CartItemIn]
+    service: ServiceFee
+    discount: Optional[float] = None
 
 class FinalizeCheckoutIn(BaseModel):
     sale_id: UUID

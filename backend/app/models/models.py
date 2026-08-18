@@ -625,6 +625,16 @@ class Sale(BaseMixin, table=True):
     tax_amount: float = Field(default=0.0)
     discount_applied: float = Field(default=0.0)
     total_amount: float = Field(default=0.0)
+    service_amount: Optional[Dict[str, Any]] = Field(
+            default=None,
+            sa_column=Column(JSONB, nullable=True),
+            description="Service fee applied to a sale!."
+        )
+    discount_amount: Optional[Dict[str, Any]] = Field(
+                default=None,
+                sa_column=Column(JSONB, nullable=True),
+                description="Discount ammount applied to a sale"
+            )
 
     items: List["SaleItem"] = Relationship(back_populates="sale")
     document: Optional["FinancialDocument"] = Relationship(

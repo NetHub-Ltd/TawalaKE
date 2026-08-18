@@ -4,6 +4,12 @@ from pydantic import BaseModel, ConfigDict
 from app.models.models import SaleStatus
 from datetime import datetime
 
+
+class ServiceFee(BaseModel):
+    amount: Optional[int | float | None] = None
+    description: Optional[str] = None
+
+
 class ItemReadMinimal(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -55,6 +61,8 @@ class SaleReadWithRelations(BaseModel):
     total_amount: float
     created_at: datetime
     updated_at: datetime
+    service_amount: dict
+    discount: float | int | None
 
     # EXPLICIT RELATIONAL FIELDS: Required for Pydantic to include selectinload objects
     business: Optional[BusinessReadMinimal] = None

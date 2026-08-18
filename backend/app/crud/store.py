@@ -108,7 +108,8 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 )
             logger.info(f"Product data: {product.attributes.get('sku', 'N/A')} ")
             item_total = product.selling_price * item.quantity
-            subtotal += item_total
+            subtotal += item_total 
+            subtotal - payload.discount
 
             sale_items.append(
                 SaleItem(
@@ -129,6 +130,17 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         tax_amount = round(subtotal * tax_rate, 2)
         total_amount = subtotal + tax_amount
 
+        service = {}
+
+        if payload.service and payload.service.amount is not None:
+            service["amount"] = payload.service.amount
+
+        if payload.service and payload.service.description is not None:
+            service["description"] = payload.service.description
+
+        # Convert empty dict back to None if no keys were added
+        service = service or None
+
         sale = Sale(
             id=uuid4(),
             organization_id=current_user.organization_id,
@@ -139,10 +151,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             subtotal=subtotal,
             tax_rate=tax_rate,
             tax_amount=tax_amount,
-            discount=0.0,
-            discount_applied=0.0,
+            discount=payload.discount,
+            discount_applied=payload.discount,
             total_amount=total_amount,
-            items=sale_items
+            items=sale_items,
+            service_amount=service
         )
 
         db.add(sale)
