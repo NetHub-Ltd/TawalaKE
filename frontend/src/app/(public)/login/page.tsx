@@ -40,7 +40,7 @@ export default function LoginPage() {
         {/* Clean Centered Form Module using your Silk & Slate Card Layer */}
         <section 
           aria-label="Account Authorization"
-          className="w-full max-w-md my-auto"
+          className="w-full max-w-md p-6"
         >
           <div className="card-layered sm:p-8 backdrop-blur-md">
             <LoginForm />
@@ -48,9 +48,9 @@ export default function LoginPage() {
         </section>
 
         {/* Minimal System Footer */}
-        {/* <footer className="w-full max-w-md text-center text-xs text-muted pb-2">
+        <footer className="w-full max-w-md text-center text-xs text-muted pb-2">
           <p>© {new Date().getFullYear()} Tawala. Encrypted & Secure.</p>
-        </footer> */}
+        </footer>
       </main>
     </>
   );
