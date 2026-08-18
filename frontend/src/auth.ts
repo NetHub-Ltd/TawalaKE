@@ -177,13 +177,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             : Date.now() + 15 * 60 * 1000;
         }
 
+        const businesses = profile.assigned_businesses ?? []
+        const topFive = businesses.splice(0, 2);
+
         return {
           id: String(profile.id),
           email: profile.email,
           name: profile.full_name,
           role: profile.role,
           organization_id: profile.organization_id,
-          assigned_businesses: profile.assigned_businesses ?? [],
+          assigned_businesses: topFive ?? [],
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
           expiresAt,
