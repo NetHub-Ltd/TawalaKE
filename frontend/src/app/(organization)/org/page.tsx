@@ -72,7 +72,8 @@ async function resolveOrganization(): Promise<ResolveResult> {
 
     const fullStaffData: StaffProfileResponse = await res.json();
     const resolvedOrgId = fullStaffData.organization_id;
-    const assignedBusinesses = fullStaffData.assigned_businesses ?? [];
+    const topFive = fullStaffData.assigned_businesses ?? [];
+    const assignedBusinesses = topFive.slice(0, 3);
     const userRole = (
       fullStaffData.role ||
       session.user.role ||
