@@ -61,7 +61,7 @@ class SaleReadWithRelations(BaseModel):
     total_amount: float
     created_at: datetime
     updated_at: datetime
-    service_amount: dict
+    service_amount: ServiceFee
     discount: float | int | None
 
     # EXPLICIT RELATIONAL FIELDS: Required for Pydantic to include selectinload objects
