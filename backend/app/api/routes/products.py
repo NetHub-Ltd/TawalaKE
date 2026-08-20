@@ -49,8 +49,8 @@ class PaginatedResponse(BaseModel, Generic[T]):
 async def get_products(
     request: Request,
     business_id: UUID,
-    active: Optional[bool] = True,
     db: SessionDep,
+    active: Optional[bool] = True,
     page: int = Query(default=1, ge=1, description="Current page number"),
     size: int = Query(default=50, ge=1, le=100, alias="limit", description="Number of rows per page"),
     sort_by: Optional[str] = Query(default=None, description="Model column attribute name to sort by"),
