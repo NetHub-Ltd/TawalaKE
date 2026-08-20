@@ -33,7 +33,7 @@ class InitializeCheckout(BaseModel):
     business_id: UUID
     cashier_id: UUID
     items: List[CartItemIn]
-    service: ServiceFee
+    service: Optional[ServiceFee] = None
     discount: Optional[float] = None
 
 class FinalizeCheckoutIn(BaseModel):
