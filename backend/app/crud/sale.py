@@ -27,7 +27,7 @@ class InitializeCheckoutRequest(BaseModel):
     business_id: UUID
     discount: float | int | None
     items: List[CartItemIn]
-    service: ServiceFee
+    service: Optional[ServiceFee] = None
 
 class InitializeCheckout(BaseModel):
     business_id: UUID
