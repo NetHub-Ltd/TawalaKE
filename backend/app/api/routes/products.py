@@ -48,7 +48,8 @@ class PaginatedResponse(BaseModel, Generic[T]):
 @cache(expire=CACHE_TTL_SEC, namespace="products", key_builder=universal_key_builder)
 async def get_products(
     request: Request,
-    business_id: UUID, 
+    business_id: UUID,
+    active: Optional[bool] = True
     db: SessionDep,
     page: int = Query(default=1, ge=1, description="Current page number"),
     size: int = Query(default=50, ge=1, le=100, alias="limit", description="Number of rows per page"),
