@@ -7,16 +7,12 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="w-full h-full overflow-y-auto flex flex-col">
-      {/* FIXED TOP NAVBAR */}
-      <header className="fixed top-0 left-0 right-0 h-20  bg-card border-b border-border/40 flex items-center  z-50">
-        <div className="w-full">
-          <NavBar />
-        </div>
-      </header>
-      
-      {/* ROUTE CONTENT SPACE */}
-      <main className="flex-1 h-full">
+    <div className="min-h-screen flex flex-col text-foreground antialiased">
+      {/* Sticky Top Bar (NavBar owns the single semantic <header> tag) */}
+      <NavBar />
+
+      {/* Main Content Area - Rendered cleanly below navbar without overlap */}
+      <main id="main-content" className="flex-1 w-full">
         {children}
       </main>
     </div>

@@ -6,6 +6,12 @@
  */
 import type { BaseAttributes } from './baseAttributes';
 
+// export interface BaseAttributes {
+//   unit_of_measure?: string | null;
+//   buying_price?: number | null;
+//   sku?: string | null;
+// }
+
 export interface ProductResponse {
   id: string;
   label: string;

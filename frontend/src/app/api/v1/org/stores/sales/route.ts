@@ -59,6 +59,8 @@ if(!body){
     return NextResponse.json({error: "Body is required"}, {status: 400})
 }
 
+console.debug("Sale Data", body)
+
 
 const res = await fetch(`${process.env.BACKEND_URL}/business/new-sale`, {
     method: "POST",

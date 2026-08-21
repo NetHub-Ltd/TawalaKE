@@ -69,7 +69,7 @@ export default function NavBar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 shadow-sm backdrop-blur-md transition-all">
-      <div className=" mx-auto px-4 ">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <nav
           aria-label="Main Corporate Navigation"
           className="flex items-center justify-between h-20 select-none"
@@ -81,7 +81,6 @@ export default function NavBar() {
               className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary rounded-xl"
               aria-label="Tawala Home"
             >
-              {/* Optimized Brand Logo Image */}
               <div className="relative h-10 w-10 rounded-xl overflow-hidden bg-brand-primary/10 flex items-center justify-center shrink-0 border border-brand-primary/20 shadow-xs transition-transform duration-300 group-hover:scale-105">
                 <Image
                   src="/logo.svg"
@@ -107,7 +106,6 @@ export default function NavBar() {
 
           {/* MID-REGION: DESKTOP NAVIGATION LINKS & MEGA-MENU */}
           <div className="hidden md:flex items-center gap-8 font-sans">
-            {/* Centralized Solutions Dropdown */}
             <div
               className="relative"
               onMouseLeave={closeSolutions}
@@ -129,7 +127,6 @@ export default function NavBar() {
                 />
               </button>
 
-              {/* Solutions Mega Menu Flyout */}
               {isSolutionsOpen && (
                 <div
                   role="menu"
@@ -172,7 +169,6 @@ export default function NavBar() {
                     })}
                   </div>
 
-                  {/* Mega Menu Footer Jump to Overview */}
                   <div className="pt-2 border-t border-border/30">
                     <Link
                       href="/solutions"
@@ -191,7 +187,6 @@ export default function NavBar() {
               )}
             </div>
 
-            {/* Standard Links */}
             {[
               { name: "Pricing", path: "/billing" },
               { name: "Support", path: "/support" },
@@ -289,7 +284,6 @@ export default function NavBar() {
             </Link>
           </div>
 
-          {/* MOBILE CTA BUTTONS */}
           <div className="pt-3 border-t border-border/30 flex flex-col gap-2">
             <Link
               href="/login"
