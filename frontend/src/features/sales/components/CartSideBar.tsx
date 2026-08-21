@@ -1372,7 +1372,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
     const payload = {
       business_id: resolvedBusinessId,
-      user_id: userId,
+      // user_id: userId,
       items: cart.map((item) => ({
         product_id: item.id,
         quantity: item.qty,
