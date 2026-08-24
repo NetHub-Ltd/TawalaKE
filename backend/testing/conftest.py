@@ -1,143 +1,221 @@
-# # # tests/conftest.py
-# # import pytest
-# # from unittest.mock import AsyncMock, MagicMock, patch
-# # from fastapi.testclient import TestClient
-
-# # # Force testing environment attributes prior to core app evaluation
-# # with patch("app.core.config.settings.environment", "testing"), \
-# #      patch("app.core.config.settings.is_prod", False):
-# #     from app.core.config import settings
-# #     from app.core.redis_client import redis_manager
-# #     from app.main import create_application
-
-# # @pytest.fixture(scope="function")
-# # def mock_db_engine():
-# #     """
-# #     Interceptors for the SQLAlchemy/SQLModel async database context.
-# #     Mocks 'AsyncSession(engine)' to cleanly return a successful SELECT 1 response.
-# #     """
-# #     with patch("app.main.AsyncSession") as mock_session_cls:
-# #         mock_session_instance = AsyncMock()
-# #         # Mock the session.exec() context wrapper behavior
-# #         mock_session_instance.exec = AsyncMock(return_value=MagicMock())
-# #         mock_session_cls.return_value.__aenter__.return_value = mock_session_instance
-# #         yield mock_session_cls
-
-# # @pytest.fixture(scope="function")
-# # def mock_redis_manager():
-# #     """
-# #     Interceptors for the global Redis client instance state.
-# #     Prevents live pool compilation hooks during test runners.
-# #     """
-# #     with patch.object(redis_manager, "get_async_client") as mock_get_client, \
-# #          patch.object(redis_manager, "close", new_callable=AsyncMock) as mock_close:
-        
-# #         mock_client = MagicMock()
-# #         mock_get_client.return_value = mock_client
-        
-# #         yield {
-# #             "manager": redis_manager,
-# #             "get_async_client": mock_get_client,
-# #             "close": mock_close
-# #         }
-
-# # @pytest.fixture(scope="function")
-# # def app_instance(mock_db_engine, mock_redis_manager):
-# #     """
-# #     Generates a freshly created instance of the FastAPI application factory
-# #     with all peripheral IO systems safely mocked.
-# #     """
-# #     app = create_application()
-# #     return app
-
-# # tests/conftest.py
-# import pytest
-# from unittest.mock import AsyncMock, MagicMock, patch
-
-# # 1. Import settings and configure absolute baseline test constraints immediately
-# from app.core.config import settings, Environment
-
-# settings.environment = Environment.DEVELOPMENT
-
-# # 2. Safely import downstream dependencies now that settings are primed
-# from app.core.redis_client import redis_manager
-# from app.main import create_application
-
-
-# @pytest.fixture(scope="function")
-# def mock_db_engine():
-#     """
-#     Mocks the SQLModel/SQLAlchemy AsyncSession environment 
-#     to prevent physical database socket handshakes.
-#     """
-#     with patch("app.main.AsyncSession") as mock_session_cls:
-#         mock_session_instance = AsyncMock()
-#         mock_session_instance.exec = AsyncMock(return_value=MagicMock())
-#         mock_session_cls.return_value.__aenter__.return_value = mock_session_instance
-#         yield mock_session_cls
-
-
-# @pytest.fixture(scope="function")
-# def mock_redis_manager():
-#     """
-#     Intercepts the application Redis manager state to isolate testing 
-#     from active shared memory environments.
-#     """
-#     with patch.object(redis_manager, "get_async_client") as mock_get_client, \
-#          patch.object(redis_manager, "close", new_callable=AsyncMock) as mock_close:
-        
-#         mock_client = MagicMock()
-#         mock_get_client.return_value = mock_client
-        
-#         yield {
-#             "manager": redis_manager,
-#             "get_async_client": mock_get_client,
-#             "close": mock_close
-#         }
-
-
-# @pytest.fixture(scope="function")
-# def app_instance(mock_db_engine, mock_redis_manager):
-#     """Generates an isolated instance of the FastAPI application."""
-#     return create_application()
-
-# testing/conftest.py
+"""Pytest configuration and shared fixtures for Tawala backend tests."""
 import pytest
+from datetime import datetime, timezone, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4, UUID
 
-# 1. Force the baseline environment config first
+from fastapi.testclient import TestClient
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+# Force development environment before any app imports
+import os
+os.environ["APP_NAME"] = "TawalaTest"
+os.environ["APP_VERSION"] = "0.0.1"
+os.environ["ENVIRONMENT"] = "development"
+os.environ["DATABASE_NAME"] = "test_db"
+os.environ["DATABASE_USER"] = "test_user"
+os.environ["DATABASE_HOST"] = "localhost"
+os.environ["DATABASE_PORT"] = "5432"
+os.environ["DATABASE_PASSWORD"] = "test_pass"
+os.environ["SECRET_KEY"] = "test-secret-key-32-chars-long!!"
+os.environ["ISSUER"] = "test"
+os.environ["AUDIENCE"] = "test"
+os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
+os.environ["REFRESH_TOKEN_EXPIRE_DAYS"] = "7"
+os.environ["PIN_TOKEN_EXPIRE_HOURS"] = "8"
+os.environ["ADMIN_NAME"] = "Test Admin"
+os.environ["ADMIN_EMAIL"] = "admin@test.com"
+os.environ["ADMIN_PASSWORD"] = "testpass123"
+os.environ["RESOURCE_SERVER"] = "http://localhost:8000"
+os.environ["ALLOWED_ORIGINS"] = "http://localhost:3000"
+os.environ["RESEND_API_KEY"] = "test_key"
+os.environ["REDIS_URL"] = "redis://localhost:6379/0"
+
+# CRITICAL: Patch lifespan BEFORE importing create_application
+import app.main as main_module
+
+async def mock_lifespan(app):
+    """Bypass DB check, admin creation, and Redis init for tests."""
+    yield
+
+main_module.lifespan = mock_lifespan
+
 from app.core.config import settings, Environment
 settings.environment = Environment.DEVELOPMENT
 
-# 2. Import down-stream resources safely
-from app.core.redis_client import redis_manager
 from app.main import create_application
+from app.api.deps import get_current_user, get_current_staff
+from app.models.models import Staff, StaffRole, Organization, Business
 
-@pytest.fixture(scope="function")
-def mock_db_engine():
-    """Mocks SQLModel AsyncSession to isolate persistence loops during test cycles."""
-    with patch("app.main.AsyncSession") as mock_session_cls:
-        mock_session_instance = AsyncMock()
-        mock_session_instance.exec = AsyncMock(return_value=MagicMock())
-        mock_session_cls.return_value.__aenter__.return_value = mock_session_instance
-        yield mock_session_cls
 
+# ------------------------------------------------------------------
+# Mock Application Instance
+# ------------------------------------------------------------------
 @pytest.fixture(scope="function")
-def mock_redis_manager():
-    """Intercepts active Redis connections to use isolated mock instances."""
-    with patch.object(redis_manager, "get_async_client") as mock_get_client, \
-         patch.object(redis_manager, "close", new_callable=AsyncMock) as mock_close:
-        
-        mock_client = MagicMock()
-        mock_get_client.return_value = mock_client
-        
-        yield {
-            "manager": redis_manager,
-            "get_async_client": mock_get_client,
-            "close": mock_close
-        }
-
-@pytest.fixture(scope="function")
-def app_instance(mock_db_engine, mock_redis_manager):
+def app_instance():
     """Provides a cleanly initialized application factory instance."""
-    return create_application()
+    yield create_application()
+
+
+# ------------------------------------------------------------------
+# Mock Session Fixture
+# ------------------------------------------------------------------
+@pytest.fixture(scope="function")
+def mock_session():
+    """Provides a fully mocked AsyncSession with all required attributes."""
+    session = AsyncMock(spec=AsyncSession)
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+    session.rollback = AsyncMock()
+    session.flush = AsyncMock()
+    session.refresh = AsyncMock()
+    session.delete = AsyncMock()
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(return_value=None)
+    return session
+
+
+# ------------------------------------------------------------------
+# Mock User / Staff Fixtures
+# ------------------------------------------------------------------
+@pytest.fixture(scope="function")
+def mock_staff_user():
+    """Returns a mock Staff user with Owner role and assigned businesses."""
+    org_id = uuid4()
+    business_id = uuid4()
+    staff_id = uuid4()
+
+    staff = MagicMock(spec=Staff)
+    staff.id = staff_id
+    staff.email = "test@nethub.co.ke"
+    staff.full_name = "Test User"
+    staff.role = StaffRole.OWNER
+    staff.active = True
+    staff.organization_id = org_id
+    staff.assigned_businesses = [MagicMock(id=business_id, name="Test Store")]
+    staff.password_hash = "hashed_password"
+    staff.pin_hash = None
+    staff.created_at = datetime.now(timezone.utc)
+    staff.updated_at = datetime.now(timezone.utc)
+    return staff
+
+
+@pytest.fixture(scope="function")
+def mock_cashier_user():
+    """Returns a mock Staff user with Cashier role."""
+    org_id = uuid4()
+    business_id = uuid4()
+    staff_id = uuid4()
+
+    staff = MagicMock(spec=Staff)
+    staff.id = staff_id
+    staff.email = "cashier@nethub.co.ke"
+    staff.full_name = "Test Cashier"
+    staff.role = StaffRole.CASHIER
+    staff.active = True
+    staff.organization_id = org_id
+    staff.assigned_businesses = [MagicMock(id=business_id, name="Test Store")]
+    staff.password_hash = "hashed_password"
+    staff.pin_hash = None
+    staff.created_at = datetime.now(timezone.utc)
+    staff.updated_at = datetime.now(timezone.utc)
+    return staff
+
+
+@pytest.fixture(scope="function")
+def mock_manager_user():
+    """Returns a mock Staff user with Manager role."""
+    org_id = uuid4()
+    business_id = uuid4()
+    staff_id = uuid4()
+
+    staff = MagicMock(spec=Staff)
+    staff.id = staff_id
+    staff.email = "manager@nethub.co.ke"
+    staff.full_name = "Test Manager"
+    staff.role = StaffRole.MANAGER
+    staff.active = True
+    staff.organization_id = org_id
+    staff.assigned_businesses = [MagicMock(id=business_id, name="Test Store")]
+    staff.password_hash = "hashed_password"
+    staff.pin_hash = None
+    staff.created_at = datetime.now(timezone.utc)
+    staff.updated_at = datetime.now(timezone.utc)
+    return staff
+
+
+# ------------------------------------------------------------------
+# Authenticated TestClient Fixtures
+# ------------------------------------------------------------------
+@pytest.fixture(scope="function")
+def client_as_owner(app_instance, mock_staff_user):
+    """Returns a TestClient with Owner-level authentication."""
+    app_instance.dependency_overrides[get_current_user] = lambda: mock_staff_user
+    app_instance.dependency_overrides[get_current_staff] = lambda: mock_staff_user
+    with TestClient(app_instance) as client:
+        yield client
+    app_instance.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def client_as_cashier(app_instance, mock_cashier_user):
+    """Returns a TestClient with Cashier-level authentication."""
+    app_instance.dependency_overrides[get_current_user] = lambda: mock_cashier_user
+    app_instance.dependency_overrides[get_current_staff] = lambda: mock_cashier_user
+    with TestClient(app_instance) as client:
+        yield client
+    app_instance.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def client_as_manager(app_instance, mock_manager_user):
+    """Returns a TestClient with Manager-level authentication."""
+    app_instance.dependency_overrides[get_current_user] = lambda: mock_manager_user
+    app_instance.dependency_overrides[get_current_staff] = lambda: mock_manager_user
+    with TestClient(app_instance) as client:
+        yield client
+    app_instance.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def client_unauthenticated(app_instance):
+    """Returns a TestClient with no authentication overrides (raw 401/403 behavior)."""
+    with TestClient(app_instance) as client:
+        yield client
+
+
+# ------------------------------------------------------------------
+# Sample Data Fixtures
+# ------------------------------------------------------------------
+@pytest.fixture(scope="function")
+def client_as_admin(app_instance, mock_staff_user):
+    """Returns a TestClient with admin routes enabled."""
+    from app.core.config import settings
+    original = settings.admin_route
+    settings.admin_route = True
+    app_instance.dependency_overrides[get_current_user] = lambda: mock_staff_user
+    app_instance.dependency_overrides[get_current_staff] = lambda: mock_staff_user
+    with TestClient(app_instance) as client:
+        yield client
+    settings.admin_route = original
+    app_instance.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def sample_org_id():
+    return uuid4()
+
+
+@pytest.fixture(scope="function")
+def sample_business_id():
+    return uuid4()
+
+
+@pytest.fixture(scope="function")
+def sample_product_id():
+    return uuid4()
+
+
+@pytest.fixture(scope="function")
+def sample_staff_id():
+    return uuid4()
