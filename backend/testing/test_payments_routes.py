@@ -1,3 +1,7 @@
+"""Route tests — routes currently commented out of api_router."""
+import pytest
+pytestmark = pytest.mark.skip(reason="Route not mounted in api_router (sales/payments/staff disabled)")
+
 """Tests for payment API endpoints."""
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock

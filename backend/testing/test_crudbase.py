@@ -101,6 +101,7 @@ async def test_get_multi_paginated(mock_session):
 
     mock_count_result = MagicMock()
     mock_count_result.scalar_one.return_value = 42
+    mock_count_result.one.return_value = 42
 
     mock_data_result = MagicMock()
     mock_data_result.all.return_value = mock_products
@@ -177,11 +178,10 @@ async def test_search_success(mock_session):
 async def test_create_success(mock_session):
     """create() persists a new record and returns it."""
     create_data = ProductCreate(
+        business_id=uuid4(),
         label="New Product",
         selling_price=100.0,
-        cost_price=50.0,
-        track_stock=True,
-        stock=10.0
+        stock=10.0,
     )
 
     result = await product_crud.create(mock_session, obj_in=create_data)
@@ -197,7 +197,7 @@ async def test_create_integrity_error(mock_session):
     """create() raises 409 on unique constraint violation."""
     mock_session.flush.side_effect = IntegrityError("stmt", "params", Exception("duplicate"))
 
-    create_data = ProductCreate(label="Duplicate", selling_price=10.0)
+    create_data = ProductCreate(business_id=__import__("uuid").uuid4(), label="Duplicate", selling_price=10.0, stock=1.0)
 
     with pytest.raises(HTTPException) as exc_info:
         await product_crud.create(mock_session, obj_in=create_data)
