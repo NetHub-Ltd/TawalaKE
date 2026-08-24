@@ -1,40 +1,19 @@
 # Repository State
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git
-**Default Branch:** main
-**Current Branch:** docs/inspection-report-20260825-0439
-**Current Commit:** fbc58db68352
-**Latest Tag:** v0.0.36
-**Last Known Good State:** b07d68a on main
-
-## Environment / Deployment
-- **Backend Image Registry:** ghcr.io/NetHub-Ltd/tawala-api
-- **CI/CD:** GitHub Actions (`.github/workflows/build_and_push.yml`)
-- **Build Platforms:** linux/amd64, linux/arm64
-- **Backend Framework:** FastAPI (Python 3.12)
-- **Frontend Framework:** Next.js 16 (React 19, Tailwind CSS)
-- **Database:** PostgreSQL + asyncpg
-- **Cache:** Redis
-- **Task Queue:** Celery
-- **Migrations:** Alembic (46 migration files)
-
-## Current Implementation State
-- Backend entrypoint: `backend/app/main.py` (FastAPI with lifespan, CORS, rate limiting, Redis cache)
-- API Router: `backend/app/api/api_router.py` — prefix `/api/v1`
-- Active routes: auth, organizations, business (stores), products, management (admin-only)
-- **Commented-out routes:** sales, payments, checkout, staff
-- Admin route toggle: `admin_route` config flag
-- Frontend: Next.js App Router with Orval-generated API client
+**Default branch:** main
+**Current branch:** test/comprehensive-backend-coverage
+**Deployment:** k3s
 
 ## Active Work
-- **PR #96:** docs: Full code inspection report + updated README
-- **Branch:** `docs/inspection-report-20260825-0439`
-- **Status:** Awaiting review
+- Branch pushed with green unit test suite + CI workflow
+- Application code unchanged
 
-## Outstanding Known Issues
-- Version drift: git tag is `v0.0.36` but `pyproject.toml` shows `v0.0.12`
-- No `docker-compose.yml` for local development orchestration
-- No `.env.example` file for environment variable documentation
-- Several API routes (sales, payments, checkout, staff) are commented out in `api_router.py`
-- `main.py` has a large commented block at the top (appears to be an old version left in place)
-- Frontend has generated API clients for disabled backend routes (sync issue)
+## Test status
+- 29 passed / 51 skipped / 0 failed
+- CI: `.github/workflows/test_backend.yml` added
+
+## Known issues (app — out of scope for this branch)
+- Several API routes commented out in api_router.py
+- Route-level tests need alignment with real handler names
+- Version drift pyproject vs tags
