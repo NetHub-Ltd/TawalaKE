@@ -29,7 +29,7 @@
 ## Active Work
 - **Branch:** `test/comprehensive-backend-coverage`
 - **Commit:** f04ebb1
-- **Status:** Pushed to remote (verify with `git ls-remote origin test/comprehensive-backend-coverage`)
+- **Status:** ✅ PUSHED to remote
 - **Scope:** Comprehensive backend test suite + CI gate
 - **Files changed:** 11 files in backend/testing/
 
@@ -57,4 +57,4 @@
 - Several API routes (sales, payments, checkout, staff) are commented out in `api_router.py`
 - `main.py` has a large commented block at the top (appears to be an old version left in place)
 - Frontend has generated API clients for disabled backend routes (sync issue)
-- **NEW:** CI workflow file `.github/workflows/test_backend.yml` not yet pushed (PAT lacks workflow scope)
+- **NEW:** CI workflow file `.github/workflows/test_backend.yml` is UNTRACKED locally (PAT lacks workflow scope — add via GitHub web or workflow-scoped PAT)
