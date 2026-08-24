@@ -2,8 +2,8 @@
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git
 **Default Branch:** main
-**Current Branch:** docs/inspection-report-20260825-0439
-**Current Commit:** fbc58db68352
+**Current Branch:** test/comprehensive-backend-coverage
+**Current Commit:** f04ebb1
 **Latest Tag:** v0.0.36
 **Last Known Good State:** b07d68a on main
 
@@ -27,9 +27,28 @@
 - Frontend: Next.js App Router with Orval-generated API client
 
 ## Active Work
-- **PR #96:** docs: Full code inspection report + updated README
-- **Branch:** `docs/inspection-report-20260825-0439`
-- **Status:** Awaiting review
+- **Branch:** `test/comprehensive-backend-coverage`
+- **Commit:** f04ebb1
+- **Status:** Pushed to remote (verify with `git ls-remote origin test/comprehensive-backend-coverage`)
+- **Scope:** Comprehensive backend test suite + CI gate
+- **Files changed:** 11 files in backend/testing/
+
+## Test Files Inventory
+| File | Tests | Status |
+|---|---|---|
+| conftest.py | Fixtures | ✅ Updated |
+| test_crudbase.py | 12 | ✅ Rewritten |
+| test_store_crud.py | 12 | ✅ Fixed |
+| test_product_crud.py | 7 | ✅ Unchanged |
+| test_main.py | 3 | ⚠️ Needs verification |
+| test_auth_routes.py | 12 | ✅ Created |
+| test_organization_routes.py | 7 | ✅ Created |
+| test_products_routes.py | 8 | ✅ Created |
+| test_stores_routes.py | 11 | ✅ Created |
+| test_management_routes.py | 2 | ✅ Created |
+| test_payments_routes.py | 3 | ✅ Created |
+| test_staff_routes.py | 2 | ✅ Created |
+| test_sales_routes.py | 2 | ✅ Created |
 
 ## Outstanding Known Issues
 - Version drift: git tag is `v0.0.36` but `pyproject.toml` shows `v0.0.12`
@@ -38,3 +57,4 @@
 - Several API routes (sales, payments, checkout, staff) are commented out in `api_router.py`
 - `main.py` has a large commented block at the top (appears to be an old version left in place)
 - Frontend has generated API clients for disabled backend routes (sync issue)
+- **NEW:** CI workflow file `.github/workflows/test_backend.yml` not yet pushed (PAT lacks workflow scope)

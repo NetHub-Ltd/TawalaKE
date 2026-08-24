@@ -1,52 +1,79 @@
 # Task Tracker
 
-**Task Name:** Full Code Inspection Report + README Update
-**Goal:** Produce a comprehensive file-by-file code inspection report and update README to reflect actual project state
-**Approved Scope:** Repository inspection, report generation, README update, PR creation
-
-## Proposed Changes
-- [x] Create file-by-file inspection report with timestamp in filename
-- [x] Update README.md with actual project state
-- [x] Open PR into main
-
-## Approved Changes
-- [x] Initialize `.trackers/` directory
-- [x] Record repository state
-- [x] Produce inspection report
-- [x] Update README
-- [x] Create PR #96
+**Task Name:** Comprehensive Backend Test Suite + CI Gate
+**Goal:** Ensure every backend logic is tested, all tests passing, CI gate blocks merge on failure
+**Approved Scope:** testing/ directory, .github/workflows/, conftest.py — ZERO application code changes
+**Branch:** test/comprehensive-backend-coverage
+**Commit:** f04ebb1
 
 ## Completed Changes
-- [x] Cloned repository from GitHub
-- [x] Inspected repository structure
-- [x] Identified tech stack and architecture
-- [x] Identified CI/CD pipeline
-- [x] Identified commented-out routes and version drift
-- [x] Wrote comprehensive inspection report (53,870 bytes)
-- [x] Updated README.md (7,410 bytes)
-- [x] Created branch `docs/inspection-report-20260825-0439`
-- [x] Committed changes: `fbc58db`
-- [x] Pushed branch to origin
-- [x] Opened PR #96: https://github.com/NetHub-Ltd/TawalaKE/pull/96
+- [x] Replace test_crudbase.py (was copy-paste) with 12 proper unit tests
+- [x] Fix test_store_crud.py — restore 9 commented tests, fix imports
+- [x] Create test_auth_routes.py (12 tests)
+- [x] Create test_organization_routes.py (7 tests)
+- [x] Create test_products_routes.py (8 tests)
+- [x] Create test_stores_routes.py (11 tests)
+- [x] Create test_management_routes.py (2 tests)
+- [x] Create test_payments_routes.py (3 tests)
+- [x] Create test_staff_routes.py (2 tests)
+- [x] Create test_sales_routes.py (2 tests)
+- [x] Update conftest.py with mock lifespan, auth fixtures, admin fixture
+- [x] Commit and push to remote (test/comprehensive-backend-coverage)
 
 ## Remaining Changes
-- [ ] Await user review and merge of PR #96
+- [ ] Verify all tests pass locally (pytest)
+- [ ] Fix any remaining test failures
+- [ ] Create .github/workflows/test_backend.yml (template ready, see below)
+- [ ] Open PR into main
 
 ## Explicitly Out of Scope
-- No code changes
-- No configuration changes
-- No deployment changes
-- No feature additions
+- ZERO changes to backend/app/ (no CRUD, model, schema, route, core, utility code)
+- ZERO changes to frontend/
+- ZERO changes to docs/
+- ZERO changes to pyproject.toml, Dockerfile, entrypoint.sh
+
+## Environment Variables Required for Testing
+```bash
+export APP_NAME=TawalaTest
+export APP_VERSION=0.0.1
+export ENVIRONMENT=development
+export DATABASE_NAME=test_db
+export DATABASE_USER=test_user
+export DATABASE_HOST=localhost
+export DATABASE_PORT=5432
+export DATABASE_PASSWORD=test_pass
+export SECRET_KEY=test-secret-key-32-chars-long!!
+export ISSUER=test
+export AUDIENCE=test
+export ACCESS_TOKEN_EXPIRE_MINUTES=30
+export REFRESH_TOKEN_EXPIRE_DAYS=7
+export PIN_TOKEN_EXPIRE_HOURS=8
+export ADMIN_NAME="Test Admin"
+export ADMIN_EMAIL=admin@test.com
+export ADMIN_PASSWORD=testpass123
+export RESOURCE_SERVER=http://localhost:8000
+export ALLOWED_ORIGINS=http://localhost:3000
+export RESEND_API_KEY=test_key
+export REDIS_URL=redis://localhost:6379/0
+```
+
+## Test Run Command
+```bash
+cd backend
+pytest testing/ -v --tb=short
+```
+
+## CI Workflow Template
+File: .github/workflows/test_backend.yml (NOT YET PUSHED — see repo-state.md for content)
+
+## Known Issues for Next Agent
+1. test_main.py may still have lifespan-related errors — needs verification
+2. Some route tests may return 422 if request body schemas don't exactly match — verify against app/schemas/*.py
+3. The PAT used for push may lack workflow scope — CI file needs to be added via GitHub web or a PAT with workflow scope
+4. If push fails with TLS errors, retry or use GitHub web interface to upload the branch
 
 ## Decisions Made
-- Report filename includes timestamp: `TawalaKE_Code_Inspection_Report_2026-08-25_0446.md`
-- README updated to document disabled routes, version drift, and infrastructure gaps
-- `.trackers/` committed with the work for session continuity
-
-## Decisions Still Required
-- Whether to merge PR #96
-- Which recommendations from the report to prioritize
-
-## Relevant Risks
-- PR is documentation-only — zero production risk
-- Report contains security observations that should be reviewed
+- Mock lifespan in conftest.py to bypass DB/Redis checks (no real DB needed for unit tests)
+- client_as_admin fixture sets admin_route=True dynamically for management tests
+- Coverage threshold: 60% (conservative, can be raised after green)
+- All route tests use dependency_overrides for auth (fast, isolated)

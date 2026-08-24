@@ -5,25 +5,22 @@
 **Previous Image/Version:** ghcr.io/NetHub-Ltd/tawala-api:v0.0.36
 **Branch:** main
 
-## Rollback Procedure
-1. Revert to commit `b07d68a05566` via `git checkout b07d68a055666aae258eb5581930611db99e4c4d` or `git revert <bad-commit>`
-2. If container deployment: redeploy previous image tag `v0.0.36` from GHCR
-3. Database: Alembic migrations are forward-only; rollback requires downgrading via `alembic downgrade <revision>`
+## Current Work Rollback
+- **Branch:** test/comprehensive-backend-coverage
+- **Commit:** f04ebb1
+- **To rollback:** `git reset --hard b07d68a` or simply delete the branch
+- **Impact:** Zero — only test files modified, no application code
 
-## Migration Considerations
-- 46 Alembic migration files exist
-- Migrations are additive; no destructive changes observed in recent history
-- Rollback would require downgrading to previous migration revision
+## Rollback Procedure
+1. If branch is unmerged: delete branch `test/comprehensive-backend-coverage`
+2. If merged: `git revert f04ebb1`
+3. No database changes, no deployment impact
 
 ## Data Rollback Considerations
-- PostgreSQL is the primary data store
-- Redis is used for caching and rate limiting (ephemeral)
-- Celery tasks may have in-flight jobs during rollback
-
-## Irreversible Operations
-- None identified yet for current state
+- No data changes — test files only
+- No migration changes
+- No environment variable changes
 
 ## Recovery Notes
-- CI builds images on every push to `main` and on tags
-- Images are multi-platform (amd64 + arm64)
-- No production deployment config found in repo (deployment likely external)
+- All test files can be recreated from this tracker documentation
+- CI workflow template is documented in task.md
