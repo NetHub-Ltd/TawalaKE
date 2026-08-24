@@ -54,9 +54,9 @@ jobs:
           RESOURCE_SERVER: http://localhost:8000
           ALLOWED_ORIGINS: http://localhost:3000
           RESEND_API_KEY: test_key
-          REDIS_URL: redis://localhost:6379/0
+          REDIS_URL: memory://
         run: |
-          pytest testing/ -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=0
+          pytest testing/ -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=60
 
       - name: Upload coverage report
         if: always()
