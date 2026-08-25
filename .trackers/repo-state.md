@@ -1,19 +1,20 @@
 # Repository State
 
-**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git
-**Default branch:** main
-**Current branch:** test/comprehensive-backend-coverage
-**Deployment:** k3s
+**Branch:** `feature/onboarding-ab-password-setup` (from main)
+**Task:** Onboarding A+B — email verify + password setup
 
-## Active Work
-- Branch pushed with green unit test suite + CI workflow
-- Application code unchanged
+## Changes (this branch)
+### Backend
+- `app/crud/staff.py` — pending onboard (`active=False`)
+- `app/api/routes/organization.py` — setup token + onboarding email
+- `app/api/routes/auth.py` — set-password; login cookie fix; optional `email` on TokenResponse
+- `app/core/security.py` — null password safe authenticate
+- `app/core/mailer.py` — `send_onboarding_setup`
 
-## Test status
-- 29 passed / 51 skipped / 0 failed
-- CI: `.github/workflows/test_backend.yml` added
+### Frontend
+- Personal details + set-password UI (design tokens)
+- BFF: onboarding personal-details, auth set-password
 
-## Known issues (app — out of scope for this branch)
-- Several API routes commented out in api_router.py
-- Route-level tests need alignment with real handler names
-- Version drift pyproject vs tags
+## Production notes
+- Requires working `RESEND_API_KEY`, `FRONTEND_URL`, Redis for tokens
+- `FRONTEND_URL` used for email links (scheme normalized if missing)

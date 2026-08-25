@@ -31,18 +31,26 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
         await db.flush()
         await db.refresh(org)
 
-        payload = {
+        # Pending account: no password until email setup link is completed.
+        # active=False prevents login until set-password activates the account.
+        create_payload = {
             "email": payload.email,
             "full_name": payload.full_name,
             "tenant_id": org.id,
             "organization_id": org.id,
-            "role": StaffRole.OWNER
-
+            "role": StaffRole.OWNER,
+            "active": False,
+            "hashed_password": None,
         }
-        staff = await self.create(db=db, obj_in=payload)
+        if getattr(payload, "phone", None):
+            create_payload["phone"] = payload.phone
+
+        staff = await self.create(db=db, obj_in=create_payload)
         await db.commit()
         await db.refresh(staff)
-        logger.info(f"Created Staff: {staff.id} for Org: {staff.organization_id}")
+        logger.info(
+            f"Created pending Staff: {staff.id} for Org: {staff.organization_id} (active=False)"
+        )
         return staff
 
 staff_crud = StaffCrud(Staff) 

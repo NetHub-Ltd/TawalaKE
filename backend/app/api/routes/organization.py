@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel
 from app.api.deps import SessionDep, AuthUser
 from app.models.models import Organization, Tenant, Staff, StaffRole
@@ -14,24 +14,66 @@ from app.schemas.org import OrgCreate, OrgUpdate, OrgResponse
 from app.schemas.staff import StaffOnboard
 from app.core.redis_client import limiter
 from app.schemas.store import StoreCreate, StoreResponse
+from app.core.security import security
+from app.core.mailer import mailer
+from app.core.config import settings
+from app.utils.logging import logger
 
 # Directly utilizing your provided dependency definitions
-from app.api.deps import SessionDep, get_redis, AsyncRedis,universal_key_builder, purge_cache_namespace
+from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace
 
 router = APIRouter()
 CACHE_TTL_SEC = 300 
 
-@router.post("/onboarding", response_model=ApiResponse[StaffResponse])
-async def create_tenant(request: Request, db: SessionDep, payload: StaffOnboard, redis_client: AsyncRedis = Depends(get_redis)):
-    # only allow onboarding if the user is not associated with any tenant
+def _frontend_base_url() -> str:
+    """Normalize settings.frontend_url into an absolute origin."""
+    url = (settings.frontend_url or "").strip()
+    if not url:
+        return "https://tawala.nethub.co.ke"
+    if not url.startswith("http://") and not url.startswith("https://"):
+        url = f"https://{url}"
+    return url.rstrip("/")
 
-    new_tenant = await organization_crud.onboard_tenant(payload, db)
-    await purge_cache_namespace(redis_client, "organizations")  # Clear organization cache after onboarding
+
+@router.post("/onboarding", response_model=ApiResponse[StaffResponse])
+async def create_tenant(
+    request: Request,
+    db: SessionDep,
+    payload: StaffOnboard,
+    background_tasks: BackgroundTasks,
+    redis_client: AsyncRedis = Depends(get_redis),
+):
+    """
+    Start self-serve onboarding: create pending OWNER + org shell, email setup link.
+    Account remains inactive until password is set via /auth/onboarding/set-password.
+    """
+    staff = await organization_crud.onboard_tenant(payload, db)
+    await purge_cache_namespace(redis_client, "organizations")
+
+    # Opaque single-use token (reuses reset keyspace; longer TTL for email delivery)
+    setup_token = await security.create_password_reset_token(
+        staff_id=staff.id,
+        redis_client=redis_client,
+        expire_minutes=60,
+    )
+    setup_url = f"{_frontend_base_url()}/onboarding/set-password?token={setup_token}"
+    client_ip = request.client.host if request.client else "Unknown"
+
+    background_tasks.add_task(
+        mailer.send_onboarding_setup,
+        to_email=staff.email,
+        setup_url=setup_url,
+        user_name=getattr(staff, "full_name", None),
+        ip_address=client_ip,
+        expire_minutes=60,
+    )
+    logger.info(f"Onboarding setup email queued for staff {staff.id}")
+
     return ApiResponse(
         status=True,
         status_code=201,
-        message="Tenant onboarded successfully",
-        data=new_tenant
+        message="Check your email to verify your account and set a password.",
+        data=staff,
     )
 
 @router.patch("/update-org", status_code=201, response_model=ApiResponse[OrgResponse])

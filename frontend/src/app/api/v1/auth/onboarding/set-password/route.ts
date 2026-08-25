@@ -25,10 +25,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // BACKEND_URL may already include /api/v1
   const path = base.endsWith("/api/v1")
-    ? `${base}/organizations/onboarding`
-    : `${base}/api/v1/organizations/onboarding`;
+    ? `${base}/auth/onboarding/set-password`
+    : `${base}/api/v1/auth/onboarding/set-password`;
 
   let response: Response;
   try {
@@ -58,18 +57,12 @@ export async function POST(req: Request) {
     const detail =
       (typeof data.detail === "string" && data.detail) ||
       (typeof data.message === "string" && data.message) ||
-      (typeof data.error === "string" && data.error) ||
-      "Something went wrong. Please try again.";
+      "Unable to set password. The link may be invalid or expired.";
     return NextResponse.json(
-      {
-        error: detail,
-        message: detail,
-        detail: data.detail ?? detail,
-      },
+      { error: detail, message: detail, detail: data.detail ?? detail },
       { status: response.status }
     );
   }
 
-  // Prefer full API envelope; fall back to data payload
-  return NextResponse.json(data, { status: response.status === 201 ? 201 : 200 });
+  return NextResponse.json(data, { status: 200 });
 }
