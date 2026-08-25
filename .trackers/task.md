@@ -2,28 +2,23 @@
 
 **Branch:** `deploy/onboarding-combined-test`  
 **Open PR:** https://github.com/NetHub-Ltd/TawalaKE/pull/107  
-**Protocol:** Engineer Mode v1.2.0
+**Related issue:** https://github.com/NetHub-Ltd/TawalaKE/issues/108  
 
 ## Status
-ACTIVE — deploy/test branch (user validates before merge to main)
+ACTIVE — deploy/test branch
 
-## Latest approved task
-**Scroll fix for plans / onboarding (approved 2026-08-26)**  
-Root shell uses `overflow-hidden`; content must scroll inside a local region.
+## Latest approved work (2026-08-26)
+1. **Phase A enum fix (#108)** — trial writes `tier=FREE` (live DB labels); `plan_id` is product truth. Migration Phase B deferred.
+2. **Plans UI** — Ndovu ribbon, features collapsed behind “See more features”, trial CTA above features.
 
-### Completed this change
-- [x] Public layout: navbar + `flex-1 min-h-0 overflow-y-auto` content region
-- [x] Plans page: remove `overflow-hidden`; `min-h-full` + bottom padding; drop scale clip
-- [x] personal-details / set-password / organization: `min-h-full` + vertical padding
-- [x] `/org/contact-us`: `h-full overflow-y-auto`
+### Completed
+- [x] Expand `SubscriptionTier` with FREE/BRONZE/SILVER/GOLD; default subscription tier FREE; `create_type=False`
+- [x] `start_plan_trial` sets `tier=FREE`, `plan_id=<plan>`
+- [x] `PlanCard`: diagonal ribbon on Ndovu, collapsible features, early CTA
+- [x] Trackers updated
 
-### Prior completed (branch history)
-- [x] Task 1 A+B, Task 2, route-order 422, trial enum, plans UI, trackers resync
+### Deferred
+- [ ] Phase B: Alembic ADD VALUE for BASIC/NDOVU/ENTERPRISE/TRIAL (or rename path)
 
 ## Next work
 None until a new written proposal is approved.
-
-## Verification
-1. `/onboarding/plans` — full card height visible via vertical scroll
-2. Other onboarding steps still usable without clipping
-3. Root terminal shell still non-scrolling at body level

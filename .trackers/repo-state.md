@@ -1,11 +1,10 @@
 # Repository State
 
-**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
-**Default branch:** `main`  
-**Active branch:** `deploy/onboarding-combined-test`  
-**Open PR:** #107  
-**Deployment:** k3s / preview (user-controlled)
+**Branch:** `deploy/onboarding-combined-test`  
+**PR:** #107  
+**Issue:** #108 (subscription_tier_enum drift)
 
-## Implementation notes
-- Root `layout.tsx` keeps `body`/`main` `overflow-hidden` (terminal shell).
-- `(public)/layout.tsx` provides the scrollport for public/onboarding pages.
+## Critical constraint
+Live Postgres `subscription_tier_enum` = **FREE | BRONZE | SILVER | GOLD**.  
+App must not write BASIC/NDOVU/ENTERPRISE/TRIAL to `subscriptions.tier` until Phase B migration.  
+Product identity: **`plan_id` → plans.code**.

@@ -37,6 +37,10 @@ class EventType(str, Enum):
 
 
 class SubscriptionTier(str, Enum):
+    FREE = "FREE"
+    BRONZE = "BRONZE"
+    SILVER = "SILVER"
+    GOLD = "GOLD"
     BASIC = "BASIC"
     NDOVU = "NDOVU"
     ENTERPRISE = "ENTERPRISE"
