@@ -34,7 +34,7 @@ export default function OrgContactUsPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-background px-4 py-10">
+    <div className="h-full min-h-0 overflow-y-auto overflow-x-hidden bg-background px-4 py-10">
       <div className="mx-auto max-w-3xl">
         <Link
           href="/org"

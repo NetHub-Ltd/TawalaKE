@@ -2,45 +2,28 @@
 
 **Branch:** `deploy/onboarding-combined-test`  
 **Open PR:** https://github.com/NetHub-Ltd/TawalaKE/pull/107  
-**Protocol:** Engineer Mode v1.2.0 — proposal-first; trackers authoritative  
+**Protocol:** Engineer Mode v1.2.0
 
 ## Status
-**ACTIVE — deploy/test branch** (not merged to main). User deploys this branch for validation before manually merging.
+ACTIVE — deploy/test branch (user validates before merge to main)
 
-## Authorized work on this branch (historical + current)
+## Latest approved task
+**Scroll fix for plans / onboarding (approved 2026-08-26)**  
+Root shell uses `overflow-hidden`; content must scroll inside a local region.
 
-### Task 1 A+B (approved earlier)
-- [x] Pending onboard (`active=False`), setup email, set-password, auto-login
-- [x] Eager-load `assigned_businesses` (MissingGreenlet)
-- [x] Public allowlist for set-password in `proxy.ts`
+### Completed this change
+- [x] Public layout: navbar + `flex-1 min-h-0 overflow-y-auto` content region
+- [x] Plans page: remove `overflow-hidden`; `min-h-full` + bottom padding; drop scale clip
+- [x] personal-details / set-password / organization: `min-h-full` + vertical padding
+- [x] `/org/contact-us`: `h-full overflow-y-auto`
 
-### Task 2 (approved earlier)
-- [x] Plans from DB, 7-day trial BASIC/NDOVU, org profile, `/org` gate
-- [x] `onboarding=true` when profile complete + active subscription (store optional)
-- [x] Trial invoice email (KES 0)
-
-### Fixes pushed without a fresh proposal (protocol debt — acknowledged)
-- [x] Route order: static paths before `/{organization_id}` (422 onboarding-status)
-- [x] Trial tier: stop writing `TRIAL` enum; use BASIC/NDOVU
-- [x] Plans page redesign + `/org/contact-us`
-- [ ] **Tracker updates** (this commit)
-
-## Out of scope
-- Merging to `main` without user direction
-- Dev PR (#100) content
-- Production deploy without user direction
+### Prior completed (branch history)
+- [x] Task 1 A+B, Task 2, route-order 422, trial enum, plans UI, trackers resync
 
 ## Next work
-**None authorized until a written proposal is approved.**
+None until a new written proposal is approved.
 
-## Verification (post-redeploy)
-1. GET `/api/v1/organizations/onboarding-status` → 200 (not 422)
-2. OWNER `onboarding=false` → `/org` redirects to plans or organization
-3. Start BASIC/NDOVU trial → subscription row, no enum error, invoice email
-4. Set-password works without session (public BFF)
-5. Enterprise → Contact sales → `/org/contact-us` (auth required)
-
-## Decisions
-- Trial length: 7 days
-- Annual billing presentation on plans page
-- DB enum has no `TRIAL` value in prod — use plan-matching tier
+## Verification
+1. `/onboarding/plans` — full card height visible via vertical scroll
+2. Other onboarding steps still usable without clipping
+3. Root terminal shell still non-scrolling at body level

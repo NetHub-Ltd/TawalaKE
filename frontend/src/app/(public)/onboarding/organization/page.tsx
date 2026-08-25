@@ -33,7 +33,7 @@ export default async function OrganizationOnboardingPage() {
   const org = status.organization || {};
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-background p-4">
+    <div className="flex min-h-full items-center justify-center bg-background p-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lift">
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-brand-primary">
           Organization profile

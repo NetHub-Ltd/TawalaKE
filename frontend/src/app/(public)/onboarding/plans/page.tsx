@@ -133,7 +133,7 @@ export default async function PlansOnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden bg-background">
+    <div className="relative min-h-full bg-background pb-16">
       <div
         className="pointer-events-none absolute -left-32 top-0 h-96 w-96 rounded-full bg-brand-primary/10 blur-3xl"
         aria-hidden
@@ -190,7 +190,7 @@ export default async function PlansOnboardingPage() {
                   key={plan.id}
                   className={
                     isNdovu
-                      ? "relative flex flex-col rounded-2xl border-2 border-brand-primary bg-card p-6 shadow-lift ring-4 ring-brand-primary/15 lg:scale-[1.03]"
+                      ? "relative flex flex-col rounded-2xl border-2 border-brand-primary bg-card p-6 shadow-lift ring-4 ring-brand-primary/15 "
                       : "relative flex flex-col rounded-2xl border border-border bg-card/90 p-6 shadow-sm backdrop-blur"
                   }
                 >
