@@ -69,9 +69,10 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
 const publicApiRoutes = [
+  // Self-serve onboarding (no session yet)
   "/api/v1/org/onboarding/personal-details",
-  // remove the typo path once nothing calls it
-  "/api/v1/org/onboading/personal-details",
+  "/api/v1/org/onboading/personal-details", // legacy typo
+  "/api/v1/auth/onboarding/set-password",
 ];
 
 function isPublicApi(pathname: string) {
