@@ -8,6 +8,7 @@ class OrgCreate(BaseModel):
 
 
 class OrgUpdate(BaseModel):
+    name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_number: Optional[str] = None      # KRA PIN
@@ -16,6 +17,7 @@ class OrgUpdate(BaseModel):
 
 class OrgResponse(OrgCreate):
     active: bool
-    phone: str
+    phone: Optional[str] = None
     id: UUID
+    onboarding: Optional[bool] = False
     

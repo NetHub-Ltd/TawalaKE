@@ -50,7 +50,7 @@ PLANS_SEED = [
         "currency": "KES",
         "is_active": True,
         "is_public": True,
-        "trial_days": 14,                  # 14-day trial of Ndovu features
+        "trial_days": 7,                   # 7-day trial of Ndovu features
         "sort_order": 2,
         "limits": {
             "max_businesses": 5,
