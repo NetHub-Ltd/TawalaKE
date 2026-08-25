@@ -275,6 +275,12 @@ async function resolveOrganization(): Promise<ResolveResult> {
           if (!st.onboarding) {
             return { type: "redirect", destination: "/onboarding/organization" };
           }
+        } else {
+          console.error(
+            "[OrgResolution] onboarding-status HTTP",
+            statusRes.status,
+            await statusRes.text().catch(() => ""),
+          );
         }
       } catch (e) {
         console.error("[OrgResolution] onboarding status failed:", e);

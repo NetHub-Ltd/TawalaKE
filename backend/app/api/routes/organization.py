@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlmodel import select
 from app.crud.organization import organization_crud
 from app.schemas.schemas import ApiResponse, BusinessResponse, StaffResponse, OrganizationResponse
-from typing import List
+from typing import List, Optional, Any
 from pydantic import EmailStr
 from app.crud.business import business_crud
 from fastapi_cache.decorator import cache
@@ -18,16 +18,13 @@ from app.core.security import security
 from app.core.mailer import mailer
 from app.core.config import settings
 from app.utils.logging import logger
-
-# Directly utilizing your provided dependency definitions
 from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace
 from datetime import datetime, timezone
 from app.crud import subscription as subscription_crud
-from app.schemas.plans import PlanRead
-from typing import Optional, Any
 
 router = APIRouter()
-CACHE_TTL_SEC = 300 
+CACHE_TTL_SEC = 300
+
 
 def _frontend_base_url() -> str:
     """Normalize settings.frontend_url into an absolute origin."""
@@ -37,6 +34,19 @@ def _frontend_base_url() -> str:
     if not url.startswith("http://") and not url.startswith("https://"):
         url = f"https://{url}"
     return url.rstrip("/")
+
+
+def _require_owner(user) -> None:
+    role = user.role.value if hasattr(user.role, "value") else str(user.role)
+    if str(role).upper() != "OWNER":
+        raise HTTPException(
+            status_code=403, detail="Only organization owners can perform this action"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Static paths MUST be registered before /{organization_id}
+# ---------------------------------------------------------------------------
 
 
 @router.post("/onboarding", response_model=ApiResponse[StaffResponse])
@@ -54,7 +64,6 @@ async def create_tenant(
     staff = await organization_crud.onboard_tenant(payload, db)
     await purge_cache_namespace(redis_client, "organizations")
 
-    # Opaque single-use token (reuses reset keyspace; longer TTL for email delivery)
     setup_token = await security.create_password_reset_token(
         staff_id=staff.id,
         redis_client=redis_client,
@@ -80,6 +89,7 @@ async def create_tenant(
         data=staff,
     )
 
+
 @router.patch("/update-org", status_code=201, response_model=ApiResponse[OrgResponse])
 @limiter.limit("20/minute")
 async def updates_organization(
@@ -99,8 +109,6 @@ async def updates_organization(
         raise HTTPException(status_code=403, detail="Not Authorized to perform this action!")
 
     org = await organization_crud.get_organization_by_id(db=db, org_id=organization_id)
-    if org is None:
-        raise HTTPException(status_code=404, detail="Organization Not Found")
 
     new_org = await organization_crud.update(db=db, db_obj=org, obj_in=payload)
     await db.commit()
@@ -116,109 +124,6 @@ async def updates_organization(
         message="Organization Updated Successfully",
         data=new_org,
     )
-
-
-
-@router.get("/{organization_id}", response_model=OrganizationResponse)
-@cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder) 
-async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
-    if organization_id != user.organization_id:
-        raise HTTPException(status_code=403, detail="Unathorized to perform this operation")
-    
-    org = await organization_crud.get_organization_by_id(db=db, org_id=organization_id)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Organization retrieved successfully",
-        data=org
-    )
-
-
-@router.get('/stores/{organization_id}', response_model=ApiResponse[List[BusinessResponse]])
-@cache(expire=CACHE_TTL_SEC, namespace="stores", key_builder=universal_key_builder) 
-async def get_businesses_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
-    
-    if organization_id != user.organization_id:
-        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
-        
-    businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Businesses retrieved successfully",
-        data=businesses
-    )
-
-@router.get('/staff/{organization_id}', response_model=ApiResponse[List[StaffResponse]])
-@cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
-async def get_staff_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None):
-    
-    staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Staff retrieved successfully",
-        data=staff
-    )
-
-
-@router.get("/billing/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
-@cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
-async def get_billing_by_tenant(organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True):
-    
-    # if organization_id != user.organization_id:
-    #     raise HTTPException(status_code=403, detail="You dont have access to perform this action")
-    businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Businesses retrieved successfully",
-        data=businesses
-    )
-
-
-@router.post('/new-store', status_code=200, response_model=ApiResponse[StoreResponse])
-async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUser):
-    if user.role != "OWNER" and payload.organization != user.organization_id:
-        raise HTTPException(status_code=403, detail="You are not allowed to perform this action")
-
-    store = await organization_crud.register_store(db, payload, user)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Store created succesfully",
-        data=store
-    )
-
-
-# ---------------------------------------------------------------------------
-# Plans / subscription / trial (Task 2)
-# ---------------------------------------------------------------------------
-
-class SubscriptionResponse(BaseModel):
-    id: Any
-    organization_id: Any
-    plan_id: Optional[Any] = None
-    tier: Optional[str] = None
-    active: bool
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    plan_code: Optional[str] = None
-    plan_name: Optional[str] = None
-
-
-class OnboardingStatusResponse(BaseModel):
-    organization_id: Any
-    onboarding: bool
-    has_active_subscription: bool
-    profile_complete: bool
-    role: str
-
-
-def _require_owner(user) -> None:
-    role = user.role.value if hasattr(user.role, "value") else str(user.role)
-    if str(role).upper() != "OWNER":
-        raise HTTPException(status_code=403, detail="Only organization owners can perform this action")
 
 
 @router.get("/plans", response_model=ApiResponse[list])
@@ -244,18 +149,20 @@ async def list_billing_plans(db: SessionDep, user: AuthUser):
     return ApiResponse(status=True, status_code=200, message="Plans retrieved", data=data)
 
 
-@router.get("/subscription", response_model=ApiResponse)
+@router.get("/subscription", response_model=ApiResponse[dict])
 async def get_my_subscription(db: SessionDep, user: AuthUser):
     org_id = user.organization_id or user.tenant_id
     if not org_id:
         raise HTTPException(status_code=400, detail="No organization on account")
     sub = await subscription_crud.get_active_subscription(db, org_id)
     if not sub:
-        return ApiResponse(status=True, status_code=200, message="No active subscription", data=None)
+        return ApiResponse(
+            status=True, status_code=200, message="No active subscription", data=None
+        )
+    from app.models.models import Plan
+
     plan_code = plan_name = None
     if sub.plan_id:
-        from sqlmodel import select
-        from app.models.models import Plan
         plan = (await db.exec(select(Plan).where(Plan.id == sub.plan_id))).first()
         if plan:
             plan_code, plan_name = plan.code, plan.name
@@ -270,17 +177,17 @@ async def get_my_subscription(db: SessionDep, user: AuthUser):
         "plan_code": plan_code,
         "plan_name": plan_name,
     }
-    return ApiResponse(status=True, status_code=200, message="Subscription retrieved", data=data)
+    return ApiResponse(
+        status=True, status_code=200, message="Subscription retrieved", data=data
+    )
 
 
-@router.get("/onboarding-status", response_model=ApiResponse)
+@router.get("/onboarding-status", response_model=ApiResponse[dict])
 async def get_onboarding_status(db: SessionDep, user: AuthUser):
     org_id = user.organization_id or user.tenant_id
     if not org_id:
         raise HTTPException(status_code=400, detail="No organization on account")
     org = await organization_crud.get_organization_by_id(db=db, org_id=org_id)
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
     sub = await subscription_crud.get_active_subscription(db, org_id)
     role = user.role.value if hasattr(user.role, "value") else str(user.role)
     data = {
@@ -298,10 +205,12 @@ async def get_onboarding_status(db: SessionDep, user: AuthUser):
             "tax_number": getattr(org, "tax_number", None),
         },
     }
-    return ApiResponse(status=True, status_code=200, message="Onboarding status", data=data)
+    return ApiResponse(
+        status=True, status_code=200, message="Onboarding status", data=data
+    )
 
 
-@router.post("/trial/start", response_model=ApiResponse)
+@router.post("/trial/start", response_model=ApiResponse[dict])
 async def start_trial(
     db: SessionDep,
     user: AuthUser,
@@ -314,8 +223,6 @@ async def start_trial(
         raise HTTPException(status_code=400, detail="No organization on account")
 
     org = await organization_crud.get_organization_by_id(db=db, org_id=org_id)
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
 
     sub, plan = await subscription_crud.start_ndovu_trial(db, org_id)
     org = await subscription_crud.maybe_mark_onboarding_complete(db, org)
@@ -348,4 +255,79 @@ async def start_trial(
         status_code=200,
         message="Ndovu trial started. A trial invoice was sent to your email.",
         data=data,
+    )
+
+
+@router.post("/new-store", status_code=200, response_model=ApiResponse[StoreResponse])
+async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUser):
+    if user.role != "OWNER" and payload.organization != user.organization_id:
+        raise HTTPException(status_code=403, detail="You are not allowed to perform this action")
+
+    store = await organization_crud.register_store(db, payload, user)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Store created succesfully",
+        data=store,
+    )
+
+
+@router.get("/stores/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
+@cache(expire=CACHE_TTL_SEC, namespace="stores", key_builder=universal_key_builder)
+async def get_businesses_by_tenant(
+    organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
+):
+    if organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
+
+    businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Businesses retrieved successfully",
+        data=businesses,
+    )
+
+
+@router.get("/staff/{organization_id}", response_model=ApiResponse[List[StaffResponse]])
+@cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
+async def get_staff_by_tenant(
+    organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None
+):
+    staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Staff retrieved successfully",
+        data=staff,
+    )
+
+
+@router.get("/billing/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
+@cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
+async def get_billing_by_tenant(
+    organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
+):
+    businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Businesses retrieved successfully",
+        data=businesses,
+    )
+
+
+# Parameterized catch-all for org by id — MUST remain after static paths
+@router.get("/{organization_id}", response_model=OrganizationResponse)
+@cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
+async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
+    if organization_id != user.organization_id:
+        raise HTTPException(status_code=403, detail="Unathorized to perform this operation")
+
+    org = await organization_crud.get_organization_by_id(db=db, org_id=organization_id)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Organization retrieved successfully",
+        data=org,
     )
