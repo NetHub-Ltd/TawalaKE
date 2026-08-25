@@ -361,5 +361,67 @@ class EmailService:
         )
 
 
+
+    @classmethod
+    def send_trial_invoice(
+        cls,
+        to_email: str,
+        org_name: str,
+        plan_name: str,
+        trial_days: int,
+        start_date: str,
+        end_date: str,
+        currency: str = "KES",
+    ) -> None:
+        """Email-only trial invoice (KES 0) after NDOVU trial start."""
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <body style="margin:0;padding:0;background:#f8fafc;font-family:Inter,system-ui,sans-serif;">
+          <table role="presentation" width="100%" style="padding:40px 10px;">
+            <tr><td align="center">
+              <table role="presentation" width="100%" style="max-width:560px;background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
+                <tr><td style="background:#0f172a;padding:24px;text-align:center;">
+                  <h1 style="color:#fff;margin:0;font-size:20px;">Tawala Billing</h1>
+                </td></tr>
+                <tr><td style="padding:32px 24px;color:#334155;font-size:14px;line-height:1.6;">
+                  <h2 style="color:#0f172a;margin:0 0 12px;">Trial invoice</h2>
+                  <p>Hello,</p>
+                  <p>
+                    Your organization <strong>{org_name}</strong> is on a
+                    <strong>{trial_days}-day free trial</strong> of <strong>{plan_name}</strong>.
+                  </p>
+                  <table width="100%" style="margin:24px 0;border-collapse:collapse;font-size:14px;">
+                    <tr>
+                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;">Plan</td>
+                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">{plan_name}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;">Trial window</td>
+                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">{start_date} → {end_date}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;">Amount due today</td>
+                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;"><strong>0 {currency}</strong></td>
+                    </tr>
+                  </table>
+                  <p style="color:#64748b;font-size:12px;">
+                    No payment is required during the trial. You can upgrade or cancel before the trial ends.
+                  </p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+        """
+        cls.send_transactional_email(
+            sender=settings.email_from_billing,
+            to_addresses=[to_email],
+            subject=f"Tawala trial invoice — {plan_name} ({trial_days} days)",
+            html_content=html_content,
+        )
+
+
 # Global Service Instance
 mailer = EmailService()
