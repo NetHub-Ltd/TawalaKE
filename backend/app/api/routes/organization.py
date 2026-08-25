@@ -210,21 +210,27 @@ async def get_onboarding_status(db: SessionDep, user: AuthUser):
     )
 
 
+class TrialStartBody(BaseModel):
+    plan_code: str = "NDOVU"
+
+
 @router.post("/trial/start", response_model=ApiResponse[dict])
 async def start_trial(
     db: SessionDep,
     user: AuthUser,
     background_tasks: BackgroundTasks,
+    payload: Optional[TrialStartBody] = None,
 ):
-    """OWNER only: start a 7-day NDOVU trial and email a zero-amount invoice."""
+    """OWNER only: start a 7-day trial on BASIC or NDOVU; email zero-amount invoice."""
     _require_owner(user)
     org_id = user.organization_id or user.tenant_id
     if not org_id:
         raise HTTPException(status_code=400, detail="No organization on account")
 
     org = await organization_crud.get_organization_by_id(db=db, org_id=org_id)
+    code = (payload.plan_code if payload else "NDOVU") or "NDOVU"
 
-    sub, plan = await subscription_crud.start_ndovu_trial(db, org_id)
+    sub, plan = await subscription_crud.start_plan_trial(db, org_id, plan_code=code)
     org = await subscription_crud.maybe_mark_onboarding_complete(db, org)
 
     start_s = sub.start_date.strftime("%Y-%m-%d") if sub.start_date else ""
@@ -234,7 +240,7 @@ async def start_trial(
         to_email=user.email or org.email,
         org_name=org.name,
         plan_name=plan.name,
-        trial_days=subscription_crud.TRIAL_DAYS,
+        trial_days=int((sub.end_date - sub.start_date).days) if sub.end_date and sub.start_date else subscription_crud.TRIAL_DAYS,
         start_date=start_s,
         end_date=end_s,
         currency=plan.currency or "KES",
@@ -245,7 +251,7 @@ async def start_trial(
         "subscription_id": str(sub.id),
         "plan_code": plan.code,
         "plan_name": plan.name,
-        "trial_days": subscription_crud.TRIAL_DAYS,
+        "trial_days": int((sub.end_date - sub.start_date).days) if sub.end_date and sub.start_date else subscription_crud.TRIAL_DAYS,
         "start_date": sub.start_date.isoformat() if sub.start_date else None,
         "end_date": sub.end_date.isoformat() if sub.end_date else None,
         "onboarding": bool(org.onboarding),

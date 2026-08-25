@@ -4,11 +4,11 @@ PLANS_SEED = [
         "name": "Basic",
         "description": "Perfect for single-location businesses just getting started.",
         "price_monthly": 1490.00,
-        "price_yearly": 14300.00,          # ~20% discount
+        "price_yearly": 14300.00,          # billed annually
         "currency": "KES",
         "is_active": True,
         "is_public": True,
-        "trial_days": 0,                   # Trial is handled separately
+        "trial_days": 7,                   # 7-day self-serve trial
         "sort_order": 1,
         "limits": {
             "max_businesses": 1,

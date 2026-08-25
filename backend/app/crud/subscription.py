@@ -13,7 +13,9 @@ from app.models.models import Plan, Subscription, Organization, SubscriptionTier
 from app.utils.logging import logger
 
 TRIAL_DAYS = 7
-NDOVU_CODE = "NDOVU"
+# DB enum subscription_tier_enum historically has BASIC/NDOVU/ENTERPRISE only.
+# Never write TRIAL — production Postgres rejects it.
+TRIAL_ELIGIBLE_CODES = {"BASIC", "NDOVU"}
 
 
 def _as_utc(dt: Optional[datetime]) -> Optional[datetime]:
@@ -22,6 +24,16 @@ def _as_utc(dt: Optional[datetime]) -> Optional[datetime]:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+
+def _tier_for_plan_code(code: str) -> SubscriptionTier:
+    """Map plan code to a value present in production subscription_tier_enum."""
+    c = (code or "").upper()
+    if c == "BASIC":
+        return SubscriptionTier.BASIC
+    if c == "ENTERPRISE":
+        return SubscriptionTier.ENTERPRISE
+    return SubscriptionTier.NDOVU
 
 
 async def get_active_subscription(
@@ -85,19 +97,30 @@ async def maybe_mark_onboarding_complete(
     return org
 
 
-async def start_ndovu_trial(
-    db: AsyncSession, organization_id: UUID
+async def start_plan_trial(
+    db: AsyncSession, organization_id: UUID, plan_code: str = "NDOVU"
 ) -> Tuple[Subscription, Plan]:
-    plan = await get_plan_by_code(db, NDOVU_CODE)
+    code = (plan_code or "NDOVU").upper()
+    if code not in TRIAL_ELIGIBLE_CODES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Plan '{code}' is not available for self-serve trial. Contact sales.",
+        )
+
+    plan = await get_plan_by_code(db, code)
     existing = await get_active_subscription(db, organization_id)
     if existing:
         return existing, plan
 
+    days = TRIAL_DAYS
+    if getattr(plan, "trial_days", None) and plan.trial_days > 0:
+        days = int(plan.trial_days)
+
     now = datetime.now(timezone.utc)
-    end = now + timedelta(days=TRIAL_DAYS)
+    end = now + timedelta(days=days)
     sub = Subscription(
         organization_id=organization_id,
-        tier=SubscriptionTier.TRIAL,
+        tier=_tier_for_plan_code(code),
         active=True,
         start_date=now,
         end_date=end,
@@ -107,6 +130,13 @@ async def start_ndovu_trial(
     await db.commit()
     await db.refresh(sub)
     logger.info(
-        f"Started {TRIAL_DAYS}-day NDOVU trial for org {organization_id} sub={sub.id}"
+        f"Started {days}-day {code} trial for org {organization_id} sub={sub.id} tier={sub.tier}"
     )
     return sub, plan
+
+
+# Backward-compatible alias
+async def start_ndovu_trial(
+    db: AsyncSession, organization_id: UUID
+) -> Tuple[Subscription, Plan]:
+    return await start_plan_trial(db, organization_id, "NDOVU")
