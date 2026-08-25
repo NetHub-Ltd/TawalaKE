@@ -1,21 +1,20 @@
-# Rollback
+# Rollback State
 
-**Current main HEAD:** `69fe068` (Merge PR #97 — test suite + CI)  
-**Previous main before PR #97 content:** parent of merge; last pre-suite feature baseline was around inspection-report merge `0eb93d0` era  
-**Production image stream:** `ghcr.io/NetHub-Ltd/tawala-api` (tags per release process; PR #97 did not change runtime image code)
+**Deploy branch tip:** `e603129` on `deploy/onboarding-combined-test`  
+**Previous tip before last fix:** `a4224da` (route order only)  
+**main (untouched by this PR until user merges):** remains pre-onboarding-combined unless user merges #107
 
-## What PR #97 changed
-- `backend/testing/**` only (plus CI workflow + trackers)
-- **No** `backend/app/**`, frontend, migrations, or Docker image contents
+## Rollback of deploy/test branch
+```bash
+git checkout deploy/onboarding-combined-test
+git reset --hard <prior-sha>   # e.g. a4224da or cf7f02c
+git push --force-with-lease origin deploy/onboarding-combined-test
+```
+Only with user approval — force-push is exceptional.
 
-## Rollback procedure (if tests/CI must be removed)
-1. `git revert -m 1 69fe068` on a branch, or revert the test commits individually
-2. Optionally delete `.github/workflows/test_backend.yml` if CI gate must be disabled
-3. **Runtime / k3s:** no action required — production behavior unchanged by PR #97
+## Runtime impact if branch is live on preview
+- Revert image/tag to previous known-good preview build
+- No irreversible migrations required by this workstream (enum value TRIAL was never successfully written)
 
-## Data / migration
-- None — tests only
-
-## Recovery notes
-- Suite can be re-run from `backend/testing/` + env vars in `.trackers/task.md`
-- CI template also under `.trackers/ci-workflow-template.md` (historical)
+## Data notes
+- Pending staff (`active=false`) and trial subscriptions may exist from testing; clean up manually if needed
