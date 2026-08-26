@@ -3,8 +3,9 @@ import { auth } from "@/auth";
 
 /**
  * BFF → backend POST /business/checkout
- * Backend returns a Sale object. HTTP status is the success signal
- * (Sale.status is an enum string like COMPLETED, not a boolean).
+ * Backend returns ApiResponse[SaleReadWithRelations]:
+ *   { status: true, data: Sale, ... }
+ * HTTP status is authoritative for transport errors.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -47,7 +48,8 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok) {
       const raw =
-        (data && typeof data === "object" &&
+        (data &&
+          typeof data === "object" &&
           ((data as { detail?: unknown }).detail ||
             (data as { error?: unknown }).error ||
             (data as { message?: unknown }).message)) ||
@@ -58,7 +60,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: detail, detail }, { status: res.status });
     }
 
-    return NextResponse.json(data, { status: 200 });
+    // Prefer unwrapped sale when ApiResponse envelope is present
+    const payload =
+      data &&
+      typeof data === "object" &&
+      "data" in data &&
+      (data as { data: unknown }).data != null
+        ? (data as { data: unknown }).data
+        : data;
+
+    return NextResponse.json(payload, { status: 200 });
   } catch (error: unknown) {
     console.error("[checkout BFF] fatal", error);
     return NextResponse.json(

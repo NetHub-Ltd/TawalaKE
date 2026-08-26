@@ -8,6 +8,7 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  Clock,
   Receipt,
   Zap,
   Package,
@@ -37,16 +38,6 @@ function formatMoney(amount: number, currency = "KES") {
   })}`;
 }
 
-function isInvoiceSale(sale: SaleResponse): boolean {
-  if (sale.status === "PENDING_PAYMENT") return true;
-  const method = String(
-    (sale as { payment_method?: string }).payment_method ||
-      (sale as { method?: string }).method ||
-      "",
-  ).toUpperCase();
-  return method === "INVOICE";
-}
-
 function customerLabel(sale: SaleResponse): string {
   const c = sale.customer as
     | { name?: string; full_name?: string; phone?: string }
@@ -56,6 +47,11 @@ function customerLabel(sale: SaleResponse): string {
   const name = sale.customer_name as string | undefined;
   if (name) return name;
   return "—";
+}
+
+function itemCount(sale: SaleResponse): number {
+  if (Array.isArray(sale.items)) return sale.items.length;
+  return 0;
 }
 
 type Props = {
@@ -76,7 +72,11 @@ export default function CompleteSaleClient({
     limit: 1,
   });
 
-  const sale = useMemo(() => sales[0] ?? null, [sales]);
+  const sale = useMemo(() => {
+    if (!sales?.length) return null;
+    return sales.find((s) => s.id === saleId) ?? sales[0] ?? null;
+  }, [sales, saleId]);
+
   const terminalHref = `/org/${organizationId}/${businessId}/terminal`;
   const previewHref = `/org/${organizationId}/${businessId}/sale/${saleId}/preview`;
 
@@ -106,27 +106,49 @@ export default function CompleteSaleClient({
     );
   }
 
-  const invoice = isInvoiceSale(sale);
+  const status = String(sale.status || "").toUpperCase();
+  const isPending = status === "PENDING_PAYMENT";
+  const isCompleted = status === "COMPLETED";
   const currency = (sale.currency as string) || "KES";
-  const itemCount = Array.isArray(sale.items) ? sale.items.length : 0;
+  const count = itemCount(sale);
   const shortId = sale.id.slice(0, 8).toUpperCase();
+
+  const shellClass = isPending
+    ? "rounded-2xl border-2 border-amber-500/40 bg-card p-6 shadow-lift sm:p-8"
+    : "rounded-2xl border-2 border-emerald-500/35 bg-card p-6 shadow-lift sm:p-8";
+
+  const iconWrap = isPending
+    ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600"
+    : "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600";
+
+  const badgeClass = isPending
+    ? "inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700"
+    : "inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700";
 
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col justify-center px-4 py-10">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-8">
+      <div className={shellClass}>
         <div className="mb-6 flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent">
-            <CheckCircle2 size={22} />
+          <div className={iconWrap}>
+            {isPending ? <Clock size={22} /> : <CheckCircle2 size={22} />}
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
-              Sale recorded
+          <div className="min-w-0 flex-1">
+            <p
+              className={
+                isPending
+                  ? "text-xs font-semibold uppercase tracking-wide text-amber-600"
+                  : "text-xs font-semibold uppercase tracking-wide text-emerald-600"
+              }
+            >
+              {isPending ? "Awaiting payment" : "Sale recorded"}
             </p>
             <h1 className="text-xl font-semibold text-foreground">
-              {invoice ? "Invoice ready" : "Payment complete"}
+              {isPending ? "Invoice ready" : "Payment complete"}
             </h1>
             <p className="mt-1 text-sm text-muted">
-              Brief summary — start another sale or open the document.
+              {isPending
+                ? "This sale is unpaid. Open the invoice or start the next sale."
+                : "Payment received. Open the receipt or start the next sale."}
             </p>
           </div>
         </div>
@@ -150,8 +172,10 @@ export default function CompleteSaleClient({
           </div>
           <div className="flex items-center justify-between gap-3">
             <dt className="text-muted">Status</dt>
-            <dd className="font-medium text-foreground">
-              {String(sale.status).replace(/_/g, " ")}
+            <dd>
+              <span className={badgeClass}>
+                {status.replace(/_/g, " ") || "UNKNOWN"}
+              </span>
             </dd>
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -165,7 +189,7 @@ export default function CompleteSaleClient({
               <Package size={14} /> Items
             </dt>
             <dd className="text-foreground">
-              {itemCount} {itemCount === 1 ? "item" : "items"}
+              {count} {count === 1 ? "item" : "items"}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-3">
@@ -187,10 +211,14 @@ export default function CompleteSaleClient({
           </button>
           <Link
             href={previewHref}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-brand-primary bg-transparent text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
+            className={
+              isPending
+                ? "inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-amber-600 bg-transparent text-sm font-semibold text-amber-700 transition hover:bg-amber-600 hover:text-white"
+                : "inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-emerald-600 bg-transparent text-sm font-semibold text-emerald-700 transition hover:bg-emerald-600 hover:text-white"
+            }
           >
             <Receipt size={16} />
-            {invoice ? "View invoice" : "View receipt"}
+            {isPending ? "View invoice" : isCompleted ? "View receipt" : "View document"}
           </Link>
         </div>
       </div>

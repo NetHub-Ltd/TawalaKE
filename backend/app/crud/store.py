@@ -301,16 +301,19 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             # background_tasks.add_task(async_process_document_generation, sale.id)
             background_tasks.add_task(async_update_sales_analytics, sale.id)
 
-            # return sale
+            # Re-load with the same graph as fetch_sale_by_id so callers see
+            # final status, customer, items, payments after commit.
             new_stmt = (
-            select(Sale).where(Sale.id == sale_id).options(
-                selectinload(Sale.items),
-                selectinload(Sale.customer),
-                selectinload(Sale.cashier)
-                )
+                select(Sale)
+                .where(Sale.id == sale_id)
+                .options(*self._get_sale_eager_options())
             )
-
             new_sale = (await db.exec(new_stmt)).first()
+            if not new_sale:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Sale finalized but could not be reloaded.",
+                )
             return new_sale
         except IntegrityError as e:
             await db.rollback()

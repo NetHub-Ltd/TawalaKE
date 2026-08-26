@@ -163,11 +163,20 @@ async def audit_product_stock(
 
 
 @router.post("/new-sale", status_code=200, response_model=SaleResponse)
-async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep, user: AuthUser):
+async def create_pending_sale(
+    payload: InitializeCheckoutRequest,
+    db: SessionDep,
+    user: AuthUser,
+    redis_client: AsyncRedis = Depends(get_redis),
+):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
-    # logger.info(f"Payload Data: {payload_data.service.description}")
-    record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data, current_user=user)
+    record_sale = await store_crud.initialize_checkout(
+        db=db, payload=payload_data, current_user=user
+    )
     await db.commit()
+    await purge_cache_namespace(
+        redis_client, namespace="sales", business_id=payload.business_id
+    )
     return record_sale
 
 
@@ -260,25 +269,39 @@ async def get_sales(
         ) from val_err
 
 
-@router.post("/checkout")
+@router.post(
+    "/checkout",
+    response_model=ApiResponse[SaleReadWithRelations],
+    status_code=status.HTTP_200_OK,
+)
 async def checkout_sale(
     db: SessionDep,
     payload: FinalizeCheckoutIn,
     user: AuthUser,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    redis_client: AsyncRedis = Depends(get_redis),
 ):
     """
-    Finalizes the sale (payment + stock deduction) and returns immediately.
-    Document (Receipt/Invoice) generation runs in the background.
+    Finalizes the sale (payment + stock deduction) and returns the sale
+    with relations. Document generation runs in the background.
     """
-    # 1. Finalize the sale (critical path - fast response)
     sale = await store_crud.finalize_checkout(
-        db=db, 
-        sale_id=payload.sale_id, 
+        db=db,
+        sale_id=payload.sale_id,
         payload=payload,
-        background_tasks=background_tasks
+        background_tasks=background_tasks,
     )
-    return sale
+    # Mutations must not leave GET /sales serving pre-checkout rows
+    if sale is not None:
+        await purge_cache_namespace(
+            redis_client, namespace="sales", business_id=sale.business_id
+        )
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Checkout completed successfully.",
+        data=sale,
+    )
 
 
 @router.post("/assign-staff", response_model=StaffResponse)
