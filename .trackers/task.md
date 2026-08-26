@@ -1,15 +1,21 @@
 # Task Tracker
 
-**Branch:** `chore/frontend-turbopack-builds`  
-**Base:** `main`
+**Branch:** `fix/checkout-invoice-no-migration`  
+**Base:** `main`  
+**Constraint:** No database migrations authorized.
 
-## Authorized
-Enable Turbopack for faster local/CI frontend builds.
+## Root cause
+Live `payment_method_enum` = CASH|MPESA|CARD|BANK. Writing INVOICE → 500.
 
-## Completed
-- [x] `dev`: `next dev --turbopack`
-- [x] `build`: `next build --turbopack`
-- [x] `build:webpack`: webpack fallback if Turbopack misbehaves
+## Fix (application only)
+- [x] API still accepts payment_method INVOICE (schema)
+- [x] Never write INVOICE to payments.method
+- [x] Invoice path: Sale.status=PENDING_PAYMENT, no Payment row; worker creates invoice from status
+- [x] Cash path: Payment with CASH, status COMPLETED
+- [x] Model PaymentMethod matches DB labels only; create_type=False
+- [x] Customer.sale_id field on model (column already exists — not a migration)
+- [x] BFF success = HTTP 2xx (Sale.status is not boolean)
 
-## Note
-Next 16 may default to Turbopack; flags make the choice explicit and documented.
+## Explicitly NOT included
+- No Alembic migrations
+- No ALTER TYPE

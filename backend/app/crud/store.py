@@ -204,26 +204,55 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Target pending sale tracking code not found."
             )
 
-        sale.status = SaleStatus.COMPLETED
+        # API accepts INVOICE as checkout intent. Live DB enum is only
+        # CASH|MPESA|CARD|BANK — never write INVOICE to payments.method.
+        method_value = (
+            payload.payment_method.value
+            if hasattr(payload.payment_method, "value")
+            else str(payload.payment_method)
+        )
+        is_invoice = method_value == "INVOICE"
+
+        sale.status = (
+            SaleStatus.PENDING_PAYMENT if is_invoice else SaleStatus.COMPLETED
+        )
         db.add(sale)
 
-        # 2. Process standard transactional payment attachment with corrected field keys
-        payment = Payment(
-            organization_id=sale.organization_id,
-            business_id=sale.business_id,
-            sale_id=sale.id,
-            amount=sale.total_amount,
-            method=payload.payment_method,
-            reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}"
-        )
-        db.add(payment)
+        # Settled channels: record payment with a DB-legal method.
+        # Invoice / credit: no payment row (nothing collected); worker mints
+        # DocumentType.INVOICE from PENDING_PAYMENT status.
+        if not is_invoice:
+            try:
+                db_method = PaymentMethod(method_value)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Unsupported payment method: {method_value}",
+                ) from exc
+            payment = Payment(
+                organization_id=sale.organization_id,
+                business_id=sale.business_id,
+                sale_id=sale.id,
+                amount=sale.total_amount,
+                method=db_method,
+                reference=payload.payment_reference
+                or f"TXN-{uuid4().hex[:8].upper()}",
+            )
+            db.add(payment)
+
+        customer_name = (payload.customer_name or "").strip()
+        if not customer_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Customer name is required to complete checkout.",
+            )
 
         customer = Customer(
             organization_id=sale.organization_id,
             business_id=sale.business_id,
             sale_id=sale.id,
-            name=payload.customer_name,
-            phone=payload.customer_phone   
+            name=customer_name,
+            phone=payload.customer_phone,
         )
 
         db.add(customer)
@@ -291,6 +320,13 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Document sequencing integrity index crash. Transaction aborted."
             )
+        except SQLAlchemyError as e:
+            await db.rollback()
+            logger.error(f"Database error during checkout finalization: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to finalize checkout.",
+            ) from e
 
     async def create_staff_account(
         self,

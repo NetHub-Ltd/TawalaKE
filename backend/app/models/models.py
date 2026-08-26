@@ -36,10 +36,16 @@ from app.utils.helpers import utc_now
 # =========================================================
 
 class PaymentMethod(str, Enum):
+    """Labels present on live Postgres payment_method_enum (no migration).
+
+    API may accept "INVOICE" as a checkout intent; that must NOT be written
+    to payments.method until a DBA-approved migration adds the label.
+    Document type is driven by Sale.status == PENDING_PAYMENT (worker).
+    """
     CASH = "CASH"
     MPESA = "MPESA"
-    INVOICE = "INVOICE"
     CARD = "CARD"
+    BANK = "BANK"
 
 
 class SaleStatus(str, Enum):
@@ -553,6 +559,12 @@ class Customer(BaseMixin, table=True):
         index=True,
         ondelete="CASCADE"
     )
+    sale_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="sales.id",
+        index=True,
+        ondelete="CASCADE",
+    )
 
     name: str
     phone: Optional[str] = Field(default=None, index=True)
@@ -659,7 +671,14 @@ class Payment(BaseMixin, table=True):
         ondelete="CASCADE"
     )
     method: PaymentMethod = Field(
-        sa_column=Column(SAEnum(PaymentMethod, name="payment_method_enum"))
+        sa_column=Column(
+            SAEnum(
+                PaymentMethod,
+                name="payment_method_enum",
+                values_callable=lambda obj: [e.value for e in obj],
+                create_type=False,
+            )
+        )
     )
     reference: Optional[str] = Field(default=None, index=True)
 

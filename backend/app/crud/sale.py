@@ -10,6 +10,7 @@ from app.models.models import (
     Payment, PaymentMethod, Customer, StockHistory, StockMovementType,
     Product
 )
+from app.schemas.store import PaymentMethod as PaymentMethodIn
 
 # =========================================================
 # PYDANTIC VALIDATION SCHEMAS
@@ -38,7 +39,7 @@ class InitializeCheckout(BaseModel):
 
 class FinalizeCheckoutIn(BaseModel):
     sale_id: UUID
-    payment_method: PaymentMethod
+    payment_method: PaymentMethodIn
     payment_reference: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
@@ -165,16 +166,17 @@ class SaleService:
                 sale.customer_id = customer.id
 
         # 4. Route Payment & Configure Operational Document Status
-        payment = Payment(
-            business_id=sale.business_id,
-            sale_id=sale.id,
-            amount=sale.total_amount,
-            method=payload.payment_method,
-            reference=payload.payment_reference
-        )
-        db.add(payment)
+        if str(payload.payment_method) != "INVOICE":
+            payment = Payment(
+                business_id=sale.business_id,
+                sale_id=sale.id,
+                amount=sale.total_amount,
+                method=PaymentMethod(str(payload.payment_method)),
+                reference=payload.payment_reference
+            )
+            db.add(payment)
 
-        if payload.payment_method == PaymentMethod.INVOICE:
+        if str(payload.payment_method) == "INVOICE":
             sale.status = SaleStatus.PENDING_PAYMENT
             doc_type = DocumentType.INVOICE
         else:
@@ -258,13 +260,13 @@ class SaleService:
         s_analytic.total_transactions_count += 1
 
         # Break out revenue volume metrics matching designated channels
-        if payload.payment_method == PaymentMethod.CASH:
+        if str(payload.payment_method) == "CASH":
             s_analytic.cash_sales_volume += sale.total_amount
-        elif payload.payment_method == PaymentMethod.MPESA:
+        elif str(payload.payment_method) == "MPESA":
             s_analytic.mpesa_sales_volume += sale.total_amount
-        elif payload.payment_method == PaymentMethod.CARD:
+        elif str(payload.payment_method) == "CARD":
             s_analytic.card_sales_volume += sale.total_amount
-        elif payload.payment_method == PaymentMethod.INVOICE:
+        elif str(payload.payment_method) == "INVOICE":
             s_analytic.credit_invoice_volume += sale.total_amount
 
         db.add(s_analytic)
@@ -286,7 +288,7 @@ class SaleService:
             discount_amount=sale.discount,
             tax_amount=sale.tax_amount,
             total_amount=sale.total_amount,
-            amount_paid=0.0 if payload.payment_method == PaymentMethod.INVOICE else sale.total_amount
+            amount_paid=0.0 if str(payload.payment_method) == "INVOICE" else sale.total_amount
         )
         db.add(document)
         
