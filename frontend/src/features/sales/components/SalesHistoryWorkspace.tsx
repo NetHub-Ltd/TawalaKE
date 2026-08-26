@@ -65,9 +65,10 @@ function getCashierName(sale: SaleResponse) {
 interface SalesRowProps {
   sale: SaleResponse;
   onClick: () => void;
+  previewHref: string;
 }
 
-function SalesRow({ sale, onClick }: SalesRowProps) {
+function SalesRow({ sale, onClick, previewHref }: SalesRowProps) {
   const statusStyles: Record<string, string> = {
     PENDING_PAYMENT: "bg-amber-500/10 text-amber-600 border-amber-500/20",
     COMPLETED: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -133,12 +134,21 @@ function SalesRow({ sale, onClick }: SalesRowProps) {
         </div>
       </td>
 
-      {/* Amount + affordance */}
+      {/* Amount + invoice action + affordance */}
       <td className="py-4 px-6 w-[32%]">
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex items-center justify-end gap-2">
           <span className="font-mono font-bold text-[13px] text-foreground tabular-nums">
             {formatMoney(total, currency)}
           </span>
+          {sale.status === "PENDING_PAYMENT" && (
+            <a
+              href={previewHref}
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 rounded-lg border border-brand-primary/40 bg-brand-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-primary hover:bg-brand-primary hover:text-white transition-colors"
+            >
+              View invoice
+            </a>
+          )}
           <RowChevron
             size={16}
             className="
@@ -358,6 +368,7 @@ export default function SalesHistoryWorkspace() {
                     key={sale.id}
                     sale={sale}
                     onClick={() => goToDetail(sale.id)}
+                    previewHref={`/org/${organizationId}/${normalizedBusinessId}/sale/${sale.id}/preview`}
                   />
                 ))}
               </tbody>
