@@ -1,22 +1,20 @@
 # Task Tracker
 
 **Branch:** `fix/terminal-checkout-invoice-payment-method`  
-**Base:** `main`  
-**PR target:** `main`
+**PR:** #109 → `main`
 
-## Authorized work
-Fix terminal checkout “Generate invoice” → Something went wrong.
+## Authorized scope
+1. Fix Generate invoice → INVOICE payment method (done)
+2. Complete-sale screen + history View invoice (approved)
 
-### Root cause
-Frontend sent `payment_method: "CREDIT"`; backend `PaymentMethod` only accepts `CASH | MPESA | INVOICE | CARD`.
+## Completed
+- [x] CheckoutForm sends `INVOICE`; better error toasts
+- [x] Complete-sale page: summary + Quick sale + View receipt/invoice
+- [x] Checkout success redirects to complete-sale
+- [x] Sales history: View invoice on PENDING_PAYMENT rows
+- [x] Sale detail: View invoice for pending, View receipt for completed
 
-### Completed
-- [x] Map Generate invoice → `INVOICE` in zod schema + select option
-- [x] Surface BFF/backend error detail in toast description
-- [x] Remove debug console.logs from submit path
-- [x] Cash path unchanged (`CASH`)
-
-### Verification
-1. Terminal → cart → customer form → Generate invoice → sale completes / navigates to preview
-2. Cash path still works
-3. Failed checkout shows backend/BFF message in toast description
+## Verification
+- `npm run build` (frontend) required before push
+- Manual: invoice checkout → complete-sale → quick sale / view invoice
+- History pending row → View invoice

@@ -108,7 +108,7 @@ export function CheckoutForm({
       });
 
       router.push(
-        `/org/${organizationId}/${businessId}/sale/${saleId}/preview`
+        `/org/${organizationId}/${businessId}/complete-sale?saleId=${encodeURIComponent(saleId)}`
       );
     } catch (err) {
       toast.error("Something went wrong", {
