@@ -204,26 +204,40 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Target pending sale tracking code not found."
             )
 
-        sale.status = SaleStatus.COMPLETED
+        is_invoice = payload.payment_method == PaymentMethod.INVOICE
+        # Invoice = amount due later; cash/card/mpesa = settled now
+        sale.status = (
+            SaleStatus.PENDING_PAYMENT if is_invoice else SaleStatus.COMPLETED
+        )
         db.add(sale)
 
-        # 2. Process standard transactional payment attachment with corrected field keys
+        # 2. Payment row — method must exist on Postgres payment_method_enum
+        # (INVOICE requires migration c4f8a91b2e10). Invoice amount is the
+        # outstanding balance; paid channels store the collected total.
         payment = Payment(
             organization_id=sale.organization_id,
             business_id=sale.business_id,
             sale_id=sale.id,
-            amount=sale.total_amount,
+            amount=0.0 if is_invoice else sale.total_amount,
             method=payload.payment_method,
-            reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}"
+            reference=payload.payment_reference
+            or f"{'INV' if is_invoice else 'TXN'}-{uuid4().hex[:8].upper()}",
         )
         db.add(payment)
+
+        customer_name = (payload.customer_name or "").strip()
+        if not customer_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Customer name is required to complete checkout.",
+            )
 
         customer = Customer(
             organization_id=sale.organization_id,
             business_id=sale.business_id,
             sale_id=sale.id,
-            name=payload.customer_name,
-            phone=payload.customer_phone   
+            name=customer_name,
+            phone=payload.customer_phone,
         )
 
         db.add(customer)
@@ -291,6 +305,22 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Document sequencing integrity index crash. Transaction aborted."
             )
+        except SQLAlchemyError as e:
+            await db.rollback()
+            logger.error(f"Database error during checkout finalization: {str(e)}")
+            msg = str(e.orig) if getattr(e, "orig", None) else str(e)
+            if "payment_method_enum" in msg or "InvalidTextRepresentation" in msg:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=(
+                        "Payment method is not supported by the database enum. "
+                        "Run migrations / prestart so payment_method_enum includes INVOICE."
+                    ),
+                ) from e
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to finalize checkout.",
+            ) from e
 
     async def create_staff_account(
         self,

@@ -1,7 +1,4 @@
 # Rollback
 
-Revert the PR commit or:
-```bash
-git checkout main -- frontend/src/features/sales/components/CheckoutForm.tsx
-```
-No DB migration. Frontend-only.
+Revert branch commits. Enum label INVOICE can remain in Postgres (safe).
+Do not remove enum value if any payment rows reference it.

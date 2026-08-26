@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 
+/**
+ * BFF → POST {BACKEND_URL}/business/checkout
+ *
+ * Backend returns a Sale object (or error body), NOT necessarily
+ * { status: boolean }. Treat HTTP status as source of truth.
+ */
 export async function POST(req: NextRequest) {
   try {
     const session = await auth();
@@ -10,15 +16,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    console.log("Request body:", JSON.stringify(body));
-
-    if (!body) {
-      return NextResponse.json({ error: "Invalid request, body is needed" }, { status: 400 });
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
     }
 
-    // 1. FIXED: Added the body payload downstream to your backend service
-    const res = await fetch(`${process.env.BACKEND_URL}/business/checkout`, {
+    const base = (process.env.BACKEND_URL || "").replace(/\/$/, "");
+    if (!base) {
+      return NextResponse.json(
+        { error: "BACKEND_URL is not configured" },
+        { status: 500 },
+      );
+    }
+
+    const url = base.endsWith("/api/v1")
+      ? `${base}/business/checkout`
+      : `${base}/api/v1/business/checkout`;
+
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -27,28 +47,36 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(body),
     });
 
+    const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      console.error("An error occurred during backend checkout endpoint invocation:", res.statusText);
-      return NextResponse.json({ error: res.statusText }, { status: res.status });
+      const message =
+        (typeof data === "object" &&
+          data &&
+          (data.detail || data.error || data.message)) ||
+        res.statusText ||
+        "Checkout failed";
+      const detail =
+        typeof message === "string" ? message : JSON.stringify(message);
+      console.error("[checkout BFF] upstream error", res.status, detail);
+      return NextResponse.json(
+        { error: detail, detail },
+        { status: res.status },
+      );
     }
 
-
-    const data = await res.json()
-    console.debug("response data", data)
-
-    if (!data.status) {
-      return NextResponse.json({ error: data.message || "Checkout status verification rejected" }, { status: 400 });
-    }
-
+    // Success: pass through Sale (or wrapper) so the client can redirect
     return NextResponse.json(data, { status: 200 });
-
-  } catch (error: any) {
-    console.error("Fatal execution pipeline crash inside route handler:", error);
-    
-    // 3. FIXED: Guarantees Next.js always gets a Response object, even if things completely break
+  } catch (error: unknown) {
+    console.error("[checkout BFF] fatal", error);
     return NextResponse.json(
-      { error: error?.message || "Internal Server Pipeline Exception" },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Internal Server Pipeline Exception",
+      },
+      { status: 500 },
     );
   }
 }

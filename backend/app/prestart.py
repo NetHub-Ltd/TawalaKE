@@ -28,6 +28,44 @@ data = TenantCreate(
 )
 
 
+
+async def ensure_payment_method_enum(session) -> None:
+    """
+    Ensure Postgres payment_method_enum includes INVOICE.
+
+    Historical type: CASH | MPESA | CARD | BANK
+    App PaymentMethod also uses INVOICE for generate-invoice checkout.
+    Uses AUTOCOMMIT because some PG versions disallow ADD VALUE in a txn.
+    """
+    from sqlalchemy import text
+
+    logger.info("🔧 Ensuring payment_method_enum includes INVOICE...")
+    conn = await session.connection()
+    await conn.execution_options(isolation_level="AUTOCOMMIT").execute(
+        text(
+            """
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM pg_type WHERE typname = 'payment_method_enum'
+                ) AND NOT EXISTS (
+                    SELECT 1
+                    FROM pg_enum e
+                    JOIN pg_type t ON t.oid = e.enumtypid
+                    WHERE t.typname = 'payment_method_enum'
+                      AND e.enumlabel = 'INVOICE'
+                ) THEN
+                    ALTER TYPE payment_method_enum ADD VALUE 'INVOICE';
+                END IF;
+            END
+            $$;
+            """
+        )
+    )
+    logger.info("✅ payment_method_enum ready")
+
+
+
 async def seed_plans(session) -> None:
     """
     Idempotent seeding of billing plans with full Pydantic validation.
@@ -85,6 +123,7 @@ async def create_admin_tenant(payload: TenantCreate = data) -> None:
             # -------------------------------------------------
             # 1. Seed billing plans first (global)
             # -------------------------------------------------
+            await ensure_payment_method_enum(session)
             await seed_plans(session)
 
             # -------------------------------------------------

@@ -1,6 +1,4 @@
 # Repository State
 
-**Branch:** `fix/terminal-checkout-invoice-payment-method`  
-**Base:** `main`  
-**Change:** `frontend/src/features/sales/components/CheckoutForm.tsx` only  
-**Contract:** backend `PaymentMethod` = CASH | MPESA | INVOICE | CARD
+**Branch:** `fix/checkout-invoice-enum-and-complete-sale`  
+**Critical:** payment_method_enum must include INVOICE before invoice checkout works.

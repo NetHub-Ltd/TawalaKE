@@ -15,8 +15,9 @@ from app.schemas.enums import BusinessIndustry
 class PaymentMethod(str, Enum):
     CASH = "CASH"
     MPESA = "MPESA"
-    INVOICE = "INVOICE"
     CARD = "CARD"
+    BANK = "BANK"
+    INVOICE = "INVOICE"
 
 
 class SaleStatus(str, Enum):
