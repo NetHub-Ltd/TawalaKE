@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner"; // npm install sonner
+import { toast } from "sonner";
 
 const personalDetailsSchema = z.object({
   firstName: z
@@ -51,11 +51,9 @@ export function PersonalDetailsForm() {
     try {
       const res = await fetch("/api/v1/org/onboarding/personal-details", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          full_name: `${data.firstName} ${data.lastName}`,
+          full_name: `${data.firstName} ${data.lastName}`.trim(),
           email: data.email,
         }),
       });
@@ -63,171 +61,135 @@ export function PersonalDetailsForm() {
       const result = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        // Handle field-level validation errors from the backend
-        if (result.errors && typeof result.errors === "object") {
-          Object.entries(result.errors).forEach(([field, message]) => {
-            setError(field as keyof PersonalDetailsFormData, {
-              type: "server",
-              message: Array.isArray(message) ? message[0] : String(message),
-            });
-          });
+        const message =
+          result.message ||
+          result.error ||
+          (typeof result.detail === "string" ? result.detail : null) ||
+          "Something went wrong. Please try again.";
+
+        if (res.status === 409) {
+          setError("email", { type: "server", message: String(message) });
         }
 
-        throw new Error(
-          result.message || result.error || "Something went wrong. Please try again."
-        );
+        throw new Error(String(message));
       }
 
-      // Success
       setSubmittedEmail(data.email);
       setIsSuccess(true);
-      toast.success("Personal details saved successfully");
+      toast.success("Check your email to continue");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "An unexpected error occurred";
+        err instanceof Error ? err.message : "Something went wrong. Please try again.";
       toast.error(message);
-      console.error("Failed to submit personal details:", err);
     }
   };
 
-  // ─── Success State ───────────────────────────────────────────────
   if (isSuccess) {
     return (
-      <div className="text-center space-y-5 py-6">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+      <div className="space-y-6 text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-accent/15 text-brand-accent">
           <svg
-            className="h-8 w-8 text-green-600"
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-7 w-7"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
             strokeWidth={2}
+            aria-hidden
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M5 13l4 4L19 7"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
             />
           </svg>
         </div>
-
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Check your email
-          </h2>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            We’ve sent a verification email to{" "}
-            <span className="font-medium text-gray-900">{submittedEmail}</span>.
-            <br />
-            Please check your inbox (and spam folder) for the next instructions
-            to proceed.
+          <h2 className="text-xl font-semibold text-foreground">Check your email</h2>
+          <p className="text-sm text-muted leading-relaxed">
+            We sent a verification link to{" "}
+            <span className="font-medium text-foreground">{submittedEmail}</span>.
+            Open it to set your password and activate your account.
           </p>
         </div>
-
-        <p className="text-xs text-gray-500">
-          Didn’t receive the email?{" "}
-          <button
-            type="button"
-            onClick={() => setIsSuccess(false)}
-            className="text-blue-600 underline hover:text-blue-800"
-          >
-            Try again
-          </button>
+        <p className="text-xs text-muted">
+          Didn&apos;t get it? Check spam, or{" "}
+          <Link href="/login" className="text-brand-primary underline-offset-2 hover:underline">
+            return to login
+          </Link>
+          .
         </p>
       </div>
     );
   }
 
-  // ─── Form ────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-      {/* First Name + Last Name */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label
-            htmlFor="firstName"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
-          >
-            First Name
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <label htmlFor="firstName" className="block text-sm font-medium text-foreground">
+            First name
           </label>
           <input
             id="firstName"
             type="text"
+            autoComplete="given-name"
+            className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted outline-none ring-brand-primary/30 transition focus:ring-2"
+            placeholder="Jane"
             {...register("firstName")}
-            disabled={isSubmitting}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 
-                       focus:border-transparent transition disabled:opacity-60"
-            placeholder="John"
           />
           {errors.firstName && (
-            <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>
+            <p className="text-sm text-red-600">{errors.firstName.message}</p>
           )}
         </div>
-
-        <div>
-          <label
-            htmlFor="lastName"
-            className="block text-sm font-medium text-gray-700 mb-1.5"
-          >
-            Last Name
+        <div className="space-y-1.5">
+          <label htmlFor="lastName" className="block text-sm font-medium text-foreground">
+            Last name
           </label>
           <input
             id="lastName"
             type="text"
-            {...register("lastName")}
-            disabled={isSubmitting}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 
-                       focus:border-transparent transition disabled:opacity-60"
+            autoComplete="family-name"
+            className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted outline-none ring-brand-primary/30 transition focus:ring-2"
             placeholder="Doe"
+            {...register("lastName")}
           />
           {errors.lastName && (
-            <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>
+            <p className="text-sm text-red-600">{errors.lastName.message}</p>
           )}
         </div>
       </div>
 
-      {/* Email */}
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-gray-700 mb-1.5"
-        >
-          Email
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="block text-sm font-medium text-foreground">
+          Work email
         </label>
         <input
           id="email"
           type="email"
+          autoComplete="email"
+          className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted outline-none ring-brand-primary/30 transition focus:ring-2"
+          placeholder="you@company.com"
           {...register("email")}
-          disabled={isSubmitting}
-          className="w-full px-3.5 py-2.5 rounded-lg border border-gray-300 
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 
-                     focus:border-transparent transition disabled:opacity-60"
-          placeholder="john@example.com"
         />
-        {errors.email && (
-          <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-        )}
+        {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
       </div>
 
-      {/* Terms */}
-      <div className="rounded-xl bg-gray-50 p-4 space-y-3 text-sm text-gray-700">
-        <div className="flex items-start gap-3 pt-1">
+      <div className="space-y-2">
+        <div className="flex items-start gap-2">
           <input
             id="acceptTerms"
             type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-border text-brand-primary focus:ring-brand-primary"
             {...register("acceptTerms")}
-            disabled={isSubmitting}
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 
-                       focus:ring-blue-500 disabled:opacity-60"
           />
-          <label htmlFor="acceptTerms" className="leading-snug">
-            By creating an account, you agree to our{" "}
+          <label htmlFor="acceptTerms" className="text-sm text-muted leading-relaxed">
+            I agree to the{" "}
             <Link
               href="/legal/terms"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 underline hover:text-blue-800"
+              className="text-brand-primary underline-offset-2 hover:underline"
             >
               Terms of Service
             </Link>
@@ -236,23 +198,13 @@ export function PersonalDetailsForm() {
               href="/legal/policy"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 underline hover:text-blue-800"
+              className="text-brand-primary underline-offset-2 hover:underline"
             >
               Privacy Policy
             </Link>
-            , and{" "}
-            <Link
-              href="/legal/policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 underline hover:text-blue-800"
-            >
-              Data Policy
-            </Link>
-            .
+            , and Data Policy.
           </label>
         </div>
-
         {errors.acceptTerms && (
           <p className="text-sm text-red-600">{errors.acceptTerms.message}</p>
         )}
@@ -261,38 +213,17 @@ export function PersonalDetailsForm() {
       <button
         type="submit"
         disabled={isSubmitting || !acceptTerms}
-        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 
-                   disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 
-                   rounded-lg transition flex items-center justify-center gap-2"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? (
-          <>
-            <svg
-              className="animate-spin h-4 w-4 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              />
-            </svg>
-            Saving...
-          </>
-        ) : (
-          "Continue"
-        )}
+        {isSubmitting ? "Creating account…" : "Continue"}
       </button>
+
+      <p className="text-center text-sm text-muted">
+        Already have an account?{" "}
+        <Link href="/login" className="font-medium text-brand-primary underline-offset-2 hover:underline">
+          Log in
+        </Link>
+      </p>
     </form>
   );
 }

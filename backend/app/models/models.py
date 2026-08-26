@@ -67,9 +67,20 @@ class EventType(str, Enum):
 
 class SubscriptionTier(str, Enum):
     """
-    Legacy tier enum – KEPT for backward compatibility.
-    New code should prefer the Plan table + plan_id.
+    Legacy tier column on subscriptions/tenants.
+
+    Live Postgres `subscription_tier_enum` (migration 08aa8478a0e5) is:
+      FREE | BRONZE | SILVER | GOLD
+
+    BASIC / NDOVU / ENTERPRISE / TRIAL exist in application vocabulary and
+    plans.code but MUST NOT be written to `tier` until an Alembic migration
+    extends the DB enum (issue #108 Phase B). Prefer plan_id for product truth.
     """
+    FREE = "FREE"
+    BRONZE = "BRONZE"
+    SILVER = "SILVER"
+    GOLD = "GOLD"
+    # Aspirational labels (code/docs only until DB migration)
     BASIC = "BASIC"
     NDOVU = "NDOVU"
     ENTERPRISE = "ENTERPRISE"
@@ -230,8 +241,15 @@ class Subscription(BaseMixin, table=True):
 
     # Legacy field – DO NOT REMOVE
     tier: SubscriptionTier = Field(
-        sa_column=Column(SAEnum(SubscriptionTier, name="subscription_tier_enum")),
-        default=SubscriptionTier.TRIAL
+        sa_column=Column(
+            SAEnum(
+                SubscriptionTier,
+                name="subscription_tier_enum",
+                values_callable=lambda obj: [e.value for e in obj],
+                create_type=False,
+            )
+        ),
+        default=SubscriptionTier.FREE,
     )
 
     active: bool = Field(index=True, default=True)
