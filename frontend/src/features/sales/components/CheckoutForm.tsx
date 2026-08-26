@@ -15,6 +15,7 @@ interface CheckoutFormProps {
   businessId: string;
 }
 
+/** Must match backend PaymentMethod: CASH | MPESA | INVOICE | CARD */
 const schema = z.object({
   customerName: z
     .string()
@@ -26,13 +27,26 @@ const schema = z.object({
     .refine((val) => /^(07|01)\d{8}$/.test(val), {
       message: "Use a valid Kenyan number (07xxxxxxxx or 01xxxxxxxx)",
     }),
-  paymentMethod: z.enum(["CASH", "CREDIT"]),
+  paymentMethod: z.enum(["CASH", "INVOICE"]),
   signSale: z.boolean().refine((val) => val === true, {
     message: "Please confirm to complete this sale",
   }),
 });
 
 type FormValues = z.infer<typeof schema>;
+
+function extractErrorMessage(payload: unknown, fallback: string): string {
+  if (!payload || typeof payload !== "object") return fallback;
+  const p = payload as Record<string, unknown>;
+  if (typeof p.error === "string" && p.error.trim()) return p.error;
+  if (typeof p.message === "string" && p.message.trim()) return p.message;
+  if (typeof p.detail === "string" && p.detail.trim()) return p.detail;
+  if (Array.isArray(p.detail) && p.detail.length > 0) {
+    const first = p.detail[0] as { msg?: string };
+    if (first?.msg) return first.msg;
+  }
+  return fallback;
+}
 
 export function CheckoutForm({
   saleId,
@@ -62,9 +76,6 @@ export function CheckoutForm({
   const onSubmit = async (data: FormValues) => {
     const toastId = toast.loading("Completing sale...");
 
-  console.log("saleId prop →", saleId);          // ← check this
-  console.log("typeof saleId →", typeof saleId);
-
     const payload = {
       sale_id: saleId,
       payment_method: data.paymentMethod,
@@ -73,8 +84,6 @@ export function CheckoutForm({
       customer_phone: data.customerPhone,
     };
 
-    console.log("Submitting sale payload", payload)
-
     try {
       const response = await fetch(`/api/v1/org/stores/sales/checkout`, {
         method: "POST",
@@ -82,23 +91,30 @@ export function CheckoutForm({
         body: JSON.stringify(payload),
       });
 
+      const body = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error("Could not complete the sale");
+        throw new Error(
+          extractErrorMessage(body, "Could not complete the sale")
+        );
       }
 
       toast.success("Sale completed", {
         id: toastId,
-        description: `KES ${grandTotal.toLocaleString()} recorded`,
+        description:
+          data.paymentMethod === "INVOICE"
+            ? `Invoice recorded · KES ${grandTotal.toLocaleString()}`
+            : `KES ${grandTotal.toLocaleString()} recorded`,
       });
 
       router.push(
-        `/org/${organizationId}/${businessId}/sale/${saleId}/preview`
+        `/org/${organizationId}/${businessId}/complete-sale?saleId=${encodeURIComponent(saleId)}`
       );
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
       toast.error("Something went wrong", {
         id: toastId,
-        description: "Please try again",
+        description:
+          err instanceof Error ? err.message : "Please try again",
       });
     }
   };
@@ -115,7 +131,6 @@ export function CheckoutForm({
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        {/* Name */}
         <div>
           <label
             htmlFor="customerName"
@@ -141,7 +156,6 @@ export function CheckoutForm({
           )}
         </div>
 
-        {/* Phone */}
         <div>
           <label
             htmlFor="customerPhone"
@@ -168,7 +182,6 @@ export function CheckoutForm({
           )}
         </div>
 
-        {/* Payment method — clear dropdown */}
         <div>
           <label
             htmlFor="paymentMethod"
@@ -186,7 +199,7 @@ export function CheckoutForm({
                          disabled:opacity-50 transition appearance-none cursor-pointer"
             >
               <option value="CASH">Cash</option>
-              <option value="CREDIT">Generate invoice</option>
+              <option value="INVOICE">Generate invoice</option>
             </select>
             <ChevronDown
               size={16}
@@ -195,7 +208,6 @@ export function CheckoutForm({
           </div>
         </div>
 
-        {/* Sign this sale — minimal checkbox */}
         <div className="pt-1">
           <label className="flex items-start gap-2.5 cursor-pointer select-none">
             <input
