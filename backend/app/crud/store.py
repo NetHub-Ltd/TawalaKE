@@ -250,7 +250,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         customer = Customer(
             organization_id=sale.organization_id,
             business_id=sale.business_id,
-            sale_id=sale.id,
             name=customer_name,
             phone=payload.customer_phone,
         )

@@ -559,12 +559,8 @@ class Customer(BaseMixin, table=True):
         index=True,
         ondelete="CASCADE"
     )
-    sale_id: Optional[UUID] = Field(
-        default=None,
-        foreign_key="sales.id",
-        index=True,
-        ondelete="CASCADE",
-    )
+    # Note: DB may have customers.sale_id (legacy column). Do not map it —
+    # dual FKs with sales.customer_id make Customer.sales ambiguous.
 
     name: str
     phone: Optional[str] = Field(default=None, index=True)
