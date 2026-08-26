@@ -1,20 +1,15 @@
 # Task Tracker
 
-**Branch:** `fix/terminal-checkout-invoice-payment-method`  
-**PR:** #109 → `main`
+**Branch:** `chore/frontend-turbopack-builds`  
+**Base:** `main`
 
-## Authorized scope
-1. Fix Generate invoice → INVOICE payment method (done)
-2. Complete-sale screen + history View invoice (approved)
+## Authorized
+Enable Turbopack for faster local/CI frontend builds.
 
 ## Completed
-- [x] CheckoutForm sends `INVOICE`; better error toasts
-- [x] Complete-sale page: summary + Quick sale + View receipt/invoice
-- [x] Checkout success redirects to complete-sale
-- [x] Sales history: View invoice on PENDING_PAYMENT rows
-- [x] Sale detail: View invoice for pending, View receipt for completed
+- [x] `dev`: `next dev --turbopack`
+- [x] `build`: `next build --turbopack`
+- [x] `build:webpack`: webpack fallback if Turbopack misbehaves
 
-## Verification
-- `npm run build` (frontend) required before push
-- Manual: invoice checkout → complete-sale → quick sale / view invoice
-- History pending row → View invoice
+## Note
+Next 16 may default to Turbopack; flags make the choice explicit and documented.
