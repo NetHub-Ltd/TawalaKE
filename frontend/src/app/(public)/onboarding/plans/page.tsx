@@ -76,9 +76,8 @@ export default async function PlansOnboardingPage() {
             Pricing that grows with your business
           </h1>
           <p className="mt-3 text-muted">
-            All paid plans are{" "}
-            <span className="font-medium text-foreground">billed annually</span>.
-            Start with a free trial on Basic or Ndovu — no charge today.
+            Clear limits, white label from Ndovu, and graded API access — built for Kenyan SMEs.
+            Start with a free trial on Basic or Ndovu; Enterprise includes a 14-day trial window.
           </p>
         </div>
 

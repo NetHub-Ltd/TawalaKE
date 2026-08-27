@@ -1,10 +1,10 @@
 # Repository State
 
-**Branch:** `deploy/onboarding-combined-test`  
-**PR:** #107  
-**Issue:** #108 (subscription_tier_enum drift)
+**Branch:** `dev`  
+**Base:** tracks `origin/dev`  
+**Focus:** Plan catalog cohesion (limits + features) for upcoming paywall
 
-## Critical constraint
-Live Postgres `subscription_tier_enum` = **FREE | BRONZE | SILVER | GOLD**.  
-App must not write BASIC/NDOVU/ENTERPRISE/TRIAL to `subscriptions.tier` until Phase B migration.  
-Product identity: **`plan_id` → plans.code**.
+## Notes
+- Plan product truth: `plan_id` → `plans.code`
+- Live `subscription_tier_enum` still FREE | BRONZE | SILVER | GOLD (trials write FREE)
+- Enterprise is finite (not unlimited) at KSh 8,990

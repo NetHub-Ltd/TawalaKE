@@ -65,15 +65,27 @@ const LIMIT_LABELS: Record<string, string> = {
   data_retention_months: "Data retention (months)",
 };
 
+/** Human-readable labels for graded feature values (api, audit, offline). */
+const GRADED_FEATURE_LABELS: Record<string, string> = {
+  limited: "Limited",
+  standard: "Standard",
+  basic: "Basic",
+  full: "Full",
+};
+
 function formatFeatureValue(v: unknown): string | null {
   if (v === true) return "Included";
   if (v === false || v == null) return null;
-  if (typeof v === "string") return v;
+  if (typeof v === "string") {
+    const key = v.toLowerCase();
+    return GRADED_FEATURE_LABELS[key] ?? v;
+  }
   return String(v);
 }
 
 function formatLimit(v: unknown): string {
   if (v === null || v === undefined) return "Unlimited";
+  if (typeof v === "number") return v.toLocaleString();
   return String(v);
 }
 

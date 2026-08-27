@@ -1,24 +1,22 @@
 # Task Tracker
 
-**Branch:** `deploy/onboarding-combined-test`  
-**Open PR:** https://github.com/NetHub-Ltd/TawalaKE/pull/107  
-**Related issue:** https://github.com/NetHub-Ltd/TawalaKE/issues/108  
+**Branch:** `dev`  
+**Authorized:** Cohesive plan limits + features for paywall (approved 2026-08-27)
 
-## Status
-ACTIVE — deploy/test branch
+## Scope
+1. `PLANS_SEED` — finite Enterprise caps; Ndovu staff 25; white_label on Ndovu; graded `api_access`
+2. `PlanFeatures.api_access` widened to `Union[bool, str]` (non-breaking)
+3. Docs: `docs/billing.md`, README pricing, Marketing prices
+4. Frontend: PlanCard graded labels + limits formatting; onboarding plans page copy
 
-## Latest approved work (2026-08-26)
-1. **Phase A enum fix (#108)** — trial writes `tier=FREE` (live DB labels); `plan_id` is product truth. Migration Phase B deferred.
-2. **Plans UI** — Ndovu ribbon, features collapsed behind “See more features”, trial CTA above features.
+## Completed
+- [x] Seed matrix (Basic / Ndovu / Enterprise)
+- [x] Schema grade for api_access
+- [x] billing.md feature + limit matrix
+- [x] README + Marketing price alignment
+- [x] PlanCard display for graded features / numeric limits
+- [x] Onboarding plans intro copy
 
-### Completed
-- [x] Expand `SubscriptionTier` with FREE/BRONZE/SILVER/GOLD; default subscription tier FREE; `create_type=False`
-- [x] `start_plan_trial` sets `tier=FREE`, `plan_id=<plan>`
-- [x] `PlanCard`: diagonal ribbon on Ndovu, collapsible features, early CTA
-- [x] Trackers updated
-
-### Deferred
-- [ ] Phase B: Alembic ADD VALUE for BASIC/NDOVU/ENTERPRISE/TRIAL (or rename path)
-
-## Next work
-None until a new written proposal is approved.
+## Out of scope
+- Paywall enforcement middleware (next)
+- Merging to main beyond this PR
