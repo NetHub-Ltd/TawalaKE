@@ -45,8 +45,8 @@ PLANS_SEED = [
         "code": "NDOVU",
         "name": "Ndovu",
         "description": "The recommended plan for growing businesses. Strength, memory, and reliability.",
-        "price_monthly": 3990.00,
-        "price_yearly": 38300.00,
+        "price_monthly": 2499.00,
+        "price_yearly": 29988.00,
         "currency": "KES",
         "is_active": True,
         "is_public": True,
@@ -97,7 +97,7 @@ PLANS_SEED = [
         "code": "ENTERPRISE",
         "name": "Enterprise",
         "description": "For complex multi-branch operations that need full control, compliance, and scale.",
-        "price_monthly": 9990.00,          # Starting price
+        "price_monthly": 8990.00,          # Starting price
         "price_yearly": None,              # Custom
         "currency": "KES",
         "is_active": True,
