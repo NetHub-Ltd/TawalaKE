@@ -317,19 +317,21 @@ export default function SaleDetailPage() {
               <ArrowLeft size={16} />
               Back to history
             </Link>
-            {sale.status === "COMPLETED" && (
+            {(sale.status === "COMPLETED" ||
+              sale.status === "PENDING_PAYMENT") && (
               <button
                 type="button"
                 className="h-11 px-5 rounded-xl bg-brand-primary text-white text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
                 onClick={() => {
-                  // Wire to receipt print / preview when ready
                   router.push(
                     `/org/${organizationId}/${normalizedBusinessId}/sale/${sale.id}/preview`,
                   );
                 }}
               >
                 <Receipt size={16} />
-                View receipt
+                {sale.status === "PENDING_PAYMENT"
+                  ? "View invoice"
+                  : "View receipt"}
               </button>
             )}
           </div>
