@@ -17,7 +17,7 @@ from app.crud.store import store_crud
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
 from sqlmodel import select
-from app.models.models import Sale,  SaleAnalyticsSummary
+from app.models.models import Sale, SaleAnalyticsSummary, Staff
 from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
 from fastapi_cache.decorator import cache
 from app.core.redis_client import limiter
@@ -169,9 +169,8 @@ async def audit_product_stock(
 async def create_pending_sale(
     payload: InitializeCheckoutRequest,
     db: SessionDep,
-    user: AuthUser,
     redis_client: AsyncRedis = Depends(get_redis),
-    _user: AuthUser = Depends(require_permissions(Permission.SALES_WRITE)),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
 ):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
     record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data, current_user=user)
@@ -197,8 +196,7 @@ async def get_sales(
     request: Request,
     business_id: UUID,
     db: SessionDep,
-    user: AuthUser,
-    _user: AuthUser = Depends(require_permissions(Permission.SALES_READ_OWN)),
+    user: Staff = Depends(require_permissions(Permission.SALES_READ_OWN)),
     sale_id: Optional[UUID] = Query(
         None, description="Optional UUID to fetch a specific sale"
     ),
@@ -284,10 +282,9 @@ async def get_sales(
 async def checkout_sale(
     db: SessionDep,
     payload: FinalizeCheckoutIn,
-    user: AuthUser,
     background_tasks: BackgroundTasks,
     redis_client: AsyncRedis = Depends(get_redis),
-    _user: AuthUser = Depends(require_permissions(Permission.SALES_WRITE)),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
 ):
     """
     Finalizes the sale (payment + stock deduction) and returns immediately.

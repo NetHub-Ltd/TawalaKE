@@ -10,6 +10,7 @@ from fastapi_cache.decorator import cache
 
 # Directly utilizing your provided dependency definitions
 from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace, AuthUser
+from app.models.models import Staff
 from app.api.rbac_deps import require_permissions
 from app.core.rbac import Permission
 from app.crud.product import product_crud
@@ -52,7 +53,7 @@ async def get_products(
     request: Request,
     business_id: UUID,
     db: SessionDep,
-    _user: AuthUser = Depends(require_permissions(Permission.CATALOG_READ)),
+    _user: Staff = Depends(require_permissions(Permission.CATALOG_READ)),
     active: Optional[bool] = True,
     page: int = Query(default=1, ge=1, description="Current page number"),
     size: int = Query(default=50, ge=1, le=100, alias="limit", description="Number of rows per page"),
@@ -178,7 +179,7 @@ async def create_product(
     db: SessionDep, 
     payload: ProductCreate,
     redis_client: AsyncRedis = Depends(get_redis),
-    _user: AuthUser = Depends(require_permissions(Permission.CATALOG_WRITE)),
+    _user: Staff = Depends(require_permissions(Permission.CATALOG_WRITE)),
 ):
     """
     POST /products/new
@@ -214,7 +215,7 @@ async def update_product(
     db: SessionDep, 
     payload: ProductUpdate,
     redis_client: AsyncRedis = Depends(get_redis),  # invalidation
-    _user: AuthUser = Depends(require_permissions(Permission.CATALOG_WRITE)),
+    _user: Staff = Depends(require_permissions(Permission.CATALOG_WRITE)),
 ):
     """
     PATCH /products/{product_id}
@@ -244,7 +245,7 @@ async def delete_product(
     product_id: UUID, 
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),  # invalidation
-    _user: AuthUser = Depends(require_permissions(Permission.CATALOG_WRITE)),
+    _user: Staff = Depends(require_permissions(Permission.CATALOG_WRITE)),
 ):
     """
     DELETE /products/{product_id}
