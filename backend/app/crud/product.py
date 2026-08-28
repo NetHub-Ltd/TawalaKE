@@ -79,14 +79,20 @@ class ProductCrud(BaseCRUD[Product, ProductCreate, ProductUpdate]):
 
     async def update_product(self, product_id: UUID, payload: ProductUpdate, db: AsyncSession) -> Product:
         """
-        Modifies an existing product utilizing the runtime validation pipeline.
-        Maintains structural production constraints and commits cleanly.
+        Modifies catalog fields only. Inventory quantity must use restock / stock-audit.
         """
         prod_obj = await self.get(db=db, id=product_id)
         if prod_obj is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, 
                 detail="Product not found"
+            )
+
+        raw = payload.model_dump(exclude_unset=True) if hasattr(payload, "model_dump") else dict(payload)
+        if "stock" in raw:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot change stock via product update. Use restock or stock-audit endpoints.",
             )
         
         updated = await self.update(db=db, db_obj=prod_obj, obj_in=payload)

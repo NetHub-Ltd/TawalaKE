@@ -105,7 +105,9 @@ class ProductCreate(BaseModel):
     business_id: UUID
     label: str
     selling_price: float
-    stock: float
+    stock: float = 0.0
+    cost_price: Optional[float] = None
+    track_stock: bool = True
     popularity_score: Optional[float] = 0.0
     category: Optional[str] = "General"
     attributes: BaseAttributes = Field(default_factory=BaseAttributes)
@@ -113,10 +115,12 @@ class ProductCreate(BaseModel):
 class ProductUpdate(BaseModel):
     label: Optional[str] = None
     selling_price: Optional[float] = None
-    stock: Optional[int] = None
+    # stock is intentionally omitted — mutate inventory only via restock / stock-audit
     track_stock: Optional[bool] = None
+    cost_price: Optional[float] = None
     category: Optional[str] = None
     attributes: Optional[BaseAttributes] = None
+    active: Optional[bool] = None
 
 
 class ProductResponse(BaseResponseSchema):

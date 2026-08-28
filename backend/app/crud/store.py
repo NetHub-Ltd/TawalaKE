@@ -97,25 +97,50 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         discount = float(getattr(payload, "discount", None) or 0.0)
 
         for item in payload.items:
-            stmt = select(Product).where(Product.id == item.product_id)
+            # Strict multi-tenant scope: product must belong to this business
+            stmt = select(Product).where(
+                Product.id == item.product_id,
+                Product.business_id == payload.business_id,
+                Product.deleted_at.is_(None),
+            )
             res = await db.exec(stmt)
             product = res.one_or_none()
 
             if not product:
-                logger.error(f"Checkout failure: Product ID {item.product_id} not found.")
+                logger.error(
+                    "Checkout failure: product %s not found for business %s",
+                    item.product_id,
+                    payload.business_id,
+                )
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="One or more selected inventory items could not be found."
+                    detail="One or more selected inventory items could not be found for this business.",
                 )
-            logger.info(f"Product data: {product.attributes.get('sku', 'N/A')} ")
-            item_total = product.selling_price * item.quantity
+
+            if not product.active:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Product '{product.label}' is inactive and cannot be sold.",
+                )
+
+            # Reserve capacity check at draft time (re-checked under lock at finalize)
+            if product.track_stock and product.stock < item.quantity:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Insufficient stock for '{product.label}'. "
+                        f"Available: {product.stock}, requested: {item.quantity}."
+                    ),
+                )
+
+            item_total = float(product.selling_price) * float(item.quantity)
             subtotal += item_total
 
-            cost_at_sale = (
-                product.cost_price
-                if product.cost_price is not None
-                else product.selling_price
-            )
+            # Prefer real cost; null means unknown COGS (do not invent selling-as-cost)
+            cost_at_sale = product.cost_price
+
+            attrs = product.attributes if isinstance(product.attributes, dict) else {}
+            sku = str(attrs.get("sku") or "N/A")
 
             sale_items.append(
                 SaleItem(
@@ -124,7 +149,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     quantity=item.quantity,
                     unit_price=product.selling_price,
                     total_price=item_total,
-                    sku=product.attributes.get('sku', 'N/A'),
+                    sku=sku[:50],
                     name=product.label,
                     subtotal=item_total,
                     tax_rate=0.0,
@@ -288,36 +313,74 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             db.add(sale)
 
         # 5. Stock deduction — always (cash and credit). Goods left the shelf.
-        for item in sale.items:
-            prod_stmt = select(Product).where(Product.id == item.product_id)
-            prod_res = await db.exec(prod_stmt)
-            product = prod_res.one_or_none()
+        # Pessimistic lock + ordered IDs to prevent concurrent negative stock / deadlocks.
+        product_ids = sorted({item.product_id for item in (sale.items or [])})
+        locked_products: dict = {}
+        if product_ids:
+            lock_stmt = (
+                select(Product)
+                .where(
+                    Product.id.in_(product_ids),
+                    Product.business_id == sale.business_id,
+                    Product.deleted_at.is_(None),
+                )
+                .with_for_update()
+            )
+            locked_rows = (await db.exec(lock_stmt)).all()
+            locked_products = {p.id: p for p in locked_rows}
 
-            if product and product.track_stock:
-                previous_stock_level = product.stock
-                product.stock -= item.quantity
-                if product.popularity_score is None:
-                    product.popularity_score = 0.1
-                else:
-                    product.popularity_score += 0.1
-                db.add(product)
+        for item in sale.items or []:
+            product = locked_products.get(item.product_id)
+            if product is None:
+                await db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Product {item.product_id} missing or not in this business during finalize.",
+                )
 
-                history = StockHistory(
-                    product_id=product.id,
-                    business_id=sale.business_id,
-                    performed_by=sale.cashier_id,
-                    quantity=-item.quantity,
-                    previous_stock=previous_stock_level,
-                    new_stock=product.stock,
-                    selling_price=item.unit_price,
-                    buying_price=product.cost_price,
-                    movement_type=StockMovementType.SALE,
-                    notes=(
-                        f"{'Credit' if is_credit else 'POS'} checkout stock deduction "
-                        f"for sale ID: {sale.id}"
+            if not product.track_stock:
+                continue
+
+            previous_stock_level = float(product.stock or 0)
+            qty = float(item.quantity)
+            if previous_stock_level < qty:
+                await db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Stock for '{product.label}' was depleted by a concurrent sale. "
+                        f"Available: {previous_stock_level}, needed: {qty}."
                     ),
                 )
-                db.add(history)
+
+            product.stock = previous_stock_level - qty
+            if product.popularity_score is None:
+                product.popularity_score = 0.1
+            else:
+                product.popularity_score = float(product.popularity_score) + 0.1
+            db.add(product)
+
+            history = StockHistory(
+                product_id=product.id,
+                business_id=sale.business_id,
+                organization_id=sale.organization_id or product.organization_id,
+                performed_by=sale.cashier_id,
+                quantity=-qty,
+                previous_stock=previous_stock_level,
+                new_stock=product.stock,
+                selling_price=item.unit_price,
+                buying_price=item.cost_price_at_sale
+                if item.cost_price_at_sale is not None
+                else product.cost_price,
+                movement_type=StockMovementType.SALE,
+                reference_id=sale.id,
+                reference_type="SALE",
+                notes=(
+                    f"{'Credit' if is_credit else 'POS'} checkout stock deduction "
+                    f"for sale ID: {sale.id}"
+                ),
+            )
+            db.add(history)
 
         try:
             await db.commit()
@@ -507,69 +570,63 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             }
         }
 
+
     async def add_new_stock(self, db: AsyncSession, payload: ProductRestockRequest, current_user) -> Product:
         """
-        Executes a secure inbound inventory restock operation.
-        Increments physical item volumes and updates catalog cost/selling margins 
-        atomically while safeguarding the historical trace timeline.
+        Inbound restock: increment on-hand quantity under row lock, write StockHistory (PURCHASE),
+        optionally update cost/selling prices from the supplier batch.
         """
         try:
-            # 1. Fetch product with row-level write validation locking protection (FOR UPDATE)
-            stmt = select(Product).where(Product.id == payload.product_id).with_for_update()
-            result = await db.exec(stmt)
-            product = result.one_or_none()
-
+            stmt = (
+                select(Product)
+                .where(
+                    Product.id == payload.product_id,
+                    Product.business_id == payload.business_id,
+                    Product.deleted_at.is_(None),
+                )
+                .with_for_update()
+            )
+            product = (await db.exec(stmt)).one_or_none()
             if not product:
                 raise HTTPException(
-                    status_code=404,
-                    detail="The targeted product entry was not found in this business catalog."
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Product not found for this business.",
                 )
 
-            # 2. Compute snapshots for inventory historical balancing metrics
-            previous_stock = product.stock
-            new_stock = previous_stock + payload.quantity
+            if product.organization_id is None and current_user.organization_id:
+                product.organization_id = current_user.organization_id
 
-            # 3. Create the historical ledger trail record
-            # Automatically falls back to the current catalog price parameters if the incoming transaction lacks explicit overrides
+            previous_stock = float(product.stock or 0)
+            inbound_qty = float(payload.quantity)
+            new_stock = previous_stock + inbound_qty
+
+            if payload.buying_price is not None and payload.buying_price > 0:
+                product.cost_price = float(payload.buying_price)
+            if payload.selling_price is not None and payload.selling_price > 0:
+                product.selling_price = float(payload.selling_price)
+
+            product.stock = new_stock
+            product.last_stock_take = utc_now()
+
             history_entry = StockHistory(
-                organization_id=current_user.organization_id,
                 product_id=product.id,
-                business_id=product.business_id, 
+                business_id=product.business_id,
+                organization_id=product.organization_id or current_user.organization_id,
                 performed_by=current_user.id,
-                movement_type=StockMovementType.STOCK_TAKE,
-                quantity=payload.quantity,
+                movement_type=StockMovementType.PURCHASE,
+                quantity=inbound_qty,
                 previous_stock=previous_stock,
                 new_stock=new_stock,
                 buying_price=product.cost_price,
                 selling_price=product.selling_price,
-                reference_id=product.id,
+                reference_id=payload.reference_id or product.id,
                 reference_type=payload.reference_type or "PURCHASE_ORDER",
-                notes=payload.notes
+                notes=payload.notes,
             )
 
-            # 4. Mutate master product ledger catalog values directly in memory
-            if product.organization_id is None:
-                product.organization_id = current_user.organization_id
-
-            product.stock = new_stock
-            product.last_stock_take=utc_now()
-
-            # # Update purchase cost structures if valid parameters are parsed
-            # if payload.buying_price is not None and payload.buying_price > 0:
-            #     product.cost_price = payload.buying_price
-
-            # # Apply new selling/shelf marks if provided in the batch restock payload
-            # if payload.selling_price is not None and payload.selling_price > 0:
-            #     product.selling_price = payload.selling_price
-
-            # Stage transactional models into the current Active Unit of Work
             db.add(product)
             db.add(history_entry)
-
-            # 5. Execute atomic database flush commitment
             await db.commit()
-
-            # Refresh the history entry row so it populates the auto-generated primary key UUID and timestamp strings
             await db.refresh(product)
             return product
 
@@ -578,70 +635,69 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             raise
         except SQLAlchemyError as e:
             await db.rollback()
-            logger.error(f"Database infrastructure collision during bulk stocking pipeline execution: {str(e)}")
+            logger.error("Restock transaction failed: %s", e)
             raise HTTPException(
-                status_code=500,
-                detail="Database transaction conflict encountered while updating inventory levels."
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database conflict while updating inventory levels.",
             )
 
     async def audit_stock(self, db: AsyncSession, payload: ProductAuditRequest, current_user) -> Product:
         """
-        Executes a secure inbound inventory restock operation.
-        Increments physical item volumes and updates catalog cost/selling margins 
-        atomically while safeguarding the historical trace timeline.
+        Physical count: set on-hand to absolute counted quantity under row lock.
+        StockHistory.quantity stores the signed delta (new - previous).
         """
         try:
-            # 1. Fetch product with row-level write validation locking protection (FOR UPDATE)
-            stmt = select(Product).where(Product.business_id == payload.business_id, Product.id == payload.product_id).with_for_update()
-            result = await db.exec(stmt)
-            product = result.one_or_none()
-
+            stmt = (
+                select(Product)
+                .where(
+                    Product.id == payload.product_id,
+                    Product.business_id == payload.business_id,
+                    Product.deleted_at.is_(None),
+                )
+                .with_for_update()
+            )
+            product = (await db.exec(stmt)).one_or_none()
             if not product:
                 raise HTTPException(
-                    status_code=404,
-                    detail="The targeted product entry was not found in this business catalog."
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Product not found for this business.",
                 )
 
-            # 2. Compute snapshots for inventory historical balancing metrics
-            previous_stock = product.stock
-            new_stock = payload.quantity
-
-            # If the product's organization_id is not set, assign it to the current user's organization_id,
-            # this happens freqyuently when the product was created without an organization context
-            # this used to migrate the products to an organization context instraed of using a cronjob
-            if product.organization_id is None:
+            if product.organization_id is None and current_user.organization_id:
                 product.organization_id = current_user.organization_id
 
-            # 3. Create the historical ledger trail record
-            # Automatically falls back to the current catalog price parameters if the incoming transaction lacks explicit overrides
+            previous_stock = float(product.stock or 0)
+            # Absolute physical count from the floor
+            new_stock = float(payload.quantity)
+            if new_stock < 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Physical stock count cannot be negative.",
+                )
+            delta = new_stock - previous_stock
+
+            product.stock = new_stock
+            product.last_stock_take = utc_now()
+
             history_entry = StockHistory(
                 product_id=product.id,
-                business_id=product.business_id, 
-                organization_id=product.organization_id or current_user.organization_id, # mark this for potential failure if the product is orphaned
+                business_id=product.business_id,
+                organization_id=product.organization_id or current_user.organization_id,
                 performed_by=current_user.id,
-                movement_type=StockMovementType.ADJUSTMENT, 
-                quantity=payload.quantity,
+                movement_type=StockMovementType.STOCK_TAKE,
+                quantity=delta,
                 previous_stock=previous_stock,
                 new_stock=new_stock,
                 buying_price=product.cost_price,
                 selling_price=product.selling_price,
                 reference_id=product.id,
-                reference_type=payload.reference_type or "PURCHASE_ORDER",
-                notes=payload.notes
+                reference_type=getattr(payload, "reference_type", None) or "STOCK_TAKE",
+                notes=payload.notes,
             )
 
-            # 4. Mutate master product ledger catalog values directly in memory
-            product.stock = new_stock
-            product.last_stock_take=utc_now()
-
-            # Stage transactional models into the current Active Unit of Work
             db.add(product)
             db.add(history_entry)
-
-            # 5. Execute atomic database flush commitment
             await db.commit()
-
-            # Refresh the history entry row so it populates the auto-generated primary key UUID and timestamp strings
             await db.refresh(product)
             return product
 
@@ -650,11 +706,106 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             raise
         except SQLAlchemyError as e:
             await db.rollback()
-            logger.error(f"Database infrastructure collision during bulk stocking pipeline execution: {str(e)}")
+            logger.error("Stock audit transaction failed: %s", e)
             raise HTTPException(
-                status_code=500,
-                detail="Database transaction conflict encountered while updating inventory levels."
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database conflict while updating inventory levels.",
             )
+
+
+
+    async def void_credit_sale(
+        self,
+        db: AsyncSession,
+        *,
+        sale_id: UUID,
+        current_user,
+        reason: str | None = None,
+    ) -> Sale:
+        """
+        Reverse an outstanding credit sale: restore stock and mark REFUNDED.
+        Only PENDING_PAYMENT sales with no completed payment are eligible.
+        """
+        stmt = (
+            select(Sale)
+            .where(Sale.id == sale_id)
+            .options(selectinload(Sale.items), selectinload(Sale.payments))
+            .with_for_update()
+        )
+        sale = (await db.exec(stmt)).one_or_none()
+        if not sale:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sale not found.")
+
+        if sale.status != SaleStatus.PENDING_PAYMENT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only outstanding (unpaid) credit sales can be voided.",
+            )
+
+        payments = list(sale.payments or [])
+        if any(getattr(p, "amount", 0) for p in payments):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Sale has payments recorded; use refund flow instead of void.",
+            )
+
+        product_ids = sorted({item.product_id for item in (sale.items or [])})
+        locked: dict = {}
+        if product_ids:
+            lock_stmt = (
+                select(Product)
+                .where(
+                    Product.id.in_(product_ids),
+                    Product.business_id == sale.business_id,
+                    Product.deleted_at.is_(None),
+                )
+                .with_for_update()
+            )
+            locked = {p.id: p for p in (await db.exec(lock_stmt)).all()}
+
+        for item in sale.items or []:
+            product = locked.get(item.product_id)
+            if product is None or not product.track_stock:
+                continue
+            prev = float(product.stock or 0)
+            qty = float(item.quantity)
+            product.stock = prev + qty
+            db.add(product)
+            db.add(
+                StockHistory(
+                    product_id=product.id,
+                    business_id=sale.business_id,
+                    organization_id=sale.organization_id or product.organization_id,
+                    performed_by=getattr(current_user, "id", None) or sale.cashier_id,
+                    quantity=qty,
+                    previous_stock=prev,
+                    new_stock=product.stock,
+                    selling_price=item.unit_price,
+                    buying_price=item.cost_price_at_sale,
+                    movement_type=StockMovementType.RETURN,
+                    reference_id=sale.id,
+                    reference_type="SALE_VOID",
+                    notes=reason or f"Void credit sale {sale.id}",
+                )
+            )
+
+        sale.status = SaleStatus.REFUNDED
+        db.add(sale)
+        await db.commit()
+
+        out = (
+            await db.exec(
+                select(Sale)
+                .where(Sale.id == sale_id)
+                .options(
+                    selectinload(Sale.items),
+                    selectinload(Sale.customer),
+                    selectinload(Sale.cashier),
+                    selectinload(Sale.payments),
+                )
+            )
+        ).first()
+        return out
 
     async def fetch_dashboard_analytics(
         self,

@@ -1,3 +1,13 @@
+"""
+LEGACY / NON-PRODUCTION checkout service.
+
+The live POS path is `app.crud.store.StoreCRUD.initialize_checkout` /
+`finalize_checkout` (async, used by `/business/new-sale` and `/business/checkout`).
+
+Do not wire new routes to SaleService. This module is retained only for
+reference and will be removed once callers are confirmed gone.
+"""
+
 from uuid import UUID, uuid4
 from datetime import date, datetime, timezone
 from typing import List, Optional, Dict, Any

@@ -179,7 +179,7 @@ async def create_product(
     db: SessionDep, 
     payload: ProductCreate,
     redis_client: AsyncRedis = Depends(get_redis),
-    _user: Staff = Depends(require_permissions(Permission.CATALOG_WRITE)),
+    user: Staff = Depends(require_permissions(Permission.CATALOG_WRITE)),
 ):
     """
     POST /products/new
@@ -189,7 +189,18 @@ async def create_product(
     Create a new product with core fields and dynamic JSONB attributes.
     """
     try:
-        db_obj = await product_crud.create(db, obj_in=payload.model_dump(exclude_unset=True))
+        data = payload.model_dump(exclude_unset=True)
+        if user.organization_id:
+            data.setdefault("organization_id", user.organization_id)
+            data.setdefault("tenant_id", user.organization_id)
+        if data.get("cost_price") is None and isinstance(data.get("attributes"), dict):
+            bp = data["attributes"].get("buying_price")
+            if bp is not None:
+                try:
+                    data["cost_price"] = float(bp)
+                except (TypeError, ValueError):
+                    pass
+        db_obj = await product_crud.create(db, obj_in=data)
         await db.commit()
         logger.info(f"Product created: {db_obj}")
         

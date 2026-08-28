@@ -122,8 +122,8 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: AuthUser,
-    redis_client: AsyncRedis = Depends(get_redis)
+    redis_client: AsyncRedis = Depends(get_redis),
+    current_staff: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
 ):
     """
     Increments product inventory based on an incoming supply.
@@ -145,8 +145,8 @@ async def restock_product(
 async def audit_product_stock(
     payload: ProductAuditRequest,
     db: SessionDep,
-    user: AuthUser,
-    redis_client: AsyncRedis = Depends(get_redis)
+    redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
 ):
     """
     Reconciles physical counter reality audits with system database balances.
@@ -308,6 +308,38 @@ async def checkout_sale(
             "payment_method": str(payload.payment_method),
             "status": str(getattr(sale, "status", None)),
         },
+    )
+    return sale
+
+
+@router.post("/sales/{sale_id}/void-credit", status_code=200)
+async def void_credit_sale(
+    sale_id: UUID,
+    db: SessionDep,
+    redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
+    reason: str | None = Query(None, max_length=500),
+):
+    """
+    Void an outstanding credit sale and restore stock.
+    Requires sales:write (manager/owner/admin typically also have it).
+    """
+    sale = await store_crud.void_credit_sale(
+        db=db,
+        sale_id=sale_id,
+        current_user=user,
+        reason=reason,
+    )
+    await purge_cache_namespace(redis_client, namespace="sales")
+    await purge_cache_namespace(redis_client, namespace="products")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.void_credit",
+        outcome="success",
+        resource_type="sale",
+        resource_id=sale_id,
+        meta={"reason": reason},
     )
     return sale
 
