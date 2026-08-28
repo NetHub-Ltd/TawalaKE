@@ -18,6 +18,7 @@
 //   type LucideIcon,
 // } from "lucide-react";
 // import { BusinessSwitcher } from "@/features/business/components/BusinessSwitcher";
+import { Permission, PermissionKey, canAny, permissionsForRole } from "@/lib/rbac";
 
 // interface SidebarProps {
 //   organizationId: string;
@@ -310,7 +311,8 @@ interface SidebarProps {
 interface SidebarLink {
   label: string;
   path: string;
-  allowedRoles: string[];
+  /** Any of these permissions unlocks the link (1:1 with API). */
+  anyOf: PermissionKey[];
   icon: LucideIcon;
 }
 
@@ -318,37 +320,37 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
   {
     label: "Overview",
     path: "/overview",
-    allowedRoles: ["OWNER"],
+    anyOf: [Permission.REPORTS_READ],
     icon: LayoutDashboard,
   },
   {
     label: "Terminal",
     path: "/terminal",
-    allowedRoles: ["OWNER", "MANAGER", "CASHIER"],
+    anyOf: [Permission.SALES_WRITE],
     icon: Monitor,
   },
   {
     label: "Stock",
     path: "/stock/audit",
-    allowedRoles: ["OWNER", "MANAGER"],
+    anyOf: [Permission.STOCK_ADJUST, Permission.STOCK_READ],
     icon: Package,
   },
   {
     label: "Sales History",
     path: "/sale-history",
-    allowedRoles: ["OWNER", "MANAGER", "CASHIER"],
+    anyOf: [Permission.SALES_READ_OWN, Permission.SALES_READ_BUSINESS],
     icon: History,
   },
   {
     label: "Products",
     path: "/inventory",
-    allowedRoles: ["OWNER", "MANAGER", "CASHIER"],
+    anyOf: [Permission.CATALOG_READ],
     icon: Boxes,
   },
   {
     label: "Staff",
     path: "/staff",
-    allowedRoles: ["OWNER", "MANAGER"],
+    anyOf: [Permission.ORG_STAFF_MANAGE],
     icon: Users2,
   },
 ];
@@ -425,8 +427,9 @@ export function Sidebar({
     return <SidebarSkeleton />;
   }
 
+  const perms = permissionsForRole(userRole);
   const visibleLinks = NAVIGATION_SCHEMA.filter((link) =>
-    link.allowedRoles.includes(userRole),
+    canAny(perms, link.anyOf),
   );
 
   return (
