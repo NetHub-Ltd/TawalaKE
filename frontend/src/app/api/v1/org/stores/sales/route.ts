@@ -1,86 +1,87 @@
 import { NextResponse, NextRequest } from "next/server";
 import { auth } from "@/auth";
 
+export async function GET(req: NextRequest) {
+  const session = await auth();
 
-export async function GET(req: NextRequest){
-    
-const session = await auth()
+  if (!session?.accessToken) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-if(!session?.accessToken){
-    return NextResponse.json({error: "Authorized"}, {status: 410})
-}
+  const { searchParams } = new URL(req.url);
+  const business_id = searchParams.get("business_id");
+  const sale_id = searchParams.get("sale_id");
+  const page_size =
+    searchParams.get("page_size") || searchParams.get("limit") || "20";
+  const page = searchParams.get("page") || "1";
 
-// grab businessId from params
-   // get busines id from query params
-    const { searchParams } = new URL(req.url);
-    const business_id = searchParams.get("business_id");
-    const sale_id = searchParams.get("sale_id");
-    
-      if (!business_id) {
-      return NextResponse.json({ error: "Business ID not provided" }, { status: 400 });
-    }
+  if (!business_id) {
+    return NextResponse.json(
+      { error: "Business ID not provided" },
+      { status: 400 },
+    );
+  }
 
-    const targetUrl = sale_id 
-      ? `${process.env.BACKEND_URL}/business/sales/${business_id}?sale_id=${sale_id}`
-      : `${process.env.BACKEND_URL}/business/sales/${business_id}`;
+  const qs = new URLSearchParams();
+  qs.set("page", page);
+  qs.set("page_size", page_size);
+  if (sale_id) qs.set("sale_id", sale_id);
 
-    console.log("fetching sales for: ", business_id)
-    const res = await fetch(targetUrl, {
-        method: "GET",
-        headers: {
+  const targetUrl = `${process.env.BACKEND_URL}/business/sales/${business_id}?${qs.toString()}`;
+
+  const res = await fetch(targetUrl, {
+    method: "GET",
+    headers: {
       "Content-Type": "application/json",
-       Authorization: `Bearer ${session.accessToken}`,
+      Authorization: `Bearer ${session.accessToken}`,
     },
-    })
+  });
 
-    if(!res.ok){
-        return NextResponse.json({error: res.statusText}, {status: res.status})
-    }
-    
+  const body = await res.json().catch(() => ({}));
 
-    const body = await res.json()
-    console.log("fetched sale data", body.data)
-    return NextResponse.json(body.data, {status: 200})
+  if (!res.ok) {
+    const detail =
+      (typeof body?.detail === "string" && body.detail) ||
+      (typeof body?.error === "string" && body.error) ||
+      res.statusText;
+    return NextResponse.json({ error: detail, detail }, { status: res.status });
+  }
+
+  // Prefer ApiResponse.data envelope; fall back to body
+  return NextResponse.json(body.data ?? body, { status: 200 });
 }
 
+export async function POST(req: NextRequest) {
+  const session = await auth();
 
-export async function POST(req: NextRequest){
-// check session and return a 401 if the user is not authorized
+  if (!session?.accessToken) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-const session = await auth()
+  const body = await req.json();
 
-if(!session?.accessToken){
-    return NextResponse.json({error: "Authorized"}, {status: 410})
-}
+  if (!body) {
+    return NextResponse.json({ error: "Body is required" }, { status: 400 });
+  }
 
-const body = await req.json()
-
-if(!body){
-    return NextResponse.json({error: "Body is required"}, {status: 400})
-}
-
-console.debug("Sale Data", body)
-
-
-const res = await fetch(`${process.env.BACKEND_URL}/business/new-sale`, {
+  const res = await fetch(`${process.env.BACKEND_URL}/business/new-sale`, {
     method: "POST",
     headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify(body),
-})
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.accessToken}`,
+    },
+    body: JSON.stringify(body),
+  });
 
-if(!res.ok){
-    console.error(res.text)
-    return NextResponse.json({error: "An error occured"}, {status: 500})
-}
+  const data = await res.json().catch(() => ({}));
 
-const data = await res.json()
-  if (!data) {
-        return NextResponse.json({ error: data.message }, { status: res.status });
-    }
-console.debug("Saved Sale Object", data)
-return NextResponse.json(data, {status: 200})
+  if (!res.ok) {
+    const detail =
+      (typeof data?.detail === "string" && data.detail) ||
+      (typeof data?.error === "string" && data.error) ||
+      "An error occurred";
+    return NextResponse.json({ error: detail, detail }, { status: res.status });
+  }
 
+  return NextResponse.json(data, { status: 200 });
 }
