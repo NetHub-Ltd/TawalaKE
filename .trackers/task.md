@@ -2,59 +2,35 @@
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Base branch:** `dev`  
-**Current branch:** `fix/credit-sale-tracking-and-invoice`
+**Current branch:** `fix/sales-history-relations-and-ui`
 
 ## Goal
-Credit sales: customer walks with goods/services unpaid; stock always deducted; outstanding tracked; invoice issued for collection; UI reflects credit; past data remains readable.
+Sales history list + detail show accurate items, cashier, business, and line items; denser operational UI; credit labelled clearly. Fix relation loading and sales cache staleness.
 
 ## Approved Scope
-Approved 2026-08-28 (defaults OK):
-1. Live path only (`store_crud.finalize_checkout` + document worker + BFF + checkout/complete UI)
-2. Credit (`PaymentMethod.INVOICE`): status `PENDING_PAYMENT`, no collecting Payment, stock deducted, invoice `amount_paid=0`
-3. Cash: status `COMPLETED`, full Payment, receipt
-4. Customer: no removed `sale_id`; reuse by phone; name required for credit
-5. Idempotency on re-finalize
-6. Initialize: real discount, line subtotals, cost_price_at_sale from cost when present
-7. BFF forwards backend error detail
-8. Frontend: Credit (pay later) labels + detection compatible with legacy rows
-9. No historical data rewrite
+Approved 2026-08-28:
+1. Eager-load `Sale.business`; `.unique()` on sale fetches
+2. Purge `sales` cache after new-sale + checkout
+3. Additive `item_count` / `cashier_name` on `SaleReadWithRelations`
+4. BFF page_size + error forwarding
+5. Table + detail UI: data helpers, Credit · due labels, customer column, denser table, detail meta
 
 ## Completed Changes
-- [x] `backend/app/crud/store.py` — initialize + finalize credit-aware
-- [x] `backend/app/tasks/worker.py` — invoice vs receipt from outstanding status
-- [x] BFF checkout error forwarding + sale-shaped success
-- [x] CheckoutForm credit copy
-- [x] CompleteSaleClient credit detection/labels
-- [x] Trackers updated
+- [x] Backend store.py eager options + unique
+- [x] Backend sales cache purge on write paths
+- [x] Schema list helpers
+- [x] useSales helpers + BFF
+- [x] SalesHistoryWorkspace UI
+- [x] Sale detail page helpers/labels
+- [x] Trackers
 
-## Remaining Changes
-- [ ] Open PR into `dev`
-- [ ] CI / review
-- Follow-ups (out of scope): pay-off credit, cancel+restore stock, AR aging, historical backfill
+## Remaining
+- [ ] PR review / merge to `dev`
 
-## Explicitly Out of Scope
-- Pay-off / cancel credit workflows
-- MPESA/CARD UI
-- Re-enabling commented routers
-- Migrating legacy pseudo-invoice rows
-- Merge to `main`
+## Out of scope
+Pay-off credit, cancel stock restore, CSV export, main merge
 
-## Decisions Made
-- D1 Stock on credit: always deduct
-- D2 No Payment row on credit
-- D3 Wire enum remains `INVOICE`; UI says Credit
-- D4 Past data read-compatible only
-- D5 Customer name required for credit; phone reuse
-- D6 Pay-off/cancel = follow-up
-- D7 Base = `dev`
-
-## Relevant Risks
-- Legacy COMPLETED+full-payment "invoice" rows still look paid (by design)
-- Analytics skip PENDING_PAYMENT (credit not counted as collected)
-
-## Verification Requirements
-- Cash finalize → COMPLETED + payment + receipt path
-- Credit finalize → PENDING_PAYMENT + no payment + invoice path
-- Double finalize → 409
-- Credit without name → 400
-- BFF surfaces backend detail on error
+## Verification
+- List shows non-zero items and cashier after real sales
+- Detail shows business, cashier, line items
+- SYNC after checkout without 5min wait

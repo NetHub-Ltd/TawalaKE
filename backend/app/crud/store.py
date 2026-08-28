@@ -730,6 +730,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             selectinload(Sale.items),
             selectinload(Sale.customer),
             selectinload(Sale.cashier),
+            selectinload(Sale.business),
             selectinload(Sale.payments),
             selectinload(Sale.document),
         )
@@ -756,7 +757,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         stmt = stmt.options(*self._get_sale_eager_options())
 
         result = await db.exec(stmt)
-        return result.first()
+        return result.unique().first()
 
     async def fetch_sales(self,
         db: AsyncSession,
@@ -776,7 +777,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         stmt = stmt.options(*self._get_sale_eager_options()).order_by(Sale.updated_at.desc())
 
         results = await db.exec(stmt)
-        return results.all()
+        return results.unique().all()
 
     async def fetch_sales(
         self,
@@ -861,7 +862,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
 
             results = await db.exec(paginated_stmt)
-            sales = results.all()
+            sales = results.unique().all()
 
             return sales, total_count
 
