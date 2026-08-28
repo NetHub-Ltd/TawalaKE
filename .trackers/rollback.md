@@ -1,2 +1,2 @@
 # Rollback
-Revert PR. No migration in this PR (staff APIs use existing tables).
+Revert PR. Removes frontend CI workflow and restores prior Sidebar (broken import layout).

@@ -244,8 +244,7 @@ import {
   Receipt,
   ShieldCheck,
   X,
-  Sparkles,
-} from "lucide-react";
+  } from "lucide-react";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 
 /**

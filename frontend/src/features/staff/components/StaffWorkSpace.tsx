@@ -68,8 +68,7 @@ export default function StaffWorkspace() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [showCreate, setShowCreate] = useState(false);
-  const [selected, setSelected] = useState<StaffMember | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
 
   const { staff, isLoading, isFetching, isError, error, refetch } =
     useStaff(orgId);

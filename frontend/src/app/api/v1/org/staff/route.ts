@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         const data = await res.json();
         return NextResponse.json(data, { status: res.status }); // Match backend status (200/201)
 
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error("Proxy route crashed:", err);
         return NextResponse.json({ error: "Internal Proxy Error" }, { status: 500 });
     }

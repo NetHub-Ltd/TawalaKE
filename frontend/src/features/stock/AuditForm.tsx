@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { Scale, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface ProductContext {

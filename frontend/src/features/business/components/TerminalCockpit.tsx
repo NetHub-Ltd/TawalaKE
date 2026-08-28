@@ -1270,7 +1270,6 @@ import {
   ChevronRight,
   Filter,
   Loader2,
-  Command,
 } from "lucide-react";
 import Link from "next/link";
 import { CartSidebar } from "@/features/sales/components/CartSideBar";

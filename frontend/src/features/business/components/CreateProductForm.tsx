@@ -11,8 +11,7 @@ import {
   AlertCircle,
   RotateCcw,
   Loader2,
-  ChevronDown,
-  LayoutGrid,
+    LayoutGrid,
 } from "lucide-react";
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
@@ -106,7 +105,7 @@ export function CreateProductForm() {
               New <span className="text-primary">Asset</span>
             </h1>
             <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold mt-2 opacity-70">
-              Auth: {businessName || "System_Root"} //{" "}
+              Auth: {businessName || "System_Root"}{" // "}
               {businessId?.toString().slice(0, 8)}
             </p>
           </div>

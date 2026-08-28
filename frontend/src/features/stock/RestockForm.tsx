@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useTransition } from 'react';
-import { ArrowLeft, Save, Plus, Trash2 } from 'lucide-react';
+import { } from 'lucide-react';
 import Link from 'next/link';
 
 interface ProductContext {

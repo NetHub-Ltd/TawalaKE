@@ -1,3 +1,3 @@
 # Repo state
-**Branch:** feat/fe-rbac-and-staff-suite  
+**Branch:** fix/frontend-sidebar-rbac-import-and-ci  
 **Base:** dev
