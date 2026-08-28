@@ -43,6 +43,7 @@ jobs:
 
       - name: Production build
         env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
           NEXT_TELEMETRY_DISABLED: "1"
           # Placeholders so next build / auth module can evaluate without real secrets
           AUTH_SECRET: "ci-build-placeholder-secret-min-32-chars-xx"
