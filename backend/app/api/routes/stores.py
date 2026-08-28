@@ -5,6 +5,9 @@ from datetime import date, datetime
 from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends, Request, status, Query
 
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace, get_redis, AsyncRedis
+from app.api.rbac_deps import require_permissions, purge_staff_rbac_cache
+from app.core.rbac import Permission
+from app.services.audit import record_audit
 from app.crud.business import business_crud
 from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
     BusinessUpdate, BusinessBase
@@ -168,11 +171,22 @@ async def create_pending_sale(
     db: SessionDep,
     user: AuthUser,
     redis_client: AsyncRedis = Depends(get_redis),
+    _user: AuthUser = Depends(require_permissions(Permission.SALES_WRITE)),
 ):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
     record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data, current_user=user)
     await db.commit()
     await purge_cache_namespace(redis_client, namespace="sales")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.initialize",
+        outcome="success",
+        resource_type="sale",
+        resource_id=record_sale.id,
+        business_id=payload.business_id,
+        meta={"item_count": len(payload.items or [])},
+    )
     return record_sale
 
 
@@ -184,6 +198,7 @@ async def get_sales(
     business_id: UUID,
     db: SessionDep,
     user: AuthUser,
+    _user: AuthUser = Depends(require_permissions(Permission.SALES_READ_OWN)),
     sale_id: Optional[UUID] = Query(
         None, description="Optional UUID to fetch a specific sale"
     ),
@@ -272,6 +287,7 @@ async def checkout_sale(
     user: AuthUser,
     background_tasks: BackgroundTasks,
     redis_client: AsyncRedis = Depends(get_redis),
+    _user: AuthUser = Depends(require_permissions(Permission.SALES_WRITE)),
 ):
     """
     Finalizes the sale (payment + stock deduction) and returns immediately.
@@ -284,6 +300,18 @@ async def checkout_sale(
         background_tasks=background_tasks,
     )
     await purge_cache_namespace(redis_client, namespace="sales")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.checkout",
+        outcome="success",
+        resource_type="sale",
+        resource_id=payload.sale_id,
+        meta={
+            "payment_method": str(payload.payment_method),
+            "status": str(getattr(sale, "status", None)),
+        },
+    )
     return sale
 
 

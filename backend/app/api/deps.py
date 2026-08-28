@@ -164,13 +164,20 @@ async def get_current_user(
 async def get_current_staff(
     current_user: Staff = Depends(get_current_user),
 ) -> Staff:
-    """Restrict endpoint access to valid staff roles (Owner, Manager, Cashier)."""
-    user_role = str(current_user.role.value if hasattr(current_user.role, 'value') else current_user.role).lower()
-    
-    if user_role not in ["owner", "manager", "cashier"]:
+    """Restrict endpoint access to valid tenant staff roles (includes ADMIN)."""
+    from app.core.rbac import effective_role
+    from app.models.models import StaffRole
+
+    role = effective_role(current_user)
+    if role not in (
+        StaffRole.OWNER,
+        StaffRole.ADMIN,
+        StaffRole.MANAGER,
+        StaffRole.CASHIER,
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions"
+            detail="Insufficient permissions",
         )
     return current_user
 
