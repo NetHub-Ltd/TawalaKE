@@ -202,7 +202,7 @@
 
 //       clearCart();
 //       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
-//     } catch (error: any) {
+//     } catch (error: unknown) {
 //       console.error("Checkout Submission Error:", error);
 //       const fallbackMsg = error?.message || "Operational pipeline error. Please try again.";
 //       setSubmitError(fallbackMsg);
@@ -728,7 +728,7 @@
 //       clearCart();
 //       setService(null);
 //       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
-//     } catch (error: any) {
+//     } catch (error: unknown) {
 //       console.error("Checkout Submission Error:", error);
 //       const fallbackMsg = error?.message || "Operational pipeline error. Please try again.";
 //       setSubmitError(fallbackMsg);
@@ -1408,7 +1408,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       clearCart();
       setService(null);
       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Checkout Submission Error:", error);
       const fallbackMsg = error?.message || "Operational pipeline error. Please try again.";
       setSubmitError(fallbackMsg);

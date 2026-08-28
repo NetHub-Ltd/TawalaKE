@@ -10,6 +10,7 @@ export default function Receipt({
   method: string;
   details?: string;
 }) {
+  const receiptNo = "PENDING";
   const { cart, getSubtotal, getTax, getTotal } = useCartStore();
   const today = new Date().toLocaleString();
 
@@ -30,7 +31,7 @@ export default function Receipt({
         </p>
         <p className="flex justify-between">
           <span>Receipt #:</span>{" "}
-          <span>{Math.floor(Math.random() * 10000)}</span>
+          <span>{receiptNo}</span>
         </p>
       </div>
 

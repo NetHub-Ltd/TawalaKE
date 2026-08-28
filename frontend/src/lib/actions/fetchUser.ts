@@ -1,6 +1,6 @@
 "use server";
 
-import { zUserRead } from "../types/zod.gen";
+import {  } from "../types/zod.gen";
 import { auth } from "@/auth";
 
 export async function fetchUser() {
@@ -26,7 +26,7 @@ export async function fetchUser() {
     }
 
     const json = await res.json();
-    // const parsed = zUserRead.safeParse(json);
+    // const parsed = .safeParse(json);
 
     // if (!parsed.success) {
     //   throw new Error("data_integrity_error");

@@ -10,7 +10,7 @@
 
 // interface CartState {
 //   cart: CartItem[];
-//   addToCart: (product: any) => void;
+//   addToCart: (product: unknown) => void;
 //   updateQty: (id: string, delta: number) => void;
 //   clearCart: () => void;
 //   // Computed values
@@ -76,11 +76,11 @@
 // interface CartState {
 //   cart: CartItem[];
 //   isSyncing: boolean; // Tracks API state
-//   addToCart: (product: any) => void;
+//   addToCart: (product: unknown) => void;
 //   updateQty: (id: string, delta: number) => void;
 //   clearCart: () => void;
 //   // Backend Integration
-//   createSale: () => Promise<any>;
+//   createSale: () => Promise<unknown>;
 //   // Computed values
 //   getSubtotal: () => number;
 //   getTax: () => number;
@@ -183,10 +183,10 @@ interface CartItem {
 interface CartState {
   cart: CartItem[];
   isSyncing: boolean;
-  addToCart: (product: any) => void;
+  addToCart: (product: unknown) => void;
   updateQty: (id: string, delta: number) => void;
   clearCart: () => void;
-  createSale: () => Promise<any>;
+  createSale: () => Promise<unknown>;
   getSubtotal: () => number;
   getTax: () => number;
   getTotal: () => number;

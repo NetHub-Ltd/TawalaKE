@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     // Backend returns { status: true, data: [...] } -> We return data.data
     return NextResponse.json(data.data, { status: 200 });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: "Invalid request body" },
       { status: 400 },
@@ -117,7 +117,7 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json(data, { status: 200 });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }
@@ -144,7 +144,7 @@ export async function DELETE(request: Request) {
     }
 
     return NextResponse.json(data, { status: 200 });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: "Deletion failed" }, { status: 500 });
   }
 }

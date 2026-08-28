@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  Bell,
+    Bell,
   User,
   Search,
   LayoutGrid,
@@ -11,7 +10,7 @@ import {
 } from "lucide-react";
 
 interface TerminalHeaderProps {
-  businessName: string;
+  _businessName: string;
 }
 
 /**
@@ -21,7 +20,7 @@ interface TerminalHeaderProps {
  * Performance: Minimal client-side logic; purely functional triggers.
  */
 
-export function TerminalHeader({ businessName }: TerminalHeaderProps) {
+export function TerminalHeader({ businessName: _businessName }: TerminalHeaderProps) {
   const router = useRouter();
 
   return (

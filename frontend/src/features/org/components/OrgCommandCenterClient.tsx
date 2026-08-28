@@ -10,20 +10,11 @@ import {
   ArrowRight,
   ShieldCheck,
   Pencil,
-  Users,
-  CreditCard,
   Settings,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
-  BarChart3,
-  Receipt,
-  ShieldAlert,
   HelpCircle,
-  TrendingUp,
-  Activity,
-  Zap,
 } from "lucide-react";
 
 export interface BusinessItem {
@@ -333,7 +324,7 @@ export function OrgCommandCenterClient({
 
                       <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs">
                         <div>
-                          <p className="text-[10px] text-slate-400">Today's Revenue</p>
+                          <p className="text-[10px] text-slate-400">Today&apos;s Revenue</p>
                           <p className="font-mono font-bold text-slate-900 dark:text-slate-100">
                             {business.todaySales || "$4,120.00"}
                           </p>

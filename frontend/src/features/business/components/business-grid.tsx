@@ -18,7 +18,7 @@ export function BusinessGrid() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-      {businesses?.map((biz: any) => (
+      {businesses?.map((biz: unknown) => (
         <BusinessCard
           key={biz.id}
           biz={biz}
@@ -27,10 +27,10 @@ export function BusinessGrid() {
             toast.success(`Switching to ${b.name}`);
             router.push(`/home/${b.id}`);
           }}
-          onEdit={(id) => toast.info(`Editing terminal ${id}`)}
-          onDelete={(id) => {
+          onEdit={(_id) => toast.info(`Editing terminal ${id}`)}
+          onDelete={(_id) => {
             if (confirm("Decommission this terminal node?")) {
-              // deleteBusiness(id);
+              // deleteBusiness(_id);
               toast.error("Terminal deleted");
             }
           }}
