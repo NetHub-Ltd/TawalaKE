@@ -50,7 +50,16 @@ async def async_process_document_generation(sale_id: UUID) -> str:
             )
             financial_document = existing_doc_res.unique().one_or_none()
 
-            is_invoice = sale.status == SaleStatus.PENDING_PAYMENT
+            # Credit = outstanding (PENDING_PAYMENT). Paid methods are COMPLETED.
+            # Also treat explicit INVOICE method without completion as credit for safety.
+            payment_methods = {
+                (p.method.value if hasattr(p.method, "value") else str(p.method)).upper()
+                for p in (sale.payments or [])
+            }
+            is_invoice = (
+                sale.status == SaleStatus.PENDING_PAYMENT
+                or ("INVOICE" in payment_methods and sale.status != SaleStatus.COMPLETED)
+            )
             doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
 
             if not financial_document:
@@ -61,6 +70,7 @@ async def async_process_document_generation(sale_id: UUID) -> str:
 
                 financial_document = FinancialDocument(
                     id=uuid4(),
+                    organization_id=sale.organization_id,
                     business_id=sale.business_id,
                     sale_id=sale.id,
                     customer_id=sale.customer_id,

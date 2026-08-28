@@ -14,10 +14,12 @@ export async function POST(req: NextRequest) {
     console.log("Request body:", JSON.stringify(body));
 
     if (!body) {
-      return NextResponse.json({ error: "Invalid request, body is needed" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid request, body is needed" },
+        { status: 400 },
+      );
     }
 
-    // 1. FIXED: Added the body payload downstream to your backend service
     const res = await fetch(`${process.env.BACKEND_URL}/business/checkout`, {
       method: "POST",
       headers: {
@@ -27,28 +29,48 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(body),
     });
 
+    const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
-      console.error("An error occurred during backend checkout endpoint invocation:", res.statusText);
-      return NextResponse.json({ error: res.statusText }, { status: res.status });
+      console.error(
+        "Backend checkout failed:",
+        res.status,
+        JSON.stringify(data),
+      );
+      // Forward backend detail/message so cashiers see real errors
+      const detail =
+        (typeof data?.detail === "string" && data.detail) ||
+        (typeof data?.message === "string" && data.message) ||
+        (typeof data?.error === "string" && data.error) ||
+        res.statusText ||
+        "Checkout failed";
+      return NextResponse.json(
+        { error: detail, detail, message: detail },
+        { status: res.status },
+      );
     }
 
+    console.debug("response data", data);
 
-    const data = await res.json()
-    console.debug("response data", data)
-
-    if (!data.status) {
-      return NextResponse.json({ error: data.message || "Checkout status verification rejected" }, { status: 400 });
+    // Backend returns a Sale object (has id). Accept that as success.
+    // Also accept ApiResponse-shaped payloads if introduced later.
+    if (
+      data &&
+      typeof data === "object" &&
+      (typeof (data as { id?: string }).id === "string" ||
+        (data as { status?: boolean }).status === true)
+    ) {
+      return NextResponse.json(data, { status: 200 });
     }
 
+    // Unexpected shape but HTTP OK — still return body for debugging
     return NextResponse.json(data, { status: 200 });
-
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Fatal execution pipeline crash inside route handler:", error);
-    
-    // 3. FIXED: Guarantees Next.js always gets a Response object, even if things completely break
-    return NextResponse.json(
-      { error: error?.message || "Internal Server Pipeline Exception" },
-      { status: 500 }
-    );
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Internal Server Pipeline Exception";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

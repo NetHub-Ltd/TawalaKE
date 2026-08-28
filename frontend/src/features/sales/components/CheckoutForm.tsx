@@ -99,13 +99,16 @@ export function CheckoutForm({
         );
       }
 
-      toast.success("Sale completed", {
-        id: toastId,
-        description:
-          data.paymentMethod === "INVOICE"
-            ? `Invoice recorded · KES ${grandTotal.toLocaleString()}`
-            : `KES ${grandTotal.toLocaleString()} recorded`,
-      });
+      toast.success(
+        data.paymentMethod === "INVOICE" ? "Credit sale recorded" : "Sale completed",
+        {
+          id: toastId,
+          description:
+            data.paymentMethod === "INVOICE"
+              ? `Credit · payment due · KES ${grandTotal.toLocaleString()} — invoice will be generated`
+              : `KES ${grandTotal.toLocaleString()} recorded`,
+        },
+      );
 
       router.push(
         `/org/${organizationId}/${businessId}/complete-sale?saleId=${encodeURIComponent(saleId)}`
@@ -126,7 +129,7 @@ export function CheckoutForm({
           Finish this sale
         </h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Add the customer and choose how they are paying.
+          Add the customer and choose cash or credit (pay later).
         </p>
       </div>
 
@@ -187,7 +190,7 @@ export function CheckoutForm({
             htmlFor="paymentMethod"
             className="block text-sm font-medium text-foreground mb-1.5"
           >
-            How are they paying?
+            Payment
           </label>
           <div className="relative">
             <select
@@ -198,14 +201,19 @@ export function CheckoutForm({
                          focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
                          disabled:opacity-50 transition appearance-none cursor-pointer"
             >
-              <option value="CASH">Cash</option>
-              <option value="INVOICE">Generate invoice</option>
+              <option value="CASH">Cash (paid now)</option>
+              <option value="INVOICE">Credit (pay later)</option>
             </select>
             <ChevronDown
               size={16}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
             />
           </div>
+          {paymentMethod === "INVOICE" && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              Customer takes goods now. Stock is reduced. An invoice is issued so you can collect payment later.
+            </p>
+          )}
         </div>
 
         <div className="pt-1">
@@ -247,7 +255,7 @@ export function CheckoutForm({
               <Check size={16} />
               {paymentMethod === "CASH"
                 ? "Complete cash sale"
-                : "Create invoice & finish"}
+                : "Record credit & issue invoice"}
             </>
           )}
         </button>

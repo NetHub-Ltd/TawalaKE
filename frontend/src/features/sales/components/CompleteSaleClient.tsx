@@ -37,8 +37,27 @@ function formatMoney(amount: number, currency = "KES") {
   })}`;
 }
 
-function isInvoiceSale(sale: SaleResponse): boolean {
+/**
+ * Credit sale detection — compatible with new and legacy shapes.
+ * New credit: status PENDING_PAYMENT (outstanding).
+ * Fallback: nested payments with method INVOICE, or top-level method fields.
+ */
+function isCreditSale(sale: SaleResponse): boolean {
   if (sale.status === "PENDING_PAYMENT") return true;
+
+  const payments = (sale as { payments?: Array<{ method?: string; amount?: number }> })
+    .payments;
+  if (Array.isArray(payments)) {
+    const hasInvoiceMethod = payments.some(
+      (p) => String(p?.method || "").toUpperCase() === "INVOICE",
+    );
+    const collected = payments.reduce(
+      (sum, p) => sum + (Number(p?.amount) || 0),
+      0,
+    );
+    if (hasInvoiceMethod && collected <= 0) return true;
+  }
+
   const method = String(
     (sale as { payment_method?: string }).payment_method ||
       (sale as { method?: string }).method ||
@@ -106,7 +125,7 @@ export default function CompleteSaleClient({
     );
   }
 
-  const invoice = isInvoiceSale(sale);
+  const credit = isCreditSale(sale);
   const currency = (sale.currency as string) || "KES";
   const itemCount = Array.isArray(sale.items) ? sale.items.length : 0;
   const shortId = sale.id.slice(0, 8).toUpperCase();
@@ -120,13 +139,15 @@ export default function CompleteSaleClient({
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
-              Sale recorded
+              {credit ? "Credit sale" : "Sale recorded"}
             </p>
             <h1 className="text-xl font-semibold text-foreground">
-              {invoice ? "Invoice ready" : "Payment complete"}
+              {credit ? "Credit recorded — payment due" : "Payment complete"}
             </h1>
             <p className="mt-1 text-sm text-muted">
-              Brief summary — start another sale or open the document.
+              {credit
+                ? "Stock reduced. Invoice will be used to collect payment from the customer."
+                : "Brief summary — start another sale or open the document."}
             </p>
           </div>
         </div>
@@ -151,7 +172,9 @@ export default function CompleteSaleClient({
           <div className="flex items-center justify-between gap-3">
             <dt className="text-muted">Status</dt>
             <dd className="font-medium text-foreground">
-              {String(sale.status).replace(/_/g, " ")}
+              {credit
+                ? "Credit · payment due"
+                : String(sale.status).replace(/_/g, " ")}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -190,7 +213,7 @@ export default function CompleteSaleClient({
             className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-brand-primary bg-transparent text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
           >
             <Receipt size={16} />
-            {invoice ? "View invoice" : "View receipt"}
+            {credit ? "View invoice" : "View receipt"}
           </Link>
         </div>
       </div>
