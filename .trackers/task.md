@@ -1,15 +1,40 @@
 # Task Tracker
 
-**Branch:** `chore/frontend-turbopack-builds`  
-**Base:** `main`
+**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git
+**Base branch:** `main`
+**Current branch:** *(none — on `main`)*
 
-## Authorized
-Enable Turbopack for faster local/CI frontend builds.
+## Goal
+*(To be defined by user)*
 
-## Completed
-- [x] `dev`: `next dev --turbopack`
-- [x] `build`: `next build --turbopack`
-- [x] `build:webpack`: webpack fallback if Turbopack misbehaves
+## Approved Scope
+*(Pending user authorization)*
 
-## Note
-Next 16 may default to Turbopack; flags make the choice explicit and documented.
+## Proposed Changes
+- None currently proposed.
+
+## Approved Changes
+- None currently approved.
+
+## Completed Changes (Historical)
+- PR #110: Enabled Turbopack for dev and production builds
+- PR #109: Fixed terminal checkout invoice payment method
+- PR #97: Expanded backend test coverage to ~70%
+
+## Remaining Changes
+- *(To be defined)*
+
+## Explicitly Out of Scope
+- *(To be defined)*
+
+## Decisions Made
+- *(To be recorded as work proceeds)*
+
+## Decisions Still Required
+- What is the next authorized task?
+
+## Relevant Risks
+- Trackers were stale at session start; now synchronized.
+
+## Verification Requirements
+- *(To be defined per task)*
