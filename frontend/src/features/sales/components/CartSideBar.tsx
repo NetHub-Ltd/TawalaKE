@@ -204,7 +204,9 @@
 //       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
 //     } catch (error: unknown) {
 //       console.error("Checkout Submission Error:", error);
-//       const fallbackMsg = error?.message || "Operational pipeline error. Please try again.";
+//       const fallbackMsg =
+//         (error instanceof Error ? error.message : null) ||
+//         "Operational pipeline error. Please try again.";
 //       setSubmitError(fallbackMsg);
 
 //       toast.error("Checkout staging failed", {
@@ -730,7 +732,9 @@
 //       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
 //     } catch (error: unknown) {
 //       console.error("Checkout Submission Error:", error);
-//       const fallbackMsg = error?.message || "Operational pipeline error. Please try again.";
+//       const fallbackMsg =
+//         (error instanceof Error ? error.message : null) ||
+//         "Operational pipeline error. Please try again.";
 //       setSubmitError(fallbackMsg);
 
 //       toast.error("Checkout staging failed", {
@@ -1410,7 +1414,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
     } catch (error: unknown) {
       console.error("Checkout Submission Error:", error);
-      const fallbackMsg = error?.message || "Operational pipeline error. Please try again.";
+      const fallbackMsg =
+        (error instanceof Error ? error.message : null) ||
+        "Operational pipeline error. Please try again.";
       setSubmitError(fallbackMsg);
 
       toast.error("Checkout staging failed", {

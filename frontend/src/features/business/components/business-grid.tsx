@@ -3,7 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
-import { useBusiness} from "@/features/business/hooks/useBusiness";
+import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { useTenantStore } from "@/lib/store/useTenantStore";
 import { BusinessCard } from "./business-card";
 import { BusinessSkeleton } from "./loading-skeleton";
@@ -18,7 +18,7 @@ export function BusinessGrid() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-      {businesses?.map((biz: unknown) => (
+      {businesses?.map((biz) => (
         <BusinessCard
           key={biz.id}
           biz={biz}
@@ -27,10 +27,9 @@ export function BusinessGrid() {
             toast.success(`Switching to ${b.name}`);
             router.push(`/home/${b.id}`);
           }}
-          onEdit={(_id) => toast.info(`Editing terminal ${id}`)}
+          onEdit={(editId) => toast.info(`Editing terminal ${editId}`)}
           onDelete={(_id) => {
             if (confirm("Decommission this terminal node?")) {
-              // deleteBusiness(_id);
               toast.error("Terminal deleted");
             }
           }}

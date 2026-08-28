@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 interface TerminalHeaderProps {
-  _businessName: string;
+  businessName: string;
 }
 
 /**
@@ -20,7 +20,8 @@ interface TerminalHeaderProps {
  * Performance: Minimal client-side logic; purely functional triggers.
  */
 
-export function TerminalHeader({ businessName: _businessName }: TerminalHeaderProps) {
+export function TerminalHeader({ businessName }: TerminalHeaderProps) {
+  void businessName;
   const router = useRouter();
 
   return (
