@@ -1,25 +1,28 @@
 # Repository State
 
-**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git
-**Default branch:** `main`
-**Current branch:** `main`
-**Current commit:** `2bb678e04aa2b389c4a716ead237c199ca05e506`
-**Status:** Clean, up to date with `origin/main`
-**Last known good state:** `2bb678e` (merge of PR #110)
+**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
+**Default branch:** `main`  
+**Integration branch:** `dev` (ahead of `main`; PR #114 prepares `dev` → `main`)  
+**Current branch:** `dev`  
+**Status:** Tracker conflicts with `main` resolved; PR #114 pending merge when checks are green  
 
-## Recent History
-- PR #110: `chore/frontend-turbopack-builds` — merged
-- PR #109: `fix/terminal-checkout-invoice-payment-method` — merged
-- PR #98: `docs/update-trackers-post-pr97` — merged
-- PR #97: `test/comprehensive-backend-coverage` — merged
+## Recent history (on `dev`, pending full land on `main` via #114)
+
+- PR #117: `fix/sales-history-relations-and-ui` — sale list/detail relations + UI  
+- PR #116: `fix/credit-sale-tracking-and-invoice` — credit walk-out + invoice for collection  
+- Billing: cohesive plan limits/features (Basic / Ndovu / Enterprise) for paywall  
+- PR #115 on `main`: sync trackers + `.skills/` (merged into this `dev` line)  
+- PR #110 on `main`: Turbopack builds (prior known-good on `main` tip before #114)
 
 ## Structure
-- `backend/` — Python/FastAPI backend with Alembic, pytest, uv
-- `frontend/` — Next.js 16 frontend with Turbopack
-- `.github/workflows/` — CI: `test_backend.yml`, `build_and_push.yml`
-- `docs/`, `media/` — project documentation and assets
+
+- `backend/` — FastAPI, Alembic, pytest, uv  
+- `frontend/` — Next.js 16 + Turbopack  
+- `.skills/` — agent skill set (from main sync)  
+- `.trackers/` — Engineer Mode continuity  
+- `.github/workflows/` — CI  
 
 ## Observations
-- No active topic branch is currently checked out.
-- All previously tracked work has been merged to `main`.
-- Trackers were stale; synchronized on session start.
+
+- After PR #114 merges to `main`, update this file to the merge commit SHA and clear “pending”.  
+- No separate topic branch is required for the #114 conflict resolution itself.

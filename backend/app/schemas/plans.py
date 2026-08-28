@@ -81,7 +81,7 @@ class PlanFeatures(BaseModel):
     # Access & Security
     pin_login: bool = False
     audit_trail: Union[bool, str] = False          # False | True | "basic" | "full"
-    api_access: bool = False
+    api_access: Union[bool, str] = False          # False | True | "limited" | "standard"
     sso: bool = False
     enhanced_security: bool = False
 

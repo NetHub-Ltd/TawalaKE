@@ -2,12 +2,17 @@
 
 import React, { useState, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useSales, SaleResponse } from "@/features/sales/hooks/useSales";
+import {
+  useSales,
+  SaleResponse,
+  getSaleItemCount,
+  getSaleCashierName,
+  isCreditSale,
+} from "@/features/sales/hooks/useSales";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import {
   RefreshCw,
   Calendar,
-  Layers,
   AlertCircle,
   Loader2,
   ShieldCheck,
@@ -18,10 +23,6 @@ import {
   Package,
   User,
 } from "lucide-react";
-
-/* -------------------------------------------------------------------------- */
-/* Helpers                                                                    */
-/* -------------------------------------------------------------------------- */
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -49,18 +50,25 @@ function toNumber(value: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function getItemCount(sale: SaleResponse) {
-  if (Array.isArray(sale.items)) return sale.items.length;
-  return 0;
+function statusLabel(status: string) {
+  if (status === "PENDING_PAYMENT") return "Credit · due";
+  if (status === "COMPLETED") return "Completed";
+  if (status === "CANCELLED") return "Cancelled";
+  return status.replace(/_/g, " ");
 }
 
-function getCashierName(sale: SaleResponse) {
-  return sale.cashier?.full_name || "—";
+function statusStyles(status: string) {
+  switch (status) {
+    case "PENDING_PAYMENT":
+      return "bg-amber-500/10 text-amber-700 border-amber-500/25";
+    case "COMPLETED":
+      return "bg-emerald-500/10 text-emerald-700 border-emerald-500/25";
+    case "CANCELLED":
+      return "bg-rose-500/10 text-rose-700 border-rose-500/25";
+    default:
+      return "bg-muted/15 text-muted-foreground border-border/40";
+  }
 }
-
-/* -------------------------------------------------------------------------- */
-/* SalesRow (separate component)                                              */
-/* -------------------------------------------------------------------------- */
 
 interface SalesRowProps {
   sale: SaleResponse;
@@ -69,105 +77,99 @@ interface SalesRowProps {
 }
 
 function SalesRow({ sale, onClick, previewHref }: SalesRowProps) {
-  const statusStyles: Record<string, string> = {
-    PENDING_PAYMENT: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-    COMPLETED: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-    CANCELLED: "bg-rose-500/10 text-rose-600 border-rose-500/20",
-  };
-
   const currency = (sale.currency as string) || "KES";
   const total = toNumber(sale.total_amount);
-  const itemCount = getItemCount(sale);
-  const cashierName = getCashierName(sale);
-
-  // Prefer updated_at (more accurate), fall back to created_at
+  const itemCount = getSaleItemCount(sale);
+  const cashierName = getSaleCashierName(sale);
+  const customerName =
+    (sale.customer as { name?: string } | null | undefined)?.name || null;
   const timestamp =
     (sale.updated_at as string | undefined) || sale.created_at;
+  const credit = isCreditSale(sale);
 
   return (
     <tr
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      tabIndex={0}
+      role="link"
       className="
-        group cursor-pointer
-        border-b border-border/30
-        hover:bg-brand-primary/[0.04]
-        active:bg-brand-primary/[0.07]
-        transition-colors duration-150
+        group cursor-pointer border-b border-border/30
+        hover:bg-brand-primary/[0.04] focus-visible:bg-brand-primary/[0.06]
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-primary/30
+        transition-colors
       "
     >
-      {/* Date */}
-      <td className="py-4 px-6 w-[22%]">
-        <div className="flex items-center gap-2 text-[12px] text-muted">
-          <Calendar size={13} className="opacity-50 shrink-0" />
-          <span className="leading-tight">{formatDate(timestamp)}</span>
+      <td className="py-3.5 px-4 sm:px-5 w-[22%]">
+        <div className="flex items-center gap-2 text-[13px] text-foreground/90 min-w-0">
+          <Calendar size={13} className="opacity-40 shrink-0" />
+          <span className="truncate tabular-nums">{formatDate(timestamp)}</span>
         </div>
       </td>
 
-      {/* Status */}
-      <td className="py-4 px-4 w-[16%]">
+      <td className="py-3.5 px-3 w-[16%]">
         <span
           className={`
-            inline-flex items-center px-2.5 py-1 rounded-full
-            text-[10px] font-bold uppercase tracking-wider border
-            ${statusStyles[sale.status] ?? "bg-muted/10 text-muted border-border/40"}
+            inline-flex items-center rounded-full border px-2.5 py-0.5
+            text-[10px] font-bold uppercase tracking-wide
+            ${statusStyles(String(sale.status))}
           `}
         >
-          {String(sale.status || "UNKNOWN").replace(/_/g, " ")}
+          {statusLabel(String(sale.status))}
         </span>
       </td>
 
-      {/* Items count */}
-      <td className="py-4 px-4 w-[12%]">
-        <div className="flex items-center gap-1.5 text-[12px] text-foreground/80">
+      <td className="py-3.5 px-3 w-[12%]">
+        <div className="flex items-center gap-1.5 text-[13px] text-foreground/80">
           <Package size={13} className="opacity-40 shrink-0" />
-          <span className="font-medium tabular-nums">
+          <span className="tabular-nums">
             {itemCount} {itemCount === 1 ? "item" : "items"}
           </span>
         </div>
       </td>
 
-      {/* Cashier */}
-      <td className="py-4 px-4 w-[18%]">
-        <div className="flex items-center gap-1.5 text-[12px] text-foreground/80 min-w-0">
+      <td className="py-3.5 px-3 w-[16%]">
+        <div className="flex items-center gap-1.5 text-[13px] text-foreground/80 min-w-0">
           <User size={13} className="opacity-40 shrink-0" />
           <span className="truncate">{cashierName}</span>
         </div>
       </td>
 
-      {/* Amount + invoice action + affordance */}
-      <td className="py-4 px-6 w-[32%]">
+      <td className="py-3.5 px-3 w-[14%] hidden lg:table-cell">
+        <span className="text-[13px] text-foreground/70 truncate block">
+          {customerName || "—"}
+        </span>
+      </td>
+
+      <td className="py-3.5 px-4 sm:px-5 w-[20%]">
         <div className="flex items-center justify-end gap-2">
           <span className="font-mono font-bold text-[13px] text-foreground tabular-nums">
             {formatMoney(total, currency)}
           </span>
-          {sale.status === "PENDING_PAYMENT" && (
+          {credit && (
             <a
               href={previewHref}
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 rounded-lg border border-brand-primary/40 bg-brand-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-primary hover:bg-brand-primary hover:text-white transition-colors"
+              className="shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 hover:bg-amber-500 hover:text-white transition-colors"
             >
-              View invoice
+              Invoice
             </a>
           )}
           <RowChevron
             size={16}
-            className="
-              text-muted/40
-              group-hover:text-brand-primary
-              group-hover:translate-x-0.5
-              transition-all duration-150
-              shrink-0
-            "
+            className="text-muted/40 group-hover:text-brand-primary group-hover:translate-x-0.5 transition-all duration-150 shrink-0"
+            aria-hidden
           />
         </div>
       </td>
     </tr>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/* Main workspace                                                             */
-/* -------------------------------------------------------------------------- */
 
 export default function SalesHistoryWorkspace() {
   const router = useRouter();
@@ -189,7 +191,7 @@ export default function SalesHistoryWorkspace() {
 
   const { sales, isLoading, isFetching, error, refresh } = useSales({
     businessId: normalizedBusinessId,
-    limit,
+    limit: Math.max(limit * 5, 50),
   });
 
   const processedSales = useMemo(() => {
@@ -198,199 +200,169 @@ export default function SalesHistoryWorkspace() {
       const bTime = (b.updated_at as string) || b.created_at;
       const ta = aTime ? new Date(aTime).getTime() : 0;
       const tb = bTime ? new Date(bTime).getTime() : 0;
-      const safeA = Number.isNaN(ta) ? 0 : ta;
-      const safeB = Number.isNaN(tb) ? 0 : tb;
-      return safeB - safeA;
+      return tb - ta;
     });
-
-    return sorted.filter((sale) => {
-      if (statusFilter === "ALL") return true;
-      return sale.status === statusFilter;
-    });
+    if (statusFilter === "ALL") return sorted;
+    return sorted.filter((s) => s.status === statusFilter);
   }, [sales, statusFilter]);
 
   const totalItems = processedSales.length;
-  const totalPages = Math.ceil(totalItems / limit) || 1;
-
-  const paginatedSales = useMemo(() => {
-    const start = (currentPage - 1) * limit;
-    return processedSales.slice(start, start + limit);
-  }, [processedSales, currentPage, limit]);
-
-  const handlePageChange = (direction: "prev" | "next") => {
-    setCurrentPage((prev) => {
-      if (direction === "prev") return Math.max(prev - 1, 1);
-      return Math.min(prev + 1, totalPages);
-    });
-  };
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedSales = processedSales.slice(
+    (safePage - 1) * limit,
+    safePage * limit,
+  );
 
   const goToDetail = (saleId: string) => {
-    if (!saleId) return;
     router.push(
       `/org/${organizationId}/${normalizedBusinessId}/sale-history/${saleId}`,
     );
   };
 
-  if (!normalizedBusinessId) {
-    return (
-      <div className="w-full h-full flex items-center justify-center p-8">
-        <div className="text-center space-y-2">
-          <AlertCircle className="mx-auto text-amber-500" size={20} />
-          <p className="text-sm font-semibold">No business selected</p>
-          <p className="text-xs text-muted">
-            businessId is missing – the sales query is disabled.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const handlePageChange = (dir: "prev" | "next") => {
+    setCurrentPage((p) => {
+      if (dir === "prev") return Math.max(1, p - 1);
+      return Math.min(totalPages, p + 1);
+    });
+  };
 
   return (
-    <div className="w-full h-full flex flex-col min-h-0 bg-card border border-border/40 rounded-[2rem] shadow-lift overflow-hidden">
+    <div className="w-full h-full flex flex-col min-h-0 overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
       {/* Toolbar */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-5 border-b border-border/40 bg-surface/20 shrink-0">
-        <div className="relative w-full max-w-xs">
-          <Filter
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted/60"
-            size={13}
-          />
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-border/40 bg-surface/10">
+        <div className="flex items-center gap-2 min-w-0">
+          <Filter size={14} className="text-muted-foreground shrink-0" />
           <select
             value={statusFilter}
             onChange={(e) => {
               setStatusFilter(e.target.value);
               setCurrentPage(1);
             }}
-            className="w-full h-9 pl-9 pr-8 bg-background border border-border/40 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-brand-primary/40 appearance-none cursor-pointer"
+            className="h-9 rounded-lg border border-border/50 bg-background px-3 text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary/25"
+            aria-label="Filter by status"
           >
-            <option value="ALL">All Transactions</option>
-            <option value="PENDING_PAYMENT">Pending Payment</option>
+            <option value="ALL">All transactions</option>
             <option value="COMPLETED">Completed</option>
+            <option value="PENDING_PAYMENT">Credit · due</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
 
-        <div className="flex items-center gap-3 self-end sm:self-auto">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="workspace-limit"
-              className="text-[10px] font-black uppercase text-muted tracking-wider"
-            >
-              Rows:
-            </label>
-            <select
-              id="workspace-limit"
-              value={limit}
-              onChange={(e) => {
-                setLimit(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="h-9 rounded-xl bg-background border border-border/40 text-xs font-bold text-foreground px-3 focus:outline-none focus:border-brand-primary/40 cursor-pointer"
-            >
-              <option value={10}>10 Entries</option>
-              <option value={20}>20 Entries</option>
-              <option value={50}>50 Entries</option>
-              <option value={100}>100 Entries</option>
-            </select>
-          </div>
-
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            Rows
+          </label>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="h-9 rounded-lg border border-border/50 bg-background px-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-brand-primary/25"
+          >
+            {[10, 20, 50].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
-            onClick={refresh}
-            disabled={isLoading || isFetching}
-            className="h-9 px-4 rounded-xl bg-background border border-border/40 hover:border-brand-primary/30 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-40 cursor-pointer text-foreground"
+            onClick={() => refresh()}
+            disabled={isFetching}
+            className="h-9 px-3 rounded-lg border border-border/50 bg-background text-xs font-semibold text-foreground inline-flex items-center gap-1.5 hover:bg-muted/30 disabled:opacity-50 transition"
+            aria-label="Refresh sales"
           >
             <RefreshCw
-              size={12}
-              className={isFetching ? "animate-spin text-brand-primary" : ""}
+              size={13}
+              className={isFetching ? "animate-spin" : ""}
             />
-            <span>Sync</span>
+            Sync
           </button>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 flex flex-col min-h-0 w-full relative">
-        {/* Header */}
-        <div className="w-full overflow-x-auto no-scrollbar shrink-0 bg-surface/50 border-b border-border/40 z-10">
-          <table className="w-full min-w-[720px] border-collapse text-left table-fixed">
-            <thead>
-              <tr className="text-[10px] font-black uppercase tracking-wider text-muted">
-                <th className="py-3.5 px-6 w-[22%]">When</th>
-                <th className="py-3.5 px-4 w-[16%]">Status</th>
-                <th className="py-3.5 px-4 w-[12%]">Items</th>
-                <th className="py-3.5 px-4 w-[18%]">Cashier</th>
-                <th className="py-3.5 px-6 w-[32%] text-right">Amount</th>
-              </tr>
-            </thead>
-          </table>
-        </div>
+      {/* Column headers */}
+      <div className="shrink-0 overflow-x-auto border-b border-border/30 bg-surface/5">
+        <table className="w-full min-w-[720px] table-fixed text-left">
+          <thead>
+            <tr className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <th className="py-2.5 px-4 sm:px-5 w-[22%]">When</th>
+              <th className="py-2.5 px-3 w-[16%]">Status</th>
+              <th className="py-2.5 px-3 w-[12%]">Items</th>
+              <th className="py-2.5 px-3 w-[16%]">Cashier</th>
+              <th className="py-2.5 px-3 w-[14%] hidden lg:table-cell">
+                Customer
+              </th>
+              <th className="py-2.5 px-4 sm:px-5 w-[20%] text-right">Amount</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto w-full bg-card min-h-0 relative">
-          {isLoading ? (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="animate-spin text-brand-primary" size={20} />
-                <p className="text-[11px] font-medium text-muted">
-                  Loading transactions...
-                </p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="absolute inset-0 flex items-center justify-center p-6">
-              <div className="text-center max-w-sm space-y-2">
-                <AlertCircle className="text-brand-accent mx-auto" size={18} />
-                <p className="text-xs font-bold uppercase text-foreground">
-                  Sync Error
-                </p>
-                <p className="text-[11px] text-muted leading-relaxed">
-                  {error.message}
-                </p>
-              </div>
-            </div>
-          ) : paginatedSales.length === 0 ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-              <Layers className="text-muted/30 mb-2" size={24} />
-              <p className="text-xs font-black uppercase tracking-wide text-foreground">
-                No sales found
-              </p>
-              <p className="text-[11px] text-muted max-w-xs mt-0.5">
-                {sales.length === 0
-                  ? "The API returned no sales for this business."
-                  : "No matching transactions for this filter."}
-              </p>
-            </div>
-          ) : (
-            <table className="w-full min-w-[720px] border-collapse text-left table-fixed">
-              <tbody>
-                {paginatedSales.map((sale) => (
-                  <SalesRow
-                    key={sale.id}
-                    sale={sale}
-                    onClick={() => goToDetail(sale.id)}
-                    previewHref={`/org/${organizationId}/${normalizedBusinessId}/sale/${sale.id}/preview`}
-                  />
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+      {/* Body */}
+      <div className="flex-1 min-h-0 overflow-auto">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-20">
+            <Loader2 className="animate-spin text-brand-primary" size={22} />
+            <p className="text-sm text-muted-foreground">Loading sales…</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-16 px-6 text-center">
+            <AlertCircle className="text-destructive" size={22} />
+            <p className="text-sm font-medium text-foreground">
+              Couldn’t load sales history
+            </p>
+            <p className="text-xs text-muted-foreground max-w-sm">
+              {error.message}
+            </p>
+            <button
+              type="button"
+              onClick={() => refresh()}
+              className="mt-1 h-9 px-4 rounded-lg bg-brand-primary text-white text-xs font-semibold"
+            >
+              Retry
+            </button>
+          </div>
+        ) : paginatedSales.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 px-6 text-center">
+            <p className="text-sm font-medium text-foreground">No sales yet</p>
+            <p className="text-xs text-muted-foreground">
+              {sales.length === 0
+                ? "Completed terminal sales will appear here."
+                : "No matching transactions for this filter."}
+            </p>
+          </div>
+        ) : (
+          <table className="w-full min-w-[720px] border-collapse text-left table-fixed">
+            <tbody>
+              {paginatedSales.map((sale) => (
+                <SalesRow
+                  key={sale.id}
+                  sale={sale}
+                  onClick={() => goToDetail(sale.id)}
+                  previewHref={`/org/${organizationId}/${normalizedBusinessId}/sale/${sale.id}/preview`}
+                />
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Footer */}
-      <div className="w-full bg-surface/20 px-6 py-4 border-t border-border/40 shrink-0 flex items-center justify-between text-[10px] font-medium text-muted">
+      <div className="shrink-0 flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-t border-border/40 bg-surface/10 text-[10px] font-medium text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <ShieldCheck size={13} className="text-brand-primary opacity-80" />
           <span>
             {totalItems} transaction{totalItems !== 1 ? "s" : ""}
           </span>
         </div>
-
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <span>
             Page{" "}
             <span className="font-bold text-foreground font-mono">
-              {currentPage}
+              {safePage}
             </span>{" "}
             of{" "}
             <span className="font-bold text-foreground font-mono">
@@ -399,17 +371,19 @@ export default function SalesHistoryWorkspace() {
           </span>
           <div className="flex items-center gap-1">
             <button
+              type="button"
               onClick={() => handlePageChange("prev")}
-              disabled={currentPage === 1}
-              className="h-6 w-6 rounded-md border border-border/40 flex items-center justify-center disabled:opacity-30 hover:bg-background transition-all cursor-pointer text-foreground"
+              disabled={safePage <= 1}
+              className="h-7 w-7 rounded-md border border-border/40 flex items-center justify-center disabled:opacity-30 hover:bg-background transition text-foreground"
               aria-label="Previous page"
             >
               <ChevronLeft size={12} />
             </button>
             <button
+              type="button"
               onClick={() => handlePageChange("next")}
-              disabled={currentPage === totalPages}
-              className="h-6 w-6 rounded-md border border-border/40 flex items-center justify-center disabled:opacity-30 hover:bg-background transition-all cursor-pointer text-foreground"
+              disabled={safePage >= totalPages}
+              className="h-7 w-7 rounded-md border border-border/40 flex items-center justify-center disabled:opacity-30 hover:bg-background transition text-foreground"
               aria-label="Next page"
             >
               <ChevronRight size={12} />

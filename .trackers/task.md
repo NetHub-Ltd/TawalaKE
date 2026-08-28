@@ -1,40 +1,53 @@
 # Task Tracker
 
-**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git
-**Base branch:** `main`
-**Current branch:** *(none — on `main`)*
+**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
+**Base branch:** `main` (integration via `dev` / PR #114)  
+**Current branch:** `dev`
 
 ## Goal
-*(To be defined by user)*
 
-## Approved Scope
-*(Pending user authorization)*
+Resolve PR #114 merge conflicts (trackers only) so `dev` can merge cleanly into `main`. No product-scope change in this resolution commit.
 
-## Proposed Changes
-- None currently proposed.
+## Approved scope (this resolution)
 
-## Approved Changes
-- None currently approved.
+- Merge `origin/main` into `dev`  
+- Resolve `.trackers/*` to a post-integration narrative  
+- Push `dev` (updates PR #114)  
+- Do **not** merge PR #114 without explicit user authority  
 
-## Completed Changes (Historical)
-- PR #110: Enabled Turbopack for dev and production builds
-- PR #109: Fixed terminal checkout invoice payment method
-- PR #97: Expanded backend test coverage to ~70%
+## Completed changes (historical / on `dev`)
 
-## Remaining Changes
-- *(To be defined)*
+- PR #117: Sales history relations + list/detail UI  
+- PR #116: Credit sale finalize + invoice for collection  
+- Billing: cohesive plan limits and features for paywall (PR #114 body)  
+- PR #115 (`main`): trackers sync + `.skills/`  
+- PR #110 (`main`): Turbopack builds  
 
-## Explicitly Out of Scope
-- *(To be defined)*
+## Remaining
 
-## Decisions Made
-- *(To be recorded as work proceeds)*
+- [ ] Required CI on PR #114 (especially `test-backend`) green  
+- [ ] User merges PR #114 into `main`  
+- [ ] After merge: set trackers on `main` to idle / next task TBD  
 
-## Decisions Still Required
-- What is the next authorized task?
+## Explicitly out of scope
 
-## Relevant Risks
-- Trackers were stale at session start; now synchronized.
+- Force-push `main` or rewrite shared history  
+- Changing billing/plan product code in this commit  
+- Auto-merging #114  
+- Closing/retargeting checkout-invoice stacked PRs (#111–#113) unless requested  
 
-## Verification Requirements
-- *(To be defined per task)*
+## Decisions
+
+- Tracker resolution = single coherent rewrite (not “ours” feature-branch trackers on `main`)  
+- Integration path = merge `main` into `dev`, push `dev`  
+
+## Risks
+
+- `test-backend` may still be pending/required on #114  
+- Stacked PRs into `main`/`dev` may need manual review after `dev` moves  
+
+## Verification
+
+- No conflict markers in `.trackers/`  
+- PR #114 reports conflicts resolved  
+- Product commits from `dev` unchanged by this resolution  

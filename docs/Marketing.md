@@ -64,11 +64,11 @@ We help shop owners, minimart operators, pharmacists, hardware owners, and other
 
 ### Invoicing & Receipts
 - Professional invoices and receipts
-- Custom branding (Ndovu & Enterprise)
+- White label / custom branding (Ndovu & Enterprise)
 - Digital and printable formats
 
 ### Staff Management
-- Add unlimited staff (Ndovu & above)
+- Add staff up to plan limits (25 on Ndovu, 100 on Enterprise)
 - Secure 4-digit PIN login for daily operations
 - Staff performance tracking
 
@@ -97,15 +97,15 @@ We help shop owners, minimart operators, pharmacists, hardware owners, and other
 Perfect for small single shops just starting out.  
 Includes: 1 business, up to 3 staff, basic POS, invoicing, and reports.
 
-### **Ndovu – KSh 3,990/month** (Most Popular)
+### **Ndovu – KSh 2,499/month** (Most Popular)
 The sweet spot for growing businesses.  
 Includes: Up to 5 businesses, unlimited staff, full inventory, advanced reports, receipt customization, and more.
 
-### Enterprise – KSh 9,990+/month
+### Enterprise – KSh 8,990/month
 For larger businesses with complex needs.  
 Unlimited everything + API access, advanced security, supplier management, dedicated support, and custom features.
 
-**14-day free trial** on Ndovu plan. No credit card required.
+**7-day free trial** on Ndovu. No credit card required.
 
 ---
 

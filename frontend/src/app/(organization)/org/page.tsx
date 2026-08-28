@@ -252,6 +252,41 @@ async function resolveOrganization(): Promise<ResolveResult> {
       session.user.name ||
       "User";
 
+    // OWNER: incomplete onboarding or missing plan → onboarding entrypoints
+    if (userRole === "OWNER") {
+      try {
+        const base = (process.env.BACKEND_URL || "").replace(/\/$/, "");
+        const statusUrl = base.endsWith("/api/v1")
+          ? `${base}/organizations/onboarding-status`
+          : `${base}/api/v1/organizations/onboarding-status`;
+        const statusRes = await fetch(statusUrl, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+        });
+        if (statusRes.ok) {
+          const statusJson = await statusRes.json();
+          const st = statusJson.data ?? statusJson;
+          if (!st.has_active_subscription) {
+            return { type: "redirect", destination: "/onboarding/plans" };
+          }
+          if (!st.onboarding) {
+            return { type: "redirect", destination: "/onboarding/organization" };
+          }
+        } else {
+          console.error(
+            "[OrgResolution] onboarding-status HTTP",
+            statusRes.status,
+            await statusRes.text().catch(() => ""),
+          );
+        }
+      } catch (e) {
+        console.error("[OrgResolution] onboarding status failed:", e);
+      }
+    }
+
     // Non-selector roles (e.g. CASHIER) → first assigned store
     if (!SELECTOR_ROLES.has(userRole)) {
       const businessId = assignedBusinesses[0]?.id;

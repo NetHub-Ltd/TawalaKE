@@ -163,11 +163,16 @@ async def audit_product_stock(
 
 
 @router.post("/new-sale", status_code=200, response_model=SaleResponse)
-async def create_pending_sale(payload: InitializeCheckoutRequest, db: SessionDep, user: AuthUser):
+async def create_pending_sale(
+    payload: InitializeCheckoutRequest,
+    db: SessionDep,
+    user: AuthUser,
+    redis_client: AsyncRedis = Depends(get_redis),
+):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
-    # logger.info(f"Payload Data: {payload_data.service.description}")
     record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data, current_user=user)
     await db.commit()
+    await purge_cache_namespace(redis_client, namespace="sales")
     return record_sale
 
 
@@ -265,19 +270,20 @@ async def checkout_sale(
     db: SessionDep,
     payload: FinalizeCheckoutIn,
     user: AuthUser,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    redis_client: AsyncRedis = Depends(get_redis),
 ):
     """
     Finalizes the sale (payment + stock deduction) and returns immediately.
     Document (Receipt/Invoice) generation runs in the background.
     """
-    # 1. Finalize the sale (critical path - fast response)
     sale = await store_crud.finalize_checkout(
-        db=db, 
-        sale_id=payload.sale_id, 
+        db=db,
+        sale_id=payload.sale_id,
         payload=payload,
-        background_tasks=background_tasks
+        background_tasks=background_tasks,
     )
+    await purge_cache_namespace(redis_client, namespace="sales")
     return sale
 
 

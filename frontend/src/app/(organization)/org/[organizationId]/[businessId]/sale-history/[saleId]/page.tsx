@@ -3,7 +3,14 @@
 import React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useSales, SaleResponse } from "@/features/sales/hooks/useSales";
+import {
+  useSales,
+  SaleResponse,
+  getSaleItemCount,
+  getSaleCashierName,
+  getSaleBusinessName,
+  isCreditSale,
+} from "@/features/sales/hooks/useSales";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import {
   ArrowLeft,
@@ -51,13 +58,13 @@ function toNumber(value: unknown) {
 function statusStyles(status: string) {
   switch (status) {
     case "PENDING_PAYMENT":
-      return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+      return "bg-amber-500/10 text-amber-700 border-amber-500/25";
     case "COMPLETED":
-      return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+      return "bg-emerald-500/10 text-emerald-700 border-emerald-500/25";
     case "CANCELLED":
-      return "bg-rose-500/10 text-rose-600 border-rose-500/20";
+      return "bg-rose-500/10 text-rose-700 border-rose-500/25";
     default:
-      return "bg-muted/10 text-muted border-border/40";
+      return "bg-muted/10 text-muted-foreground border-border/40";
   }
 }
 
@@ -135,14 +142,19 @@ export default function SaleDetailPage() {
   const taxAmount = toNumber(sale.tax_amount);
   const total = toNumber(sale.total_amount);
   const lineItems = Array.isArray(sale.items) ? sale.items : [];
+  const itemCount = getSaleItemCount(sale);
   const timestamp =
     (sale.updated_at as string | undefined) || sale.created_at;
-  const cashierName = sale.cashier?.full_name || "—";
-  const businessName = sale.business?.name || "—";
+  const cashierName = getSaleCashierName(sale);
+  const businessName = getSaleBusinessName(sale);
+  const credit = isCreditSale(sale);
   const customerName =
     (sale.customer as { name?: string } | undefined)?.name || null;
   const customerPhone =
     (sale.customer as { phone?: string } | undefined)?.phone || null;
+  const statusDisplay = credit
+    ? "Credit · payment due"
+    : String(sale.status).replace(/_/g, " ");
 
   return (
     <div className="w-full h-full flex flex-col min-h-0 overflow-hidden">
@@ -170,7 +182,7 @@ export default function SaleDetailPage() {
             sale.status,
           )}`}
         >
-          {String(sale.status).replace(/_/g, " ")}
+          {statusDisplay}
         </span>
       </div>
 
@@ -190,7 +202,7 @@ export default function SaleDetailPage() {
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Package size={13} className="opacity-50" />
-                {lineItems.length} item{lineItems.length !== 1 ? "s" : ""}
+                {itemCount} item{itemCount !== 1 ? "s" : ""}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <User size={13} className="opacity-50" />

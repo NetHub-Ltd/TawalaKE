@@ -1,17 +1,17 @@
-import React from 'react'
-import {PersonalDetailsForm} from "@/features/org/components/PersonalDetailsForm"
+import React from "react";
+import { PersonalDetailsForm } from "@/features/org/components/PersonalDetailsForm";
 
 export default function PersonalDetailsPage() {
   return (
-    <div className="max-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">
-          Personal Details
-        </h1>
-        <p className="text-sm text-gray-500 mb-8">
-          Please fill in your information below.
+    <div className="flex min-h-full items-center justify-center bg-background p-4 py-10">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lift">
+        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-brand-primary">
+          Step 1 of 2
         </p>
-
+        <h1 className="mb-2 text-2xl font-semibold text-foreground">Create your account</h1>
+        <p className="mb-8 text-sm text-muted">
+          Tell us who you are. We&apos;ll email you a link to set your password.
+        </p>
         <PersonalDetailsForm />
       </div>
     </div>

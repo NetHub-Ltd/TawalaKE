@@ -44,11 +44,11 @@ To become the go-to business operating system for Kenyan SMEs by providing simpl
 
 | Plan | Monthly Price | Best For |
 | :--- | :--- | :--- |
-| **Basic** | **KSh 999** | Single small shops |
-| **Ndovu** | **KSh 1,999** | Growing businesses (Recommended) |
-| **Enterprise** | **KSh 3,999+** | Complex & multi-branch operations |
+| **Basic** | **KSh 1,490** | Single small shops |
+| **Ndovu** | **KSh 2,499** | Growing businesses (Recommended) |
+| **Enterprise** | **KSh 8,990** | Multi-branch operations (finite capacity) |
 
-**14-day free trial** on the Ndovu plan.
+**7-day trial** on Basic/Ndovu; **14-day** trial window on Enterprise. See [docs/billing.md](docs/billing.md) for limits and feature matrix.
 
 ---
 

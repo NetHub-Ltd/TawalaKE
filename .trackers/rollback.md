@@ -1,29 +1,34 @@
 # Rollback
 
-**Current known-good commit:** `2bb678e04aa2b389c4a716ead237c199ca05e506`
-**Current branch:** `main`
+**Previous known-good on `main` (before PR #114):** `2bb678e` (merge of PR #110 — Turbopack)  
+**Also on `main`:** `e8ffd4a` (PR #115 — trackers + `.skills/`)  
 
-## Rollback Procedure
-If the next production-impacting change needs reversal:
+## If PR #114 is merged and must be undone
+
 ```bash
-git revert <merge-commit-sha>
-# Or for a topic branch PR:
-git revert -m 1 <merge-commit-sha>
+# Prefer revert of the merge commit on main (keeps history)
+git checkout main
+git pull
+git revert -m 1 <pr-114-merge-commit-sha>
+git push origin main
 ```
 
-## Previous Known-Good States
-- `2bb678e` — PR #110 merged (Turbopack builds)
-- `ef7cbf5` — PR #109 merged (Checkout invoice fix)
-- `ad1ecb1` — PR #97 merged (Backend test coverage)
+## If only this conflict-resolution commit on `dev` must be undone
 
-## Migration / Data Considerations
-- No pending migrations at this state.
-- Check `backend/alembic/versions/` before any rollback that touches DB schema.
+```bash
+git checkout dev
+git revert <merge-main-into-dev-commit-sha>
+# or reset only if the merge commit has not been shared widely — prefer revert
+git push origin dev
+```
 
-## Irreversible Operations
-- None known at this state.
+## Migration / data
 
-## Recovery Notes
-- Backend: Dockerized with `backend/Dockerfile` and `entrypoint.sh`
-- Frontend: Next.js 16 with Turbopack (`next dev --turbopack`, `next build --turbopack`)
-- CI: `.github/workflows/test_backend.yml` runs pytest with `REDIS_URL=memory://`
+- This conflict-resolution change is **tracker-only** (no Alembic, no schema).  
+- Product commits already on `dev` (billing, credit sales, sales-history) have their own rollback notes from those PRs.
+
+## Recovery notes
+
+- Backend: Dockerized (`backend/Dockerfile`)  
+- Frontend: Next.js 16 + Turbopack  
+- CI: `.github/workflows/test_backend.yml`  

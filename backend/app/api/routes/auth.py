@@ -28,6 +28,7 @@ class TokenResponse(BaseModel):
     id_token: Optional[str] = None
     token_type: str = "bearer"
     expires_at: Optional[datetime.datetime] = None
+    email: Optional[EmailStr] = None
 
 
 class RefreshTokenRequest(BaseModel):
@@ -39,6 +40,11 @@ class PasswordResetRequest(BaseModel):
 
 
 class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8)
+
+
+class OnboardingSetPassword(BaseModel):
     token: str
     new_password: str = Field(min_length=8)
 
@@ -85,7 +91,7 @@ async def login_with_email(
     tokens = await security.authenticate(password=creds.password, email=creds.email, db=db)
 
     # Set secure HttpOnly cookie for refresh token rotation
-    set_refresh_cookie(response, refresh_token)
+    set_refresh_cookie(response, tokens.refresh_token)
 
     return TokenResponse(
         access_token=tokens.access_token,
@@ -210,6 +216,74 @@ async def confirm_password_reset(
 
     logger.info(f"✅ Password successfully updated for staff ID: {staff.id}")
     return MessageResponse(message="Password has been updated successfully.")
+
+
+
+@router.post("/onboarding/set-password", response_model=TokenResponse)
+async def onboarding_set_password(
+    body: OnboardingSetPassword,
+    response: Response,
+    db: SessionDep,
+    redis: RedisDep,
+):
+    """
+    Complete email verification + password setup for a pending onboarded staff.
+    Activates the account and returns a login token set (auto-login).
+    """
+    from sqlalchemy.orm import selectinload
+
+    staff_id_str = await security.verify_and_consume_password_reset_token(
+        reset_token=body.token,
+        redis_client=redis,
+    )
+
+    stmt = (
+        select(Staff)
+        .where(Staff.id == staff_id_str)
+        .options(selectinload(Staff.assigned_businesses))
+    )
+    staff = (await db.exec(stmt)).first()
+
+    if not staff:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Staff account not found.",
+        )
+
+    if staff.hashed_password and staff.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account is already activated. Please log in.",
+        )
+
+    staff.hashed_password = security.hash_password(body.new_password)
+    staff.active = True
+    db.add(staff)
+    await db.commit()
+    await db.refresh(staff)
+
+    assigned_business_id = None
+    if staff.assigned_businesses:
+        assigned_business_id = str(staff.assigned_businesses[0].id)
+
+    role_value = staff.role.value if hasattr(staff.role, "value") else str(staff.role)
+    org_id = staff.organization_id or staff.tenant_id
+    user_data = {
+        "sub": str(staff.id),
+        "organization_id": str(org_id),
+        "role": role_value,
+    }
+    tokens = security.create_tokens(user_data, business_id=assigned_business_id)
+    set_refresh_cookie(response, tokens.refresh_token)
+
+    logger.info(f"Onboarding password set and account activated for staff {staff.id}")
+    return TokenResponse(
+        access_token=tokens.access_token,
+        refresh_token=tokens.refresh_token,
+        id_token=tokens.id_token,
+        expires_at=utc_now() + datetime.timedelta(minutes=settings.access_token_expire_minutes),
+        email=staff.email,
+    )
 
 
 @router.get("/me", response_model=StaffResponse)

@@ -336,7 +336,11 @@ class SecurityService:
         )
         staff = (await db.exec(stmt)).first()
 
-        if not staff or not self.verify_password(password, staff.hashed_password):
+        if (
+            not staff
+            or not staff.hashed_password
+            or not self.verify_password(password, staff.hashed_password)
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",

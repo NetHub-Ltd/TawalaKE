@@ -94,6 +94,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         """
         subtotal = 0.0
         sale_items = []
+        discount = float(getattr(payload, "discount", None) or 0.0)
 
         for item in payload.items:
             stmt = select(Product).where(Product.id == item.product_id)
@@ -108,8 +109,13 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 )
             logger.info(f"Product data: {product.attributes.get('sku', 'N/A')} ")
             item_total = product.selling_price * item.quantity
-            subtotal += item_total 
-            subtotal - payload.discount
+            subtotal += item_total
+
+            cost_at_sale = (
+                product.cost_price
+                if product.cost_price is not None
+                else product.selling_price
+            )
 
             sale_items.append(
                 SaleItem(
@@ -120,25 +126,25 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     total_price=item_total,
                     sku=product.attributes.get('sku', 'N/A'),
                     name=product.label,
-                    subtotal=subtotal,
+                    subtotal=item_total,
                     tax_rate=0.0,
-                    cost_price_at_sale=product.selling_price
+                    cost_price_at_sale=cost_at_sale,
                 )
             )
+
+        # Apply discount after line aggregation (never negative subtotal)
+        subtotal = max(0.0, subtotal - discount)
 
         # Standard Kenyan 16% VAT Configuration
         tax_amount = round(subtotal * tax_rate, 2)
         total_amount = subtotal + tax_amount
 
         service = {}
-
-        if payload.service and payload.service.amount is not None:
-            service["amount"] = payload.service.amount
-
-        if payload.service and payload.service.description is not None:
-            service["description"] = payload.service.description
-
-        # Convert empty dict back to None if no keys were added
+        payload_service = getattr(payload, "service", None)
+        if payload_service and getattr(payload_service, "amount", None) is not None:
+            service["amount"] = payload_service.amount
+        if payload_service and getattr(payload_service, "description", None) is not None:
+            service["description"] = payload_service.description
         service = service or None
 
         sale = Sale(
@@ -151,11 +157,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             subtotal=subtotal,
             tax_rate=tax_rate,
             tax_amount=tax_amount,
-            discount=payload.discount,
-            discount_applied=payload.discount,
+            discount=discount,
+            discount_applied=discount,
             total_amount=total_amount,
             items=sale_items,
-            service_amount=service
+            service_amount=service,
         )
 
         db.add(sale)
@@ -179,21 +185,28 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         *,
         sale_id: UUID,
         payload: FinalizeCheckoutIn,
-        background_tasks: BackgroundTasks  # ← Added
+        background_tasks: BackgroundTasks,
     ) -> Sale:
         """
-        Transitions a pending checkout process into a completed state, processes inventory stock
-        reductions, creates stock movement logs, and yields transaction documents.
+        Finalize a staged sale: stock deduction (always), payment (paid methods only),
+        customer link, and document/analytics side effects.
+
+        Credit (PaymentMethod.INVOICE): customer walks with goods unpaid.
+        - status stays / becomes PENDING_PAYMENT (outstanding)
+        - no collecting Payment row
+        - stock still deducted
+        - background worker issues an INVOICE (amount_paid=0) for collection
         """
-        # 1. Eagerly load the items relationship to prevent MissingGreenlet errors
+        is_credit = payload.payment_method == PaymentMethod.INVOICE
+
+        # 1. Load sale + items (eager) for stock loop
         stmt = (
             select(Sale)
             .where(Sale.id == sale_id)
             .options(
                 selectinload(Sale.items),
-                # selectinload(Sale.customer),
-                selectinload(Sale.cashier)
-                )
+                selectinload(Sale.cashier),
+            )
         )
         res = await db.exec(stmt)
         sale = res.one_or_none()
@@ -201,37 +214,80 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         if not sale:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Target pending sale tracking code not found."
+                detail="Target pending sale tracking code not found.",
             )
 
-        sale.status = SaleStatus.COMPLETED
+        # Idempotency: already fully paid/completed
+        if sale.status == SaleStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This sale is already finalized.",
+            )
+
+        # Idempotency: document already minted (covers re-finalize of credit)
+        existing_doc_res = await db.exec(
+            select(FinancialDocument).where(FinancialDocument.sale_id == sale.id)
+        )
+        if existing_doc_res.first() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This sale already has a financial document and cannot be finalized again.",
+            )
+
+        # Credit requires an identifiable customer for collection
+        customer_name = (payload.customer_name or "").strip() if payload.customer_name else ""
+        customer_phone = (payload.customer_phone or "").strip() if payload.customer_phone else ""
+        if is_credit and not customer_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Customer name is required for credit sales.",
+            )
+
+        # 2. Status: credit remains outstanding; paid methods complete
+        sale.status = (
+            SaleStatus.PENDING_PAYMENT if is_credit else SaleStatus.COMPLETED
+        )
         db.add(sale)
 
-        # 2. Process standard transactional payment attachment with corrected field keys
-        payment = Payment(
-            organization_id=sale.organization_id,
-            business_id=sale.business_id,
-            sale_id=sale.id,
-            amount=sale.total_amount,
-            method=payload.payment_method,
-            reference=payload.payment_reference or f"TXN-{uuid4().hex[:8].upper()}"
-        )
-        db.add(payment)
+        # 3. Payment only when money was collected (not credit)
+        if not is_credit:
+            payment = Payment(
+                organization_id=sale.organization_id,
+                business_id=sale.business_id,
+                sale_id=sale.id,
+                amount=sale.total_amount,
+                method=payload.payment_method,
+                reference=payload.payment_reference
+                or f"TXN-{uuid4().hex[:8].upper()}",
+            )
+            db.add(payment)
 
-        customer = Customer(
-            organization_id=sale.organization_id,
-            business_id=sale.business_id,
-            sale_id=sale.id,
-            name=payload.customer_name,
-            phone=payload.customer_phone   
-        )
+        # 4. Customer: reuse by phone within business when possible; never pass removed sale_id
+        customer = None
+        if customer_phone:
+            cust_stmt = select(Customer).where(
+                Customer.business_id == sale.business_id,
+                Customer.phone == customer_phone,
+            )
+            customer = (await db.exec(cust_stmt)).first()
 
-        db.add(customer)
-        await db.flush()
+        if customer is None and (customer_name or customer_phone):
+            # name is non-nullable on Customer; fall back for cash-only edge cases
+            resolved_name = customer_name or (customer_phone or "Walk-in customer")
+            customer = Customer(
+                organization_id=sale.organization_id,
+                business_id=sale.business_id,
+                name=resolved_name,
+                phone=customer_phone or None,
+            )
+            db.add(customer)
+            await db.flush()
 
-        sale.customer_id = customer.id
+        if customer is not None:
+            sale.customer_id = customer.id
+            db.add(sale)
 
-        # 3. Defer/Execute product stock balances decrements
+        # 5. Stock deduction — always (cash and credit). Goods left the shelf.
         for item in sale.items:
             prod_stmt = select(Product).where(Product.id == item.product_id)
             prod_res = await db.exec(prod_stmt)
@@ -248,7 +304,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
                 history = StockHistory(
                     product_id=product.id,
-                    organization_id=product.organization_id,
                     business_id=sale.business_id,
                     performed_by=sale.cashier_id,
                     quantity=-item.quantity,
@@ -257,39 +312,41 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     selling_price=item.unit_price,
                     buying_price=product.cost_price,
                     movement_type=StockMovementType.SALE,
-                    notes=f"Automated POS checkout tracking deduction for sale ID: {sale.id}"
+                    notes=(
+                        f"{'Credit' if is_credit else 'POS'} checkout stock deduction "
+                        f"for sale ID: {sale.id}"
+                    ),
                 )
                 db.add(history)
 
         try:
             await db.commit()
 
-            # === Background Document & Analytics Generation ===
-            background_tasks.add_task(
-                async_process_document_generation, 
-                sale.id
-            )
-
-            # background_tasks.add_task(async_process_document_generation, sale.id)
+            # Document: invoice for credit (amount_paid=0), receipt for paid
+            background_tasks.add_task(async_process_document_generation, sale.id)
+            # Analytics only count collected revenue for COMPLETED (paid) sales
             background_tasks.add_task(async_update_sales_analytics, sale.id)
 
-            # return sale
             new_stmt = (
-            select(Sale).where(Sale.id == sale_id).options(
-                selectinload(Sale.items),
-                selectinload(Sale.customer),
-                selectinload(Sale.cashier)
+                select(Sale)
+                .where(Sale.id == sale_id)
+                .options(
+                    selectinload(Sale.items),
+                    selectinload(Sale.customer),
+                    selectinload(Sale.cashier),
+                    selectinload(Sale.payments),
                 )
             )
-
             new_sale = (await db.exec(new_stmt)).first()
             return new_sale
         except IntegrityError as e:
             await db.rollback()
-            logger.error(f"Uniqueness check violation during storefront finalization: {str(e)}")
+            logger.error(
+                f"Uniqueness check violation during storefront finalization: {str(e)}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Document sequencing integrity index crash. Transaction aborted."
+                detail="Document sequencing integrity index crash. Transaction aborted.",
             )
 
     async def create_staff_account(
@@ -673,6 +730,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             selectinload(Sale.items),
             selectinload(Sale.customer),
             selectinload(Sale.cashier),
+            selectinload(Sale.business),
             selectinload(Sale.payments),
             selectinload(Sale.document),
         )
@@ -699,7 +757,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         stmt = stmt.options(*self._get_sale_eager_options())
 
         result = await db.exec(stmt)
-        return result.first()
+        return result.unique().first()
 
     async def fetch_sales(self,
         db: AsyncSession,
@@ -719,7 +777,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         stmt = stmt.options(*self._get_sale_eager_options()).order_by(Sale.updated_at.desc())
 
         results = await db.exec(stmt)
-        return results.all()
+        return results.unique().all()
 
     async def fetch_sales(
         self,
@@ -804,7 +862,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
 
             results = await db.exec(paginated_stmt)
-            sales = results.all()
+            sales = results.unique().all()
 
             return sales, total_count
 
