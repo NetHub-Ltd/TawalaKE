@@ -1,14 +1,10 @@
-# Task: FE RBAC 1:1 + staff suite
+# Task
 
-**Branch:** `feat/fe-rbac-and-staff-suite` → `dev`
+**Branch:** `fix/frontend-sidebar-rbac-import-and-ci` → `dev`
+
+## Goal
+Fix Sidebar `Permission is not defined` runtime crash; add frontend CI (lint strict + build).
 
 ## Done
-- [x] FE rbac lib + usePermissions + RequirePermission
-- [x] Sidebar permission nav
-- [x] Backend staff_mgmt routes (list/create/patch/businesses/reset-password)
-- [x] BFF proxies
-- [x] StaffWorkspace suite UI
-- [x] docs/rbac-frontend.md
-
-## Notes
-Last OWNER protected; ADMIN cannot modify OWNER; create OWNER only by OWNER.
+- [x] Rewrite Sidebar: single `"use client"` at top + `@/lib/rbac` imports
+- [x] `.github/workflows/test_frontend.yml` on push/PR to main and dev
