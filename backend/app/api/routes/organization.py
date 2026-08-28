@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel
 from app.api.deps import SessionDep, AuthUser
+from app.api.rbac_deps import require_permissions
+from app.core.rbac import Permission
 from app.models.models import Organization, Tenant, Staff, StaffRole
 from uuid import UUID
 from sqlmodel import select
@@ -37,10 +39,16 @@ def _frontend_base_url() -> str:
 
 
 def _require_owner(user) -> None:
-    role = user.role.value if hasattr(user.role, "value") else str(user.role)
-    if str(role).upper() != "OWNER":
+    """Legacy helper — prefer require_permissions(Permission.ORG_BILLING)."""
+    from app.core.rbac import has_permission, Permission
+    if not has_permission(user, Permission.ORG_BILLING):
         raise HTTPException(
-            status_code=403, detail="Only organization owners can perform this action"
+            status_code=403,
+            detail={
+                "code": "RBAC_DENIED",
+                "message": "Only organization owners can perform this action",
+                "permissions": ["org:billing"],
+            },
         )
 
 
@@ -100,9 +108,12 @@ async def updates_organization(
     payload: OrgUpdate,
     redis_client: AsyncRedis = Depends(get_redis),
 ):
-    role = user.role.value if hasattr(user.role, "value") else str(user.role)
-    if role != StaffRole.OWNER.value and role != "OWNER":
-        raise HTTPException(status_code=403, detail="Not Authorized to perform this action!")
+    from app.core.rbac import has_permission, Permission
+    if not has_permission(user, Permission.ORG_WRITE):
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "RBAC_DENIED", "message": "Not authorized", "permissions": ["org:write"]},
+        )
     if str(organization_id) != str(user.organization_id) and str(organization_id) != str(
         getattr(user, "tenant_id", None)
     ):
