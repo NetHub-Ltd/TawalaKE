@@ -63,22 +63,9 @@ CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
 
 def _product_response(product) -> ProductResponse:
-    """Safe Product → ProductResponse for stock routes (avoids 500 on response validation)."""
-    attrs = getattr(product, "attributes", None) or {}
-    if not isinstance(attrs, dict):
-        attrs = {}
-    return ProductResponse(
-        id=product.id,
-        label=product.label,
-        selling_price=float(product.selling_price or 0),
-        track_stock=bool(product.track_stock),
-        last_stock_take=getattr(product, "last_stock_take", None),
-        stock=float(product.stock or 0),
-        popularity_score=getattr(product, "popularity_score", None),
-        active=bool(getattr(product, "active", True)),
-        category=getattr(product, "category", None) or "General",
-        attributes=attrs,
-    )
+    """Delegate to stock.product_response (hardened against validation 500s)."""
+    from app.api.routes.stock import product_response
+    return product_response(product)
 
 @router.patch('/update-business/{business_id}', response_model=ApiResponse[BusinessResponse])
 async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payload:BusinessUpdate, redis_client: AsyncRedis = Depends(get_redis)):
