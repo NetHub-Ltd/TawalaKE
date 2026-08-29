@@ -60,8 +60,16 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const { products = [], updateProduct, isLoading, isError, refresh } = useProducts(businessId);
-  const product = products.find((item) => item.id === productId);
+  const {
+    product: detailProduct,
+    updateProduct,
+    deleteProduct,
+    isLoading,
+    isError,
+    error,
+    refresh,
+  } = useProducts(businessId, productId);
+  const product = detailProduct;
 
   const basePath = `/org/${organizationId}/${businessId}/inventory/${productId}`;
   const listPath = `/org/${organizationId}/${businessId}/inventory`;
@@ -162,7 +170,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
     }
   }
 
-  if (isLoading) {
+    if (isLoading) {
     return (
       <div className="flex min-h-[320px] flex-col items-center justify-center gap-3" role="status">
         <Loader2 className="h-7 w-7 animate-spin text-brand-primary" aria-hidden />
@@ -172,15 +180,26 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
   }
 
   if (isError || !product) {
+    const errMsg =
+      error && typeof error === "object" && "message" in error
+        ? String((error as { message?: string }).message)
+        : null;
     return (
       <div
-        className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm text-foreground"
+        className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm text-foreground"
         role="alert"
       >
         <AlertCircle className="h-4 w-4 shrink-0 text-brand-primary" />
-        Product not found or failed to load.
-        <Link href={listPath} className="ml-auto text-brand-primary underline-offset-2 hover:underline">
-          Back to inventory
+        <span>
+          {isError
+            ? errMsg || "Could not load this product. Check your connection and try again."
+            : "Product not found. It may have been deleted or the link is invalid."}
+        </span>
+        <Link
+          href={listPath}
+          className="ml-auto text-brand-primary underline-offset-2 hover:underline"
+        >
+          Back to Stock
         </Link>
       </div>
     );
@@ -410,7 +429,13 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       )}
 
       {tab === "settings" && (
-        <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm md:p-6">
+        <div className="space-y-8 rounded-2xl border border-border/60 bg-card p-4 shadow-sm md:p-6">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Catalogue settings</h2>
+            <p className="mt-1 text-sm text-muted">
+              Name, price, category, and tracking. Stock quantity is changed with Receive, Count, or Adjust.
+            </p>
+          </div>
           <AssetComposer
             initialData={{
               label: product.label,
@@ -423,6 +448,32 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
             onCancel={() => selectTab("overview")}
             isPending={updateProduct.isPending}
           />
+          <div className="border-t border-border pt-6">
+            <h2 className="text-base font-semibold text-red-600 dark:text-red-400">
+              Danger zone
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Delete removes this product from the catalogue. Stock history is retained for records where the system keeps it.
+            </p>
+            <button
+              type="button"
+              disabled={deleteProduct.isPending}
+              onClick={() => {
+                const ok = window.confirm(
+                  `Delete "${product.label}" permanently from this business catalogue? This cannot be undone from the app.`
+                );
+                if (!ok) return;
+                deleteProduct.mutate(productId, {
+                  onSuccess: () => {
+                    router.push(listPath);
+                  },
+                });
+              }}
+              className="mt-4 inline-flex min-h-[44px] items-center rounded-xl border border-red-500/40 bg-red-500/10 px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:opacity-60 dark:text-red-400"
+            >
+              {deleteProduct.isPending ? "Deleting…" : "Delete product"}
+            </button>
+          </div>
         </div>
       )}
     </div>

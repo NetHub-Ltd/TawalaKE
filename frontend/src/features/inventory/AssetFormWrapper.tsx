@@ -23,9 +23,19 @@ export function AssetFormWrapper({ businessId, organizationId }: AssetFormWrappe
   const handleCreate = useCallback(
     async (values: ProductCreate): Promise<void> => {
       try {
-        await createProduct.mutateAsync(values);
+        const created = await createProduct.mutateAsync(values);
         toast.success(`Product "${values.label}" created successfully!`);
-        router.push(`/org/${organizationId}/${businessId}/inventory`);
+        const newId =
+          created && typeof created === "object" && "id" in created
+            ? String((created as { id: string }).id)
+            : created && typeof created === "object" && "data" in created && (created as { data?: { id?: string } }).data?.id
+              ? String((created as { data: { id: string } }).data.id)
+              : null;
+        if (newId) {
+          router.push(`/org/${organizationId}/${businessId}/inventory/${newId}`);
+        } else {
+          router.push(`/org/${organizationId}/${businessId}/inventory`);
+        }
       } catch (error: unknown) {
         const errorMessage =
           error instanceof Error ? error.message : "Failed to create product";

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Trash2, Infinity } from "lucide-react";
+import { Infinity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface BaseAttributes {
@@ -27,7 +27,6 @@ export interface ProductResponse {
 interface ProductSmartRowProps {
   product: ProductResponse;
   onOpen: (id: string) => void;
-  onDelete: (id: string) => void;
 }
 
 type StockAlertState = "normal" | "low" | "crisis" | "untracked";
@@ -56,7 +55,7 @@ function auditFreshness(lastStockTake: string | null | undefined): {
   };
 }
 
-export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowProps) {
+export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
   const {
     label,
     selling_price,
@@ -224,15 +223,6 @@ export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowPr
             className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-brand-primary/30 bg-brand-primary/5 px-3 text-xs font-semibold text-brand-primary transition-colors hover:bg-brand-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
           >
             Open
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(id)}
-            title="Delete product from catalogue"
-            aria-label={`Delete ${label}`}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted transition-all duration-150 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-          >
-            <Trash2 size={14} />
           </button>
         </div>
       </td>
