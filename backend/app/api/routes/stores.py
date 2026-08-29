@@ -1,3 +1,4 @@
+from app.models.models import Staff
 from typing import List, Optional, Sequence, TypeVar, Generic
 from uuid import UUID
 from datetime import date, datetime
@@ -138,12 +139,12 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
     )
 
 
-@router.post("/restock", response_model=ApiResponse[ProductResponse])
+@router.post("/restock", response_model=ApiResponse[ProductResponse], deprecated=True)
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: AuthUser,
-    redis_client: AsyncRedis = Depends(get_redis)
+    current_staff: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
+    redis_client: AsyncRedis = Depends(get_redis),
 ):
     """
     Increments product inventory based on an incoming supply.
@@ -162,12 +163,12 @@ async def restock_product(
         data=data,
     )
 
-@router.post("/stock-audit", status_code=200, response_model=ApiResponse[ProductResponse])
+@router.post("/stock-audit", status_code=200, response_model=ApiResponse[ProductResponse], deprecated=True)
 async def audit_product_stock(
     payload: ProductAuditRequest,
     db: SessionDep,
-    user: AuthUser,
-    redis_client: AsyncRedis = Depends(get_redis)
+    user: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
+    redis_client: AsyncRedis = Depends(get_redis),
 ):
     """
     Reconciles physical counter reality audits with system database balances.
@@ -181,11 +182,11 @@ async def audit_product_stock(
 
 
 
-@router.post("/stock-adjust", response_model=ApiResponse[ProductResponse])
+@router.post("/stock-adjust", response_model=ApiResponse[ProductResponse], deprecated=True)
 async def adjust_product_stock(
     payload: ProductAdjustRequest,
     db: SessionDep,
-    user: AuthUser,
+    user: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
     redis_client: AsyncRedis = Depends(get_redis),
 ):
     """Explicit increase/decrease with reason; writes StockHistory + audit."""
@@ -195,12 +196,12 @@ async def adjust_product_stock(
     return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
 
-@router.get("/stock/movements/{business_id}/{product_id}", response_model=ApiResponse[dict])
+@router.get("/stock/movements/{business_id}/{product_id}", response_model=ApiResponse[dict], deprecated=True)
 async def list_product_stock_movements(
     business_id: UUID,
     product_id: UUID,
     db: SessionDep,
-    user: AuthUser,
+    user: Staff = Depends(require_permissions(Permission.STOCK_READ)),
     limit: int = 50,
     offset: int = 0,
 ):
