@@ -73,14 +73,28 @@ async def purge_cache_namespace(redis_client: AsyncRedis, namespace: str, **iden
 # Database Session
 # ------------------------------------------------------------------
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """Provides a scoped AsyncSession for each request."""
+    """Provides a scoped AsyncSession for each request.
+
+    On the way out we roll back any *uncommitted* work so dependency teardown
+    cannot turn a successful handler response into HTTP 500.
+    """
     async with AsyncSessionLocal() as session:
         try:
             yield session
         except SQLAlchemyError as e:
-            await session.rollback()
+            try:
+                await session.rollback()
+            except Exception:  # noqa: BLE001
+                pass
             logger.error(f"DB Session Error: {str(e)}")
             raise
+        finally:
+            # Discard leftover uncommitted state (e.g. best-effort flush) quietly.
+            try:
+                if session.in_transaction():
+                    await session.rollback()
+            except Exception:  # noqa: BLE001
+                pass
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]

@@ -160,7 +160,6 @@ class StockCrud:
         if commit:
             try:
                 await db.commit()
-                await db.refresh(product)
             except SQLAlchemyError as e:
                 await db.rollback()
                 logger.error(f"Stock movement commit failed: {e}")
@@ -168,6 +167,11 @@ class StockCrud:
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail="Database transaction conflict encountered while updating inventory levels.",
                 ) from e
+            # Refresh is best-effort: commit already succeeded; never fail the request here.
+            try:
+                await db.refresh(product)
+            except Exception as refresh_err:  # noqa: BLE001
+                logger.warning("stock movement refresh after commit failed: %s", refresh_err)
 
         return product, history, previous, target
 
@@ -196,21 +200,24 @@ class StockCrud:
             commit=True,
             touch_last_stock_take=True,
         )
+        # Use an independent session so audit cannot leave the request session
+        # dirty and cause a 500 during dependency teardown after a successful write.
         try:
             await record_audit(
-            db,
-            actor=current_user,
-            action="stock.restock",
-            resource_type="product",
-            resource_id=product.id,
-            organization_id=current_user.organization_id,
-            business_id=product.business_id,
-            meta={
-                "before": before,
-                "after": after,
-                "qty": payload.quantity,
-                "reference_type": payload.reference_type,
-            },
+                None,
+                actor=current_user,
+                action="stock.restock",
+                resource_type="product",
+                resource_id=product.id,
+                organization_id=current_user.organization_id,
+                business_id=product.business_id,
+                meta={
+                    "before": before,
+                    "after": after,
+                    "qty": payload.quantity,
+                    "reference_type": payload.reference_type,
+                },
+                independent=True,
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)
@@ -243,18 +250,19 @@ class StockCrud:
         )
         try:
             await record_audit(
-            db,
-            actor=current_user,
-            action="stock.count",
-            resource_type="product",
-            resource_id=product.id,
-            organization_id=current_user.organization_id,
-            business_id=product.business_id,
-            meta={
-                "before": before,
-                "after": after,
-                "reason_code": payload.reason_code,
-            },
+                None,
+                actor=current_user,
+                action="stock.count",
+                resource_type="product",
+                resource_id=product.id,
+                organization_id=current_user.organization_id,
+                business_id=product.business_id,
+                meta={
+                    "before": before,
+                    "after": after,
+                    "reason_code": payload.reason_code,
+                },
+                independent=True,
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)
@@ -286,20 +294,21 @@ class StockCrud:
         )
         try:
             await record_audit(
-            db,
-            actor=current_user,
-            action="stock.adjust",
-            resource_type="product",
-            resource_id=product.id,
-            organization_id=current_user.organization_id,
-            business_id=product.business_id,
-            meta={
-                "before": before,
-                "after": after,
-                "delta": delta,
-                "direction": payload.direction,
-                "reason_code": payload.reason_code,
-            },
+                None,
+                actor=current_user,
+                action="stock.adjust",
+                resource_type="product",
+                resource_id=product.id,
+                organization_id=current_user.organization_id,
+                business_id=product.business_id,
+                meta={
+                    "before": before,
+                    "after": after,
+                    "delta": delta,
+                    "direction": payload.direction,
+                    "reason_code": payload.reason_code,
+                },
+                independent=True,
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)

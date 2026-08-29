@@ -279,6 +279,28 @@ def create_application() -> FastAPI:
     application.state.limiter = limiter
     application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+    @application.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception):
+        """Log full traceback; in non-prod return the real message so we can fix root causes."""
+        logger.exception(
+            "Unhandled exception on %s %s: %s",
+            request.method,
+            request.url.path,
+            exc,
+        )
+        # Always include a stable shape the BFF already understands.
+        msg = str(exc) if not is_production else "Internal Server Error"
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "status_code": 500,
+                "message": msg,
+            },
+        )
+
     # 2. Middleware Stack Configuration
     logger.info(f"CORS Configurations -> Allowed Origins: {settings.cors_origins}")
     application.add_middleware(

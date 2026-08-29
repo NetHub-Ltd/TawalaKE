@@ -6,10 +6,12 @@ Nothing after a successful commit may turn the HTTP response into 500.
 """
 from __future__ import annotations
 
+import traceback
+
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from app.api.deps import SessionDep, purge_cache_namespace, get_redis, AsyncRedis
 from app.api.rbac_deps import require_permissions
@@ -138,6 +140,27 @@ def _business_id(product) -> Any:
         return None
 
 
+
+async def _run_mutation(label: str, coro, *, message: str):
+    """Run a stock mutation; never leak an unhandled exception as a bare 500."""
+    try:
+        product, before, after = await coro
+        biz = _business_id(product)
+        return product, before, after, biz
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("stock.%s failed: %s\n%s", label, exc, traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "status_code": 500,
+                "message": f"{label} failed: {exc}",
+            },
+        )
+
+
 @router.post("/receive", summary="Receive stock (inbound supply)")
 async def receive_stock(
     payload: ProductRestockRequest,
@@ -145,9 +168,22 @@ async def receive_stock(
     current_staff: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
     redis_client: AsyncRedis = Depends(get_redis),
 ):
-    product, before, after = await stock_crud.restock(
-        db=db, payload=payload, current_user=current_staff
-    )
+    try:
+        product, before, after = await stock_crud.restock(
+            db=db, payload=payload, current_user=current_staff
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("stock.receive failed: %s\n%s", exc, traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "status_code": 500,
+                "message": f"Receive failed: {exc}",
+            },
+        )
     biz = _business_id(product)
     try:
         if biz is not None:
@@ -156,10 +192,6 @@ async def receive_stock(
             )
     except Exception as cache_err:
         logger.warning("stock.receive cache purge failed: %s", cache_err)
-    try:
-        logger.info("stock.receive product_id=%s stock=%s", getattr(product, "id", None), after)
-    except Exception:
-        pass
     return mutation_ok(
         product, before=before, after=after, message="Stock received", business_id=biz
     )
@@ -172,9 +204,22 @@ async def count_stock(
     user: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
     redis_client: AsyncRedis = Depends(get_redis),
 ):
-    product, before, after = await stock_crud.count_stock(
-        db=db, payload=payload, current_user=user
-    )
+    try:
+        product, before, after = await stock_crud.count_stock(
+            db=db, payload=payload, current_user=user
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("stock.count failed: %s\n%s", exc, traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "status_code": 500,
+                "message": f"Count failed: {exc}",
+            },
+        )
     biz = _business_id(product)
     try:
         if biz is not None:
@@ -195,9 +240,22 @@ async def adjust_stock(
     user: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
     redis_client: AsyncRedis = Depends(get_redis),
 ):
-    product, before, after = await stock_crud.adjust_stock(
-        db=db, payload=payload, current_user=user
-    )
+    try:
+        product, before, after = await stock_crud.adjust_stock(
+            db=db, payload=payload, current_user=user
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.error("stock.adjust failed: %s\n%s", exc, traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": False,
+                "status_code": 500,
+                "message": f"Adjust failed: {exc}",
+            },
+        )
     biz = _business_id(product)
     try:
         if biz is not None:
