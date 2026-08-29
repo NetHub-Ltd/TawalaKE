@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  Bell,
+    Bell,
   User,
   Search,
   LayoutGrid,
@@ -22,6 +21,7 @@ interface TerminalHeaderProps {
  */
 
 export function TerminalHeader({ businessName }: TerminalHeaderProps) {
+  void businessName;
   const router = useRouter();
 
   return (

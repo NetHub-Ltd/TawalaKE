@@ -109,7 +109,7 @@ export function InventoryRegistry() {
   }, [debouncedSearch, itemsPerPage]);
 
   // Server-paginated & server-searched useProducts hook
-  const { products, pagination, isLoading, isFetching, deleteProduct, refresh } = useProducts(
+  const { products, pagination, isLoading, isFetching, refresh } = useProducts(
     businessId as string,
     undefined,
     currentPage,
@@ -135,18 +135,11 @@ export function InventoryRegistry() {
     setCurrentPage(1);
   };
 
-  const handleEditRedirect = (id: string) => {
+  const handleOpenWorkspace = (id: string) => {
     router.push(`/org/${organizationId}/${businessId}/inventory/${id}`);
   };
 
-  const handleDelete = (id: string) => {
-    const targetProduct = products?.find((p) => p.id === id);
-    const productName = targetProduct ? targetProduct.label : "Unknown Asset";
-
-    if (window.confirm(`Delete Product: "${productName}"? This action is logged.`)) {
-      deleteProduct.mutate(id);
-    }
-  };
+  // Product deletion only from product workspace Settings (not the list row).
 
   return (
     <main id="main-content" className="flex-1 flex flex-col h-full font-sans overflow-hidden">
@@ -155,14 +148,16 @@ export function InventoryRegistry() {
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 shrink-0">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
-            <h1 className="text-base font-black uppercase tracking-wider text-foreground">
-              Inventory Registry
+            <h1 className="text-base font-bold tracking-tight text-foreground">
+              Stock
             </h1>
             {isFetching && !isLoading && (
               <Loader2 size={14} className="animate-spin text-brand-primary" aria-label="Syncing backend records..." />
             )}
           </div>
-          <p className="text-xs text-muted font-medium">Distribution node counts & stock monitoring.</p>
+          <p className="text-xs text-muted font-medium">
+            Search products, check levels, then open a product to receive, count, or adjust stock.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -275,8 +270,8 @@ export function InventoryRegistry() {
                     <ProductSmartRow
                       key={product.id}
                       product={product}
-                      onEdit={handleEditRedirect}
-                      onDelete={handleDelete}
+                      onOpen={handleOpenWorkspace}
+                      
                     />
                   ))
                 )}

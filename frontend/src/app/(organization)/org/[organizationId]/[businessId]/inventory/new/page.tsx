@@ -30,7 +30,7 @@ interface NewAssetPageProps {
 export async function generateMetadata({
   params,
 }: NewAssetPageProps): Promise<Metadata> {
-  const { businessId, organizationId   } = await params;
+  const { businessId} = await params;
   return {
     title: "New Asset Registration | NetHub Terminal",
     description: "Register and catalog new inventory assets, set valuation, and track stock.",
@@ -41,7 +41,7 @@ export async function generateMetadata({
 }
 
 export default async function NewAssetPage({ params }: NewAssetPageProps) {
-  const { businessId, organizationId   } = await params;
+  const { businessId, organizationId } = await params;
 
   const jsonLd = {
     "@context": "https://schema.org",

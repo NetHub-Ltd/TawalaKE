@@ -152,11 +152,15 @@ export function CartSidebar() {
 
       // 3. Navigate to payment with the ID returned from your API
       // Adjust the key (e.g., sale.id or sale.data.id) based on your exact API response
-      router.push(`/sales/payment?saleId=${sale.id}`);
-    } catch (error: any) {
+      const saleId =
+        sale && typeof sale === "object" && "id" in sale
+          ? String((sale as { id: string }).id)
+          : "";
+      router.push(`/sales/payment?saleId=${saleId}`);
+    } catch (error: unknown) {
       console.error("Checkout Error:", error);
       toast.error(
-        error.message ||
+        (error instanceof Error ? error.message : null) ||
           "Failed to connect to the server. Check if the backend is running.",
       );
     } finally {

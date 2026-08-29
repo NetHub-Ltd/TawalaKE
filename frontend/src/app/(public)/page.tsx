@@ -134,7 +134,7 @@ export default function LandingPage() {
                   </span>
                 </div>
                 <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface text-muted border border-border/40">
-                  Today's Ledger
+                  Today&apos;s Ledger
                 </span>
               </div>
 

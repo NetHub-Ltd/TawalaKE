@@ -1,3 +1,4 @@
+from app.models.models import Staff
 from typing import List, Optional, Sequence, TypeVar, Generic
 from uuid import UUID
 from datetime import date, datetime
@@ -5,16 +6,20 @@ from datetime import date, datetime
 from fastapi import APIRouter, HTTPException,BackgroundTasks, Depends, Request, status, Query
 
 from app.api.deps import SessionDep, AuthUser, universal_key_builder, purge_cache_namespace, get_redis, AsyncRedis
+from app.api.rbac_deps import require_permissions, purge_staff_rbac_cache
+from app.core.rbac import Permission
+from app.services.audit import record_audit
 from app.crud.business import business_crud
 from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
     BusinessUpdate, BusinessBase
 from app.schemas.business import RestockRequest, ProductAuditRequest, StaffRequest, ProductRestockRequest
 from app.utils.logging import logger
 from app.crud.store import store_crud
+from app.crud.stock import stock_crud, ProductAdjustRequest
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
 from sqlmodel import select
-from app.models.models import Sale,  SaleAnalyticsSummary
+from app.models.models import Sale, SaleAnalyticsSummary, Staff
 from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
 from fastapi_cache.decorator import cache
 from app.core.redis_client import limiter
@@ -55,6 +60,12 @@ class PaginatedData(BaseModel, Generic[T]):
 # --- Redis Cache Durations ---
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
+
+
+def _product_response(product) -> ProductResponse:
+    """Delegate to stock.product_response (hardened against validation 500s)."""
+    from app.api.routes.stock import product_response
+    return product_response(product)
 
 @router.patch('/update-business/{business_id}', response_model=ApiResponse[BusinessResponse])
 async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payload:BusinessUpdate, redis_client: AsyncRedis = Depends(get_redis)):
@@ -115,64 +126,101 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
     )
 
 
-@router.post("/restock", response_model=ApiResponse[ProductResponse])
+@router.post("/restock", response_model=ApiResponse[ProductResponse], deprecated=True)
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: AuthUser,
-    redis_client: AsyncRedis = Depends(get_redis)
+    current_staff: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
+    redis_client: AsyncRedis = Depends(get_redis),
 ):
     """
     Increments product inventory based on an incoming supply.
     Maintains an atomic history snapshot balance.
     """
-    data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
-    await purge_cache_namespace(redis_client, namespace="products", business_id=data.business_id)
+    product, _b, _a = await stock_crud.restock(db=db, payload=payload, current_user=current_staff)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
 
-    logger.info(f"restock response: {data}")
+    data = _product_response(product)
+    logger.info(f"restock response product_id={product.id} stock={product.stock}")
 
     return ApiResponse(
         status=True,
         status_code=200,
         message="Success",
-        data=data
+        data=data,
     )
 
-@router.post("/stock-audit", status_code=200, response_model=ApiResponse[ProductResponse])
+@router.post("/stock-audit", status_code=200, response_model=ApiResponse[ProductResponse], deprecated=True)
 async def audit_product_stock(
     payload: ProductAuditRequest,
     db: SessionDep,
-    user: AuthUser,
-    redis_client: AsyncRedis = Depends(get_redis)
+    user: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
+    redis_client: AsyncRedis = Depends(get_redis),
 ):
     """
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    data =  await store_crud.audit_stock(db=db, payload=payload, current_user=user)
-    await purge_cache_namespace(redis_client, namespace="stock", business_id=data.business_id)
+    product, _b, _a = await stock_crud.count_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
+    data = _product_response(product)
+    return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
-    # logger.info(f"stock-audit response: {data}")
 
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Success",
-        data=data
+
+
+@router.post("/stock-adjust", response_model=ApiResponse[ProductResponse], deprecated=True)
+async def adjust_product_stock(
+    payload: ProductAdjustRequest,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
+    redis_client: AsyncRedis = Depends(get_redis),
+):
+    """Explicit increase/decrease with reason; writes StockHistory + audit."""
+    product, _b, _a = await stock_crud.adjust_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
+    data = _product_response(product)
+    return ApiResponse(status=True, status_code=200, message="Success", data=data)
+
+
+@router.get("/stock/movements/{business_id}/{product_id}", response_model=ApiResponse[dict], deprecated=True)
+async def list_product_stock_movements(
+    business_id: UUID,
+    product_id: UUID,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.STOCK_READ)),
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Paginated StockHistory for product workspace History tab."""
+    rows, total = await stock_crud.list_movements(
+        db, business_id=business_id, product_id=product_id, limit=limit, offset=offset
     )
+    data = {"items": rows, "total": total}
+    return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
 
 @router.post("/new-sale", status_code=200, response_model=SaleResponse)
 async def create_pending_sale(
     payload: InitializeCheckoutRequest,
     db: SessionDep,
-    user: AuthUser,
     redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
 ):
     payload_data = InitializeCheckout(**payload.model_dump(), cashier_id=user.id)
     record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data, current_user=user)
     await db.commit()
     await purge_cache_namespace(redis_client, namespace="sales")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.initialize",
+        outcome="success",
+        resource_type="sale",
+        resource_id=record_sale.id,
+        business_id=payload.business_id,
+        meta={"item_count": len(payload.items or [])},
+    )
     return record_sale
 
 
@@ -183,7 +231,7 @@ async def get_sales(
     request: Request,
     business_id: UUID,
     db: SessionDep,
-    user: AuthUser,
+    user: Staff = Depends(require_permissions(Permission.SALES_READ_OWN)),
     sale_id: Optional[UUID] = Query(
         None, description="Optional UUID to fetch a specific sale"
     ),
@@ -269,9 +317,9 @@ async def get_sales(
 async def checkout_sale(
     db: SessionDep,
     payload: FinalizeCheckoutIn,
-    user: AuthUser,
     background_tasks: BackgroundTasks,
     redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
 ):
     """
     Finalizes the sale (payment + stock deduction) and returns immediately.
@@ -284,6 +332,18 @@ async def checkout_sale(
         background_tasks=background_tasks,
     )
     await purge_cache_namespace(redis_client, namespace="sales")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.checkout",
+        outcome="success",
+        resource_type="sale",
+        resource_id=payload.sale_id,
+        meta={
+            "payment_method": str(payload.payment_method),
+            "status": str(getattr(sale, "status", None)),
+        },
+    )
     return sale
 
 

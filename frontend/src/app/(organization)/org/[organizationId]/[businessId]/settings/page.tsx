@@ -4,7 +4,7 @@ import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
 
 export default function SettingsPage() {
-  const { businessId, businessName } = useBusinessContext();
+  const { businessId: _businessId, businessName } = useBusinessContext();
 
   return (
     <div>

@@ -14,9 +14,9 @@ def test_restock_product_success(client_as_owner):
     product.business_id = uuid4()
     product.selling_price = 10.0
     product.active = True
-    with patch("app.api.routes.stores.store_crud.add_new_stock", new_callable=AsyncMock) as restock, \
+    with patch("app.api.routes.stores.stock_crud.restock", new_callable=AsyncMock) as restock, \
          patch("app.api.routes.stores.purge_cache_namespace", new_callable=AsyncMock):
-        restock.return_value = product
+        restock.return_value = (product, 0.0, 20.0)
         r = client_as_owner.post(
             "/api/v1/business/restock",
             json={
@@ -32,9 +32,9 @@ def test_audit_product_stock(client_as_owner):
     product = MagicMock()
     product.id = uuid4()
     product.stock = 8.0
-    with patch("app.api.routes.stores.store_crud.audit_stock", new_callable=AsyncMock) as audit, \
+    with patch("app.api.routes.stores.stock_crud.count_stock", new_callable=AsyncMock) as audit, \
          patch("app.api.routes.stores.purge_cache_namespace", new_callable=AsyncMock):
-        audit.return_value = product
+        audit.return_value = (product, 8.0, 8.0)
         r = client_as_owner.post(
             "/api/v1/business/stock-audit",
             json={"product_id": str(product.id), "counted_quantity": 8},

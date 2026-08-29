@@ -5,7 +5,6 @@ import {
   Bell, 
   HelpCircle, 
   Globe, 
-  User, 
   LogOut, 
   Settings, 
   Building2, 

@@ -93,7 +93,7 @@
 //             id: product.id,
 //             name: product.label || "Unnamed Product",
 //             price: product.selling_price || 0,
-//             category: (product.attributes as any)?.category || "General",
+//             category: String((product.attributes as Record<string, unknown> | undefined)?.category ?? "General"),
 //             sku: product.attributes?.sku || "",
 //             qty: 1,
 //           };
@@ -297,7 +297,7 @@
 //             id: product.id,
 //             name: product.label || "Unnamed Product",
 //             price: product.selling_price || 0,
-//             category: (product.attributes as any)?.category || "General",
+//             category: String((product.attributes as Record<string, unknown> | undefined)?.category ?? "General"),
 //             sku: product.attributes?.sku || "",
 //             qty: 1,
 //           };
@@ -559,7 +559,7 @@ export const useCartStore = create<CartState>()(
                   id: product.id,
                   name: product.label || "Unnamed Product",
                   price: product.selling_price || 0,
-                  category: (product.attributes as any)?.category || "General",
+                  category: String((product.attributes as Record<string, unknown> | undefined)?.category ?? "General"),
                   sku: product.attributes?.sku || "",
                   qty: 1,
                 },

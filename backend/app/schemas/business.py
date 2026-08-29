@@ -135,7 +135,12 @@ class ProductAuditRequest(BaseModel):
     quantity: float = Field(..., ge=0, description="The absolute physical stock number counted live on shelves.")
     
     reason_code: str = Field(..., min_length=3, max_length=100, description="Standardized shrinkage taxonomy: 'THEFT', 'DAMAGED_IN_TRANSIT', 'DATA_ENTRY_ERROR'.")
-    notes: Optional[str] = Field(..., min_length=5, max_length=1000, description="Compulsory description detailing the verification workflow observations.")
+    # Optional: empty/omitted notes are accepted; when provided, keep a useful minimum length.
+    notes: Optional[str] = Field(
+        None,
+        max_length=1000,
+        description="Optional description of the physical count observations.",
+    )
     
     reference_type: Optional[str] = Field("MANUAL_AUDIT", description="Polymorphic classification discriminator.")
 

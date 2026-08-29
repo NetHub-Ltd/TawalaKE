@@ -20,7 +20,7 @@ export function useProducts(businessId: string) {
 
   // Create Product
   const createMutation = useMutation({
-    mutationFn: async (newProduct: any) => {
+    mutationFn: async (newProduct: Record<string, unknown>) => {
       const res = await fetch(`${API_BASE}/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

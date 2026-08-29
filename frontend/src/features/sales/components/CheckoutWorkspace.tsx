@@ -22,7 +22,7 @@ interface LineItem {
   subtotal: number;
 }
 
-interface Sale {
+interface _Sale {
   id: string;
   currency: string;
   status: string;
@@ -36,15 +36,6 @@ interface Sale {
   items: LineItem[];
 }
 
-interface SalesResponse {
-  items: Sale[];
-  meta?: {
-    total: number;
-    page: number;
-    page_size: number;
-    total_pages: number;
-  };
-}
 
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
@@ -68,8 +59,7 @@ export function CheckoutWorkspace({
 }: CheckoutWorkspaceProps) {
   const { sales, isLoading, error } = useSales({ businessId, saleId });
 
-  // The hook returns { items: Sale[], meta } when a saleId is provided
-  const response = sales;
+  // The hook returns { items: _Sale[], meta } when a saleId is provided
   const activeSale = sales[0] ?? null;
 
   /* ---------- Loading ---------- */

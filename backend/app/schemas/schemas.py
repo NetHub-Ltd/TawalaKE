@@ -113,8 +113,11 @@ class ProductCreate(BaseModel):
 class ProductUpdate(BaseModel):
     label: Optional[str] = None
     selling_price: Optional[float] = None
-    stock: Optional[int] = None
+    stock: Optional[float] = None
     track_stock: Optional[bool] = None
+    active: Optional[bool] = None
+    min_stock_level: Optional[float] = None
+    cost_price: Optional[float] = None
     category: Optional[str] = None
     attributes: Optional[BaseAttributes] = None
 
@@ -128,6 +131,8 @@ class ProductResponse(BaseResponseSchema):
     popularity_score: Optional[float] = None
     active: bool
     category: str
+    min_stock_level: Optional[float] = None
+    cost_price: Optional[float] = None
     attributes: BaseAttributes
 
     # Optional lightweight embed (avoid deep nesting)

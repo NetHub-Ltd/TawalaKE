@@ -40,7 +40,7 @@ export async function loginAction(
       switch (error.type) {
         case "CredentialsSignin":
           // The `code` we set on the custom error classes is available here
-          const code = (error as any).code as string | undefined;
+          const code = (error as { code?: string }).code as string | undefined;
 
           switch (code) {
             case "invalid_credentials":

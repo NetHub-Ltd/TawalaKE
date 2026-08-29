@@ -1,12 +1,11 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Business } from "@/features/business/types/business";
 import { createContext, useContext } from "react";
 
 export function useOrganization(organizationId?: string) {
-  const queryClient = useQueryClient();
-
+  
   // Query logic: Fetch and aggressively cache the business list
   const {
     data: organization,

@@ -1,5 +1,9 @@
 "use client";
 
+function generateSkuSuffix() {
+  return Date.now().toString();
+}
+
 import React, { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
@@ -102,7 +106,7 @@ export function AssetComposer({
 
     const generatedSku =
       data.attributes?.sku?.trim() ||
-      `TWL-AUTO-${businessIdString.slice(0, 8).toUpperCase()}-${Date.now()}`;
+      `TWL-AUTO-${businessIdString.slice(0, 8).toUpperCase()}-${generateSkuSuffix()}`;
 
     const payload: ProductForm = {
       business_id: businessIdString,
