@@ -2,53 +2,52 @@
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Base / PR target:** `dev`  
-**Current branch:** `chore/skills-ui-baseline`
+**Current branch (this chore):** `chore/sync-trackers-post-114`
 
 ## Goal
 
-Restructure `.skills/` into three domains (product, backend, UI) and add an authoritative UI skill encoding the agreed UI/UX and look-and-feel baselines. Chore only.
+Bring `.trackers/` into agreement with Git history after PR #114 merged to `main` and subsequent RBAC/frontend-CI work landed on `dev`. Chore only.
 
 ## Approved scope
 
-- Three domains only: `product/`, `backend/`, `ui/`
-- Author `ui/ui-design.md` (behavior + look and feel + operational patterns + optional autonomy)
-- Fold prior flat skills into domain files; remove conflicting/duplicate flat files
-- Update `SKILL_INDEX.md` and `AGENTS.md` pointers
-- Keep `DESIGN_SKILL_PROTOCOL.md` as shared gate
-- Open PR into `dev`; do not merge without explicit user authority
+- Rewrite `repo-state.md`, `task.md`, `rollback.md` to post-merge reality
+- Open PR into `dev`
+- Do not merge without explicit user authority
+- No product, schema, CI workflow, or deployment code changes
 
-## Completed
+## Completed (this chore)
 
-- [x] Proposal approved (`proceed`)
-- [x] Domain files written
-- [x] Old flat skill files removed
-- [x] Index and AGENTS.md updated
-- [x] PR opened into `dev` (#125)
+- [x] Inspected `main` and `dev` tips and tracker content
+- [x] Confirmed `dev` is strictly ahead of `main`
+- [x] Tracker files rewritten on topic branch
+- [x] PR opened into `dev` (#124)
 
 ## Remaining
 
 - User review + merge of this PR into `dev`
+- Optional later: close or retarget leftover remote `fix/checkout-invoice-*` / `fix/product-inventory-integrity` branches
+- Optional later: promote `dev` → `main` when ready (separate task)
 
 ## Explicitly out of scope
 
-- Product UI screen implementation
-- Backend behavior changes
-- k3s / deployment
+- Any application/code change
+- Force-push or history rewrite
 - Auto-merge
+- k3s manifests (future task)
 
 ## Decisions
 
 - Working/PR target is always `dev`
-- UI baseline: job, status, recovery, trust + look-and-feel hierarchy/contrast/restraint
-- Agent UX is an optional section inside UI—not a fourth domain
+- Git history is the authority for tracker content
+- After this lands, trackers reflect idle/post-sync state until a new task is authorized
 
 ## Risks
 
-- Low: documentation/agent-instruction only
-- Agents that still reference old skill filenames will need the new index (AGENTS.md updated)
+- Low: documentation-only; no runtime impact
+- Stale trackers on `main` will remain until a future `dev` → `main` promotion carries the updated trackers
 
 ## Verification
 
-- Only three domain skill bodies under `.skills/{product,backend,ui}/`
-- No leftover conflicting flat skill markdown (except protocol + index)
-- Diff limited to `.skills/` and `AGENTS.md` (+ trackers)
+- No conflict markers
+- SHAs and PR numbers match `git log`
+- Scope limited to `.trackers/`
