@@ -21,7 +21,6 @@ import {
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { AssetComposer } from "@/features/inventory/AssetComposer";
-import { ProductCreate } from "@/lib/api/generated/models/productCreate";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "history" | "settings";
@@ -133,11 +132,10 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
     return onHand * price;
   }, [onHand, product?.selling_price]);
 
-  const handleUpdateMeta = async (values: ProductCreate): Promise<void> => {
-    const safeCategory = values.category === null ? undefined : (values.category as string);
+  const handleUpdateMeta = async (values: Record<string, unknown>): Promise<void> => {
     return new Promise((resolve, reject) => {
       updateProduct.mutate(
-        { id: productId, ...values, category: safeCategory },
+        { id: productId, ...values } as Parameters<typeof updateProduct.mutate>[0],
         {
           onSuccess: () => {
             refresh();
@@ -159,13 +157,27 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      let data: Record<string, unknown> = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
       if (!res.ok || data.status === false) {
-        throw new Error(data.error || data.message || data.detail || "Request failed");
+        const msg =
+          (typeof data.error === "string" && data.error) ||
+          (typeof data.message === "string" && data.message) ||
+          (typeof data.detail === "string" && data.detail) ||
+          (res.status === 403
+            ? "You don’t have permission to change stock. Ask a manager."
+            : `Request failed (${res.status})`);
+        throw new Error(msg);
       }
       await refresh();
       await loadMovements();
-      setSuccessMessage("Stock updated successfully.");
+      setSuccessMessage(
+        typeof data.message === "string" ? data.message : "Stock updated successfully."
+      );
       setAction(null);
       syncUrl("overview", null);
     } catch (e) {
@@ -312,45 +324,12 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           <div className="grid gap-6 lg:grid-cols-[1fr_220px]">
             <section className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold text-foreground">Recent activity</h2>
-              {movementsLoading && (
-                <p className="text-sm text-muted">Loading activity…</p>
-              )}
-              {movementsError && (
-                <p className="text-sm text-red-600 dark:text-red-400">{movementsError}</p>
-              )}
-              {!movementsLoading && !movementsError && recent.length === 0 && (
-                <p className="text-sm text-muted">No stock movements yet for this product.</p>
-              )}
-              <ul className="divide-y divide-border/60">
-                {recent.map((m) => (
-                  <li key={m.id} className="border-b border-border/40 py-3 last:border-0">
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                      <span className="font-medium text-foreground">{m.movement_type}</span>
-                      <span
-                        className={cn(
-                          "font-semibold tabular-nums",
-                          m.quantity < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
-                        )}
-                      >
-                        {m.quantity > 0 ? "+" : ""}
-                        {m.quantity}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted">
-                      {m.previous_stock != null ? m.previous_stock : "—"} → {m.new_stock}
-                      {" · "}
-                      {m.performed_by_name || "Unknown"}
-                      {" · "}
-                      {m.created_at ? new Date(m.created_at).toLocaleString() : "—"}
-                    </p>
-                    {(m.reason_code || m.notes) && (
-                      <p className="mt-0.5 text-xs text-muted truncate" title={[m.reason_code, m.notes].filter(Boolean).join(" — ")}>
-                        {[m.reason_code, m.notes].filter(Boolean).join(" — ")}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <MovementsTable
+                rows={recent}
+                loading={movementsLoading}
+                error={movementsError}
+                emptyText="No stock movements yet for this product."
+              />
             </section>
 
             <aside className="space-y-2 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
@@ -495,17 +474,11 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
               Name, price, category, and tracking. Stock quantity is changed with Receive, Count, or Adjust.
             </p>
           </div>
-          <AssetComposer
-            initialData={{
-              label: product.label,
-              selling_price: product.selling_price,
-              stock: product.stock,
-              category: product.category as ProductCreate["category"],
-              attributes: (product as { attributes?: ProductCreate["attributes"] }).attributes,
-            }}
-            onSubmit={handleUpdateMeta}
-            onCancel={() => selectTab("overview")}
+          <ProductSettingsForm
+            product={product}
             isPending={updateProduct.isPending}
+            onSave={handleUpdateMeta}
+            onCancel={() => selectTab("overview")}
           />
           <div className="border-t border-border pt-6">
             <h2 className="text-base font-semibold text-red-600 dark:text-red-400">
@@ -535,6 +508,272 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+
+function ProductSettingsForm({
+  product,
+  isPending,
+  onSave,
+  onCancel,
+}: {
+  product: {
+    label: string;
+    selling_price: number;
+    stock: number;
+    track_stock: boolean;
+    active?: boolean;
+    category?: string | null;
+    last_stock_take?: string | null;
+    attributes?: { unit_of_measure?: string | null; buying_price?: number | null; sku?: string | null };
+    min_stock_level?: number | null;
+    cost_price?: number | null;
+  };
+  isPending: boolean;
+  onSave: (values: Record<string, unknown>) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const attrs = product.attributes || {};
+  const [label, setLabel] = useState(product.label);
+  const [sellingPrice, setSellingPrice] = useState(String(product.selling_price ?? ""));
+  const [category, setCategory] = useState(product.category || "other");
+  const [sku, setSku] = useState(attrs.sku || "");
+  const [uom, setUom] = useState(attrs.unit_of_measure || "pcs");
+  const [buyingPrice, setBuyingPrice] = useState(
+    String(attrs.buying_price ?? product.cost_price ?? "")
+  );
+  const [trackStock, setTrackStock] = useState(Boolean(product.track_stock));
+  const [active, setActive] = useState(product.active !== false);
+  const [minStock, setMinStock] = useState(String(product.min_stock_level ?? 10));
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSaving(true);
+    try {
+      await onSave({
+        label: label.trim(),
+        selling_price: Number(sellingPrice) || 0,
+        category,
+        track_stock: trackStock,
+        active,
+        min_stock_level: Number(minStock) || 0,
+        cost_price: buyingPrice === "" ? undefined : Number(buyingPrice),
+        attributes: {
+          sku: sku || null,
+          unit_of_measure: uom || null,
+          buying_price: buyingPrice === "" ? null : Number(buyingPrice),
+        },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const field =
+    "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand-primary/30";
+
+  return (
+    <form onSubmit={submit} className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block space-y-1.5 sm:col-span-2">
+          <span className="text-sm font-medium text-foreground">Product name *</span>
+          <input className={field} value={label} onChange={(e) => setLabel(e.target.value)} required />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Category</span>
+          <input className={field} value={category} onChange={(e) => setCategory(e.target.value)} />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">SKU</span>
+          <input className={field} value={sku} onChange={(e) => setSku(e.target.value)} />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Selling price (KES) *</span>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            className={field}
+            value={sellingPrice}
+            onChange={(e) => setSellingPrice(e.target.value)}
+            required
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Cost / buying price (KES)</span>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            className={field}
+            value={buyingPrice}
+            onChange={(e) => setBuyingPrice(e.target.value)}
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Unit of measure</span>
+          <input className={field} value={uom} onChange={(e) => setUom(e.target.value)} />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Low-stock threshold</span>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            className={field}
+            value={minStock}
+            onChange={(e) => setMinStock(e.target.value)}
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">On-hand stock</span>
+          <input className={field + " bg-background/80"} value={product.stock} readOnly />
+          <span className="text-xs text-muted">Change stock with Receive, Count, or Adjust — not here.</span>
+        </label>
+      </div>
+
+      <div className="flex flex-wrap gap-6">
+        <label className="inline-flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={trackStock}
+            onChange={(e) => setTrackStock(e.target.checked)}
+            className="h-4 w-4 rounded border-border"
+          />
+          Track stock for this product
+        </label>
+        <label className="inline-flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={active}
+            onChange={(e) => setActive(e.target.checked)}
+            className="h-4 w-4 rounded border-border"
+          />
+          Active (available for sale)
+        </label>
+      </div>
+
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex min-h-[44px] items-center rounded-xl border border-border px-4 text-sm font-medium text-foreground"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={saving || isPending}
+          className="inline-flex min-h-[44px] items-center rounded-xl bg-brand-primary px-5 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {saving || isPending ? "Saving…" : "Save settings"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function MovementsTable({
+  rows,
+  loading,
+  error,
+  emptyText,
+}: {
+  rows: MovementRow[];
+  loading?: boolean;
+  error?: string | null;
+  emptyText: string;
+}) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border/60">
+      <table className="w-full border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-border bg-background/60 text-[11px] font-semibold uppercase tracking-wider text-muted">
+            <th className="px-3 py-2.5">When</th>
+            <th className="px-3 py-2.5">What</th>
+            <th className="px-3 py-2.5 text-right">Before</th>
+            <th className="px-3 py-2.5 text-right">Change</th>
+            <th className="px-3 py-2.5 text-right">After</th>
+            <th className="px-3 py-2.5">Reason</th>
+            <th className="px-3 py-2.5">Who</th>
+            <th className="px-3 py-2.5">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading && (
+            <tr>
+              <td colSpan={8} className="px-3 py-6 text-center text-muted">
+                Loading…
+              </td>
+            </tr>
+          )}
+          {!loading && error && (
+            <tr>
+              <td colSpan={8} className="px-3 py-6 text-center text-red-600 dark:text-red-400">
+                {error}
+              </td>
+            </tr>
+          )}
+          {!loading && !error && rows.length === 0 && (
+            <tr>
+              <td colSpan={8} className="px-3 py-6 text-center text-muted">
+                {emptyText}
+              </td>
+            </tr>
+          )}
+          {!loading &&
+            !error &&
+            rows.map((m) => (
+              <tr key={m.id} className="border-b border-border/50">
+                <td className="whitespace-nowrap px-3 py-2 text-xs text-muted">
+                  {m.created_at ? new Date(m.created_at).toLocaleString() : "—"}
+                </td>
+                <td className="px-3 py-2 font-medium text-foreground">{m.movement_type}</td>
+                <td className="px-3 py-2 text-right tabular-nums text-muted">
+                  {m.previous_stock != null ? m.previous_stock : "—"}
+                </td>
+                <td
+                  className={
+                    "px-3 py-2 text-right font-semibold tabular-nums " +
+                    (m.quantity < 0
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-emerald-600 dark:text-emerald-400")
+                  }
+                >
+                  {m.quantity > 0 ? "+" : ""}
+                  {m.quantity}
+                </td>
+                <td className="px-3 py-2 text-right font-semibold tabular-nums text-foreground">
+                  {m.new_stock}
+                </td>
+                <td
+                  className="max-w-[120px] truncate px-3 py-2 text-foreground"
+                  title={m.reason_code || m.reference_type || ""}
+                >
+                  {m.reason_code || m.reference_type || "—"}
+                </td>
+                <td className="px-3 py-2 text-foreground">{m.performed_by_name || "—"}</td>
+                <td className="max-w-[160px] truncate px-3 py-2 text-muted" title={m.notes || ""}>
+                  {m.notes || "—"}
+                </td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
     </div>
   );
 }
