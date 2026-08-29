@@ -37,8 +37,3 @@
 
 - Preferred target: k3s
 - Current path: multi-arch Docker → GHCR (`tawala-api`) via GHA; no k3s manifests in-repo yet
-
-## Observations
-
-- Open remote topic branches still present (historical): `fix/checkout-invoice-*`, `fix/product-inventory-integrity` — review/close separately if desired.
-- Next product or infra work should start from updated `dev` after this tracker PR merges.

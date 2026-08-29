@@ -2,13 +2,12 @@
 
 ## Known-good references
 
-| Ref | SHA | Notes |
-|-----|-----|--------|
-| **main tip (post #114)** | `faa51fb` | Merge of PR #114 — current production-line tip |
-| **dev tip (pre this chore)** | `e153d7d` | Includes RBAC + frontend CI; base for this tracker PR |
-| **main before #114** | prior to `faa51fb` (e.g. `e8ffd4a` / PR #115 line) | Use only if reverting the entire #114 integration |
+| Ref | SHA / note |
+|-----|------------|
+| **dev tip before this chore** | `e153d7d` (or parent of this branch) |
+| **main tip (post #114)** | `faa51fb` |
 
-## If this tracker-sync PR must be undone
+## If this skills PR must be undone
 
 ```bash
 git checkout dev

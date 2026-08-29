@@ -12,23 +12,12 @@ Before reading code, proposing changes, or implementing anything, the agent **mu
 
 The `.skills/` directory contains authoritative design, engineering, security, and testing guidance. No agent should begin work without loading the skills that apply to the current task.
 
-### Skill files
-- `SKILL_INDEX.md` — start here; maps tasks to skills
-- `DESIGN_SKILL_PROTOCOL.md` — overarching design reasoning protocol
-- `design-principles.md` — foundational product/interface judgment
-- `product-thinking.md` — user outcomes and task definition
-- `interaction-design.md` — behavior, states, feedback, recovery
-- `ux-evaluation.md` — iterative usability evaluation
-- `design-review.md` — final cross-disciplinary checkpoint
-- `visual-design.md` — hierarchy, typography, spacing, color
-- `design-systems.md` — reusable patterns and tokens
-- `forms-data-dense-ui.md` — forms, tables, dashboards
-- `responsive-design.md` — viewport and input adaptation
-- `accessibility.md` — WCAG 2.2 AA as core requirement
-- `backend-api-design.md` — FastAPI routes, Pydantic, async, DI
-- `database-design.md` — PostgreSQL schema, indexing, migrations
-- `security-privacy.md` — authN/authZ, validation, secrets, TLS
-- `testing-qa.md` — pytest, integration tests, coverage, CI
+### Skill files (three domains)
+- `SKILL_INDEX.md` — start here; maps tasks to domains
+- `DESIGN_SKILL_PROTOCOL.md` — mandatory design reasoning sequence
+- `product/product-design.md` — product design & planning (outcomes, scope, evaluation)
+- `backend/backend-design.md` — backend design practices (API, data, security, tests)
+- `ui/ui-design.md` — UI (behavior baseline, look & feel, operational patterns, optional autonomy)
 
 ## 2. Follow Tracker Protocol Second
 
