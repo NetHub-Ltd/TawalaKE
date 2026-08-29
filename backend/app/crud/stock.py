@@ -196,21 +196,24 @@ class StockCrud:
             commit=True,
             touch_last_stock_take=True,
         )
+        # Never use the request session for audit — missing audit_events must not
+        # poison the session (PendingRollbackError) after a successful stock write.
         try:
             await record_audit(
-            db,
-            actor=current_user,
-            action="stock.restock",
-            resource_type="product",
-            resource_id=product.id,
-            organization_id=current_user.organization_id,
-            business_id=product.business_id,
-            meta={
-                "before": before,
-                "after": after,
-                "qty": payload.quantity,
-                "reference_type": payload.reference_type,
-            },
+                None,
+                actor=current_user,
+                action="stock.restock",
+                resource_type="product",
+                resource_id=product.id,
+                organization_id=current_user.organization_id,
+                business_id=product.business_id,
+                meta={
+                    "before": before,
+                    "after": after,
+                    "qty": payload.quantity,
+                    "reference_type": payload.reference_type,
+                },
+                independent=True,
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)
@@ -243,18 +246,19 @@ class StockCrud:
         )
         try:
             await record_audit(
-            db,
-            actor=current_user,
-            action="stock.count",
-            resource_type="product",
-            resource_id=product.id,
-            organization_id=current_user.organization_id,
-            business_id=product.business_id,
-            meta={
-                "before": before,
-                "after": after,
-                "reason_code": payload.reason_code,
-            },
+                None,
+                actor=current_user,
+                action="stock.count",
+                resource_type="product",
+                resource_id=product.id,
+                organization_id=current_user.organization_id,
+                business_id=product.business_id,
+                meta={
+                    "before": before,
+                    "after": after,
+                    "reason_code": payload.reason_code,
+                },
+                independent=True,
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)
@@ -286,20 +290,21 @@ class StockCrud:
         )
         try:
             await record_audit(
-            db,
-            actor=current_user,
-            action="stock.adjust",
-            resource_type="product",
-            resource_id=product.id,
-            organization_id=current_user.organization_id,
-            business_id=product.business_id,
-            meta={
-                "before": before,
-                "after": after,
-                "delta": delta,
-                "direction": payload.direction,
-                "reason_code": payload.reason_code,
-            },
+                None,
+                actor=current_user,
+                action="stock.adjust",
+                resource_type="product",
+                resource_id=product.id,
+                organization_id=current_user.organization_id,
+                business_id=product.business_id,
+                meta={
+                    "before": before,
+                    "after": after,
+                    "delta": delta,
+                    "direction": payload.direction,
+                    "reason_code": payload.reason_code,
+                },
+                independent=True,
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)

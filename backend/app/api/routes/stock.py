@@ -1,8 +1,9 @@
 """
 Stock domain HTTP API.
 
-Mutation endpoints commit first, then return a plain JSON snapshot.
-Nothing after a successful commit may turn the HTTP response into 500.
+Mutation endpoints commit first, snapshot the product into a plain dict while
+the session is still healthy, then the HTTP response is built only from
+primitives — never from a possibly-poisoned ORM instance after audit failures.
 """
 from __future__ import annotations
 
@@ -44,23 +45,42 @@ def _safe_iso(value: Any) -> str | None:
 
 
 def snapshot_product(product) -> dict[str, Any]:
-    """JSON-safe product dict. Never raises."""
+    """JSON-safe product dict. Call only while the session is healthy."""
     try:
-        raw_attrs = getattr(product, "attributes", None) or {}
+        state = getattr(product, "_sa_instance_state", None)
+        ident = None
+        if state is not None:
+            try:
+                ident = state.identity
+            except Exception:
+                ident = None
+        pid = str(ident[0]) if ident else str(getattr(product, "id", "") or "")
+
+        inst = getattr(product, "__dict__", {}) or {}
+
+        def g(key: str, default: Any = None) -> Any:
+            if key in inst and not str(key).startswith("_"):
+                return inst.get(key, default)
+            return getattr(product, key, default)
+
+        raw_attrs = g("attributes") or {}
         if not isinstance(raw_attrs, dict):
             raw_attrs = {}
+
+        biz = g("business_id")
         return {
-            "id": str(getattr(product, "id", "") or ""),
-            "label": str(getattr(product, "label", "") or ""),
-            "selling_price": _safe_float(getattr(product, "selling_price", 0), 0.0) or 0.0,
-            "track_stock": bool(getattr(product, "track_stock", True)),
-            "last_stock_take": _safe_iso(getattr(product, "last_stock_take", None)),
-            "stock": _safe_float(getattr(product, "stock", 0), 0.0) or 0.0,
-            "popularity_score": _safe_float(getattr(product, "popularity_score", None)),
-            "active": bool(getattr(product, "active", True)),
-            "category": str(getattr(product, "category", None) or "General"),
-            "min_stock_level": _safe_float(getattr(product, "min_stock_level", 10), 10.0) or 10.0,
-            "cost_price": _safe_float(getattr(product, "cost_price", None)),
+            "id": pid,
+            "label": str(g("label", "") or ""),
+            "selling_price": _safe_float(g("selling_price", 0), 0.0) or 0.0,
+            "track_stock": bool(g("track_stock", True)),
+            "last_stock_take": _safe_iso(g("last_stock_take")),
+            "stock": _safe_float(g("stock", 0), 0.0) or 0.0,
+            "popularity_score": _safe_float(g("popularity_score")),
+            "active": bool(g("active", True)),
+            "category": str(g("category") or "General"),
+            "min_stock_level": _safe_float(g("min_stock_level", 10), 10.0) or 10.0,
+            "cost_price": _safe_float(g("cost_price")),
+            "business_id": str(biz) if biz is not None else None,
             "attributes": {
                 "unit_of_measure": (
                     str(raw_attrs["unit_of_measure"])
@@ -76,17 +96,18 @@ def snapshot_product(product) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001
         logger.warning("snapshot_product failed: %s", exc)
         return {
-            "id": str(getattr(product, "id", "") or ""),
-            "label": str(getattr(product, "label", "") or ""),
+            "id": "",
+            "label": "",
             "selling_price": 0.0,
             "track_stock": True,
             "last_stock_take": None,
-            "stock": _safe_float(getattr(product, "stock", 0), 0.0) or 0.0,
+            "stock": 0.0,
             "popularity_score": None,
             "active": True,
             "category": "General",
             "min_stock_level": 10.0,
             "cost_price": None,
+            "business_id": None,
             "attributes": {
                 "unit_of_measure": None,
                 "buying_price": None,
@@ -95,47 +116,29 @@ def snapshot_product(product) -> dict[str, Any]:
         }
 
 
-def mutation_ok(
-    product,
+def mutation_ok_from_data(
+    data: dict[str, Any],
     *,
     before: float,
     after: float,
     message: str = "Success",
-    business_id: Any = None,
 ) -> JSONResponse:
-    """
-    Always return HTTP 200 with status:true after a successful write.
-    Snapshot failures fall back to a minimal payload — never 500.
-    """
-    try:
-        data = {
-            **snapshot_product(product),
-            "previous_stock": float(before),
-            "new_stock": float(after),
-        }
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("mutation_ok snapshot failed: %s", exc)
-        data = {
-            "id": str(getattr(product, "id", "") or ""),
-            "stock": float(after),
-            "previous_stock": float(before),
-            "new_stock": float(after),
-            "business_id": str(business_id) if business_id is not None else None,
-        }
-    body = {
-        "status": True,
-        "status_code": 200,
-        "message": message,
-        "data": data,
+    """Build success response from a plain dict only — never touch ORM."""
+    payload = {
+        **data,
+        "previous_stock": float(before),
+        "new_stock": float(after),
+        "stock": float(after),
     }
-    return JSONResponse(status_code=200, content=body)
-
-
-def _business_id(product) -> Any:
-    try:
-        return getattr(product, "business_id", None)
-    except Exception:
-        return None
+    return JSONResponse(
+        status_code=200,
+        content={
+            "status": True,
+            "status_code": 200,
+            "message": message,
+            "data": payload,
+        },
+    )
 
 
 @router.post("/receive", summary="Receive stock (inbound supply)")
@@ -148,7 +151,9 @@ async def receive_stock(
     product, before, after = await stock_crud.restock(
         db=db, payload=payload, current_user=current_staff
     )
-    biz = _business_id(product)
+    # Snapshot WHILE session is healthy — before any further side effects.
+    data = snapshot_product(product)
+    biz = data.get("business_id")
     try:
         if biz is not None:
             await purge_cache_namespace(
@@ -156,12 +161,8 @@ async def receive_stock(
             )
     except Exception as cache_err:
         logger.warning("stock.receive cache purge failed: %s", cache_err)
-    try:
-        logger.info("stock.receive product_id=%s stock=%s", getattr(product, "id", None), after)
-    except Exception:
-        pass
-    return mutation_ok(
-        product, before=before, after=after, message="Stock received", business_id=biz
+    return mutation_ok_from_data(
+        data, before=before, after=after, message="Stock received"
     )
 
 
@@ -175,7 +176,8 @@ async def count_stock(
     product, before, after = await stock_crud.count_stock(
         db=db, payload=payload, current_user=user
     )
-    biz = _business_id(product)
+    data = snapshot_product(product)
+    biz = data.get("business_id")
     try:
         if biz is not None:
             await purge_cache_namespace(
@@ -183,8 +185,8 @@ async def count_stock(
             )
     except Exception as cache_err:
         logger.warning("stock.count cache purge failed: %s", cache_err)
-    return mutation_ok(
-        product, before=before, after=after, message="Stock count saved", business_id=biz
+    return mutation_ok_from_data(
+        data, before=before, after=after, message="Stock count saved"
     )
 
 
@@ -198,7 +200,8 @@ async def adjust_stock(
     product, before, after = await stock_crud.adjust_stock(
         db=db, payload=payload, current_user=user
     )
-    biz = _business_id(product)
+    data = snapshot_product(product)
+    biz = data.get("business_id")
     try:
         if biz is not None:
             await purge_cache_namespace(
@@ -206,8 +209,8 @@ async def adjust_stock(
             )
     except Exception as cache_err:
         logger.warning("stock.adjust cache purge failed: %s", cache_err)
-    return mutation_ok(
-        product, before=before, after=after, message="Stock adjusted", business_id=biz
+    return mutation_ok_from_data(
+        data, before=before, after=after, message="Stock adjusted"
     )
 
 

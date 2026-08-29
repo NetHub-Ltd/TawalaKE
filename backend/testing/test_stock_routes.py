@@ -24,7 +24,7 @@ def test_stock_mounted_on_api_router():
 
 def test_snapshot_product_is_json_safe():
     from types import SimpleNamespace
-    from app.api.routes.stock import snapshot_product, mutation_ok
+    from app.api.routes.stock import snapshot_product, mutation_ok_from_data
 
     product = SimpleNamespace(
         id="00000000-0000-0000-0000-000000000001",
@@ -45,10 +45,9 @@ def test_snapshot_product_is_json_safe():
     assert snap["attributes"]["buying_price"] == 9.0
     assert "extra" not in snap["attributes"]
 
-    # Non-datetime last_stock_take must not raise
     product.last_stock_take = "already-a-string"
     snap2 = snapshot_product(product)
     assert snap2["last_stock_take"] == "already-a-string"
 
-    resp = mutation_ok(product, before=1.0, after=5.0, message="ok")
+    resp = mutation_ok_from_data(snap2, before=1.0, after=5.0, message="ok")
     assert resp.status_code == 200

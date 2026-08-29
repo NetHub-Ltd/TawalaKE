@@ -63,4 +63,11 @@ async def record_audit(
         db.add(AuditEvent(**payload))
         await db.flush()
     except Exception as exc:  # noqa: BLE001
+        # Missing audit_events table (migration not applied) or any DB error:
+        # never poison the caller session / never raise.
         logger.error(f"audit write failed action={action} outcome={outcome}: {exc}")
+        if db is not None and not independent:
+            try:
+                await db.rollback()
+            except Exception:  # noqa: BLE001
+                pass
