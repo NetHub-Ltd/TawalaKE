@@ -37,6 +37,7 @@ interface MovementRow {
   notes: string | null;
   reference_type: string | null;
   performed_by: string | null;
+  performed_by_name?: string | null;
 }
 
 interface ProductWorkspaceProps {
@@ -264,8 +265,8 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
               )}
               <ul className="divide-y divide-border/60">
                 {recent.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                    <span className="text-muted">
+                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                    <span className="text-muted min-w-[8rem]">
                       {m.created_at ? new Date(m.created_at).toLocaleString() : "—"}
                     </span>
                     <span
@@ -278,6 +279,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                       {m.quantity}
                     </span>
                     <span className="text-foreground">{m.movement_type}</span>
+                    <span className="text-muted text-xs">{m.performed_by_name || "—"}</span>
                   </li>
                 ))}
               </ul>
@@ -352,24 +354,25 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="border-b border-border bg-background/50 text-xs font-semibold uppercase tracking-wider text-muted">
-                  <th className="px-4 py-3">Date</th>
-                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">When</th>
+                  <th className="px-4 py-3">What</th>
                   <th className="px-4 py-3 text-right">Qty</th>
                   <th className="px-4 py-3 text-right">Balance</th>
+                  <th className="px-4 py-3">Who</th>
                   <th className="px-4 py-3">Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {movementsLoading && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
                       Loading history…
                     </td>
                   </tr>
                 )}
                 {!movementsLoading && movements.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
                       No movements recorded yet.
                     </td>
                   </tr>
@@ -391,6 +394,9 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                       {m.new_stock}
+                    </td>
+                    <td className="px-4 py-2.5 text-foreground text-sm">
+                      {m.performed_by_name || "—"}
                     </td>
                     <td className="px-4 py-2.5 text-muted max-w-[240px] truncate">
                       {m.notes || m.reference_type || "—"}

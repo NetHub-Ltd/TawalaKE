@@ -2,6 +2,7 @@
 
 // import React from "react";
 // import { Trash2, Infinity } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // export interface BaseAttributes {
 //   unit_of_measure?: string | null;
@@ -26,12 +27,28 @@
 // }
 
 // export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowProps) {
-//   const { label, selling_price, track_stock, stock, active, id, last_stock_take } = product;
+//   const { label, selling_price, track_stock, stock, active, id, last_stock_take, popularity_score } = product;
 //   const { sku, unit_of_measure } = product.attributes || {};
 
 //   // 1. Flatten Data Representation for Noise Reduction
 //   const displaySku = sku && sku.trim() !== "" ? sku : "No SKU";
 //   const displayUom = unit_of_measure && unit_of_measure.trim() !== "" ? unit_of_measure : "Pcs";
+
+  // Audit freshness: green < 30d, amber older, red never
+  let auditBorder = "border-l-4 border-l-red-500";
+  let auditTitle = "Never counted — open workspace and run Count stock";
+  if (last_stock_take) {
+    const days = (Date.now() - new Date(last_stock_take).getTime()) / (1000 * 60 * 60 * 24);
+    if (days <= 30) {
+      auditBorder = "border-l-4 border-l-emerald-500";
+      auditTitle = `Last count within a month (${new Date(last_stock_take).toLocaleDateString()})`;
+    } else {
+      auditBorder = "border-l-4 border-l-amber-500";
+      auditTitle = `Last count over a month ago (${new Date(last_stock_take).toLocaleDateString()})`;
+    }
+  }
+
+
 
 //   // 2. Compute Stock Alert Matrix
 //   let stockAlertState: "normal" | "low" | "crisis" | "untracked" = "normal";
@@ -79,7 +96,14 @@
 //         <span className="text-sm font-extrabold text-foreground">
 //           {formattedPrice}
 //         </span>
-//       </td>
+//       
+        <span
+          className="text-[11px] text-muted"
+          title="Relative sales activity score for this product"
+        >
+          Sales activity: {popularity_score != null ? Number(popularity_score).toFixed(1) : "—"}
+        </span>
+        </div></td>
 
 //       {/* COLUMN 3: LIVE INVENTORY STATUS (BETTING-INSPIRED SMART FLASH MATRIX) */}
 //       <td className="px-6 py-4 align-middle">
@@ -161,6 +185,7 @@ export interface ProductResponse {
   /** ISO timestamp of last physical count / stock take when API provides it */
   last_stock_take?: string | null;
   stock: number;
+  popularity_score?: number | null;
   active: boolean;
   category?: string;
   attributes: BaseAttributes;
@@ -173,12 +198,28 @@ interface ProductSmartRowProps {
 }
 
 export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowProps) {
-  const { label, selling_price, track_stock, stock, active, id, last_stock_take } = product;
+  const { label, selling_price, track_stock, stock, active, id, last_stock_take, popularity_score } = product;
   const { sku, unit_of_measure } = product.attributes || {};
 
   // 1. Flatten Data Representation for Noise Reduction
   const displaySku = sku && sku.trim() !== "" ? sku : "No SKU";
   const displayUom = unit_of_measure && unit_of_measure.trim() !== "" ? unit_of_measure : "Pcs";
+
+  // Audit freshness: green < 30d, amber older, red never
+  let auditBorder = "border-l-4 border-l-red-500";
+  let auditTitle = "Never counted — open workspace and run Count stock";
+  if (last_stock_take) {
+    const days = (Date.now() - new Date(last_stock_take).getTime()) / (1000 * 60 * 60 * 24);
+    if (days <= 30) {
+      auditBorder = "border-l-4 border-l-emerald-500";
+      auditTitle = `Last count within a month (${new Date(last_stock_take).toLocaleDateString()})`;
+    } else {
+      auditBorder = "border-l-4 border-l-amber-500";
+      auditTitle = `Last count over a month ago (${new Date(last_stock_take).toLocaleDateString()})`;
+    }
+  }
+
+
 
   // 2. Compute Stock Alert Matrix
   let stockAlertState: "normal" | "low" | "crisis" | "untracked" = "normal";
@@ -211,14 +252,16 @@ export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowPr
           onOpen(id);
         }
       }}
-      className="
-        group border-b border-border bg-card/40 transition-all duration-200 ease-in-out cursor-pointer
-        hover:bg-brand-primary/5
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-inset
-        data-[active=false]:opacity-50 data-[active=false]:bg-secondary/5
-        data-[alert=crisis]:bg-red-500/5 dark:data-[alert=crisis]:bg-red-500/10
-        data-[alert=low]:bg-amber-500/5 dark:data-[alert=low]:bg-amber-500/10
-      "
+      title={auditTitle}
+      className={cn(
+        "group border-b border-border bg-card/40 transition-all duration-200 ease-in-out cursor-pointer",
+        auditBorder,
+        "hover:bg-brand-primary/5",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-inset",
+        "data-[active=false]:opacity-50 data-[active=false]:bg-secondary/5",
+        "data-[alert=crisis]:bg-red-500/5 dark:data-[alert=crisis]:bg-red-500/10",
+        "data-[alert=low]:bg-amber-500/5 dark:data-[alert=low]:bg-amber-500/10"
+      )}
     >
       {/* COLUMN 1: CORE PRODUCT IDENTITY */}
       <td className="px-6 py-4 align-middle">
@@ -246,6 +289,7 @@ export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowPr
 
       {/* COLUMN 2: FINANCIAL MATRIX */}
       <td className="px-6 py-4 align-middle text-right font-mono">
+        <div className="flex flex-col items-end gap-0.5">
         <span className="text-sm font-extrabold text-foreground">
           {formattedPrice}
         </span>

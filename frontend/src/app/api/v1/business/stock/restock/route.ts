@@ -1,38 +1,57 @@
-// this route proxies a POST request to the backend
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 
 const API_BASE = process.env.BACKEND_URL;
 
+async function readBackendJson(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { status: false, message: text.slice(0, 500) || res.statusText };
+  }
+}
+
 export async function POST(req: NextRequest) {
-    const session = await auth()
+  const session = await auth();
+  if (!session?.accessToken) {
+    return NextResponse.json({ error: "Unauthorized!" }, { status: 401 });
+  }
 
-    if(!session?.accessToken){
-        return NextResponse.json({error: "Unauthorized!"}, {status: 401})
-    }
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
-    const body = await req.json()
-    if(!body){
-        // return a 400
-        return NextResponse.json({"error": "Invalid request body"}, {status: 400})
-    }
-    console.log("request data", body)
-
+  try {
     const res = await fetch(`${API_BASE}/business/restock`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.accessToken}`,
-    },
-    body: JSON.stringify(body),
-  });
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = (await readBackendJson(res)) as {
+      status?: boolean;
+      message?: string;
+      detail?: string | unknown;
+      error?: string;
+    } | null;
 
-  const data = await res.json();
-  console.log("response data for restock", data)
-    if (!data.status) {
-      return NextResponse.json({ error: data.message }, { status: res.status });
+    if (!res.ok || (data && data.status === false)) {
+      const msg =
+        (data && (data.message || data.error)) ||
+        (typeof data?.detail === "string" ? data.detail : null) ||
+        `Restock failed (${res.status})`;
+      return NextResponse.json({ error: msg, detail: data?.detail }, { status: res.status || 500 });
     }
-
-    
     return NextResponse.json(data, { status: res.status });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Restock proxy error";
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
 }

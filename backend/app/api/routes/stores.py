@@ -60,6 +60,25 @@ class PaginatedData(BaseModel, Generic[T]):
 CACHE_TTL_SEC = 300  # 5 minutes cache visibility matrix
 
 
+
+def _product_response(product) -> ProductResponse:
+    """Safe Product → ProductResponse for stock routes (avoids 500 on response validation)."""
+    attrs = getattr(product, "attributes", None) or {}
+    if not isinstance(attrs, dict):
+        attrs = {}
+    return ProductResponse(
+        id=product.id,
+        label=product.label,
+        selling_price=float(product.selling_price or 0),
+        track_stock=bool(product.track_stock),
+        last_stock_take=getattr(product, "last_stock_take", None),
+        stock=float(product.stock or 0),
+        popularity_score=getattr(product, "popularity_score", None),
+        active=bool(getattr(product, "active", True)),
+        category=getattr(product, "category", None) or "General",
+        attributes=attrs,
+    )
+
 @router.patch('/update-business/{business_id}', response_model=ApiResponse[BusinessResponse])
 async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payload:BusinessUpdate, redis_client: AsyncRedis = Depends(get_redis)):
     """
@@ -130,16 +149,17 @@ async def restock_product(
     Increments product inventory based on an incoming supply.
     Maintains an atomic history snapshot balance.
     """
-    data = await stock_crud.restock(db=db, payload=payload, current_user=current_staff)
-    await purge_cache_namespace(redis_client, namespace="products", business_id=data.business_id)
+    product = await stock_crud.restock(db=db, payload=payload, current_user=current_staff)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
 
-    logger.info(f"restock response: {data}")
+    data = _product_response(product)
+    logger.info(f"restock response product_id={product.id} stock={product.stock}")
 
     return ApiResponse(
         status=True,
         status_code=200,
         message="Success",
-        data=data
+        data=data,
     )
 
 @router.post("/stock-audit", status_code=200, response_model=ApiResponse[ProductResponse])
@@ -153,17 +173,11 @@ async def audit_product_stock(
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    data = await stock_crud.count_stock(db=db, payload=payload, current_user=user)
-    await purge_cache_namespace(redis_client, namespace="stock", business_id=data.business_id)
+    product = await stock_crud.count_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
+    data = _product_response(product)
+    return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
-    # logger.info(f"stock-audit response: {data}")
-
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Success",
-        data=data
-    )
 
 
 
@@ -175,8 +189,9 @@ async def adjust_product_stock(
     redis_client: AsyncRedis = Depends(get_redis),
 ):
     """Explicit increase/decrease with reason; writes StockHistory + audit."""
-    data = await stock_crud.adjust_stock(db=db, payload=payload, current_user=user)
-    await purge_cache_namespace(redis_client, namespace="products", business_id=data.business_id)
+    product = await stock_crud.adjust_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
+    data = _product_response(product)
     return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
 
@@ -193,23 +208,7 @@ async def list_product_stock_movements(
     rows, total = await stock_crud.list_movements(
         db, business_id=business_id, product_id=product_id, limit=limit, offset=offset
     )
-    data = {
-        "items": [
-            {
-                "id": str(r.id),
-                "created_at": r.created_at.isoformat() if r.created_at else None,
-                "movement_type": r.movement_type.value if hasattr(r.movement_type, "value") else str(r.movement_type),
-                "quantity": r.quantity,
-                "previous_stock": r.previous_stock,
-                "new_stock": r.new_stock,
-                "notes": r.notes,
-                "reference_type": r.reference_type,
-                "performed_by": str(r.performed_by) if r.performed_by else None,
-            }
-            for r in rows
-        ],
-        "total": total,
-    }
+    data = {"items": rows, "total": total}
     return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
 
