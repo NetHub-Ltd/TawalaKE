@@ -35,7 +35,9 @@ interface MovementRow {
   previous_stock: number | null;
   new_stock: number;
   notes: string | null;
+  reason_code?: string | null;
   reference_type: string | null;
+  reference_id?: string | null;
   performed_by: string | null;
   performed_by_name?: string | null;
 }
@@ -58,6 +60,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
   const [movementsLoading, setMovementsLoading] = useState(false);
   const [movementsError, setMovementsError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const {
@@ -149,6 +152,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
   async function postStock(path: string, body: Record<string, unknown>) {
     setSubmitting(true);
     setFormError(null);
+    setSuccessMessage(null);
     try {
       const res = await fetch(path, {
         method: "POST",
@@ -161,6 +165,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       }
       await refresh();
       await loadMovements();
+      setSuccessMessage("Stock updated successfully.");
       setAction(null);
       syncUrl("overview", null);
     } catch (e) {
@@ -256,17 +261,51 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
         ))}
       </nav>
 
+      {successMessage && (
+        <div
+          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300"
+          role="status"
+        >
+          {successMessage}
+        </div>
+      )}
+
       {tab === "overview" && !action && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Metric label="On hand" value={`${onHand}`} />
             <Metric label="Value (KES)" value={value.toLocaleString()} />
-            <Metric label="Selling" value={String(product.selling_price ?? "—")} />
+            <Metric label="Selling price" value={String(product.selling_price ?? "—")} />
             <Metric label="Category" value={product.category || "—"} />
             <Metric
-              label="Status"
-              value={product.track_stock ? (onHand <= 10 ? "Low" : "OK") : "N/A"}
-              tone={product.track_stock && onHand <= 10 ? "warn" : "ok"}
+              label="Stock status"
+              value={
+                !product.track_stock
+                  ? "Not tracked"
+                  : onHand <= 0
+                    ? "Out of stock"
+                    : onHand <= 10
+                      ? "Low"
+                      : "In stock"
+              }
+              tone={
+                !product.track_stock
+                  ? undefined
+                  : onHand <= 0
+                    ? "warn"
+                    : onHand <= 10
+                      ? "warn"
+                      : "ok"
+              }
+            />
+            <Metric
+              label="Last count"
+              value={
+                product.last_stock_take
+                  ? new Date(product.last_stock_take).toLocaleDateString()
+                  : "Never"
+              }
+              tone={!product.last_stock_take && product.track_stock ? "warn" : undefined}
             />
           </div>
 
@@ -284,21 +323,31 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
               )}
               <ul className="divide-y divide-border/60">
                 {recent.map((m) => (
-                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                    <span className="text-muted min-w-[8rem]">
+                  <li key={m.id} className="border-b border-border/40 py-3 last:border-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="font-medium text-foreground">{m.movement_type}</span>
+                      <span
+                        className={cn(
+                          "font-semibold tabular-nums",
+                          m.quantity < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
+                        )}
+                      >
+                        {m.quantity > 0 ? "+" : ""}
+                        {m.quantity}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      {m.previous_stock != null ? m.previous_stock : "—"} → {m.new_stock}
+                      {" · "}
+                      {m.performed_by_name || "Unknown"}
+                      {" · "}
                       {m.created_at ? new Date(m.created_at).toLocaleString() : "—"}
-                    </span>
-                    <span
-                      className={cn(
-                        "font-semibold tabular-nums",
-                        m.quantity < 0 ? "text-red-600 dark:text-red-400" : "text-brand-accent"
-                      )}
-                    >
-                      {m.quantity > 0 ? "+" : ""}
-                      {m.quantity}
-                    </span>
-                    <span className="text-foreground">{m.movement_type}</span>
-                    <span className="text-muted text-xs">{m.performed_by_name || "—"}</span>
+                    </p>
+                    {(m.reason_code || m.notes) && (
+                      <p className="mt-0.5 text-xs text-muted truncate" title={[m.reason_code, m.notes].filter(Boolean).join(" — ")}>
+                        {[m.reason_code, m.notes].filter(Boolean).join(" — ")}
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -375,8 +424,10 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                 <tr className="border-b border-border bg-background/50 text-xs font-semibold uppercase tracking-wider text-muted">
                   <th className="px-4 py-3">When</th>
                   <th className="px-4 py-3">What</th>
-                  <th className="px-4 py-3 text-right">Qty</th>
-                  <th className="px-4 py-3 text-right">Balance</th>
+                  <th className="px-4 py-3 text-right">Before</th>
+                  <th className="px-4 py-3 text-right">Change</th>
+                  <th className="px-4 py-3 text-right">After</th>
+                  <th className="px-4 py-3">Reason</th>
                   <th className="px-4 py-3">Who</th>
                   <th className="px-4 py-3">Notes</th>
                 </tr>
@@ -384,41 +435,49 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
               <tbody>
                 {movementsLoading && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted">
                       Loading history…
                     </td>
                   </tr>
                 )}
                 {!movementsLoading && movements.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted">
+                    <td colSpan={8} className="px-4 py-8 text-center text-muted">
                       No movements recorded yet.
                     </td>
                   </tr>
                 )}
                 {movements.map((m) => (
                   <tr key={m.id} className="border-b border-border/50">
-                    <td className="px-4 py-2.5 text-muted whitespace-nowrap">
+                    <td className="px-4 py-2.5 text-muted whitespace-nowrap text-xs">
                       {m.created_at ? new Date(m.created_at).toLocaleString() : "—"}
                     </td>
-                    <td className="px-4 py-2.5 text-foreground">{m.movement_type}</td>
+                    <td className="px-4 py-2.5 text-foreground text-sm font-medium">
+                      {m.movement_type}
+                    </td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-muted">
+                      {m.previous_stock != null ? m.previous_stock : "—"}
+                    </td>
                     <td
                       className={cn(
                         "px-4 py-2.5 text-right font-semibold tabular-nums",
-                        m.quantity < 0 ? "text-red-600 dark:text-red-400" : "text-brand-accent"
+                        m.quantity < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
                       )}
                     >
                       {m.quantity > 0 ? "+" : ""}
                       {m.quantity}
                     </td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-foreground">
                       {m.new_stock}
                     </td>
-                    <td className="px-4 py-2.5 text-foreground text-sm">
+                    <td className="px-4 py-2.5 text-sm text-foreground max-w-[140px] truncate" title={m.reason_code || m.reference_type || ""}>
+                      {m.reason_code || m.reference_type || "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-sm text-foreground">
                       {m.performed_by_name || "—"}
                     </td>
-                    <td className="px-4 py-2.5 text-muted max-w-[240px] truncate">
-                      {m.notes || m.reference_type || "—"}
+                    <td className="px-4 py-2.5 text-muted max-w-[200px] truncate text-sm" title={m.notes || ""}>
+                      {m.notes || "—"}
                     </td>
                   </tr>
                 ))}

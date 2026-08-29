@@ -105,6 +105,7 @@ class StockCrud:
         notes: Optional[str] = None,
         reference_id: Optional[UUID] = None,
         reference_type: Optional[str] = None,
+        reason_code: Optional[str] = None,
         buying_price: Optional[float] = None,
         selling_price: Optional[float] = None,
         commit: bool = True,
@@ -150,6 +151,7 @@ class StockCrud:
             selling_price=selling_price if selling_price is not None else product.selling_price,
             reference_id=reference_id or product.id,
             reference_type=reference_type,
+            reason_code=reason_code,
             notes=notes,
         )
         db.add(product)
@@ -235,6 +237,7 @@ class StockCrud:
             business_id=product.business_id,
             notes=payload.notes or payload.reason_code,
             reference_type=payload.reference_type or "MANUAL_AUDIT",
+            reason_code=payload.reason_code,
             commit=True,
             touch_last_stock_take=True,
         )
@@ -277,6 +280,7 @@ class StockCrud:
             business_id=product.business_id,
             notes=payload.notes or payload.reason_code,
             reference_type=payload.reference_type or "MANUAL_ADJUSTMENT",
+            reason_code=payload.reason_code,
             commit=True,
             touch_last_stock_take=True,
         )
@@ -405,7 +409,9 @@ class StockCrud:
                     "previous_stock": hist.previous_stock,
                     "new_stock": hist.new_stock,
                     "notes": hist.notes,
+                    "reason_code": getattr(hist, "reason_code", None),
                     "reference_type": hist.reference_type,
+                    "reference_id": str(hist.reference_id) if getattr(hist, "reference_id", None) else None,
                     "performed_by": str(hist.performed_by) if hist.performed_by else None,
                     "performed_by_name": who,
                 }
