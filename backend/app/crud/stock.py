@@ -176,7 +176,7 @@ class StockCrud:
         db: AsyncSession,
         payload: ProductRestockRequest,
         current_user: Staff,
-    ) -> Product:
+    ) -> tuple:
         product = await self.get_product_for_update(
             db, product_id=payload.product_id, business_id=payload.business_id
         )
@@ -214,14 +214,14 @@ class StockCrud:
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)
-        return product
+        return product, before, after
 
     async def count_stock(
         self,
         db: AsyncSession,
         payload: ProductAuditRequest,
         current_user: Staff,
-    ) -> Product:
+    ) -> tuple:
         """Physical count: payload.quantity is absolute shelf count."""
         product = await self.get_product_for_update(
             db, product_id=payload.product_id, business_id=payload.business_id
@@ -258,14 +258,14 @@ class StockCrud:
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)
-        return product
+        return product, before, after
 
     async def adjust_stock(
         self,
         db: AsyncSession,
         payload: ProductAdjustRequest,
         current_user: Staff,
-    ) -> Product:
+    ) -> tuple:
         delta = payload.signed_delta()
         product = await self.get_product_for_update(
             db, product_id=payload.product_id, business_id=payload.business_id
@@ -303,7 +303,7 @@ class StockCrud:
             )
         except Exception as audit_err:
             logger.warning("stock audit event failed: %s", audit_err)
-        return product
+        return product, before, after
 
     async def apply_sale_item_deduction(
         self,

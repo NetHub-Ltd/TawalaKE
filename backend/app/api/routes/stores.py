@@ -137,7 +137,7 @@ async def restock_product(
     Increments product inventory based on an incoming supply.
     Maintains an atomic history snapshot balance.
     """
-    product = await stock_crud.restock(db=db, payload=payload, current_user=current_staff)
+    product, _b, _a = await stock_crud.restock(db=db, payload=payload, current_user=current_staff)
     await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
 
     data = _product_response(product)
@@ -161,7 +161,7 @@ async def audit_product_stock(
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    product = await stock_crud.count_stock(db=db, payload=payload, current_user=user)
+    product, _b, _a = await stock_crud.count_stock(db=db, payload=payload, current_user=user)
     await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
     data = _product_response(product)
     return ApiResponse(status=True, status_code=200, message="Success", data=data)
@@ -177,7 +177,7 @@ async def adjust_product_stock(
     redis_client: AsyncRedis = Depends(get_redis),
 ):
     """Explicit increase/decrease with reason; writes StockHistory + audit."""
-    product = await stock_crud.adjust_stock(db=db, payload=payload, current_user=user)
+    product, _b, _a = await stock_crud.adjust_stock(db=db, payload=payload, current_user=user)
     await purge_cache_namespace(redis_client, namespace="products", business_id=product.business_id)
     data = _product_response(product)
     return ApiResponse(status=True, status_code=200, message="Success", data=data)
