@@ -25,15 +25,20 @@ function errorMessage(data: unknown, fallback: string, status: number): string {
   return fallback;
 }
 
+/**
+ * Prefer body.status when present.
+ * - status === true  → success even if HTTP is non-2xx (post-commit edge cases)
+ * - status === false → failure
+ * - missing status   → fall back to HTTP ok
+ */
 function isFailure(res: Response, data: unknown): boolean {
-  if (!res.ok) return true;
-  if (data && typeof data === "object" && (data as { status?: boolean }).status === false) {
-    return true;
+  if (data && typeof data === "object" && "status" in data) {
+    return (data as { status?: boolean }).status === false;
   }
-  return false;
+  return !res.ok;
 }
 
-/** Authenticated POST to backend /stock/... (path always under /api/v1 via backendUrl). */
+/** Authenticated POST to backend /stock/... */
 export async function proxyStockPost(
   backendPath: string,
   body: unknown,
@@ -43,8 +48,9 @@ export async function proxyStockPost(
   if (!session?.accessToken) {
     return NextResponse.json({ error: "Unauthorized!" }, { status: 401 });
   }
+  const url = backendUrl(backendPath);
   try {
-    const res = await fetch(backendUrl(backendPath), {
+    const res = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -54,6 +60,11 @@ export async function proxyStockPost(
     });
     const data = await readBackendJson(res);
     if (isFailure(res, data)) {
+      console.error("[stockProxy POST]", {
+        url,
+        upstreamStatus: res.status,
+        data,
+      });
       return NextResponse.json(
         {
           error: errorMessage(data, fallbackError, res.status),
@@ -62,14 +73,17 @@ export async function proxyStockPost(
               ? (data as { detail?: unknown }).detail
               : undefined,
         },
-        { status: res.status || 500 }
+        { status: res.status >= 400 ? res.status : 500 }
       );
     }
+    // Always surface success as 200 to the browser when body says success
+    // (or HTTP is ok with no status field).
     return NextResponse.json(data ?? { status: true, message: "Success" }, {
-      status: res.status || 200,
+      status: 200,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : fallbackError;
+    console.error("[stockProxy POST network]", { url, msg });
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
@@ -79,23 +93,30 @@ export async function proxyStockGet(backendPath: string, fallbackError: string) 
   if (!session?.accessToken) {
     return NextResponse.json({ error: "Unauthorized!" }, { status: 401 });
   }
+  const url = backendUrl(backendPath);
   try {
-    const res = await fetch(backendUrl(backendPath), {
+    const res = await fetch(url, {
       headers: { Authorization: `Bearer ${session.accessToken}` },
       cache: "no-store",
     });
     const data = await readBackendJson(res);
     if (isFailure(res, data)) {
+      console.error("[stockProxy GET]", {
+        url,
+        upstreamStatus: res.status,
+        data,
+      });
       return NextResponse.json(
         { error: errorMessage(data, fallbackError, res.status) },
-        { status: res.status || 500 }
+        { status: res.status >= 400 ? res.status : 500 }
       );
     }
     return NextResponse.json(data ?? { status: true, message: "Success" }, {
-      status: res.status || 200,
+      status: 200,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : fallbackError;
+    console.error("[stockProxy GET network]", { url, msg });
     return NextResponse.json({ error: msg }, { status: 502 });
   }
 }
