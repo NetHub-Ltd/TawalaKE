@@ -14,6 +14,7 @@ from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
 from app.schemas.business import RestockRequest, ProductAuditRequest, StaffRequest, ProductRestockRequest
 from app.utils.logging import logger
 from app.crud.store import store_crud
+from app.crud.stock import stock_crud, ProductAdjustRequest
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
 from sqlmodel import select
@@ -129,7 +130,7 @@ async def restock_product(
     Increments product inventory based on an incoming supply.
     Maintains an atomic history snapshot balance.
     """
-    data =  await store_crud.add_new_stock(db=db, payload=payload, current_user=current_staff)
+    data = await stock_crud.restock(db=db, payload=payload, current_user=current_staff)
     await purge_cache_namespace(redis_client, namespace="products", business_id=data.business_id)
 
     logger.info(f"restock response: {data}")
@@ -152,7 +153,7 @@ async def audit_product_stock(
     Reconciles physical counter reality audits with system database balances.
     Calculates the inventory variance delta and tracks loss anomalies.
     """
-    data =  await store_crud.audit_stock(db=db, payload=payload, current_user=user)
+    data = await stock_crud.count_stock(db=db, payload=payload, current_user=user)
     await purge_cache_namespace(redis_client, namespace="stock", business_id=data.business_id)
 
     # logger.info(f"stock-audit response: {data}")
@@ -163,6 +164,53 @@ async def audit_product_stock(
         message="Success",
         data=data
     )
+
+
+
+@router.post("/stock-adjust", response_model=ApiResponse[ProductResponse])
+async def adjust_product_stock(
+    payload: ProductAdjustRequest,
+    db: SessionDep,
+    user: AuthUser,
+    redis_client: AsyncRedis = Depends(get_redis),
+):
+    """Explicit increase/decrease with reason; writes StockHistory + audit."""
+    data = await stock_crud.adjust_stock(db=db, payload=payload, current_user=user)
+    await purge_cache_namespace(redis_client, namespace="products", business_id=data.business_id)
+    return ApiResponse(status=True, status_code=200, message="Success", data=data)
+
+
+@router.get("/stock/movements/{business_id}/{product_id}", response_model=ApiResponse[dict])
+async def list_product_stock_movements(
+    business_id: UUID,
+    product_id: UUID,
+    db: SessionDep,
+    user: AuthUser,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Paginated StockHistory for product workspace History tab."""
+    rows, total = await stock_crud.list_movements(
+        db, business_id=business_id, product_id=product_id, limit=limit, offset=offset
+    )
+    data = {
+        "items": [
+            {
+                "id": str(r.id),
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "movement_type": r.movement_type.value if hasattr(r.movement_type, "value") else str(r.movement_type),
+                "quantity": r.quantity,
+                "previous_stock": r.previous_stock,
+                "new_stock": r.new_stock,
+                "notes": r.notes,
+                "reference_type": r.reference_type,
+                "performed_by": str(r.performed_by) if r.performed_by else None,
+            }
+            for r in rows
+        ],
+        "total": total,
+    }
+    return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
 
 @router.post("/new-sale", status_code=200, response_model=SaleResponse)
