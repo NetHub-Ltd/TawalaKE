@@ -283,7 +283,7 @@ export function useProducts(
   const refresh = async () => {
     await queryClient.invalidateQueries({
       queryKey: ["products", businessId],
-      refetchType: "active",
+      refetchType: "all",
     });
   };
 
@@ -342,7 +342,23 @@ export function useProducts(
 
   const rawData = productsQuery.data as unknown as Record<string, unknown> | undefined;
 
+  const resolvedDetailProduct: ProductResponse | undefined = (() => {
+    if (!productId || !rawData || typeof rawData !== "object") return undefined;
+    // BFF returns { data: product } for single-product GET
+    if ("data" in rawData && rawData.data && !Array.isArray(rawData.data)) {
+      return rawData.data as ProductResponse;
+    }
+    // Direct product object
+    if ("id" in rawData && "label" in rawData) {
+      return rawData as unknown as ProductResponse;
+    }
+    return undefined;
+  })();
+
   const resolvedProducts: ProductResponse[] = (() => {
+    if (productId) {
+      return resolvedDetailProduct ? [resolvedDetailProduct] : [];
+    }
     if (!rawData) return [];
     if (Array.isArray(rawData)) return rawData as ProductResponse[];
     if (Array.isArray(rawData.data)) return rawData.data as ProductResponse[];
@@ -371,9 +387,7 @@ export function useProducts(
     pagination: resolvedPagination,
     total: resolvedPagination?.total ?? 0,
 
-    product: !Array.isArray(rawData) && rawData && !("data" in rawData) && !("records" in rawData)
-      ? (rawData as unknown as ProductResponse)
-      : undefined,
+    product: resolvedDetailProduct,
 
     isLoading: productsQuery.isLoading,
     isError: productsQuery.isError,

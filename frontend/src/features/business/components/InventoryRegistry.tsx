@@ -109,7 +109,7 @@ export function InventoryRegistry() {
   }, [debouncedSearch, itemsPerPage]);
 
   // Server-paginated & server-searched useProducts hook
-  const { products, pagination, isLoading, isFetching, deleteProduct, refresh } = useProducts(
+  const { products, pagination, isLoading, isFetching, refresh } = useProducts(
     businessId as string,
     undefined,
     currentPage,
@@ -139,14 +139,7 @@ export function InventoryRegistry() {
     router.push(`/org/${organizationId}/${businessId}/inventory/${id}`);
   };
 
-  const handleDelete = (id: string) => {
-    const targetProduct = products?.find((p) => p.id === id);
-    const productName = targetProduct ? targetProduct.label : "Unknown Asset";
-
-    if (window.confirm(`Delete Product: "${productName}"? This action is logged.`)) {
-      deleteProduct.mutate(id);
-    }
-  };
+  // Product deletion only from product workspace Settings (not the list row).
 
   return (
     <main id="main-content" className="flex-1 flex flex-col h-full font-sans overflow-hidden">
@@ -286,7 +279,7 @@ export function InventoryRegistry() {
                       key={product.id}
                       product={product}
                       onOpen={handleOpenWorkspace}
-                      onDelete={handleDelete}
+                      
                     />
                   ))
                 )}
