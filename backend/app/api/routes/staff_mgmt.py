@@ -26,6 +26,7 @@ from app.schemas.staff_mgmt import (
     StaffCreateManagedIn,
 )
 from app.services.audit import record_audit
+from app.services import paywall as paywall_service
 from app.utils.logging import logger
 
 router = APIRouter()
@@ -142,6 +143,8 @@ async def create_staff(
     org_id = payload.organization_id or user.organization_id
     if not org_id or (user.organization_id and org_id != user.organization_id):
         raise HTTPException(403, detail="Invalid organization")
+
+    await paywall_service.enforce_create_staff(db, org_id)
 
     existing = (
         await db.exec(select(Staff).where(Staff.email == payload.email))

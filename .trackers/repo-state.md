@@ -2,8 +2,8 @@
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Integration branch:** `dev`  
-**Pre-branch tip:** `499e40f` (Merge #135)
+**Pre-branch tip:** `8d46875` (main / initial `dev` tip)
 
 ## This branch
 
-`fix/stock-mutation-postcommit-500-v2` — post-commit response hardening + client non-blocking refresh after stock mutations.
+`feat/paywall-enforcement` — plan-based paywall (limits + features) on create paths + entitlements API.
