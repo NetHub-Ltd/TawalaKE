@@ -107,11 +107,15 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       const res = await fetch(
         `/api/v1/stock/movements?business_id=${businessId}&product_id=${productId}&limit=50`
       );
-      const data = await res.json();
-      if (!res.ok || data.status === false) {
-        throw new Error(data.error || data.message || "Failed to load history");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.status === false) {
+        throw new Error(
+          (typeof data?.error === "string" && data.error) ||
+            (typeof data?.message === "string" && data.message) ||
+            "Failed to load history"
+        );
       }
-      setMovements(data.data?.items || []);
+      setMovements(data?.data?.items || []);
     } catch (e) {
       setMovementsError(e instanceof Error ? e.message : "Failed to load history");
     } finally {
@@ -162,7 +166,9 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       } catch {
         data = {};
       }
-      if (!res.ok || data.status === false) {
+      // Treat only explicit failure: non-OK HTTP or status === false.
+      // Missing status on a 2xx body is treated as success (write already committed).
+      if (!res.ok || data?.status === false) {
         const msg =
           (typeof data.error === "string" && data.error) ||
           (typeof data.message === "string" && data.message) ||
@@ -240,7 +246,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           {product.label}
         </h1>
         <p className="text-sm text-muted">
-          View levels, run stock actions, and see history. Use Settings only for name, price, and catalogue details.
+          View levels, run stock actions, and see history. Use Settings for name, category, cost, and tracking — not selling price, SKU, or on-hand quantity.
         </p>
       </header>
 
@@ -470,7 +476,8 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           <div>
             <h2 className="text-base font-semibold text-foreground">Catalogue settings</h2>
             <p className="mt-1 text-sm text-muted">
-              Name, price, category, and tracking. Stock quantity is changed with Receive, Count, or Adjust.
+              Name, category, cost, and tracking. Selling price, SKU, and on-hand stock are not
+              edited here — use Receive, Count, or Adjust for quantity; price/SKU stay outside this form.
             </p>
           </div>
           <ProductSettingsForm
@@ -537,9 +544,7 @@ function ProductSettingsForm({
 }) {
   const attrs = product.attributes || {};
   const [label, setLabel] = useState(product.label);
-  const [sellingPrice, setSellingPrice] = useState(String(product.selling_price ?? ""));
   const [category, setCategory] = useState(product.category || "other");
-  const [sku, setSku] = useState(attrs.sku || "");
   const [uom, setUom] = useState(attrs.unit_of_measure || "pcs");
   const [buyingPrice, setBuyingPrice] = useState(
     String(attrs.buying_price ?? product.cost_price ?? "")
@@ -555,16 +560,15 @@ function ProductSettingsForm({
     setError(null);
     setSaving(true);
     try {
+      // Selling price, SKU, and on-hand stock are intentionally omitted from this form.
       await onSave({
         label: label.trim(),
-        selling_price: Number(sellingPrice) || 0,
         category,
         track_stock: trackStock,
         active,
         min_stock_level: Number(minStock) || 0,
         cost_price: buyingPrice === "" ? undefined : Number(buyingPrice),
         attributes: {
-          sku: sku || null,
           unit_of_measure: uom || null,
           buying_price: buyingPrice === "" ? null : Number(buyingPrice),
         },
@@ -591,22 +595,6 @@ function ProductSettingsForm({
           <input className={field} value={category} onChange={(e) => setCategory(e.target.value)} />
         </label>
         <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-foreground">SKU</span>
-          <input className={field} value={sku} onChange={(e) => setSku(e.target.value)} />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-foreground">Selling price (KES) *</span>
-          <input
-            type="number"
-            min={0}
-            step="any"
-            className={field}
-            value={sellingPrice}
-            onChange={(e) => setSellingPrice(e.target.value)}
-            required
-          />
-        </label>
-        <label className="block space-y-1.5">
           <span className="text-sm font-medium text-foreground">Cost / buying price (KES)</span>
           <input
             type="number"
@@ -631,11 +619,6 @@ function ProductSettingsForm({
             value={minStock}
             onChange={(e) => setMinStock(e.target.value)}
           />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-sm font-medium text-foreground">On-hand stock</span>
-          <input className={field + " bg-background/80"} value={product.stock} readOnly />
-          <span className="text-xs text-muted">Change stock with Receive, Count, or Adjust — not here.</span>
         </label>
       </div>
 

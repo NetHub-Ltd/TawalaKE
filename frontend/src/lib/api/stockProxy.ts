@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-
-const API_BASE = process.env.BACKEND_URL;
+import { backendUrl } from "@/lib/api/backend";
 
 export async function readBackendJson(res: Response): Promise<unknown> {
   const text = await res.text();
@@ -26,7 +25,15 @@ function errorMessage(data: unknown, fallback: string, status: number): string {
   return fallback;
 }
 
-/** Authenticated POST to backend /stock/... */
+function isFailure(res: Response, data: unknown): boolean {
+  if (!res.ok) return true;
+  if (data && typeof data === "object" && (data as { status?: boolean }).status === false) {
+    return true;
+  }
+  return false;
+}
+
+/** Authenticated POST to backend /stock/... (path always under /api/v1 via backendUrl). */
 export async function proxyStockPost(
   backendPath: string,
   body: unknown,
@@ -37,7 +44,7 @@ export async function proxyStockPost(
     return NextResponse.json({ error: "Unauthorized!" }, { status: 401 });
   }
   try {
-    const res = await fetch(`${API_BASE}${backendPath}`, {
+    const res = await fetch(backendUrl(backendPath), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -46,16 +53,21 @@ export async function proxyStockPost(
       body: JSON.stringify(body),
     });
     const data = await readBackendJson(res);
-    if (!res.ok || (data && typeof data === "object" && (data as { status?: boolean }).status === false)) {
+    if (isFailure(res, data)) {
       return NextResponse.json(
         {
           error: errorMessage(data, fallbackError, res.status),
-          detail: data && typeof data === "object" ? (data as { detail?: unknown }).detail : undefined,
+          detail:
+            data && typeof data === "object"
+              ? (data as { detail?: unknown }).detail
+              : undefined,
         },
         { status: res.status || 500 }
       );
     }
-    return NextResponse.json(data, { status: res.status });
+    return NextResponse.json(data ?? { status: true, message: "Success" }, {
+      status: res.status || 200,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : fallbackError;
     return NextResponse.json({ error: msg }, { status: 502 });
@@ -68,18 +80,20 @@ export async function proxyStockGet(backendPath: string, fallbackError: string) 
     return NextResponse.json({ error: "Unauthorized!" }, { status: 401 });
   }
   try {
-    const res = await fetch(`${API_BASE}${backendPath}`, {
+    const res = await fetch(backendUrl(backendPath), {
       headers: { Authorization: `Bearer ${session.accessToken}` },
       cache: "no-store",
     });
     const data = await readBackendJson(res);
-    if (!res.ok || (data && typeof data === "object" && (data as { status?: boolean }).status === false)) {
+    if (isFailure(res, data)) {
       return NextResponse.json(
         { error: errorMessage(data, fallbackError, res.status) },
         { status: res.status || 500 }
       );
     }
-    return NextResponse.json(data, { status: res.status });
+    return NextResponse.json(data ?? { status: true, message: "Success" }, {
+      status: res.status || 200,
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : fallbackError;
     return NextResponse.json({ error: msg }, { status: 502 });
