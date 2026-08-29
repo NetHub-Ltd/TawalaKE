@@ -1,53 +1,28 @@
 # Task Tracker
 
-**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Base / PR target:** `dev`  
-**Current branch (this chore):** `chore/sync-trackers-post-114`
+**Branch:** `feat/product-workspace-stock-crud`
 
 ## Goal
 
-Bring `.trackers/` into agreement with Git history after PR #114 merged to `main` and subsequent RBAC/frontend-CI work landed on `dev`. Chore only.
+Single PR: centralize stock in `stock_crud`, product workspace UI (Overview | History | Settings + Receive/Count/Adjust), audit on stock events, tests, theme-aligned UI.
 
-## Approved scope
+## Completed
 
-- Rewrite `repo-state.md`, `task.md`, `rollback.md` to post-merge reality
-- Open PR into `dev`
-- Do not merge without explicit user authority
-- No product, schema, CI workflow, or deployment code changes
+- [x] `backend/app/crud/stock.py` — restock, count, adjust, apply_movement, sale deduction, list_movements
+- [x] Removed stock mutations from `store_crud`; finalize_checkout borrows `stock_crud`
+- [x] Routes: restock/audit → stock_crud; added stock-adjust + movements
+- [x] Tests: `test_stock_crud.py`; route mocks updated
+- [x] Product workspace UI + API proxies
+- [x] Theme tokens from `globals.css` (card, border, muted, brand-*)
 
-## Completed (this chore)
+## Out of scope
 
-- [x] Inspected `main` and `dev` tips and tracker content
-- [x] Confirmed `dev` is strictly ahead of `main`
-- [x] Tracker files rewritten on topic branch
-- [x] PR opened into `dev` (#124)
-
-## Remaining
-
-- User review + merge of this PR into `dev`
-- Optional later: close or retarget leftover remote `fix/checkout-invoice-*` / `fix/product-inventory-integrity` branches
-- Optional later: promote `dev` → `main` when ready (separate task)
-
-## Explicitly out of scope
-
-- Any application/code change
-- Force-push or history rewrite
-- Auto-merge
-- k3s manifests (future task)
-
-## Decisions
-
-- Working/PR target is always `dev`
-- Git history is the authority for tracker content
-- After this lands, trackers reflect idle/post-sync state until a new task is authorized
-
-## Risks
-
-- Low: documentation-only; no runtime impact
-- Stale trackers on `main` will remain until a future `dev` → `main` promotion carries the updated trackers
+- Transfer / dispose first-class types
+- Multi-branch true warehouse ledger
+- k3s
 
 ## Verification
 
-- No conflict markers
-- SHAs and PR numbers match `git log`
-- Scope limited to `.trackers/`
+- Backend unit tests for stock_crud
+- Manual checklist in PR body
