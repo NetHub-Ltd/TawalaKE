@@ -158,8 +158,11 @@ export interface ProductResponse {
   label: string;
   selling_price: number;
   track_stock: boolean;
+  /** ISO timestamp of last physical count / stock take when API provides it */
+  last_stock_take?: string | null;
   stock: number;
   active: boolean;
+  category?: string;
   attributes: BaseAttributes;
 }
 
