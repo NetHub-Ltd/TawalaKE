@@ -12,7 +12,6 @@ import {
   User,
   LogOut,
   LayoutDashboard,
-  Boxes,
   Users2,
   ChevronLeft,
   type LucideIcon,
@@ -55,8 +54,12 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
   },
   {
     label: "Stock",
-    path: "/stock/audit",
-    anyOf: [Permission.STOCK_ADJUST, Permission.STOCK_READ],
+    path: "/inventory",
+    anyOf: [
+      Permission.CATALOG_READ,
+      Permission.STOCK_READ,
+      Permission.STOCK_ADJUST,
+    ],
     icon: Package,
   },
   {
@@ -64,12 +67,6 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     path: "/sale-history",
     anyOf: [Permission.SALES_READ_OWN, Permission.SALES_READ_BUSINESS],
     icon: History,
-  },
-  {
-    label: "Products",
-    path: "/inventory",
-    anyOf: [Permission.CATALOG_READ],
-    icon: Boxes,
   },
   {
     label: "Staff",

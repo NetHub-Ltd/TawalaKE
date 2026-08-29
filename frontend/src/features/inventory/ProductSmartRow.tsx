@@ -1,7 +1,7 @@
 // "use client";
 
 // import React from "react";
-// import { Edit2, Trash2, Infinity } from "lucide-react";
+// import { Trash2, Infinity } from "lucide-react";
 
 // export interface BaseAttributes {
 //   unit_of_measure?: string | null;
@@ -21,12 +21,12 @@
 
 // interface ProductSmartRowProps {
 //   product: ProductResponse;
-//   onEdit: (id: string) => void;
+//   onOpen: (id: string) => void;
 //   onDelete: (id: string) => void;
 // }
 
-// export function ProductSmartRow({ product, onEdit, onDelete }: ProductSmartRowProps) {
-//   const { label, selling_price, track_stock, stock, active, id } = product;
+// export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowProps) {
+//   const { label, selling_price, track_stock, stock, active, id, last_stock_take } = product;
 //   const { sku, unit_of_measure } = product.attributes || {};
 
 //   // 1. Flatten Data Representation for Noise Reduction
@@ -118,7 +118,7 @@
 //       <td className="px-6 py-4 align-middle text-right">
 //         <div className="flex items-center justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
 //           <button
-//             onClick={() => onEdit(id)}
+//             onClick={() => onOpen(id)}
 //             type="button"
 //             aria-label={`Edit ${label}`}
 //             className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-foreground transition-all duration-150 hover:border-primary hover:text-primary active:scale-95"
@@ -145,7 +145,7 @@
 "use client";
 
 import React from "react";
-import { Edit2, Trash2, Infinity } from "lucide-react";
+import { Trash2, Infinity } from "lucide-react";
 
 export interface BaseAttributes {
   unit_of_measure?: string | null;
@@ -158,19 +158,22 @@ export interface ProductResponse {
   label: string;
   selling_price: number;
   track_stock: boolean;
+  /** ISO timestamp of last physical count / stock take when API provides it */
+  last_stock_take?: string | null;
   stock: number;
   active: boolean;
+  category?: string;
   attributes: BaseAttributes;
 }
 
 interface ProductSmartRowProps {
   product: ProductResponse;
-  onEdit: (id: string) => void;
+  onOpen: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-export function ProductSmartRow({ product, onEdit, onDelete }: ProductSmartRowProps) {
-  const { label, selling_price, track_stock, stock, active, id } = product;
+export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowProps) {
+  const { label, selling_price, track_stock, stock, active, id, last_stock_take } = product;
   const { sku, unit_of_measure } = product.attributes || {};
 
   // 1. Flatten Data Representation for Noise Reduction
@@ -198,9 +201,20 @@ export function ProductSmartRow({ product, onEdit, onDelete }: ProductSmartRowPr
     <tr
       data-active={active}
       data-alert={stockAlertState}
+      role="link"
+      tabIndex={0}
+      title="Open product stock workspace"
+      onClick={() => onOpen(id)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen(id);
+        }
+      }}
       className="
-        group border-b border-border bg-card/40 transition-all duration-200 ease-in-out
-        hover:bg-primary/5
+        group border-b border-border bg-card/40 transition-all duration-200 ease-in-out cursor-pointer
+        hover:bg-brand-primary/5
+        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-inset
         data-[active=false]:opacity-50 data-[active=false]:bg-secondary/5
         data-[alert=crisis]:bg-red-500/5 dark:data-[alert=crisis]:bg-red-500/10
         data-[alert=low]:bg-amber-500/5 dark:data-[alert=low]:bg-amber-500/10
@@ -215,6 +229,18 @@ export function ProductSmartRow({ product, onEdit, onDelete }: ProductSmartRowPr
           <span className="text-xs text-secondary font-mono tracking-tight mt-0.5">
             {displaySku}
           </span>
+          {last_stock_take ? (
+            <span
+              className="text-[11px] text-muted mt-1"
+              title="Last physical count or stock adjustment recorded for this product"
+            >
+              Last count: {new Date(last_stock_take).toLocaleDateString()}
+            </span>
+          ) : track_stock ? (
+            <span className="text-[11px] text-muted mt-1" title="No stock count recorded yet">
+              Not counted yet
+            </span>
+          ) : null}
         </div>
       </td>
 
@@ -261,23 +287,24 @@ export function ProductSmartRow({ product, onEdit, onDelete }: ProductSmartRowPr
         </div>
       </td>
 
-      {/* COLUMN 4: CONTEXTUAL ACTIONS */}
-      <td className="px-6 py-4 align-middle text-right">
-        <div className="flex items-center justify-end gap-2 sm:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-150">
+      {/* COLUMN 4: ACTIONS — always visible primary Open */}
+      <td className="px-6 py-4 align-middle text-right" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-2">
           <button
-            onClick={() => onEdit(id)}
+            onClick={() => onOpen(id)}
             type="button"
-            aria-label={`Edit ${label}`}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-foreground transition-all duration-150 hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary active:scale-95 cursor-pointer"
+            title="Open stock workspace — receive, count, adjust, history"
+            aria-label={`Open stock workspace for ${label}`}
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-brand-primary/30 bg-brand-primary/5 px-3 text-xs font-semibold text-brand-primary transition-colors hover:bg-brand-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
           >
-            <Edit2 size={14} />
+            Open
           </button>
-
           <button
             onClick={() => onDelete(id)}
             type="button"
+            title="Delete product from catalogue"
             aria-label={`Delete ${label}`}
-            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-secondary transition-all duration-150 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 active:scale-95 cursor-pointer"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-muted transition-all duration-150 hover:border-red-500/40 hover:bg-red-500/5 hover:text-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
           >
             <Trash2 size={14} />
           </button>

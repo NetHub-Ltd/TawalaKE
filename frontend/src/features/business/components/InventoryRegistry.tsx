@@ -135,7 +135,7 @@ export function InventoryRegistry() {
     setCurrentPage(1);
   };
 
-  const handleEditRedirect = (id: string) => {
+  const handleOpenWorkspace = (id: string) => {
     router.push(`/org/${organizationId}/${businessId}/inventory/${id}`);
   };
 
@@ -155,14 +155,16 @@ export function InventoryRegistry() {
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 shrink-0">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
-            <h1 className="text-base font-black uppercase tracking-wider text-foreground">
-              Inventory Registry
+            <h1 className="text-base font-bold tracking-tight text-foreground">
+              Stock
             </h1>
             {isFetching && !isLoading && (
               <Loader2 size={14} className="animate-spin text-brand-primary" aria-label="Syncing backend records..." />
             )}
           </div>
-          <p className="text-xs text-muted font-medium">Distribution node counts & stock monitoring.</p>
+          <p className="text-xs text-muted font-medium">
+            Search products, check levels, then open a product to receive, count, or adjust stock.
+          </p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -177,6 +179,14 @@ export function InventoryRegistry() {
             <RotateCw size={14} className={cn(isFetching && "animate-spin")} />
             <span className="hidden sm:inline">Sync</span>
           </Button>
+
+          <Link
+            href={`/org/${organizationId}/${businessId}/stock/audit`}
+            className="inline-flex min-h-[44px] items-center gap-2 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground hover:border-brand-primary/40 transition-colors"
+            title="Count many products at once (bulk stocktake)"
+          >
+            Bulk stocktake
+          </Link>
 
           <Link href={`/org/${organizationId}/${businessId}/inventory/new`} passHref legacyBehavior>
             <a className="inline-flex min-h-[44px] items-center gap-2 px-4 bg-brand-secondary text-background hover:scale-[1.01] active:scale-100 rounded-lg text-xs font-bold transition-all shadow-xs whitespace-nowrap focus:outline-hidden focus:ring-2 focus:ring-brand-primary">
@@ -275,7 +285,7 @@ export function InventoryRegistry() {
                     <ProductSmartRow
                       key={product.id}
                       product={product}
-                      onEdit={handleEditRedirect}
+                      onOpen={handleOpenWorkspace}
                       onDelete={handleDelete}
                     />
                   ))
