@@ -104,7 +104,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
     setMovementsError(null);
     try {
       const res = await fetch(
-        `/api/v1/business/stock/movements?business_id=${businessId}&product_id=${productId}&limit=50`
+        `/api/v1/stock/movements?business_id=${businessId}&product_id=${productId}&limit=50`
       );
       const data = await res.json();
       if (!res.ok || data.status === false) {
@@ -335,7 +335,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           error={formError}
           onCancel={() => selectAction(null)}
           onReceive={async (fields) => {
-            await postStock("/api/v1/business/stock/restock", {
+            await postStock("/api/v1/stock/receive", {
               product_id: productId,
               business_id: businessId,
               quantity: fields.quantity,
@@ -345,7 +345,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
             });
           }}
           onCount={async (fields) => {
-            await postStock("/api/v1/business/stock/audit", {
+            await postStock("/api/v1/stock/count", {
               product_id: productId,
               business_id: businessId,
               quantity: fields.physical,
@@ -355,7 +355,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
             });
           }}
           onAdjust={async (fields) => {
-            await postStock("/api/v1/business/stock/adjust", {
+            await postStock("/api/v1/stock/adjust", {
               product_id: productId,
               business_id: businessId,
               quantity: fields.quantity,
