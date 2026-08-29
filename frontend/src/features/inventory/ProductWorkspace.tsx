@@ -166,9 +166,12 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       } catch {
         data = {};
       }
-      // Treat only explicit failure: non-OK HTTP or status === false.
-      // Missing status on a 2xx body is treated as success (write already committed).
-      if (!res.ok || data?.status === false) {
+      // Explicit API failure only. Backend commits before responding — a rare
+      // post-commit error must not be the only signal; prefer body.status when present.
+      const explicitFail =
+        data?.status === false ||
+        (!res.ok && data?.status !== true);
+      if (explicitFail) {
         const msg =
           (typeof data.error === "string" && data.error) ||
           (typeof data.message === "string" && data.message) ||
@@ -178,13 +181,23 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
             : `Request failed (${res.status})`);
         throw new Error(msg);
       }
-      await refresh();
-      await loadMovements();
+      // Success path: never let refresh/history failures flip the UI to error
+      // after the movement was accepted (history tab is source of truth).
       setSuccessMessage(
         typeof data.message === "string" ? data.message : "Stock updated successfully."
       );
       setAction(null);
       syncUrl("overview", null);
+      try {
+        await refresh();
+      } catch {
+        /* non-blocking */
+      }
+      try {
+        await loadMovements();
+      } catch {
+        /* non-blocking */
+      }
     } catch (e) {
       setFormError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
