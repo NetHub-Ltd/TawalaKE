@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
-import { AssetComposer } from "@/features/inventory/AssetComposer";
 import { cn } from "@/lib/utils";
 
 type Tab = "overview" | "history" | "settings";
