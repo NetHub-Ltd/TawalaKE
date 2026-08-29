@@ -20,7 +20,7 @@ Bring `.trackers/` into agreement with Git history after PR #114 merged to `main
 - [x] Inspected `main` and `dev` tips and tracker content
 - [x] Confirmed `dev` is strictly ahead of `main`
 - [x] Tracker files rewritten on topic branch
-- [ ] PR opened into `dev`
+- [x] PR opened into `dev` (#124)
 
 ## Remaining
 
