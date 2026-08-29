@@ -182,7 +182,7 @@ class StockCrud:
             db,
             product=product,
             delta=float(payload.quantity),
-            movement_type=StockMovementType.STOCK_TAKE,
+            movement_type=StockMovementType.PURCHASE,
             performed_by=current_user.id,
             organization_id=current_user.organization_id,
             business_id=product.business_id,
@@ -194,7 +194,8 @@ class StockCrud:
             commit=True,
             touch_last_stock_take=True,
         )
-        await record_audit(
+        try:
+            await record_audit(
             db,
             actor=current_user,
             action="stock.restock",
@@ -208,7 +209,9 @@ class StockCrud:
                 "qty": payload.quantity,
                 "reference_type": payload.reference_type,
             },
-        )
+            )
+        except Exception as audit_err:
+            logger.warning("stock audit event failed: %s", audit_err)
         return product
 
     async def count_stock(
@@ -235,7 +238,8 @@ class StockCrud:
             commit=True,
             touch_last_stock_take=True,
         )
-        await record_audit(
+        try:
+            await record_audit(
             db,
             actor=current_user,
             action="stock.count",
@@ -248,7 +252,9 @@ class StockCrud:
                 "after": after,
                 "reason_code": payload.reason_code,
             },
-        )
+            )
+        except Exception as audit_err:
+            logger.warning("stock audit event failed: %s", audit_err)
         return product
 
     async def adjust_stock(
@@ -274,7 +280,8 @@ class StockCrud:
             commit=True,
             touch_last_stock_take=True,
         )
-        await record_audit(
+        try:
+            await record_audit(
             db,
             actor=current_user,
             action="stock.adjust",
@@ -289,7 +296,9 @@ class StockCrud:
                 "direction": payload.direction,
                 "reason_code": payload.reason_code,
             },
-        )
+            )
+        except Exception as audit_err:
+            logger.warning("stock audit event failed: %s", audit_err)
         return product
 
     async def apply_sale_item_deduction(
@@ -349,14 +358,8 @@ class StockCrud:
         product_id: UUID,
         limit: int = 50,
         offset: int = 0,
-    ) -> Tuple[List[StockHistory], int]:
-        base = (
-            select(StockHistory)
-            .where(
-                StockHistory.business_id == business_id,
-                StockHistory.product_id == product_id,
-            )
-        )
+    ) -> Tuple[List[dict], int]:
+        """Return movement rows with performer label for History UI."""
         count_stmt = select(func.count()).select_from(StockHistory).where(
             StockHistory.business_id == business_id,
             StockHistory.product_id == product_id,
@@ -365,12 +368,49 @@ class StockCrud:
         total_n = int(total[0] if isinstance(total, tuple) else total)
 
         stmt = (
-            base.order_by(desc(StockHistory.created_at))
+            select(StockHistory, Staff)
+            .where(
+                StockHistory.business_id == business_id,
+                StockHistory.product_id == product_id,
+            )
+            .outerjoin(Staff, Staff.id == StockHistory.performed_by)
+            .order_by(desc(StockHistory.created_at))
             .offset(offset)
             .limit(min(limit, 200))
         )
-        rows = (await db.exec(stmt)).all()
-        return list(rows), total_n
+        result = await db.exec(stmt)
+        pairs = result.all()
+        rows: List[dict] = []
+        for pair in pairs:
+            hist = pair[0] if isinstance(pair, (tuple, list)) else getattr(pair, "StockHistory", pair)
+            staff = None
+            if isinstance(pair, (tuple, list)) and len(pair) > 1:
+                staff = pair[1]
+            elif hasattr(pair, "__getitem__"):
+                try:
+                    hist, staff = pair[0], pair[1]
+                except Exception:
+                    hist = pair[0]
+            who = None
+            if staff is not None:
+                who = getattr(staff, "full_name", None) or getattr(staff, "email", None)
+            rows.append(
+                {
+                    "id": str(hist.id),
+                    "created_at": hist.created_at.isoformat() if getattr(hist, "created_at", None) else None,
+                    "movement_type": hist.movement_type.value
+                    if hasattr(hist.movement_type, "value")
+                    else str(hist.movement_type),
+                    "quantity": hist.quantity,
+                    "previous_stock": hist.previous_stock,
+                    "new_stock": hist.new_stock,
+                    "notes": hist.notes,
+                    "reference_type": hist.reference_type,
+                    "performed_by": str(hist.performed_by) if hist.performed_by else None,
+                    "performed_by_name": who,
+                }
+            )
+        return rows, total_n
 
 
 stock_crud = StockCrud()
