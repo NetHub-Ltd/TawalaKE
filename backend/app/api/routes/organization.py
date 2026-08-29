@@ -23,6 +23,7 @@ from app.utils.logging import logger
 from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace
 from datetime import datetime, timezone
 from app.crud import subscription as subscription_crud
+from app.services import paywall as paywall_service
 
 router = APIRouter()
 CACHE_TTL_SEC = 300
@@ -280,6 +281,11 @@ async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUse
     if user.role != "OWNER" and payload.organization != user.organization_id:
         raise HTTPException(status_code=403, detail="You are not allowed to perform this action")
 
+    org_id = payload.organization or user.organization_id
+    if org_id is None:
+        raise HTTPException(status_code=400, detail="organization is required")
+    await paywall_service.enforce_create_business(db, org_id)
+
     store = await organization_crud.register_store(db, payload, user)
     return ApiResponse(
         status=True,
@@ -287,6 +293,28 @@ async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUse
         message="Store created succesfully",
         data=store,
     )
+
+
+@router.get("/entitlements", response_model=ApiResponse[dict])
+async def get_org_entitlements(db: SessionDep, user: AuthUser):
+    """
+    Current plan, limits, features, and live usage for the caller's organization.
+    Used by billing UI and client-side soft gates.
+    """
+    org_id = user.organization_id
+    if org_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "ORG_REQUIRED", "message": "Staff must belong to an organization"},
+        )
+    snapshot = await paywall_service.get_usage_snapshot(db, org_id)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Entitlements resolved",
+        data=snapshot,
+    )
+
 
 
 @router.get("/stores/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])

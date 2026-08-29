@@ -17,6 +17,7 @@ from app.crud.product import product_crud
 from app.schemas.schemas import ProductResponse, ProductCreate, ApiResponse, ProductUpdate
 from app.utils.logging import logger
 from app.core.redis_client import limiter
+from app.services import paywall as paywall_service
 
 
 router = APIRouter()
@@ -187,7 +188,16 @@ async def create_product(
     PURPOSE:
     --------
     Create a new product with core fields and dynamic JSONB attributes.
+    Enforces plan max_products paywall before write.
     """
+    org_id = getattr(_user, "organization_id", None)
+    if org_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "ORG_REQUIRED", "message": "Staff must belong to an organization"},
+        )
+    await paywall_service.enforce_create_product(db, org_id)
+
     try:
         db_obj = await product_crud.create(db, obj_in=payload.model_dump(exclude_unset=True))
         await db.commit()

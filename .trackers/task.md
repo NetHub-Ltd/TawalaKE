@@ -1,21 +1,40 @@
 # Task Tracker
 
 **Base / PR target:** `dev`  
-**Branch:** `fix/stock-mutation-postcommit-500-v2`
+**Branch:** `feat/paywall-enforcement`
 
 ## Goal
 
-Eliminate remaining stock quick-action UI 500s after #135. Backend must never return 500 after a successful stock commit; client must not treat post-success refresh failures as action failures.
+Enforce plan limits and feature flags server-side so paid tiers control capacity. Expose entitlements for billing UI.
+
+## Scope (approved)
+
+- Backend entitlements service (`services/paywall.py`)
+- Hard limits on create: businesses (new-store), staff, products
+- Feature helper ready for routes (`require_feature`)
+- `GET /organizations/entitlements` usage snapshot
+- Unit tests for resolve / limit / feature
+- Status: 402 capacity, 403 feature/inactive
 
 ## Completed
 
-- [x] `backend/app/api/routes/stock.py` — defensive snapshot/mutation_ok (never raises → always HTTP 200 after write)
-- [x] `ProductAuditRequest.notes` — truly optional (was Optional + Field(...))
-- [x] `stockProxy` — prefer body.status; log upstream failures; success → browser 200
-- [x] `postStock` — success first; refresh/loadMovements non-blocking
-- [x] Route unit test for non-datetime last_stock_take + mutation_ok
+- [x] `backend/app/services/paywall.py` — resolve, check_limit, require_feature, usage snapshot
+- [x] Wire product create, staff create, new-store
+- [x] Entitlements endpoint on organization router
+- [x] `backend/testing/test_paywall.py`
+- [x] Trackers updated; `dev` created from main
+
+## Out of scope (this PR)
+
+- Payment provider webhooks / M-Pesa fulfillment
+- Monthly transaction/invoice counters
+- Full billing UI redesign
+- Soft grace-period jobs
 
 ## Verification
 
-- Receive / Count / Adjust → success banner, History updates, no form 500
-- Backend: mutation_ok always 200 after commit
+- Under limit → create succeeds
+- At limit → 402 PLAN_LIMIT_REACHED with current/maximum
+- Missing/expired sub → 403 SUBSCRIPTION_INACTIVE
+- Feature off → 403 FEATURE_NOT_AVAILABLE
+- Smoke: resolve + limit block
