@@ -23,7 +23,7 @@ Restructure `.skills/` into three domains (product, backend, UI) and add an auth
 - [x] Domain files written
 - [x] Old flat skill files removed
 - [x] Index and AGENTS.md updated
-- [ ] PR opened into `dev`
+- [x] PR opened into `dev` (#125)
 
 ## Remaining
 
