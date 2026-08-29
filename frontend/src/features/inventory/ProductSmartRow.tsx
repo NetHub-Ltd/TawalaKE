@@ -96,14 +96,8 @@ import { cn } from "@/lib/utils";
 //         <span className="text-sm font-extrabold text-foreground">
 //           {formattedPrice}
 //         </span>
-//       
-        <span
-          className="text-[11px] text-muted"
-          title="Relative sales activity score for this product"
-        >
-          Sales activity: {popularity_score != null ? Number(popularity_score).toFixed(1) : "—"}
-        </span>
-        </div></td>
+//         </span>
+//       </td>
 
 //       {/* COLUMN 3: LIVE INVENTORY STATUS (BETTING-INSPIRED SMART FLASH MATRIX) */}
 //       <td className="px-6 py-4 align-middle">
@@ -170,6 +164,7 @@ import { cn } from "@/lib/utils";
 
 import React from "react";
 import { Trash2, Infinity } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface BaseAttributes {
   unit_of_measure?: string | null;
@@ -244,7 +239,7 @@ export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowPr
       data-alert={stockAlertState}
       role="link"
       tabIndex={0}
-      title="Open product stock workspace"
+      title={auditTitle}
       onClick={() => onOpen(id)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -252,7 +247,6 @@ export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowPr
           onOpen(id);
         }
       }}
-      title={auditTitle}
       className={cn(
         "group border-b border-border bg-card/40 transition-all duration-200 ease-in-out cursor-pointer",
         auditBorder,
@@ -290,16 +284,24 @@ export function ProductSmartRow({ product, onOpen, onDelete }: ProductSmartRowPr
       {/* COLUMN 2: FINANCIAL MATRIX */}
       <td className="px-6 py-4 align-middle text-right font-mono">
         <div className="flex flex-col items-end gap-0.5">
-        <span className="text-sm font-extrabold text-foreground">
-          {formattedPrice}
-        </span>
+          <span className="text-sm font-extrabold text-foreground">
+            {formattedPrice}
+          </span>
+          <span
+            className="text-[11px] text-muted"
+            title="Relative sales activity score for this product"
+          >
+            Sales activity:{" "}
+            {popularity_score != null ? Number(popularity_score).toFixed(1) : "—"}
+          </span>
+        </div>
       </td>
 
       {/* COLUMN 3: LIVE INVENTORY STATUS */}
       <td className="px-6 py-4 align-middle">
         <div className="flex items-center justify-start">
           {stockAlertState === "untracked" && (
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-secondary/10 text-secondary border border-border工作">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-secondary/10 text-secondary border border-border">
               <Infinity size={12} aria-hidden="true" />
               <span>Service</span>
             </div>
