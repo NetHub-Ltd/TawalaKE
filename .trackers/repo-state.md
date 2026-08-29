@@ -3,27 +3,12 @@
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Default branch:** `main`  
 **Integration / working branch:** `dev` (all PRs open against `dev`)  
-**Current tip on main:** `faa51fb` — Merge pull request #114 from NetHub-Ltd/dev  
-**Current tip on dev:** `e153d7d` — Merge branch 'main' into dev  
+**Current tip on dev (pre this branch):** `4d6554d` — Merge pull request #134 from NetHub-Ltd/fix/stock-mutation-response-and-settings  
 
 ## Status
 
-- PR #114 has landed on `main`.
-- `dev` is strictly ahead of `main` (no commits on main missing from dev).
-- Trackers synchronized to post-#114 reality (this chore).
-
-## Recent history (landed)
-
-**On main (via #114 and earlier):**
-- PR #114 — billing plan limits/features, credit-sale + invoice, sales-history relations/UI, prior tracker sync
-- PR #115 — trackers + `.skills/`
-- PR #110 — Turbopack builds
-
-**On dev only (not yet on main):**
-- PR #119 — tenant API RBAC permissions matrix, hard deps, audit log
-- PR #120 — frontend 1:1 permissions + staff management suite
-- PR #121 — Sidebar RBAC import fix + frontend CI (lint + build gate)
-- Follow-ups: ESLint/TS cleanups, Node heap for Next build, merge main → dev
+- Recent stock work on `dev`: dedicated `/stock` router, mutation JSON snapshots (#133/#134), workspace UX.
+- This branch addresses remaining client/proxy gap: stock BFF URL construction + settings field set.
 
 ## Structure
 
