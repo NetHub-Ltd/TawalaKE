@@ -203,7 +203,9 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
         <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
           {product.label}
         </h1>
-        <p className="text-sm text-muted">Product workspace — stock, history, and details</p>
+        <p className="text-sm text-muted">
+          View levels, run stock actions, and see history. Use Settings only for name, price, and catalogue details.
+        </p>
       </header>
 
       <nav

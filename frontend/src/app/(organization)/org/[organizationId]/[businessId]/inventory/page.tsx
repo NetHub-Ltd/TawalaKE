@@ -8,9 +8,9 @@ import { InventoryRegistry } from "@/features/business/components/InventoryRegis
  */
 
 export const metadata: Metadata = {
-  title: "Inventory Registry | Asset Management",
+  title: "Stock | Tawala",
   description:
-    "Comprehensive overview of all business assets, stock levels, and procurement metrics.",
+    "Search products and open a product workspace to manage stock.",
 };
 
 export default function Page() {
