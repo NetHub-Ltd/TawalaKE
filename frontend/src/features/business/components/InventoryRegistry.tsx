@@ -173,14 +173,6 @@ export function InventoryRegistry() {
             <span className="hidden sm:inline">Sync</span>
           </Button>
 
-          <Link
-            href={`/org/${organizationId}/${businessId}/stock/audit`}
-            className="inline-flex min-h-[44px] items-center gap-2 px-3 rounded-lg border border-border bg-card text-xs font-semibold text-foreground hover:border-brand-primary/40 transition-colors"
-            title="Count many products at once (bulk stocktake)"
-          >
-            Bulk stocktake
-          </Link>
-
           <Link href={`/org/${organizationId}/${businessId}/inventory/new`} passHref legacyBehavior>
             <a className="inline-flex min-h-[44px] items-center gap-2 px-4 bg-brand-secondary text-background hover:scale-[1.01] active:scale-100 rounded-lg text-xs font-bold transition-all shadow-xs whitespace-nowrap focus:outline-hidden focus:ring-2 focus:ring-brand-primary">
               <Plus size={16} strokeWidth={3} className="shrink-0" />
