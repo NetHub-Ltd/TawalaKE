@@ -1,20 +1,24 @@
 # Task Tracker
 
 **Base / PR target:** `dev`  
-**Branch:** `fix/paywall-hardening`
+**Branch:** `fix/frontend-auth-authz`
 
 ## Goal
 
-PR B — billing/paywall hardening (approved).
+Frontend AuthN/AuthZ aligned with backend: clean auth engine, org URL binding, server token preference, product search session bearer.
 
 ## Completed
 
-- [x] Unregister PaywallValidityMiddleware (no X-Organization-Id trust)
-- [x] Middleware module stubbed (deps-only enforcement)
-- [x] paywall_deps org from organization_id or tenant_id
-- [x] Subscription deactivate / activate_or_extend / mark_expired + invalidate
-- [x] Trial start uses shared _invalidate_org
-- [x] persist_usage SELECT FOR UPDATE
-- [x] OWNER cancel + activate org routes
-- [x] Payment confirmation activates subscription + invalidates cache
-- [x] Tests for middleware removal + lifecycle exports
+- [x] Slim `src/auth.ts` (remove dead commented configs)
+- [x] Org layout binds `organizationId` to session
+- [x] Business layout same tenant check
+- [x] `requireApiAuth` / `orgMatchesSession` helpers
+- [x] `fetchUser` + `useTenant` without requiring client accessToken
+- [x] Product search BFF uses server session token (not client Authorization)
+- [x] `apiError` mapper for RBAC/paywall codes
+- [x] `npm run lint` clean
+- [x] `npm run build:webpack` success (typecheck + compile)
+
+## Notes
+
+`next build --turbopack` may OOM in low-memory agents; webpack build verifies TS and routes.

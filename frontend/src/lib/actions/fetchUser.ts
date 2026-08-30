@@ -1,13 +1,15 @@
 "use server";
 
-import {  } from "../types/zod.gen";
 import { auth } from "@/auth";
+import { getServerAccessToken } from "@/lib/auth/get-server-access-token";
 
 export async function fetchUser() {
   const session = await auth();
+  const accessToken =
+    (await getServerAccessToken()) ?? session?.accessToken ?? null;
   const baseUrl = process.env.BACKEND_URL;
 
-  if (!session?.accessToken) {
+  if (!accessToken || session?.error) {
     throw new Error("Unauthorized: No token provided");
   }
   try {
@@ -15,9 +17,8 @@ export async function fetchUser() {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
-      // Ensures the server fetches fresh data
       cache: "no-store",
     });
 
@@ -26,12 +27,6 @@ export async function fetchUser() {
     }
 
     const json = await res.json();
-    // const parsed = .safeParse(json);
-
-    // if (!parsed.success) {
-    //   throw new Error("data_integrity_error");
-    // }
-    console.log("user data", json)
     return json;
   } catch (error) {
     console.error("Internal Server Fetch Error:", error);
