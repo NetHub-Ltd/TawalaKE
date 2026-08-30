@@ -7,7 +7,7 @@ export async function GET() {
   if (!session?.accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const res = await fetch(`${process.env.BACKEND_URL}/business/staff`, {
+  const res = await fetch(`${process.env.BACKEND_URL}/staff`, {
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
       "Content-Type": "application/json",
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const payload = await req.json();
-  const res = await fetch(`${process.env.BACKEND_URL}/business/staff`, {
+  const res = await fetch(`${process.env.BACKEND_URL}/staff`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${session.accessToken}`,

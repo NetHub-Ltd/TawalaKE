@@ -12,7 +12,7 @@ export async function PUT(
   const { staffId } = await ctx.params;
   const payload = await req.json();
   const res = await fetch(
-    `${process.env.BACKEND_URL}/business/staff/${staffId}/businesses`,
+    `${process.env.BACKEND_URL}/staff/${staffId}/businesses`,
     {
       method: "PUT",
       headers: {

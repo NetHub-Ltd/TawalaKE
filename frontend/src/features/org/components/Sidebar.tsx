@@ -37,6 +37,8 @@ interface SidebarLink {
   /** Any of these permissions unlocks the link (1:1 with API). */
   anyOf: PermissionKey[];
   icon: LucideIcon;
+  /** Org-scoped route: /org/{orgId}{path} instead of under businessId */
+  orgLevel?: boolean;
 }
 
 const NAVIGATION_SCHEMA: SidebarLink[] = [
@@ -69,10 +71,11 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     icon: History,
   },
   {
-    label: "Staff",
+    label: "Team",
     path: "/staff",
     anyOf: [Permission.ORG_STAFF_MANAGE],
     icon: Users2,
+    orgLevel: true,
   },
 ];
 
@@ -184,7 +187,9 @@ export function Sidebar({
 
         <nav className="flex-1 space-y-1" aria-label="Sidebar Links">
           {visibleLinks.map((link) => {
-            const href = `/org/${organizationId}/${businessId}${link.path}`;
+            const href = link.orgLevel
+              ? `/org/${organizationId}${link.path}`
+              : `/org/${organizationId}/${businessId}${link.path}`;
             const isActive =
               link.path === ""
                 ? pathname === href

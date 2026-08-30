@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { StaffRoleName } from "@/lib/rbac";
 
 export interface StaffBusiness {
@@ -10,7 +10,7 @@ export interface StaffBusiness {
 
 export interface StaffMember {
   id: string;
-  organization_id?: string | null;
+  organization_id?: string;
   email: string;
   full_name: string;
   role: StaffRoleName | string;
@@ -31,13 +31,16 @@ async function parseError(res: Response) {
   const body = await res.json().catch(() => ({}));
   const detail = body?.detail;
   if (typeof detail === "string") return detail;
-  if (detail?.message) return detail.message;
+  if (detail && typeof detail === "object" && "message" in detail) {
+    return String((detail as { message?: string }).message);
+  }
   return body?.error || body?.message || res.statusText || "Request failed";
 }
 
+/** Org staff directory — single source (managed staff module). */
 export function useStaff(organizationId?: string) {
   const query = useQuery<StaffMember[]>({
-    queryKey: ["staff", organizationId, "managed"],
+    queryKey: ["staff", organizationId, "directory"],
     queryFn: async () => {
       const res = await fetch(`/api/v1/org/staff/managed`);
       if (!res.ok) throw new Error(await parseError(res));
@@ -56,6 +59,20 @@ export function useStaff(organizationId?: string) {
     error: query.error,
     refetch: query.refetch,
   };
+}
+
+/** Single staff workspace payload. */
+export function useStaffMember(organizationId?: string, staffId?: string) {
+  return useQuery<StaffMember>({
+    queryKey: ["staff", organizationId, staffId],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/org/staff/${staffId}`);
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json() as Promise<StaffMember>;
+    },
+    enabled: !!organizationId && !!staffId,
+    staleTime: 15_000,
+  });
 }
 
 export function useCreateStaff(organizationId?: string) {
@@ -96,8 +113,9 @@ export function useUpdateStaff(organizationId?: string) {
       if (!res.ok) throw new Error(await parseError(res));
       return res.json() as Promise<StaffMember>;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["staff", organizationId] });
+      qc.invalidateQueries({ queryKey: ["staff", organizationId, vars.staffId] });
     },
   });
 }
@@ -120,8 +138,9 @@ export function useSetStaffBusinesses(organizationId?: string) {
       if (!res.ok) throw new Error(await parseError(res));
       return res.json() as Promise<StaffMember>;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["staff", organizationId] });
+      qc.invalidateQueries({ queryKey: ["staff", organizationId, vars.staffId] });
     },
   });
 }
@@ -144,13 +163,8 @@ export function useResetStaffPassword(organizationId?: string) {
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["staff", organizationId] });
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["staff", organizationId, vars.staffId] });
     },
   });
-}
-
-/** @deprecated use useCreateStaff */
-export function useRegisterStaff(organizationId?: string) {
-  return useCreateStaff(organizationId);
 }

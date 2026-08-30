@@ -208,6 +208,30 @@ async def create_staff(
     )
 
 
+@router.get("/{staff_id}", response_model=ApiResponse[StaffResponse])
+async def get_staff(
+    staff_id: UUID,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.ORG_STAFF_MANAGE)),
+):
+    """Staff workspace payload — single member in caller org."""
+    if not user.organization_id:
+        raise HTTPException(400, detail="Actor has no organization")
+    stmt = (
+        select(Staff)
+        .where(Staff.id == staff_id)
+        .where(Staff.organization_id == user.organization_id)
+        .where(Staff.deleted_at.is_(None))
+        .options(selectinload(Staff.assigned_businesses))
+    )
+    target = (await db.exec(stmt)).unique().first()
+    if not target:
+        raise HTTPException(404, detail="Staff not found")
+    _assert_can_manage_target(user, target)
+    data = await _staff_response(db, target)
+    return ApiResponse(status=True, status_code=200, message="ok", data=data)
+
+
 @router.patch("/{staff_id}", response_model=ApiResponse[StaffResponse])
 async def update_staff(
     staff_id: UUID,

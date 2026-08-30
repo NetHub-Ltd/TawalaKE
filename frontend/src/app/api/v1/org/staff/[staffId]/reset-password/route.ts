@@ -12,7 +12,7 @@ export async function POST(
   const { staffId } = await ctx.params;
   const payload = await req.json();
   const res = await fetch(
-    `${process.env.BACKEND_URL}/business/staff/${staffId}/reset-password`,
+    `${process.env.BACKEND_URL}/staff/${staffId}/reset-password`,
     {
       method: "POST",
       headers: {

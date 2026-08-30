@@ -41,6 +41,13 @@ api_router.include_router(
     tags=["Staff Management"],
     dependencies=[Depends(require_active_plan)],
 )
+# Canonical staff module path (same router) — prefer this going forward
+api_router.include_router(
+    staff_mgmt.router,
+    prefix="/staff",
+    tags=["Staff Management"],
+    dependencies=[Depends(require_active_plan)],
+)
 api_router.include_router(
     products.router,
     prefix="/products",
