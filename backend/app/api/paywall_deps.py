@@ -21,7 +21,7 @@ from app.services.paywall import Entitlements, paywall
 
 
 def _org_id_from_user(user: Staff) -> UUID:
-    org_id = getattr(user, "organization_id", None)
+    org_id = getattr(user, "organization_id", None) or getattr(user, "tenant_id", None)
     if org_id is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
