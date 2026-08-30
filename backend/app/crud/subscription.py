@@ -11,6 +11,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.models import Plan, Subscription, Organization, SubscriptionTier
 from app.utils.logging import logger
+from app.services.paywall import paywall
+from app.core.redis_client import redis_manager
 
 TRIAL_DAYS = 7
 TRIAL_ELIGIBLE_CODES = {"BASIC", "NDOVU"}
@@ -135,6 +137,11 @@ async def start_plan_trial(
     db.add(sub)
     await db.commit()
     await db.refresh(sub)
+    try:
+        redis = redis_manager.get_async_client()
+        await paywall.invalidate(redis, organization_id)
+    except Exception:
+        pass
     logger.info(
         f"Started {days}-day {code} trial for org {organization_id} "
         f"sub={sub.id} tier={sub.tier} plan_id={plan.id}"

@@ -17,7 +17,8 @@ from app.crud.product import product_crud
 from app.schemas.schemas import ProductResponse, ProductCreate, ApiResponse, ProductUpdate
 from app.utils.logging import logger
 from app.core.redis_client import limiter
-from app.services import paywall as paywall_service
+from app.services.paywall import paywall as paywall_service, LIMIT_PRODUCTS
+from app.api.deps import get_redis
 
 
 router = APIRouter()
@@ -196,10 +197,11 @@ async def create_product(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "ORG_REQUIRED", "message": "Staff must belong to an organization"},
         )
-    await paywall_service.enforce_create_product(db, org_id)
+    await paywall_service.enforce_create_product(db, org_id, redis=redis_client)
 
     try:
         db_obj = await product_crud.create(db, obj_in=payload.model_dump(exclude_unset=True))
+        await paywall_service.bump_usage(db, org_id, LIMIT_PRODUCTS, redis=redis_client)
         await db.commit()
         logger.info(f"Product created: {db_obj}")
         
