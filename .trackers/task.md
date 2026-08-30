@@ -1,24 +1,14 @@
 # Task Tracker
 
-**Base / PR target:** `dev`  
-**Branch:** `fix/frontend-auth-authz`
-
 ## Goal
+Phase S0 staff workspace: list → click row → member workspace; one backend staff module path.
 
-Frontend AuthN/AuthZ aligned with backend: clean auth engine, org URL binding, server token preference, product search session bearer.
-
-## Completed
-
-- [x] Slim `src/auth.ts` (remove dead commented configs)
-- [x] Org layout binds `organizationId` to session
-- [x] Business layout same tenant check
-- [x] `requireApiAuth` / `orgMatchesSession` helpers
-- [x] `fetchUser` + `useTenant` without requiring client accessToken
-- [x] Product search BFF uses server session token (not client Authorization)
-- [x] `apiError` mapper for RBAC/paywall codes
-- [x] `npm run lint` clean
-- [x] `npm run build:webpack` success (typecheck + compile)
-
-## Notes
-
-`next build --turbopack` may OOM in low-memory agents; webpack build verifies TS and routes.
+## Done
+- [x] GET /staff/{id} + mount staff_mgmt at /staff (and keep /business/staff)
+- [x] BFF aligned to /staff
+- [x] /org/{orgId}/staff directory (TeamDirectory)
+- [x] /org/{orgId}/staff/{staffId} workspace (overview, access, security actions)
+- [x] Business /staff redirects to org Team
+- [x] Sidebar Team → org-level path
+- [x] Single useStaff module; deprecated org/staff hook re-exports
+- [x] lint + build:webpack pass
