@@ -13,8 +13,8 @@ export default async function OrgStaffPage({
 }) {
   const { organizationId } = await params;
   return (
-    <main id="main-content" className="flex h-full min-h-[70vh] flex-col">
+    <div className="flex h-full min-h-[70vh] flex-col">
       <TeamDirectory organizationId={organizationId} />
-    </main>
+    </div>
   );
 }
