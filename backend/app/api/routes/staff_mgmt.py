@@ -1,4 +1,8 @@
-"""Tenant staff management under org:staff:manage."""
+"""Tenant staff management under org:staff:manage.
+
+Canonical HTTP mount: /api/v1/staff
+Legacy alias mount: /api/v1/business/staff (temporary).
+"""
 from __future__ import annotations
 
 from typing import List, Optional

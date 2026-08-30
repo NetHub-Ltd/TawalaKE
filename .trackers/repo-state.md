@@ -2,12 +2,13 @@
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Integration branch:** `dev`  
-**Current branch:** `feat/org-level-staff-shell`  
-**Base:** `dev` @ `8b4b7e5` (Merge PR #146 staff-workspace-s0)  
+**Current branch:** `feat/org-staff-management-canonical`  
+**Base:** `dev` @ `9247ae2`  
 **Preferred deploy:** k3s  
 **PR target:** `dev`
 
-## Current implementation state
-- Staff Team directory + member workspace routes are org-scoped (`/org/{orgId}/staff`).
-- Org-level staff layout now provides Sidebar + Header shell (no businessId required in URL).
-- Sidebar accepts optional `businessId`; business nav falls back to first assigned store from session.
+## Notes
+- Canonical staff management API: `GET/POST /api/v1/staff`, member ops under `/api/v1/staff/{id}`
+- Legacy alias: `/api/v1/business/staff`
+- BFF staff routes use `backendUrl()` so BACKEND_URL with or without `/api/v1` works
+- Org command center exposes **Team** at `/org/{orgId}/staff`

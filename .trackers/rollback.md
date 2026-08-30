@@ -1,15 +1,10 @@
 # Rollback
 
-**Previous known-good:** `dev` @ `8b4b7e5` (post PR #146)
+**Previous known-good:** `dev` @ `9247ae2`
 
-## Procedure
 ```bash
 git checkout dev && git pull
-git revert <merge-or-commit-sha-of-this-PR>
+git revert <merge-commit-sha>
 ```
-Or close/unmerge the PR before merge.
 
-## Notes
-- No database migrations
-- No image/tag changes required for rollback
-- Frontend-only layout/navigation change
+No migrations. Frontend + router mount only.
