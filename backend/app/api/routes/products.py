@@ -11,7 +11,7 @@ from fastapi_cache.decorator import cache
 # Directly utilizing your provided dependency definitions
 from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace, AuthUser
 from app.models.models import Staff
-from app.api.rbac_deps import require_permissions
+from app.api.rbac_deps import require_permissions, assert_business_access
 from app.core.rbac import Permission
 from app.crud.product import product_crud
 from app.schemas.schemas import ProductResponse, ProductCreate, ApiResponse, ProductUpdate
@@ -76,6 +76,8 @@ async def get_products(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Business ID is required"
         )
+
+    await assert_business_access(db, _user, business_id, redis_client)
     
     # Calculate offset engine parameters from 1-indexed page systems
     skip = (page - 1) * size
@@ -262,6 +264,17 @@ async def update_product(
     --------
     Update product core fields and/or complex nested attributes.
     """
+    existing = await product_crud.get(db, product_id)
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    await assert_business_access(db, _user, existing.business_id, redis_client)
+    caller_org = _user.organization_id or getattr(_user, "tenant_id", None)
+    if caller_org and existing.organization_id and str(existing.organization_id) != str(caller_org):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "RBAC_DENIED", "message": "Product not in your organization"},
+        )
+
     new_obj = await product_crud.update_product(product_id=product_id, payload=payload, db=db)
     
     # Drops targeted arrays matching both specific IDs and parent business matrices cleanly
@@ -295,6 +308,14 @@ async def delete_product(
     target_product = await product_crud.get(db, product_id)
     if not target_product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    await assert_business_access(db, _user, target_product.business_id, redis_client)
+    caller_org = _user.organization_id or getattr(_user, "tenant_id", None)
+    if caller_org and target_product.organization_id and str(target_product.organization_id) != str(caller_org):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "RBAC_DENIED", "message": "Product not in your organization"},
+        )
         
     business_id = target_product.business_id
     await product_crud.delete_product(product_id, db)

@@ -54,8 +54,13 @@ class StockCrud:
     def _assert_tenant_product(self, product: Product, current_user: Staff) -> None:
         """Reject cross-org product access (IDOR guard)."""
         caller_org = current_user.organization_id or getattr(current_user, "tenant_id", None)
+        if caller_org is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "RBAC_DENIED", "message": "Staff must belong to an organization"},
+            )
         prod_org = product.organization_id
-        if caller_org and prod_org and str(caller_org) != str(prod_org):
+        if prod_org is None or str(caller_org) != str(prod_org):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={"code": "RBAC_DENIED", "message": "Product not in your organization"},
@@ -286,6 +291,7 @@ class StockCrud:
         product = await self.get_product_for_update(
             db, product_id=payload.product_id, business_id=payload.business_id
         )
+        self._assert_tenant_product(product, current_user)
         product, _hist, before, after = await self.apply_movement(
             db,
             product=product,

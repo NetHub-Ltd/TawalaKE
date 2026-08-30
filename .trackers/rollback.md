@@ -2,12 +2,10 @@
 
 | Ref | Note |
 |-----|------|
-| dev tip before branch | `98b41f0` |
+| dev tip | `cdb76a4` |
 
 ```bash
-git checkout dev && git pull
-git revert <sha>
-git push origin dev
+git checkout dev && git pull && git revert <sha>
 ```
 
 No migrations.
