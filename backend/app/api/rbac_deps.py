@@ -70,10 +70,6 @@ def require_permissions(*required: Permission | str) -> Callable:
         db: SessionDep,
         redis: AsyncRedis = Depends(get_redis),
     ) -> Staff:
-        enforce = getattr(settings, "rbac_enforce", True)
-        if not enforce:
-            return user
-
         ok = has_all_permissions(user, required_perms)
         # Prefer cache for observability / future soft checks; matrix is DB-backed via Staff.role
         try:
@@ -159,7 +155,6 @@ def require_business_access(
         db: SessionDep,
         redis: AsyncRedis = Depends(get_redis),
     ) -> UUID:
-        enforce = getattr(settings, "rbac_enforce", True)
         biz_id: Optional[UUID] = None
 
         if from_body:
@@ -180,9 +175,6 @@ def require_business_access(
         if biz_id is None:
             # Some endpoints carry business only on nested payload; caller must pass explicitly
             return user  # type: ignore[return-value]
-
-        if not enforce:
-            return biz_id
 
         # Org match
         biz = (
