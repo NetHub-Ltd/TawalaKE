@@ -35,17 +35,18 @@ api_router.include_router(
     tags=["Store Management"],
     dependencies=_commerce_gate,
 )
-api_router.include_router(
-    staff_mgmt.router,
-    prefix="/business/staff",
-    tags=["Staff Management"],
-    dependencies=[Depends(require_active_plan)],
-)
-# Canonical staff module path (same router) — prefer this going forward
+# Staff management (org-scoped). Canonical path is /api/v1/staff.
+# /api/v1/business/staff is a temporary alias for older clients; prefer /staff.
 api_router.include_router(
     staff_mgmt.router,
     prefix="/staff",
     tags=["Staff Management"],
+    dependencies=[Depends(require_active_plan)],
+)
+api_router.include_router(
+    staff_mgmt.router,
+    prefix="/business/staff",
+    tags=["Staff Management (legacy alias)"],
     dependencies=[Depends(require_active_plan)],
 )
 api_router.include_router(

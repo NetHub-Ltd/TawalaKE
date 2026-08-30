@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { backendUrl } from "@/lib/api/backend";
 
 export async function PUT(
   req: NextRequest,
@@ -11,17 +12,14 @@ export async function PUT(
   }
   const { staffId } = await ctx.params;
   const payload = await req.json();
-  const res = await fetch(
-    `${process.env.BACKEND_URL}/staff/${staffId}/businesses`,
-    {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${session.accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
+  const res = await fetch(backendUrl(`/staff/${staffId}/businesses`), {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${session.accessToken}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify(payload),
+  });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) return NextResponse.json(body, { status: res.status });
   return NextResponse.json(body.data ?? body, { status: 200 });

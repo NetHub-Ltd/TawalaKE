@@ -15,6 +15,7 @@ import {
   ChevronRight,
   LayoutDashboard,
   HelpCircle,
+  Users,
 } from "lucide-react";
 
 export interface BusinessItem {
@@ -63,13 +64,13 @@ export function OrgCommandCenterClient({
       badge: `${activeCount}`,
       roles: ["OWNER", "MANAGER"],
     },
-    // {
-    //   id: "staff",
-    //   label: "Staff & Permissions",
-    //   href: `/org/${orgId}/staff`,
-    //   icon: Users,
-    //   roles: ["OWNER", "MANAGER"],
-    // },
+    {
+      id: "staff",
+      label: "Team",
+      href: `/org/${orgId}/staff`,
+      icon: Users,
+      roles: ["OWNER", "MANAGER", "ADMIN"],
+    },
     // {
     //   id: "billing",
     //   label: "Billing & Subscription",
