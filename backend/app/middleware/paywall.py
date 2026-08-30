@@ -5,9 +5,10 @@ Plan validity is enforced only via authenticated dependencies:
   - require_paywall(...)
   - PaywallService on create paths
 
-Previously this middleware accepted X-Organization-Id, which is not a
-trustworthy tenant signal. It was removed from the app stack in the
-paywall-hardening pass. This module remains so old imports do not break.
+Previously this module registered an HTTP middleware that trusted a client
+tenant header. That is not a safe tenant signal. The middleware was removed
+from the app stack in the paywall-hardening pass. This module remains so
+old imports do not break.
 """
 from __future__ import annotations
 
