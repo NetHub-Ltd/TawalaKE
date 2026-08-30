@@ -23,7 +23,7 @@ from app.utils.logging import logger
 from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace
 from datetime import datetime, timezone
 from app.crud import subscription as subscription_crud
-from app.services import paywall as paywall_service
+from app.services.paywall import paywall as paywall_service, LIMIT_BUSINESSES
 
 router = APIRouter()
 CACHE_TTL_SEC = 300
@@ -284,9 +284,12 @@ async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUse
     org_id = payload.organization or user.organization_id
     if org_id is None:
         raise HTTPException(status_code=400, detail="organization is required")
-    await paywall_service.enforce_create_business(db, org_id)
+    redis = await get_redis()
+    await paywall_service.enforce_create_business(db, org_id, redis=redis)
 
     store = await organization_crud.register_store(db, payload, user)
+    await paywall_service.bump_usage(db, org_id, LIMIT_BUSINESSES, redis=redis)
+    await db.commit()
     return ApiResponse(
         status=True,
         status_code=200,
@@ -307,7 +310,8 @@ async def get_org_entitlements(db: SessionDep, user: AuthUser):
             status_code=403,
             detail={"code": "ORG_REQUIRED", "message": "Staff must belong to an organization"},
         )
-    snapshot = await paywall_service.get_usage_snapshot(db, org_id)
+    redis = await get_redis()
+    snapshot = await paywall_service.usage_snapshot(db, org_id, redis=redis)
     return ApiResponse(
         status=True,
         status_code=200,

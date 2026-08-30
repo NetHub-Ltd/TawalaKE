@@ -2,12 +2,12 @@
 
 | Ref | Note |
 |-----|------|
-| dev before this branch | `8d46875` |
+| dev before this branch | `cecc3cf` |
 
 ```bash
 git checkout dev && git pull
-git revert <sha>   # or close PR without merge
+git revert <sha>
 git push origin dev
 ```
 
-Backend only: `services/paywall.py`, product/staff/organization routes, `testing/test_paywall.py`, trackers. No migrations.
+No migrations. Revert services/paywall.py, paywall_deps, middleware, api_router, route wiring, subscription invalidate, tests.
