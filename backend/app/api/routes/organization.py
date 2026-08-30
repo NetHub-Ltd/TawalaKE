@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel
 from app.api.deps import SessionDep, AuthUser
 from app.api.rbac_deps import require_permissions
-from app.core.rbac import Permission
+from app.core.rbac import Permission, effective_role, has_permission
 from app.models.models import Organization, Tenant, Staff, StaffRole
 from uuid import UUID
 from sqlmodel import select
@@ -278,12 +278,15 @@ async def start_trial(
 
 @router.post("/new-store", status_code=200, response_model=ApiResponse[StoreResponse])
 async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUser):
-    if user.role != "OWNER" and payload.organization != user.organization_id:
-        raise HTTPException(status_code=403, detail="You are not allowed to perform this action")
-
-    org_id = payload.organization or user.organization_id
+    from app.models.models import StaffRole
+    role = effective_role(user)
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    # Client cannot choose a different org; always bind to caller
+    org_id = caller_org
     if org_id is None:
         raise HTTPException(status_code=400, detail="organization is required")
+    if role not in (StaffRole.OWNER, StaffRole.ADMIN):
+        raise HTTPException(status_code=403, detail="You are not allowed to perform this action")
     redis = await get_redis()
     await paywall_service.enforce_create_business(db, org_id, redis=redis)
 
@@ -326,7 +329,8 @@ async def get_org_entitlements(db: SessionDep, user: AuthUser):
 async def get_businesses_by_tenant(
     organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
 ):
-    if organization_id != user.organization_id:
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or str(organization_id) != str(caller_org):
         raise HTTPException(status_code=403, detail="You dont have access to perform this action")
 
     businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
@@ -343,6 +347,9 @@ async def get_businesses_by_tenant(
 async def get_staff_by_tenant(
     organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None
 ):
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or str(organization_id) != str(caller_org):
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
     staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
     return ApiResponse(
         status=True,
@@ -357,6 +364,9 @@ async def get_staff_by_tenant(
 async def get_billing_by_tenant(
     organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
 ):
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or str(organization_id) != str(caller_org):
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
     businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
     return ApiResponse(
         status=True,
@@ -370,7 +380,8 @@ async def get_billing_by_tenant(
 @router.get("/{organization_id}", response_model=OrganizationResponse)
 @cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
 async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
-    if organization_id != user.organization_id:
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or str(organization_id) != str(caller_org):
         raise HTTPException(status_code=403, detail="Unathorized to perform this operation")
 
     org = await organization_crud.get_organization_by_id(db=db, org_id=organization_id)

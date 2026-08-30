@@ -2,8 +2,8 @@
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Integration branch:** `dev`  
-**Pre-branch tip:** `98182c8` (Merge #140)
+**Pre-branch tip:** `98b41f0` (Merge #141)
 
 ## This branch
 
-`fix/rbac-remove-kill-switch` — remove `rbac_enforce` env kill switch; RBAC always on.
+`fix/auth-authz-hardening` — AuthN + AuthZ: JWT org claim, refresh from DB, tenant binding, IDOR fixes.
