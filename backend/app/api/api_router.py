@@ -56,7 +56,3 @@ api_router.include_router(
         Depends(require_paywall("basic_stock_tracking", "pos_and_sales", "invoicing")),
     ],
 )
-# api_router.include_router(sales.router, prefix="/sales", tags=["sales"])
-# api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
-# api_router.include_router(checkout.router, prefix="/terminal", tags=["Checkout Pipeline"])
-# api_router.include_router(staff.router, prefix="/staff", tags=["Staff Management"])
