@@ -14,7 +14,7 @@ export default async function StaffWorkspacePage({
 }) {
   const { organizationId, staffId } = await params;
   return (
-    <main id="main-content" className="flex h-full min-h-[70vh] flex-col">
+    <div className="flex h-full min-h-[70vh] flex-col">
       <Suspense
         fallback={
           <div className="p-8 text-sm text-slate-500">Loading workspace…</div>
@@ -25,6 +25,6 @@ export default async function StaffWorkspacePage({
           staffId={staffId}
         />
       </Suspense>
-    </main>
+    </div>
   );
 }

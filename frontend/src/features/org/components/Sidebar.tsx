@@ -26,7 +26,8 @@ import {
 
 interface SidebarProps {
   organizationId: string;
-  businessId: string;
+  /** When omitted (org-level surfaces), business links use session fallback */
+  businessId?: string;
   /** Prefer from server layout / page — avoids useSession race */
   userRole?: string;
 }
@@ -154,6 +155,17 @@ export function Sidebar({
     canAny(perms, link.anyOf),
   );
 
+  // Org-level pages (e.g. Team) may not have businessId in the URL.
+  // Prefer explicit prop, else first assigned store from session.
+  const assigned =
+    (
+      session?.user as
+        | { assigned_businesses?: { id: string }[] }
+        | undefined
+    )?.assigned_businesses ?? [];
+  const effectiveBusinessId =
+    businessId || assigned[0]?.id || undefined;
+
   return (
     <motion.aside
       initial={false}
@@ -189,7 +201,9 @@ export function Sidebar({
           {visibleLinks.map((link) => {
             const href = link.orgLevel
               ? `/org/${organizationId}${link.path}`
-              : `/org/${organizationId}/${businessId}${link.path}`;
+              : effectiveBusinessId
+                ? `/org/${organizationId}/${effectiveBusinessId}${link.path}`
+                : `/org/${organizationId}`;
             const isActive =
               link.path === ""
                 ? pathname === href
