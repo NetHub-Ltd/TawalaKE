@@ -301,6 +301,62 @@ async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUse
     )
 
 
+
+
+@router.post("/subscription/cancel", response_model=ApiResponse[dict])
+async def cancel_subscription(db: SessionDep, user: AuthUser):
+    """OWNER/billing: deactivate active subscription and invalidate paywall cache."""
+    _require_owner(user)
+    org_id = user.organization_id or getattr(user, "tenant_id", None)
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization on account")
+    sub = await subscription_crud.deactivate_subscription(db, org_id, reason="user_cancel")
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Subscription cancelled" if sub else "No active subscription",
+        data={
+            "subscription_id": str(sub.id) if sub else None,
+            "active": False,
+        },
+    )
+
+
+@router.post("/subscription/activate", response_model=ApiResponse[dict])
+async def activate_subscription(
+    db: SessionDep,
+    user: AuthUser,
+    plan_code: str = "NDOVU",
+    days: int = 30,
+):
+    """
+    OWNER/billing: activate or extend a plan window.
+    Intended for post-payment fulfillment and ops; payments webhooks should call the same CRUD.
+    """
+    _require_owner(user)
+    org_id = user.organization_id or getattr(user, "tenant_id", None)
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization on account")
+    if days < 1 or days > 366:
+        raise HTTPException(status_code=400, detail="days must be between 1 and 366")
+    sub, plan = await subscription_crud.activate_or_extend_subscription(
+        db, org_id, plan_code=plan_code, days=days
+    )
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message=f"Plan {plan.code} activated",
+        data={
+            "subscription_id": str(sub.id),
+            "plan_code": plan.code,
+            "plan_name": plan.name,
+            "start_date": sub.start_date.isoformat() if sub.start_date else None,
+            "end_date": sub.end_date.isoformat() if sub.end_date else None,
+            "active": bool(sub.active),
+        },
+    )
+
+
 @router.get("/entitlements", response_model=ApiResponse[dict])
 async def get_org_entitlements(db: SessionDep, user: AuthUser):
     """

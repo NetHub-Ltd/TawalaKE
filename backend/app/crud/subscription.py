@@ -104,6 +104,15 @@ async def maybe_mark_onboarding_complete(
     return org
 
 
+async def _invalidate_org(org_id: UUID) -> None:
+    """Best-effort Redis entitlements/validity invalidation after billing writes."""
+    try:
+        redis = redis_manager.get_async_client()
+        await paywall.invalidate(redis, org_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"paywall invalidate failed org={org_id}: {exc}")
+
+
 async def start_plan_trial(
     db: AsyncSession, organization_id: UUID, plan_code: str = "NDOVU"
 ) -> Tuple[Subscription, Plan]:
@@ -137,11 +146,7 @@ async def start_plan_trial(
     db.add(sub)
     await db.commit()
     await db.refresh(sub)
-    try:
-        redis = redis_manager.get_async_client()
-        await paywall.invalidate(redis, organization_id)
-    except Exception:
-        pass
+    await _invalidate_org(organization_id)
     logger.info(
         f"Started {days}-day {code} trial for org {organization_id} "
         f"sub={sub.id} tier={sub.tier} plan_id={plan.id}"
@@ -153,3 +158,99 @@ async def start_ndovu_trial(
     db: AsyncSession, organization_id: UUID
 ) -> Tuple[Subscription, Plan]:
     return await start_plan_trial(db, organization_id, "NDOVU")
+
+
+
+async def deactivate_subscription(
+    db: AsyncSession,
+    organization_id: UUID,
+    *,
+    reason: str = "cancelled",
+) -> Optional[Subscription]:
+    """Mark all active subscriptions for the org inactive and drop paywall cache."""
+    stmt = select(Subscription).where(
+        Subscription.organization_id == organization_id,
+        Subscription.active == True,  # noqa: E712
+    )
+    subs = list(await db.exec(stmt))
+    if not subs:
+        await _invalidate_org(organization_id)
+        return None
+    now = datetime.now(timezone.utc)
+    last = None
+    for sub in subs:
+        sub.active = False
+        # Keep end_date as historical; if open-ended, close at now
+        if sub.end_date is None:
+            sub.end_date = now
+        db.add(sub)
+        last = sub
+    await db.commit()
+    if last is not None:
+        await db.refresh(last)
+    await _invalidate_org(organization_id)
+    logger.info(f"Deactivated subscription(s) for org={organization_id} reason={reason}")
+    return last
+
+
+async def activate_or_extend_subscription(
+    db: AsyncSession,
+    organization_id: UUID,
+    plan_code: str,
+    *,
+    days: int = 30,
+) -> Tuple[Subscription, Plan]:
+    """
+    Paid activation path (webhooks / admin): set plan, active, new window.
+    Deactivates other active rows for the org first.
+    """
+    plan = await get_plan_by_code(db, plan_code)
+    # Deactivate existing active rows without nested invalidate until end
+    stmt = select(Subscription).where(
+        Subscription.organization_id == organization_id,
+        Subscription.active == True,  # noqa: E712
+    )
+    for sub in list(await db.exec(stmt)):
+        sub.active = False
+        db.add(sub)
+
+    now = datetime.now(timezone.utc)
+    end = now + timedelta(days=max(1, int(days)))
+    sub = Subscription(
+        organization_id=organization_id,
+        tier=_legacy_tier_for_plan_code(plan.code),
+        active=True,
+        start_date=now,
+        end_date=end,
+        plan_id=plan.id,
+        current_usage={},
+    )
+    db.add(sub)
+    await db.commit()
+    await db.refresh(sub)
+    await _invalidate_org(organization_id)
+    logger.info(
+        f"Activated plan={plan.code} org={organization_id} days={days} sub={sub.id}"
+    )
+    return sub, plan
+
+
+async def mark_expired_subscriptions(db: AsyncSession, organization_id: UUID) -> int:
+    """Flip active=False for org subs past end_date; invalidate cache."""
+    now = datetime.now(timezone.utc)
+    stmt = select(Subscription).where(
+        Subscription.organization_id == organization_id,
+        Subscription.active == True,  # noqa: E712
+    )
+    count = 0
+    for sub in list(await db.exec(stmt)):
+        end = _as_utc(sub.end_date)
+        if end is not None and end < now:
+            sub.active = False
+            db.add(sub)
+            count += 1
+    if count:
+        await db.commit()
+        await _invalidate_org(organization_id)
+        logger.info(f"Marked {count} expired sub(s) inactive org={organization_id}")
+    return count

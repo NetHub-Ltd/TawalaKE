@@ -152,7 +152,6 @@ from app.api.api_router import api_router
 from app.core.config import settings
 from app.core.session import engine
 from app.core.redis_client import redis_manager, limiter
-from app.middleware.paywall import PaywallValidityMiddleware
 from app.utils.logging import logger
 from app.prestart import create_admin_tenant
 from app.utils.helpers import utc_now
@@ -291,7 +290,6 @@ def create_application() -> FastAPI:
     )
 
     # Plan validity gate (Redis-first). Feature limits enforced in route deps.
-    application.add_middleware(PaywallValidityMiddleware)
 
     # 3. Request IP logging middleware (runs on every request)
     @application.middleware("http")

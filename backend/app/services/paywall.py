@@ -323,7 +323,11 @@ class PaywallService:
         }
 
     async def _load_active_sub(
-        self, db: AsyncSession, org_id: UUID
+        self,
+        db: AsyncSession,
+        org_id: UUID,
+        *,
+        for_update: bool = False,
     ) -> Optional[Subscription]:
         now = datetime.now(timezone.utc)
         stmt = (
@@ -334,6 +338,8 @@ class PaywallService:
             )
             .order_by(Subscription.start_date.desc())
         )
+        if for_update:
+            stmt = stmt.with_for_update()
         for sub in list(await db.exec(stmt)):
             if not _is_expired(sub.end_date, now):
                 return sub
@@ -439,7 +445,7 @@ class PaywallService:
         redis: Optional[AsyncRedis] = None,
     ) -> None:
         """Write usage snapshot onto Subscription.current_usage and invalidate cache."""
-        sub = await self._load_active_sub(db, org_id)
+        sub = await self._load_active_sub(db, org_id, for_update=True)
         if sub is None:
             return
         merged = dict(sub.current_usage or {})

@@ -2,10 +2,10 @@
 
 | Ref | Note |
 |-----|------|
-| dev tip | `cdb76a4` |
+| dev tip | `fb7723e` |
 
 ```bash
 git checkout dev && git pull && git revert <sha>
 ```
 
-No migrations.
+No migrations. Restores previous middleware if reverted.
