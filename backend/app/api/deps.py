@@ -122,12 +122,6 @@ async def get_current_user(
         )
         staff = (await db.exec(stmt)).first()
 
-        logger.info(
-            f"Staff lookup: sub={token_data.sub}, "
-            f"staff_id={staff.id if staff else None}, "
-            f"email={staff.email if staff else None}"
-        )
-
         if not staff or not staff.active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -135,19 +129,40 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # logger.info(f"Authenticated user: {staff.email} (ID: {staff.assigned_businesses})")
-        logger.info(
-            f"Authenticated user: {staff.email} "
-            f"(ID: {staff.id}, sub: {token_data.sub}, "
-            f"assigned_businesses: {len(staff.assigned_businesses)})"
-        )
-        if not staff.assigned_businesses:
+        # Tenant claim must match DB (never trust JWT org alone)
+        db_org = staff.organization_id or staff.tenant_id
+        claim_org = token_data.organization_id
+        if db_org is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Staff account is not linked to an organization",
+            )
+        if claim_org and str(db_org) != str(claim_org):
+            logger.warning(
+                f"Org claim mismatch staff={staff.id} claim={claim_org} db={db_org}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        from app.core.rbac import effective_role, is_org_wide_role
+        from app.models.models import StaffRole
+
+        role = effective_role(staff)
+        # OWNER/ADMIN may authenticate with zero stores (onboarding / billing).
+        # Other roles need at least one business assignment.
+        if not staff.assigned_businesses and not is_org_wide_role(staff):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User has no assigned businesses",
             )
 
-        # staff.business_id = staff.assigned_businesses[0].id  # Assign the first business ID for context
+        logger.info(
+            f"Authenticated staff_id={staff.id} role={role.value if role else None} "
+            f"businesses={len(staff.assigned_businesses)}"
+        )
         return staff
 
     except HTTPException:

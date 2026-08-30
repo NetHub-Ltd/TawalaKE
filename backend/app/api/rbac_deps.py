@@ -173,8 +173,13 @@ def require_business_access(
                 biz_id = UUID(str(raw))
 
         if biz_id is None:
-            # Some endpoints carry business only on nested payload; caller must pass explicitly
-            return user  # type: ignore[return-value]
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "business_id is required for this action",
+                },
+            )
 
         # Org match
         biz = (

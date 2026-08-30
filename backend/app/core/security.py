@@ -15,67 +15,56 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.models import Staff
+from app.models.models import Staff, StaffRole
 from app.core.config import settings
 from app.utils.helpers import utc_now
 from app.utils.logging import logger
 
 
 # ========================= ENUMS & SCOPES MAP =========================
-class StaffRole(str, Enum):
-    """Staff roles used for authorization and scope resolution."""
+# Single source of truth for roles: models.StaffRole
 
-    OWNER = "OWNER"
-    MANAGER = "MANAGER"
-    CASHIER = "CASHIER"
-
-    @classmethod
-    def _missing_(cls, value: object) -> Optional["StaffRole"]:
-        """
-        Case-insensitive Enum lookup fallback for legacy or lowercased DB roles.
-        Returns the matching member or None (which causes ValueError in the constructor).
-        """
-        if isinstance(value, str):
-            for member in cls:
-                if member.value.lower() == value.lower():
-                    return member
-        return None
-
-
-# Granular scopes mapped across Products, Sales, Stock, Staff, and Org resources.
-# Keep this map in sync with the actual permissions enforced by require_scopes().
+# Legacy JWT scopes — kept for tokens that still carry scopes.
+# Runtime AuthZ uses app.core.rbac.Permission (require_permissions).
 ROLE_SCOPES: Dict[StaffRole, List[str]] = {
     StaffRole.OWNER: [
         "org:admin",
         "business:read", "business:write", "business:delete",
         "staff:read", "staff:write", "staff:delete",
-        # Products
         "products:read", "products:write", "products:delete",
-        # Sales
         "sales:read", "sales:write", "sales:void",
-        # Stock / Inventory
+        "stock:read", "stock:write", "stock:adjust",
+        "reports:read",
+    ],
+    StaffRole.ADMIN: [
+        "business:read", "business:write",
+        "staff:read", "staff:write",
+        "products:read", "products:write", "products:delete",
+        "sales:read", "sales:write",
         "stock:read", "stock:write", "stock:adjust",
         "reports:read",
     ],
     StaffRole.MANAGER: [
         "business:read", "business:write",
         "staff:read",
-        # Products
         "products:read", "products:write",
-        # Sales
         "sales:read", "sales:write",
-        # Stock / Inventory
         "stock:read", "stock:write", "stock:adjust",
         "reports:read",
     ],
     StaffRole.CASHIER: [
-        # Products & Sales
         "products:read",
         "sales:read", "sales:write",
-        # Stock (Cashier needs read access to check availability during checkout)
         "stock:read",
     ],
 }
+
+
+def _resolve_role(role_str: str) -> Optional[StaffRole]:
+    try:
+        return StaffRole(str(role_str).strip().upper())
+    except ValueError:
+        return None
 
 
 # OAuth2 Scheme declaration for FastAPI Swagger UI compatibility.
@@ -211,9 +200,7 @@ class SecurityService:
         An unrecognized role results in an empty scope list (and a warning log).
         """
         role_str = str(user_data["role"]).strip().upper()
-
-        # StaffRole._missing_ makes this tolerant of legacy / mixed-case values
-        role_enum = StaffRole(role_str)
+        role_enum = _resolve_role(role_str)
         scopes = ROLE_SCOPES.get(role_enum, []) if role_enum is not None else []
 
         if not scopes:
@@ -313,7 +300,7 @@ class SecurityService:
             logger.info(f"JWT verification failed: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Invalid authentication token: {str(e)}",
+                detail="Invalid authentication token",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
@@ -354,9 +341,16 @@ class SecurityService:
 
         role_value = staff.role.value if hasattr(staff.role, "value") else str(staff.role)
 
+        org_id = staff.organization_id or staff.tenant_id
+        if org_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Staff account is not linked to an organization",
+            )
+
         user_data = {
             "sub": str(staff.id),
-            "organization_id": str(staff.tenant_id),
+            "organization_id": str(org_id),
             "role": role_value,
         }
 
@@ -366,15 +360,14 @@ class SecurityService:
         self,
         old_refresh_token: str,
         redis_client: AsyncRedis,
+        db: Optional[AsyncSession] = None,
     ) -> Token:
         """
         Safely rotates a refresh token:
         1. Verifies the old token (including blacklist check).
         2. Blacklists the old JTI for its remaining lifetime.
-        3. Issues a completely new token set (new JTIs).
-
-        Raises 500 if redis_client is missing – rotation without blacklisting
-        would be insecure.
+        3. Reloads staff from DB when session provided (active + current role/org).
+        4. Issues a completely new token set (new JTIs).
         """
         if redis_client is None:
             raise HTTPException(
@@ -389,7 +382,6 @@ class SecurityService:
             f"Rotating refresh token for staff {token_data.sub}, JTI: {token_data.jti}"
         )
 
-        # Blacklist the old refresh token for its remaining TTL
         now_ts = int(utc_now().timestamp())
         ttl_remaining = max(0, token_data.exp - now_ts)
 
@@ -400,18 +392,49 @@ class SecurityService:
                 ex=ttl_remaining,
             )
         else:
-            # Token is already expired – no need to blacklist, but log for observability
             logger.warning(
                 f"Refresh token already expired (JTI {token_data.jti}) – skipping blacklist"
             )
 
-        user_data = {
-            "sub": token_data.sub,
-            "organization_id": token_data.organization_id,
-            "role": token_data.role,
-        }
+        business_id = token_data.business_id
+        if db is not None:
+            stmt = (
+                select(Staff)
+                .where(Staff.id == token_data.sub)
+                .options(selectinload(Staff.assigned_businesses))
+            )
+            staff = (await db.exec(stmt)).first()
+            if not staff or not staff.active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found or account is inactive",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+            org_id = staff.organization_id or staff.tenant_id
+            if org_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Staff account is not linked to an organization",
+                )
+            role_value = staff.role.value if hasattr(staff.role, "value") else str(staff.role)
+            user_data = {
+                "sub": str(staff.id),
+                "organization_id": str(org_id),
+                "role": role_value,
+            }
+            if staff.assigned_businesses:
+                business_id = str(staff.assigned_businesses[0].id)
+            else:
+                business_id = None
+        else:
+            user_data = {
+                "sub": token_data.sub,
+                "organization_id": token_data.organization_id,
+                "role": token_data.role,
+            }
+
         logger.info(f"Issuing new token set for staff {user_data['sub']}")
-        return self.create_tokens(user_data, business_id=token_data.business_id)
+        return self.create_tokens(user_data, business_id=business_id)
 
     # ------------------------------------------------------------------
     # 4. OPAQUE PASSWORD RESET TOKENS (REDIS)

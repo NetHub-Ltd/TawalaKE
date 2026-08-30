@@ -191,16 +191,42 @@ async def create_product(
     Create a new product with core fields and dynamic JSONB attributes.
     Enforces plan max_products paywall before write.
     """
-    org_id = getattr(_user, "organization_id", None)
+    org_id = getattr(_user, "organization_id", None) or getattr(_user, "tenant_id", None)
     if org_id is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "ORG_REQUIRED", "message": "Staff must belong to an organization"},
         )
+
+    # Tenant + business binding: never trust client org; verify business belongs to caller org
+    from sqlmodel import select
+    from app.models.models import Business
+    from app.api.rbac_deps import load_assigned_business_ids
+    from app.core.rbac import is_org_wide_role
+
+    biz = (
+        await db.exec(select(Business).where(Business.id == payload.business_id))
+    ).first()
+    if not biz or biz.organization_id != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "RBAC_DENIED", "message": "Business not in your organization"},
+        )
+    if not is_org_wide_role(_user):
+        assigned = await load_assigned_business_ids(db, _user, redis_client)
+        if payload.business_id not in assigned:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "RBAC_DENIED", "message": "No access to this business"},
+            )
+
     await paywall_service.enforce_create_product(db, org_id, redis=redis_client)
 
     try:
-        db_obj = await product_crud.create(db, obj_in=payload.model_dump(exclude_unset=True))
+        create_data = payload.model_dump(exclude_unset=True)
+        create_data["organization_id"] = org_id
+        create_data["business_id"] = payload.business_id
+        db_obj = await product_crud.create(db, obj_in=create_data)
         await paywall_service.bump_usage(db, org_id, LIMIT_PRODUCTS, redis=redis_client)
         await db.commit()
         logger.info(f"Product created: {db_obj}")

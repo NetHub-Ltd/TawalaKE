@@ -1,17 +1,26 @@
 # Task Tracker
 
 **Base / PR target:** `dev`  
-**Branch:** `fix/rbac-remove-kill-switch`
+**Branch:** `fix/auth-authz-hardening`
 
 ## Goal
 
-Phase 0 of authz hardening: remove `settings.rbac_enforce` so permission and business-access checks cannot be disabled via env.
+Single PR fixing authentication and authorization (PR A). Paywall/billing is out of scope (PR B later).
 
 ## Completed
 
-- [x] Remove `rbac_enforce` from `core/config.py`
-- [x] Always enforce in `require_permissions` and `require_business_access`
+- [x] JWT organization_id from staff.organization_id (not bare tenant_id)
+- [x] get_current_user: claim vs DB org match; reduced PII logs; OWNER/ADMIN zero-store allowed
+- [x] Refresh rotates with DB staff reload (inactive → 401)
+- [x] Single StaffRole from models; ADMIN in ROLE_SCOPES
+- [x] Opaque JWT error messages
+- [x] require_business_access fail-closed when business_id missing
+- [x] Product create: business in org + assignment; stamp organization_id
+- [x] Store create: bind to caller org only; effective_role OWNER/ADMIN
+- [x] Org list/get IDOR guards on staff/billing/stores/org
+- [x] Stock mutations: cross-org product rejected
+- [x] Tests: role scopes, token org claim, authenticate org preference
 
-## Follow-ups (separate PRs)
+## Out of scope
 
-See audit proposal: tenant binding, JWT org claim, dual role systems, paywall middleware trust, IDOR tests.
+Paywall middleware, feature gates, usage counters (PR B).
