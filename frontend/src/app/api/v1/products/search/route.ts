@@ -75,6 +75,8 @@
 
 // Parent File Import: app/api/v1/products/search/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { getServerAccessToken } from "@/lib/auth/get-server-access-token";
 
 const BACKEND_API_URL = process.env.BACKEND_URL;
 
@@ -110,14 +112,22 @@ export async function GET(request: NextRequest) {
     if (category) targetParams.append("category", category);
     if (active !== null && active !== undefined) targetParams.append("active", active);
 
+    const session = await auth();
+    const accessToken =
+      (await getServerAccessToken()) ?? session?.accessToken ?? null;
+    if (!accessToken || session?.error) {
+      return NextResponse.json(
+        { status: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
     const backendResponse = await fetch(
       `${BACKEND_API_URL}/products/search?${targetParams.toString()}`,
       {
         headers: {
           "Content-Type": "application/json",
-          ...(request.headers.get("authorization") && {
-            Authorization: request.headers.get("authorization")!,
-          }),
+          Authorization: `Bearer ${accessToken}`,
         },
         cache: "no-store",
       }

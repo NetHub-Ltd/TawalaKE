@@ -70,7 +70,8 @@
 import React from "react";
 import { Metadata } from "next";
 import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
+import { orgMatchesSession } from "@/lib/auth/require-api-auth";
 import { BusinessProvider } from "@/features/business/components/BusinessProvider";
 import { Sidebar } from "@/features/org/components/Sidebar";
 import { Header } from "@/features/org/components/Header";
@@ -108,6 +109,10 @@ export default async function TerminalLayout({
         `/org/${organizationId}/${businessId}/overview`,
       )}`,
     );
+  }
+
+  if (!orgMatchesSession(organizationId, session.user.organization_id)) {
+    notFound();
   }
 
   // Real role from JWT/session — no CASHIER default
