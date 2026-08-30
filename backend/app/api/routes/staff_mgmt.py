@@ -140,9 +140,15 @@ async def create_staff(
     if payload.role == StaffRole.OWNER and actor_role != StaffRole.OWNER:
         raise HTTPException(403, detail={"code": "RBAC_DENIED", "message": "Only OWNER may create OWNER"})
 
-    org_id = payload.organization_id or user.organization_id
-    if not org_id or (user.organization_id and org_id != user.organization_id):
+    # Never trust client organization_id — bind to caller only
+    org_id = user.organization_id or getattr(user, "tenant_id", None)
+    if not org_id:
         raise HTTPException(403, detail="Invalid organization")
+    if payload.organization_id and str(payload.organization_id) != str(org_id):
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "RBAC_DENIED", "message": "Cannot create staff in another organization"},
+        )
 
     await paywall_service.enforce_create_staff(db, org_id, redis=redis)
 

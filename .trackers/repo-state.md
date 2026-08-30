@@ -2,8 +2,8 @@
 
 **Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Integration branch:** `dev`  
-**Pre-branch tip:** `98b41f0` (Merge #141)
+**Pre-branch tip:** `cdb76a4` (Merge #142)
 
 ## This branch
 
-`fix/auth-authz-hardening` — AuthN + AuthZ: JWT org claim, refresh from DB, tenant binding, IDOR fixes.
+`fix/authz-idor-hotfix` — product list/update/delete IDOR, stock adjust tenant, staff org bind.
