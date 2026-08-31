@@ -12,7 +12,6 @@ import {
   User,
   LogOut,
   LayoutDashboard,
-  Users2,
   ChevronLeft,
   type LucideIcon,
 } from "lucide-react";
@@ -70,13 +69,6 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     path: "/sale-history",
     anyOf: [Permission.SALES_READ_OWN, Permission.SALES_READ_BUSINESS],
     icon: History,
-  },
-  {
-    label: "Team",
-    path: "/staff",
-    anyOf: [Permission.ORG_STAFF_MANAGE],
-    icon: Users2,
-    orgLevel: true,
   },
 ];
 

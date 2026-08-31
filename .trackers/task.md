@@ -1,19 +1,14 @@
 # Task Tracker
 
-**Branch:** `chore/staff-canonical-cleanup`  
-**Base / PR target:** `dev`  
-**Status:** Implementation complete — awaiting PR
+**Branch:** `fix/org-staff-shell-and-bff`  
+**Base:** `dev`  
+**Status:** Implementing shell + BFF clarity for Team
 
 ## Goal
-Single dedicated staff management surface (org-level); remove duplicate/legacy staff APIs and dead FE.
+Team is an organization surface: org nav only (no business POS sidebar).
+BFF `/api/v1/org/staff` remains sole list/create proxy to backend `/api/v1/staff`.
 
 ## Done
-- [x] Dedicated router `backend/app/api/routes/staff.py` (from staff_mgmt); sole mount `/api/v1/staff`
-- [x] Removed `/business/staff` alias, `assign-staff`, `get-staff`, org `GET /staff/{org_id}`
-- [x] Deleted legacy register `staff.py` and store `create_staff_account`
-- [x] FE BFF: `/api/v1/org/staff` → backend `/staff`; removed `/managed` and stale proxies
-- [x] Deleted `StaffWorkSpace.tsx`, deprecated org/staff re-export hook
-- [x] Tests: alias must 404; removed skipped legacy test_staff_routes.py
-
-## Out of scope (unchanged)
-Onboarding OWNER create, RBAC matrix, schema filename `staff_mgmt.py`, sales/payments mount gaps
+- [x] OrgShell for `/org/{orgId}/staff`
+- [x] Remove Team from business Sidebar
+- [x] Harden staff BFF error reporting
