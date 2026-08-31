@@ -1,15 +1,20 @@
 # Task Tracker
 
-**Branch:** `fix/staff-role-enum-crud-ux`  
-**Base:** `dev`
+**Branch:** `feat/homepage-ctr-conversion`  
+**Base:** `chore/technical-seo-foundation` (includes PR #153 SEO work)
+
+## Goal
+Raise homepage CTR for cold Kenyan shop owners.
 
 ## Done
-- [x] Alembic: ADD VALUE ADMIN to staff_role_enum
-- [x] staff_crud owns list/create/update/businesses/password/activity/onboard
-- [x] Thin routes/staff.py
-- [x] Remove organization register_staff / tenant_staff
-- [x] Activity API + BFF + member Activity tab
-- [x] Clearer FE error parsing
+- [x] Primary trial CTAs → `/onboarding/personal-details` (not `/org`)
+- [x] Login path for existing users
+- [x] Pricing signal (from KSh 1,490/mo)
+- [x] Social proof block (illustrative, replaceable)
+- [x] Honest outcomes strip
+- [x] Footer nav (Pricing, Solutions, Support, Login, Legal)
+- [x] Typography uses design tokens (`.text-h1/h2/h3`, no arbitrary `text-[Npx]`)
 
-## Required after merge
-Run alembic upgrade so ADMIN exists in Postgres.
+## Follow-ups
+- Replace illustrative quotes with verified customer quotes
+- Pricing footer link currently points at onboarding plans (auth may be required) — consider public pricing page later
