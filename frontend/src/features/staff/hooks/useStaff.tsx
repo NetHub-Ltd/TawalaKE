@@ -34,7 +34,46 @@ async function parseError(res: Response) {
   if (detail && typeof detail === "object" && "message" in detail) {
     return String((detail as { message?: string }).message);
   }
+  // BFF diagnostic shape from upstream FastAPI
+  const upstream = body?.upstream_body;
+  if (upstream?.detail) {
+    if (typeof upstream.detail === "string") return upstream.detail;
+    if (typeof upstream.detail === "object" && upstream.detail?.message) {
+      return String(upstream.detail.message);
+    }
+  }
+  if (body?.error && body?.upstream_status) {
+    return `${body.error} (${body.upstream_status})`;
+  }
   return body?.error || body?.message || res.statusText || "Request failed";
+}
+
+export interface StaffActivityItem {
+  id: string;
+  action: string;
+  outcome: string;
+  actor_staff_id?: string | null;
+  actor_email?: string | null;
+  actor_role?: string | null;
+  resource_id?: string | null;
+  meta?: Record<string, unknown>;
+  created_at?: string | null;
+}
+
+export function useStaffActivity(organizationId?: string, staffId?: string) {
+  return useQuery<StaffActivityItem[]>({
+    queryKey: ["staff", organizationId, staffId, "activity"],
+    queryFn: async () => {
+      const q = staffId
+        ? `/api/v1/org/staff/${staffId}/activity`
+        : `/api/v1/org/staff/activity`;
+      const res = await fetch(q);
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: !!organizationId,
+  });
 }
 
 /** Org staff directory — single source (managed staff module). */

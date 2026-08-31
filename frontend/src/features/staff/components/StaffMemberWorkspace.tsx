@@ -8,6 +8,7 @@ import {
   useUpdateStaff,
   useSetStaffBusinesses,
   useResetStaffPassword,
+  useStaffActivity,
 } from "@/features/staff/hooks/useStaff";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
@@ -33,7 +34,7 @@ function roleBadge(role: string) {
   return styles[role] || styles.CASHIER;
 }
 
-type Tab = "overview" | "access" | "security";
+type Tab = "overview" | "access" | "security" | "activity";
 
 export default function StaffMemberWorkspace({
   organizationId,
@@ -57,6 +58,10 @@ export default function StaffMemberWorkspace({
   const updateMut = useUpdateStaff(organizationId);
   const assignMut = useSetStaffBusinesses(organizationId);
   const resetMut = useResetStaffPassword(organizationId);
+  const { data: activity = [], isLoading: activityLoading } = useStaffActivity(
+    organizationId,
+    staffId,
+  );
   const { businesses } = useBusiness(organizationId);
 
   const [msg, setMsg] = useState<string | null>(null);
@@ -215,6 +220,7 @@ export default function StaffMemberWorkspace({
             ["overview", "Overview"],
             ["access", "Access"],
             ["security", "Security"],
+            ["activity", "Activity"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -409,6 +415,44 @@ export default function StaffMemberWorkspace({
           </button>
         </section>
       )}
+      {tabParam === "activity" && (
+        <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+            Activity
+          </h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Actions taken on this member (create, role, stores, password, status).
+          </p>
+          {activityLoading ? (
+            <p className="mt-4 text-sm text-slate-500">Loading activity…</p>
+          ) : activity.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">No recorded actions yet.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+              {activity.map((a) => (
+                <li key={a.id} className="flex flex-col gap-0.5 py-3 text-sm">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="font-medium text-slate-800 dark:text-slate-100">
+                      {a.action}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {a.created_at
+                        ? new Date(a.created_at).toLocaleString()
+                        : ""}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {a.actor_email || "System"}
+                    {a.actor_role ? ` · ${a.actor_role}` : ""}
+                    {a.outcome ? ` · ${a.outcome}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
     </div>
   );
 }

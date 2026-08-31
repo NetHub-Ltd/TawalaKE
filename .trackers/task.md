@@ -1,14 +1,15 @@
 # Task Tracker
 
-**Branch:** `fix/org-staff-shell-and-bff`  
-**Base:** `dev`  
-**Status:** Implementing shell + BFF clarity for Team
-
-## Goal
-Team is an organization surface: org nav only (no business POS sidebar).
-BFF `/api/v1/org/staff` remains sole list/create proxy to backend `/api/v1/staff`.
+**Branch:** `fix/staff-role-enum-crud-ux`  
+**Base:** `dev`
 
 ## Done
-- [x] OrgShell for `/org/{orgId}/staff`
-- [x] Remove Team from business Sidebar
-- [x] Harden staff BFF error reporting
+- [x] Alembic: ADD VALUE ADMIN to staff_role_enum
+- [x] staff_crud owns list/create/update/businesses/password/activity/onboard
+- [x] Thin routes/staff.py
+- [x] Remove organization register_staff / tenant_staff
+- [x] Activity API + BFF + member Activity tab
+- [x] Clearer FE error parsing
+
+## Required after merge
+Run alembic upgrade so ADMIN exists in Postgres.
