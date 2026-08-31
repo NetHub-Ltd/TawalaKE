@@ -20,7 +20,7 @@ from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
 from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
 from sqlmodel import select
 from app.models.models import Sale, SaleAnalyticsSummary, Staff
-from app.schemas.schemas import StaffCreateIn, StaffResponse, ProductResponse
+from app.schemas.schemas import ProductResponse
 from fastapi_cache.decorator import cache
 from app.core.redis_client import limiter
 from app.schemas.analytics import DashboardAnalyticsResponse
@@ -345,25 +345,6 @@ async def checkout_sale(
         },
     )
     return sale
-
-
-@router.post("/assign-staff", response_model=StaffResponse)
-async def register_and_assign_staff(db: SessionDep, user: AuthUser, payload: StaffCreateIn):
-    logger.info(f"endpoint hit with payload: {payload}")
-    staff = await store_crud.register_staff(db, payload)
-    if staff:
-        logger.info(f"created staff with id: {staff.id}")
-    logger.info(f"Created Staff with id: {staff.id}")
-    return staff
-
-@router.get("/get-staff", response_model=StaffResponse)
-async def fetch_staff_with_id(db: SessionDep, staff_id: UUID, user: AuthUser,):
-    staff, ass = await store_crud.fetch_staff_with_id(db, staff_id)
-    if ass.business_id is not None:
-        db_obj = StaffResponse(**staff.model_dump(), business_id=ass.business_id)
-    
-    db_obj = StaffResponse(**staff.model_dump())
-    return db_obj
 
 
 @router.get("/receipts/{sale_id}", status_code=200, response_model=FinancialDocumentSnapshotSchema)

@@ -42,7 +42,7 @@ export function useStaff(organizationId?: string) {
   const query = useQuery<StaffMember[]>({
     queryKey: ["staff", organizationId, "directory"],
     queryFn: async () => {
-      const res = await fetch(`/api/v1/org/staff/managed`);
+      const res = await fetch(`/api/v1/org/staff`);
       if (!res.ok) throw new Error(await parseError(res));
       const data = await res.json();
       return Array.isArray(data) ? data : [];
@@ -79,7 +79,7 @@ export function useCreateStaff(organizationId?: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateStaffInput) => {
-      const res = await fetch(`/api/v1/org/staff/managed`, {
+      const res = await fetch(`/api/v1/org/staff`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

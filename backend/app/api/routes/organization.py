@@ -398,23 +398,6 @@ async def get_businesses_by_tenant(
     )
 
 
-@router.get("/staff/{organization_id}", response_model=ApiResponse[List[StaffResponse]])
-@cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
-async def get_staff_by_tenant(
-    organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None
-):
-    caller_org = user.organization_id or getattr(user, "tenant_id", None)
-    if caller_org is None or str(organization_id) != str(caller_org):
-        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
-    staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Staff retrieved successfully",
-        data=staff,
-    )
-
-
 @router.get("/billing/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
 @cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
 async def get_billing_by_tenant(
