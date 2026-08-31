@@ -16,8 +16,6 @@ from app.crud.base import BaseCRUD
 from app.core.security import security
 from app.models.models import (
     Business,
-    StaffBusinessAssignment,
-    Staff,
     StockHistory,
     StockMovementType,
     Product,
@@ -32,7 +30,7 @@ from app.models.models import (
     StaffRole,
     SaleAnalyticsSummary
 )
-from app.schemas.schemas import BusinessCreate, BusinessUpdate, StaffCreateIn
+from app.schemas.schemas import BusinessCreate, BusinessUpdate
 from app.schemas.business import StaffRequest, ProductAuditRequest, ProductRestockRequest
 from app.schemas.store import FinalizeCheckoutIn, CartItemIn, InitializeCheckout
 from app.utils.logging import logger
@@ -340,45 +338,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Document sequencing integrity index crash. Transaction aborted.",
             )
 
-    async def create_staff_account(
-        self,
-        db: AsyncSession,
-        *,
-        payload: StaffCreateIn
-    ) -> Staff:
-        """
-        Creates staff accounts and signs physical records into persistence matrices safely.
-        """
-        try:
-            db_staff = Staff(
-                id=uuid4(),
-                tenant_id=payload.tenant_id,
-                email=payload.email,
-                full_name=payload.full_name,
-                hashed_password=security.hash_password(payload.password) if payload.password else "",
-                role=payload.role,
-                active=True
-            )
-            db.add(db_staff)
-            await db.flush()
-
-            assignment = StaffBusinessAssignment(
-                id=uuid4(),
-                staff_id=db_staff.id,
-                business_id=payload.business_id,
-                role=payload.role
-            )
-            db.add(assignment)
-
-            await db.commit()
-            return db_staff
-        except Exception as error:
-            logger.error(f"Operational fault context in user provisioning sequence: {error}")
-            await db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                detail="Staff account creation error."
-            )
 
     async def get_financial_document_json(
         self,

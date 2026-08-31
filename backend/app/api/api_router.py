@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, staff_mgmt, stock
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock
 from app.core.config import settings
 
 from app.utils.logging import logger
@@ -35,18 +35,11 @@ api_router.include_router(
     tags=["Store Management"],
     dependencies=_commerce_gate,
 )
-# Staff management (org-scoped). Canonical path is /api/v1/staff.
-# /api/v1/business/staff is a temporary alias for older clients; prefer /staff.
+# Staff management (organization-scoped). Sole dedicated surface.
 api_router.include_router(
-    staff_mgmt.router,
+    staff.router,
     prefix="/staff",
     tags=["Staff Management"],
-    dependencies=[Depends(require_active_plan)],
-)
-api_router.include_router(
-    staff_mgmt.router,
-    prefix="/business/staff",
-    tags=["Staff Management (legacy alias)"],
     dependencies=[Depends(require_active_plan)],
 )
 api_router.include_router(

@@ -1,4 +1,4 @@
-"""Canonical org staff management routes at /api/v1/staff (and legacy alias)."""
+"""Canonical organization staff management routes at /api/v1/staff only."""
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -51,15 +51,10 @@ def test_list_staff_canonical_path_not_404(client_as_owner, mock_session):
     assert r.status_code in (200, 422, 500)
 
 
-def test_list_staff_legacy_alias_not_404(client_as_owner, mock_session):
-    """GET /api/v1/business/staff remains as temporary alias."""
-    result = MagicMock()
-    result.all = lambda: []
-    result.unique = lambda: result
-    mock_session.exec = AsyncMock(return_value=result)
+def test_list_staff_legacy_business_alias_removed(client_as_owner, mock_session):
+    """GET /api/v1/business/staff must not be mounted (dedicated /staff only)."""
     r = client_as_owner.get("/api/v1/business/staff")
-    assert r.status_code != 404, r.text
-    assert r.status_code in (200, 422, 500)
+    assert r.status_code == 404, r.text
 
 
 def test_get_staff_member_route_exists(client_as_owner, mock_session):

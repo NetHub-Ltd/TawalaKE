@@ -1,13 +1,11 @@
 # Rollback
 
-| Ref | Note |
-|-----|------|
-| Prior known-good on `dev` | `f25f1b3` (Merge #148) |
+Prior `dev` tip before this work: `18d4f52`
 
 ```bash
 git checkout dev && git pull
-git revert <sha-of-report-commit>
-git push origin dev
+# revert merge commit of the PR, or:
+git revert <merge-sha>
 ```
 
-Docs-only change (`.reports/` + tracker updates). No runtime impact.
+No migrations. API removals: restore previous routes if external clients still need them.

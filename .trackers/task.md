@@ -1,21 +1,19 @@
 # Task Tracker
 
+**Branch:** `chore/staff-canonical-cleanup`  
 **Base / PR target:** `dev`  
-**Branch:** `dev` (docs-only direct push, user-authorized)
+**Status:** Implementation complete — awaiting PR
 
 ## Goal
-Capture codebase forensic audit report into `.reports/` and push to `dev`.
+Single dedicated staff management surface (org-level); remove duplicate/legacy staff APIs and dead FE.
 
-## Approved scope
-- Write `TAWALA_CODEBASE_FORENSIC_AUDIT.md` under `.reports/`
-- Direct push to `dev` (explicit user instruction; no PR)
+## Done
+- [x] Dedicated router `backend/app/api/routes/staff.py` (from staff_mgmt); sole mount `/api/v1/staff`
+- [x] Removed `/business/staff` alias, `assign-staff`, `get-staff`, org `GET /staff/{org_id}`
+- [x] Deleted legacy register `staff.py` and store `create_staff_account`
+- [x] FE BFF: `/api/v1/org/staff` → backend `/staff`; removed `/managed` and stale proxies
+- [x] Deleted `StaffWorkSpace.tsx`, deprecated org/staff re-export hook
+- [x] Tests: alias must 404; removed skipped legacy test_staff_routes.py
 
-## Out of scope
-- Code changes
-- Architecture redesign
-- Implementation work
-
-## Completed
-- [x] Forensic audit performed (read-only)
-- [x] Report written to `.reports/TAWALA_CODEBASE_FORENSIC_AUDIT.md`
-- [ ] Commit + push to origin/dev
+## Out of scope (unchanged)
+Onboarding OWNER create, RBAC matrix, schema filename `staff_mgmt.py`, sales/payments mount gaps
