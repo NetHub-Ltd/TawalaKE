@@ -1,11 +1,10 @@
 # Rollback
 
-Prior `dev` tip before this work: `18d4f52`
+**Branch:** `chore/technical-seo-foundation`
 
-```bash
-git checkout dev && git pull
-# revert merge commit of the PR, or:
-git revert <merge-sha>
-```
+If this work must be reverted:
+1. Do not merge the PR, or
+2. Revert the merge commit on `dev`, or
+3. Checkout the previous `dev` HEAD (`e63bb22`) and redeploy.
 
-No migrations. API removals: restore previous routes if external clients still need them.
+No database or migration changes in this branch.

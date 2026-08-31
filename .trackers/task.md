@@ -1,15 +1,21 @@
 # Task Tracker
 
-**Branch:** `fix/staff-role-enum-crud-ux`  
+**Branch:** `chore/technical-seo-foundation`  
 **Base:** `dev`
 
-## Done
-- [x] Alembic: ADD VALUE ADMIN to staff_role_enum
-- [x] staff_crud owns list/create/update/businesses/password/activity/onboard
-- [x] Thin routes/staff.py
-- [x] Remove organization register_staff / tenant_staff
-- [x] Activity API + BFF + member Activity tab
-- [x] Clearer FE error parsing
+## Goal
+Technical SEO foundation with canonical domain `https://tawala.nethub.co.ke`.
 
-## Required after merge
-Run alembic upgrade so ADMIN exists in Postgres.
+## In progress / Done
+- [x] Unify metadataBase + canonicals to tawala.nethub.co.ke
+- [x] Align public titles/descriptions with Marketing.md voice
+- [x] Remove global mobile blocker from root layout (public pages usable on mobile)
+- [x] Keep terminal/POS routes noindex + widescreen preference
+- [x] Add `robots.ts` and `sitemap.ts`
+- [x] Fix `site.webmanifest`
+- [x] Remove active `tawala.io` canonicals from public/org metadata
+
+## Out of scope
+- New marketing content / blog
+- Search Console / analytics setup
+- Core Web Vitals deep audit

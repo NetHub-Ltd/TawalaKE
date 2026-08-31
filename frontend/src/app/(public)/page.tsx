@@ -19,10 +19,17 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Tawala | Stop Shop Leakages & Track Daily Profits",
-  description: "Eliminate stock leakages, hold staff accountable, and see real daily net profits in real-time. Built specifically for retail shops, minimarts, and pharmacies.",
+  title: "Stop Shop Leakages & Track Daily Profits",
+  description:
+    "Eliminate stock leakages, hold staff accountable with PIN login, and see real daily net profits. Built for Kenyan retail shops, minimarts, and pharmacies.",
   alternates: {
-    canonical: "https://tawala.io",
+    canonical: "/",
+  },
+  openGraph: {
+    title: "Tawala | Stop Shop Leakages & Track Daily Profits",
+    description:
+      "Eliminate stock leakages, hold staff accountable with PIN login, and see real daily net profits. Built for Kenyan retail shops, minimarts, and pharmacies.",
+    url: "https://tawala.nethub.co.ke",
   },
 };
 
@@ -30,16 +37,18 @@ export default function LandingPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": "Tawala Platform",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "Web, Android, iOS, Windows",
-    "description": "Enterprise business management platform for retail shop owners to stop stock leakages, manage inventory, and view daily net profits.",
-    "offers": {
+    name: "Tawala",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web, Android, iOS, Windows",
+    description:
+      "Business management system for Kenyan SMEs. Stop stock leakages, manage staff with PIN login, track inventory, and see real daily net profit.",
+    url: "https://tawala.nethub.co.ke",
+    offers: {
       "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "KES",
-      "priceValidUntil": "2026-12-31",
-      "availability": "https://schema.org/InStock",
+      price: "0",
+      priceCurrency: "KES",
+      description: "14-day free trial",
+      availability: "https://schema.org/InStock",
     },
   };
 
@@ -50,9 +59,8 @@ export default function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* Primary Semantic Landmark */}
-      <main
-        id="main-content"
+      {/* Primary content landmark is provided by root layout */}
+      <div
         className="min-h-screen w-full bg-background text-foreground relative flex flex-col overflow-x-hidden selection:bg-brand-primary/20"
       >
         {/* =========================================================
@@ -413,7 +421,7 @@ export default function LandingPage() {
             </p>
           </div>
         </footer>
-      </main>
+      </div>
     </>
   );
 }

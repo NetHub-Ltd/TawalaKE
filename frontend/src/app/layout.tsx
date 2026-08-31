@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
-import { MonitorX } from "lucide-react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,14 +23,48 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Tawala | High-Performance Cloud Commerce",
-  description: "The enterprise-grade Business Management engine built for sub-second speeds and global multi-tenant scale.",
   metadataBase: new URL("https://tawala.nethub.co.ke"),
-  alternates: { canonical: "/" },
+  title: {
+    default: "Tawala | Tawala biashara yako",
+    template: "%s | Tawala",
+  },
+  description:
+    "Simple business management for Kenyan SMEs. Stop stock leakages, hold staff accountable with PIN login, and see your real daily net profit. Built for retail shops, minimarts, and pharmacies.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_KE",
+    url: "https://tawala.nethub.co.ke",
+    siteName: "Tawala",
+    title: "Tawala | Tawala biashara yako",
+    description:
+      "Take control of your biashara. Track sales, stop stock leakages, and hold staff accountable — built for Kenyan shops.",
+    images: [
+      {
+        url: "/web-app-manifest-512x512.png",
+        width: 512,
+        height: 512,
+        alt: "Tawala Business Management System",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tawala | Tawala biashara yako",
+    description:
+      "Take control of your biashara. Track sales, stop stock leakages, and hold staff accountable — built for Kenyan shops.",
+    images: ["/web-app-manifest-512x512.png"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Tawala Business Management System",
+    title: "Tawala",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -47,32 +80,11 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
       suppressHydrationWarning
     >
-      <body className="h-screen w-screen text-foreground antialiased selection:bg-brand-primary/20 overflow-hidden m-0 p-0">
+      <body className="min-h-screen w-full text-foreground antialiased selection:bg-brand-primary/20 m-0 p-0">
         <Providers>
-          
-          {/* Mobile Blocker Layer */}
-          <div className="flex md:hidden fixed inset-0 bg-background flex-col items-center justify-center p-6 text-center z-[100] font-sans">
-            <div className="h-10 w-10 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-xl flex items-center justify-center">
-              <MonitorX size={18} />
-            </div>
-            <div>
-              <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                Display Resolution Not Supported
-              </h2>
-              <p className="text-[11px] text-muted max-w-xs mt-1 leading-relaxed font-medium">
-                The Tawala platform is optimized strictly for widescreen terminal environments. Please maximize your view space or connect via a desktop workspace interface.
-              </p>
-            </div>
-          </div>
-
-          {/* DESKTOP SHELL FRAMEWORK: Locked down to prevent window leaks */}
-          <div className="hidden md:flex flex-col h-full w-full overflow-hidden relative">
-            {/* LIVE SYSTEM APP INTERFACE STREAM */}
-            <main id="main-content" className="flex-1 w-full h-full bg-surface relative overflow-hidden">
-              {children}
-            </main>
-          </div>
-
+          <main id="main-content" className="min-h-screen w-full bg-surface relative">
+            {children}
+          </main>
         </Providers>
       </body>
     </html>
