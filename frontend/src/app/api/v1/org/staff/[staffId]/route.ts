@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { backendUrl } from "@/lib/api/backend";
+
+function staffMemberUrl(staffId: string): string {
+  const base = process.env.BACKEND_URL?.replace(/\/$/, "");
+  if (!base) throw new Error("BACKEND_URL is not configured");
+  return `${base}/staff/${staffId}`;
+}
 
 export async function GET(
   _req: NextRequest,
@@ -11,7 +16,8 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { staffId } = await ctx.params;
-  const res = await fetch(backendUrl(`/staff/${staffId}`), {
+  const upstream = staffMemberUrl(staffId);
+  const res = await fetch(upstream, {
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
       "Content-Type": "application/json",
@@ -19,7 +25,12 @@ export async function GET(
     cache: "no-store",
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) return NextResponse.json(body, { status: res.status });
+  if (!res.ok) {
+    return NextResponse.json(
+      { error: "Backend staff get failed", upstream, upstream_status: res.status, upstream_body: body },
+      { status: res.status },
+    );
+  }
   return NextResponse.json(body.data ?? body, { status: 200 });
 }
 
@@ -33,7 +44,8 @@ export async function PATCH(
   }
   const { staffId } = await ctx.params;
   const payload = await req.json();
-  const res = await fetch(backendUrl(`/staff/${staffId}`), {
+  const upstream = staffMemberUrl(staffId);
+  const res = await fetch(upstream, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${session.accessToken}`,
@@ -42,6 +54,11 @@ export async function PATCH(
     body: JSON.stringify(payload),
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok) return NextResponse.json(body, { status: res.status });
+  if (!res.ok) {
+    return NextResponse.json(
+      { error: "Backend staff update failed", upstream, upstream_status: res.status, upstream_body: body },
+      { status: res.status },
+    );
+  }
   return NextResponse.json(body.data ?? body, { status: 200 });
 }
