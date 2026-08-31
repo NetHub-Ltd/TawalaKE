@@ -1,13 +1,12 @@
 # Repository State
 
 **Integration branch:** `dev`  
-**Topic branch:** `chore/technical-seo-foundation`  
+**Topic branch:** `feat/homepage-ctr-conversion`  
 **Preferred deploy:** k3s
 
 ## Current focus
-Technical SEO foundation under primary domain `https://tawala.nethub.co.ke`.
+Homepage CTR conversion upgrades on top of technical SEO foundation.
 
 ## Notes
-- Public marketing surface is mobile-friendly.
-- Authenticated terminal routes remain noindex and prefer widescreen.
-- Staff management remains single org-scoped API `/api/v1/staff` + UI `/org/{orgId}/staff`.
+- Primary canonical: `https://tawala.nethub.co.ke`
+- Public trial entry: `/onboarding/personal-details`

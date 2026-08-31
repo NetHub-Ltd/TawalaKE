@@ -1,21 +1,20 @@
 # Task Tracker
 
-**Branch:** `chore/technical-seo-foundation`  
-**Base:** `dev`
+**Branch:** `feat/homepage-ctr-conversion`  
+**Base:** `chore/technical-seo-foundation` (includes PR #153 SEO work)
 
 ## Goal
-Technical SEO foundation with canonical domain `https://tawala.nethub.co.ke`.
+Raise homepage CTR for cold Kenyan shop owners.
 
-## In progress / Done
-- [x] Unify metadataBase + canonicals to tawala.nethub.co.ke
-- [x] Align public titles/descriptions with Marketing.md voice
-- [x] Remove global mobile blocker from root layout (public pages usable on mobile)
-- [x] Keep terminal/POS routes noindex + widescreen preference
-- [x] Add `robots.ts` and `sitemap.ts`
-- [x] Fix `site.webmanifest`
-- [x] Remove active `tawala.io` canonicals from public/org metadata
+## Done
+- [x] Primary trial CTAs → `/onboarding/personal-details` (not `/org`)
+- [x] Login path for existing users
+- [x] Pricing signal (from KSh 1,490/mo)
+- [x] Social proof block (illustrative, replaceable)
+- [x] Honest outcomes strip
+- [x] Footer nav (Pricing, Solutions, Support, Login, Legal)
+- [x] Typography uses design tokens (`.text-h1/h2/h3`, no arbitrary `text-[Npx]`)
 
-## Out of scope
-- New marketing content / blog
-- Search Console / analytics setup
-- Core Web Vitals deep audit
+## Follow-ups
+- Replace illustrative quotes with verified customer quotes
+- Pricing footer link currently points at onboarding plans (auth may be required) — consider public pricing page later
