@@ -95,32 +95,12 @@ class OrganizationCrud(BaseCRUD[Organization, OrgCreate, TenantUpdate]):
         await db.refresh(tenant)
         return tenant
     
-    async def tenant_staff(self, organization_id: str, db: AsyncSession, business_id: UUID = None):
-        from app.models.models import Staff
-        stmt = select(Staff).where(Staff.organization_id == organization_id)
-        if business_id:
-            stmt = stmt.where(Staff.business_id == business_id)
-        return (await db.exec(stmt)).all()
-    
+
     async def get_business_by_tenant(self, organization_id: UUID, db: AsyncSession, active: bool):
         from app.models.models import Business
         stmt = select(Business).where(Business.organization_id == organization_id, Business.active == active)
         return (await db.exec(stmt)).all()
     
-    async def register_staff(self, organization_id: UUID, db: AsyncSession, staff_data: TenantCreate, password: str = None):
-        from app.models.models import Staff, StaffRole
-        staff = Staff(
-            full_name=staff_data.name,
-            email=staff_data.email,
-            organization_id=organization_id,
-            tenant_id=organization_id,
-            role=StaffRole.CASHIER,  # default role for new staff, can be updated later
-            hashed_password=security.hash_password(password)
-        )
-        db.add(staff)
-        await db.commit()
-        await db.refresh(staff)
-        return staff
 
 
 organization_crud = OrganizationCrud(Organization)
