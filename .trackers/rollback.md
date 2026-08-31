@@ -1,10 +1,13 @@
 # Rollback
 
-**Previous known-good:** `dev` @ `9247ae2`
+| Ref | Note |
+|-----|------|
+| Prior known-good on `dev` | `f25f1b3` (Merge #148) |
 
 ```bash
 git checkout dev && git pull
-git revert <merge-commit-sha>
+git revert <sha-of-report-commit>
+git push origin dev
 ```
 
-No migrations. Frontend + router mount only.
+Docs-only change (`.reports/` + tracker updates). No runtime impact.
