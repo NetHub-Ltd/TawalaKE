@@ -289,6 +289,8 @@ def create_application() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Plan validity gate (Redis-first). Feature limits enforced in route deps.
+
     # 3. Request IP logging middleware (runs on every request)
     @application.middleware("http")
     async def log_client_ip(request: Request, call_next):

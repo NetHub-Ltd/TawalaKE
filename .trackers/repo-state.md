@@ -1,9 +1,12 @@
 # Repository State
 
-**Repository:** https://github.com/NetHub-Ltd/TawalaKE.git  
 **Integration branch:** `dev`  
-**Pre-branch tip:** `499e40f` (Merge #135)
+**Topic branch:** `feat/homepage-ctr-conversion`  
+**Preferred deploy:** k3s
 
-## This branch
+## Current focus
+Homepage CTR conversion upgrades on top of technical SEO foundation.
 
-`fix/stock-mutation-postcommit-500-v2` — post-commit response hardening + client non-blocking refresh after stock mutations.
+## Notes
+- Primary canonical: `https://tawala.nethub.co.ke`
+- Public trial entry: `/onboarding/personal-details`

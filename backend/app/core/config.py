@@ -42,7 +42,6 @@ class Settings(BaseSettings):
 
     # Management
     admin_route: bool = False
-    rbac_enforce: bool = True
     rbac_cache_ttl_sec: int = 120
     audit_enabled: bool = True
 

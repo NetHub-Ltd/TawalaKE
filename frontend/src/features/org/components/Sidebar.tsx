@@ -12,7 +12,6 @@ import {
   User,
   LogOut,
   LayoutDashboard,
-  Users2,
   ChevronLeft,
   type LucideIcon,
 } from "lucide-react";
@@ -26,7 +25,8 @@ import {
 
 interface SidebarProps {
   organizationId: string;
-  businessId: string;
+  /** When omitted (org-level surfaces), business links use session fallback */
+  businessId?: string;
   /** Prefer from server layout / page — avoids useSession race */
   userRole?: string;
 }
@@ -37,6 +37,8 @@ interface SidebarLink {
   /** Any of these permissions unlocks the link (1:1 with API). */
   anyOf: PermissionKey[];
   icon: LucideIcon;
+  /** Org-scoped route: /org/{orgId}{path} instead of under businessId */
+  orgLevel?: boolean;
 }
 
 const NAVIGATION_SCHEMA: SidebarLink[] = [
@@ -67,12 +69,6 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     path: "/sale-history",
     anyOf: [Permission.SALES_READ_OWN, Permission.SALES_READ_BUSINESS],
     icon: History,
-  },
-  {
-    label: "Staff",
-    path: "/staff",
-    anyOf: [Permission.ORG_STAFF_MANAGE],
-    icon: Users2,
   },
 ];
 
@@ -151,6 +147,17 @@ export function Sidebar({
     canAny(perms, link.anyOf),
   );
 
+  // Org-level pages (e.g. Team) may not have businessId in the URL.
+  // Prefer explicit prop, else first assigned store from session.
+  const assigned =
+    (
+      session?.user as
+        | { assigned_businesses?: { id: string }[] }
+        | undefined
+    )?.assigned_businesses ?? [];
+  const effectiveBusinessId =
+    businessId || assigned[0]?.id || undefined;
+
   return (
     <motion.aside
       initial={false}
@@ -184,7 +191,11 @@ export function Sidebar({
 
         <nav className="flex-1 space-y-1" aria-label="Sidebar Links">
           {visibleLinks.map((link) => {
-            const href = `/org/${organizationId}/${businessId}${link.path}`;
+            const href = link.orgLevel
+              ? `/org/${organizationId}${link.path}`
+              : effectiveBusinessId
+                ? `/org/${organizationId}/${effectiveBusinessId}${link.path}`
+                : `/org/${organizationId}`;
             const isActive =
               link.path === ""
                 ? pathname === href

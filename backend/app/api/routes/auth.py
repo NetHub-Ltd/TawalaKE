@@ -106,12 +106,13 @@ async def refresh_token(
     request: Request,
     response: Response,
     redis: RedisDep,
+    db: SessionDep,
     refresh_token: str = Body(..., embed=True),
     # body: Optional[RefreshTokenRequest] = None,
 ):
     """
-    Rotates refresh tokens cleanly. Accepts refresh token from HttpOnly cookie first,
-    falling back to JSON body if provided. Blacklists old JTI in Redis to prevent replay attacks.
+    Rotates refresh tokens cleanly. Reloads staff from DB so deactivated accounts
+    and role/org changes take effect. Blacklists old JTI in Redis.
     """
     # Optional safety: strip any accidental "Bearer " or whitespace
     clean = refresh_token.strip()
@@ -121,7 +122,8 @@ async def refresh_token(
     try:
         new_tokens = await security.rotate_refresh_token(
             old_refresh_token=clean,
-            redis_client=redis
+            redis_client=redis,
+            db=db,
         )
         set_refresh_cookie(response, new_tokens.refresh_token)
 

@@ -11,9 +11,6 @@ export const metadata: Metadata = {
   title: "Terminal | POS System",
   description: "High-performance point of sale interface.",
   robots: { index: false, follow: false },
-  alternates: {
-    canonical: "https://tawala.io/terminal",
-  },
 };
 
 interface PageProps {

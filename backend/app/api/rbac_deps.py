@@ -70,10 +70,6 @@ def require_permissions(*required: Permission | str) -> Callable:
         db: SessionDep,
         redis: AsyncRedis = Depends(get_redis),
     ) -> Staff:
-        enforce = getattr(settings, "rbac_enforce", True)
-        if not enforce:
-            return user
-
         ok = has_all_permissions(user, required_perms)
         # Prefer cache for observability / future soft checks; matrix is DB-backed via Staff.role
         try:
@@ -147,6 +143,37 @@ async def load_assigned_business_ids(
     return ids
 
 
+async def assert_business_access(
+    db: AsyncSession,
+    user: Staff,
+    business_id: UUID,
+    redis: Optional[AsyncRedis] = None,
+) -> Business:
+    """
+    Hard check: business exists, same org as caller, and assigned (unless org-wide role).
+    Use from handlers when path/body already resolved a business_id.
+    """
+    biz = (await db.exec(select(Business).where(Business.id == business_id))).first()
+    if not biz:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or biz.organization_id is None or str(caller_org) != str(biz.organization_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "RBAC_DENIED", "message": "Business not in your organization"},
+        )
+
+    if not is_org_wide_role(user):
+        assigned = await load_assigned_business_ids(db, user, redis)
+        if business_id not in assigned:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "RBAC_DENIED", "message": "No access to this business"},
+            )
+    return biz
+
+
 def require_business_access(
     business_id_param: str = "business_id",
     from_body: bool = False,
@@ -159,7 +186,6 @@ def require_business_access(
         db: SessionDep,
         redis: AsyncRedis = Depends(get_redis),
     ) -> UUID:
-        enforce = getattr(settings, "rbac_enforce", True)
         biz_id: Optional[UUID] = None
 
         if from_body:
@@ -178,11 +204,13 @@ def require_business_access(
                 biz_id = UUID(str(raw))
 
         if biz_id is None:
-            # Some endpoints carry business only on nested payload; caller must pass explicitly
-            return user  # type: ignore[return-value]
-
-        if not enforce:
-            return biz_id
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "business_id is required for this action",
+                },
+            )
 
         # Org match
         biz = (

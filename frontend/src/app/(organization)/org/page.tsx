@@ -157,11 +157,12 @@ import { OrgDecisionError } from "@/features/org/components/OrgDecisionError";
 import { OrgCommandCenterClient } from "@/features/org/components/OrgCommandCenterClient";
 
 export const metadata: Metadata = {
-  title: "Organization Command Center & Footprint | Tawala",
+  title: "Organization Command Center",
   description:
-    "Executive hub for multi-tenant retail footprints. Manage organization settings, staff, billing, and active store terminals in Tawala.",
-  alternates: {
-    canonical: "https://tawala.io/org",
+    "Manage organization settings, staff, billing, and active store terminals in Tawala.",
+  robots: {
+    index: false,
+    follow: false,
   },
 };
 

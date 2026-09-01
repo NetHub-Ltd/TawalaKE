@@ -11,12 +11,14 @@ from fastapi_cache.decorator import cache
 # Directly utilizing your provided dependency definitions
 from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace, AuthUser
 from app.models.models import Staff
-from app.api.rbac_deps import require_permissions
+from app.api.rbac_deps import require_permissions, assert_business_access
 from app.core.rbac import Permission
 from app.crud.product import product_crud
 from app.schemas.schemas import ProductResponse, ProductCreate, ApiResponse, ProductUpdate
 from app.utils.logging import logger
 from app.core.redis_client import limiter
+from app.services.paywall import paywall as paywall_service, LIMIT_PRODUCTS
+from app.api.deps import get_redis
 
 
 router = APIRouter()
@@ -74,6 +76,8 @@ async def get_products(
             status_code=status.HTTP_400_BAD_REQUEST, 
             detail="Business ID is required"
         )
+
+    await assert_business_access(db, _user, business_id, redis_client)
     
     # Calculate offset engine parameters from 1-indexed page systems
     skip = (page - 1) * size
@@ -187,9 +191,45 @@ async def create_product(
     PURPOSE:
     --------
     Create a new product with core fields and dynamic JSONB attributes.
+    Enforces plan max_products paywall before write.
     """
+    org_id = getattr(_user, "organization_id", None) or getattr(_user, "tenant_id", None)
+    if org_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "ORG_REQUIRED", "message": "Staff must belong to an organization"},
+        )
+
+    # Tenant + business binding: never trust client org; verify business belongs to caller org
+    from sqlmodel import select
+    from app.models.models import Business
+    from app.api.rbac_deps import load_assigned_business_ids
+    from app.core.rbac import is_org_wide_role
+
+    biz = (
+        await db.exec(select(Business).where(Business.id == payload.business_id))
+    ).first()
+    if not biz or biz.organization_id != org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "RBAC_DENIED", "message": "Business not in your organization"},
+        )
+    if not is_org_wide_role(_user):
+        assigned = await load_assigned_business_ids(db, _user, redis_client)
+        if payload.business_id not in assigned:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"code": "RBAC_DENIED", "message": "No access to this business"},
+            )
+
+    await paywall_service.enforce_create_product(db, org_id, redis=redis_client)
+
     try:
-        db_obj = await product_crud.create(db, obj_in=payload.model_dump(exclude_unset=True))
+        create_data = payload.model_dump(exclude_unset=True)
+        create_data["organization_id"] = org_id
+        create_data["business_id"] = payload.business_id
+        db_obj = await product_crud.create(db, obj_in=create_data)
+        await paywall_service.bump_usage(db, org_id, LIMIT_PRODUCTS, redis=redis_client)
         await db.commit()
         logger.info(f"Product created: {db_obj}")
         
@@ -224,6 +264,17 @@ async def update_product(
     --------
     Update product core fields and/or complex nested attributes.
     """
+    existing = await product_crud.get(db, product_id)
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    await assert_business_access(db, _user, existing.business_id, redis_client)
+    caller_org = _user.organization_id or getattr(_user, "tenant_id", None)
+    if caller_org and existing.organization_id and str(existing.organization_id) != str(caller_org):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "RBAC_DENIED", "message": "Product not in your organization"},
+        )
+
     new_obj = await product_crud.update_product(product_id=product_id, payload=payload, db=db)
     
     # Drops targeted arrays matching both specific IDs and parent business matrices cleanly
@@ -257,6 +308,14 @@ async def delete_product(
     target_product = await product_crud.get(db, product_id)
     if not target_product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+
+    await assert_business_access(db, _user, target_product.business_id, redis_client)
+    caller_org = _user.organization_id or getattr(_user, "tenant_id", None)
+    if caller_org and target_product.organization_id and str(target_product.organization_id) != str(caller_org):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "RBAC_DENIED", "message": "Product not in your organization"},
+        )
         
     business_id = target_product.business_id
     await product_crud.delete_product(product_id, db)

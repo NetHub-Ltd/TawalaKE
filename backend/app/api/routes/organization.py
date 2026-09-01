@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from pydantic import BaseModel
 from app.api.deps import SessionDep, AuthUser
 from app.api.rbac_deps import require_permissions
-from app.core.rbac import Permission
+from app.core.rbac import Permission, effective_role, has_permission
 from app.models.models import Organization, Tenant, Staff, StaffRole
 from uuid import UUID
 from sqlmodel import select
@@ -23,6 +23,7 @@ from app.utils.logging import logger
 from app.api.deps import SessionDep, get_redis, AsyncRedis, universal_key_builder, purge_cache_namespace
 from datetime import datetime, timezone
 from app.crud import subscription as subscription_crud
+from app.services.paywall import paywall as paywall_service, LIMIT_BUSINESSES
 
 router = APIRouter()
 CACHE_TTL_SEC = 300
@@ -277,10 +278,21 @@ async def start_trial(
 
 @router.post("/new-store", status_code=200, response_model=ApiResponse[StoreResponse])
 async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUser):
-    if user.role != "OWNER" and payload.organization != user.organization_id:
+    from app.models.models import StaffRole
+    role = effective_role(user)
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    # Client cannot choose a different org; always bind to caller
+    org_id = caller_org
+    if org_id is None:
+        raise HTTPException(status_code=400, detail="organization is required")
+    if role not in (StaffRole.OWNER, StaffRole.ADMIN):
         raise HTTPException(status_code=403, detail="You are not allowed to perform this action")
+    redis = await get_redis()
+    await paywall_service.enforce_create_business(db, org_id, redis=redis)
 
     store = await organization_crud.register_store(db, payload, user)
+    await paywall_service.bump_usage(db, org_id, LIMIT_BUSINESSES, redis=redis)
+    await db.commit()
     return ApiResponse(
         status=True,
         status_code=200,
@@ -289,12 +301,92 @@ async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUse
     )
 
 
+
+
+@router.post("/subscription/cancel", response_model=ApiResponse[dict])
+async def cancel_subscription(db: SessionDep, user: AuthUser):
+    """OWNER/billing: deactivate active subscription and invalidate paywall cache."""
+    _require_owner(user)
+    org_id = user.organization_id or getattr(user, "tenant_id", None)
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization on account")
+    sub = await subscription_crud.deactivate_subscription(db, org_id, reason="user_cancel")
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Subscription cancelled" if sub else "No active subscription",
+        data={
+            "subscription_id": str(sub.id) if sub else None,
+            "active": False,
+        },
+    )
+
+
+@router.post("/subscription/activate", response_model=ApiResponse[dict])
+async def activate_subscription(
+    db: SessionDep,
+    user: AuthUser,
+    plan_code: str = "NDOVU",
+    days: int = 30,
+):
+    """
+    OWNER/billing: activate or extend a plan window.
+    Intended for post-payment fulfillment and ops; payments webhooks should call the same CRUD.
+    """
+    _require_owner(user)
+    org_id = user.organization_id or getattr(user, "tenant_id", None)
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization on account")
+    if days < 1 or days > 366:
+        raise HTTPException(status_code=400, detail="days must be between 1 and 366")
+    sub, plan = await subscription_crud.activate_or_extend_subscription(
+        db, org_id, plan_code=plan_code, days=days
+    )
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message=f"Plan {plan.code} activated",
+        data={
+            "subscription_id": str(sub.id),
+            "plan_code": plan.code,
+            "plan_name": plan.name,
+            "start_date": sub.start_date.isoformat() if sub.start_date else None,
+            "end_date": sub.end_date.isoformat() if sub.end_date else None,
+            "active": bool(sub.active),
+        },
+    )
+
+
+@router.get("/entitlements", response_model=ApiResponse[dict])
+async def get_org_entitlements(db: SessionDep, user: AuthUser):
+    """
+    Current plan, limits, features, and live usage for the caller's organization.
+    Used by billing UI and client-side soft gates.
+    """
+    org_id = user.organization_id
+    if org_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "ORG_REQUIRED", "message": "Staff must belong to an organization"},
+        )
+    redis = await get_redis()
+    snapshot = await paywall_service.usage_snapshot(db, org_id, redis=redis)
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Entitlements resolved",
+        data=snapshot,
+    )
+
+
+
 @router.get("/stores/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
 @cache(expire=CACHE_TTL_SEC, namespace="stores", key_builder=universal_key_builder)
 async def get_businesses_by_tenant(
     organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
 ):
-    if organization_id != user.organization_id:
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or str(organization_id) != str(caller_org):
         raise HTTPException(status_code=403, detail="You dont have access to perform this action")
 
     businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
@@ -306,25 +398,14 @@ async def get_businesses_by_tenant(
     )
 
 
-@router.get("/staff/{organization_id}", response_model=ApiResponse[List[StaffResponse]])
-@cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
-async def get_staff_by_tenant(
-    organization_id: UUID, db: SessionDep, user: AuthUser, business_id: UUID = None
-):
-    staff = await organization_crud.tenant_staff(organization_id, db, business_id=business_id)
-    return ApiResponse(
-        status=True,
-        status_code=200,
-        message="Staff retrieved successfully",
-        data=staff,
-    )
-
-
 @router.get("/billing/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
 @cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
 async def get_billing_by_tenant(
     organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
 ):
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or str(organization_id) != str(caller_org):
+        raise HTTPException(status_code=403, detail="You dont have access to perform this action")
     businesses = await business_crud.get_tenant_businesses(tenant_id=organization_id, db=db)
     return ApiResponse(
         status=True,
@@ -338,7 +419,8 @@ async def get_billing_by_tenant(
 @router.get("/{organization_id}", response_model=OrganizationResponse)
 @cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
 async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
-    if organization_id != user.organization_id:
+    caller_org = user.organization_id or getattr(user, "tenant_id", None)
+    if caller_org is None or str(organization_id) != str(caller_org):
         raise HTTPException(status_code=403, detail="Unathorized to perform this operation")
 
     org = await organization_crud.get_organization_by_id(db=db, org_id=organization_id)

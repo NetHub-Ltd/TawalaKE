@@ -131,7 +131,7 @@
 //           "@type": "Organization",
 //           "name": "Tawala",
 //         },
-//         "url": `https://tawala.io/solutions/${ind.slug}`,
+//         "url": `https://tawala.nethub.co.ke/solutions/${ind.slug}`,
 //       },
 //     })),
 //   };
@@ -455,17 +455,17 @@ import {
    TECHNICAL SEO: METADATA ENGINE & CANONICAL LINKING
    ========================================================= */
 export const metadata: Metadata = {
-  title: "Tawala Solutions | Industry-Specific POS & Business Systems",
+  title: "Solutions | Industry-Specific POS & Business Systems",
   description:
     "Manage retail shops, pharmacies, hardware stores, and wholesale distributors with Tawala. Stop stock leakages and track daily profits in real-time.",
   alternates: {
-    canonical: "https://tawala.io/solutions",
+    canonical: "/solutions",
   },
   openGraph: {
     title: "Tawala Solutions | Industry-Specific POS & Business Systems",
     description:
       "Manage retail shops, pharmacies, hardware stores, and wholesale distributors with Tawala. Stop stock leakages and track daily profits in real-time.",
-    url: "https://tawala.io/solutions",
+    url: "https://tawala.nethub.co.ke/solutions",
     type: "website",
   },
 };
@@ -590,7 +590,7 @@ export default function SolutionsPage() {
           "@type": "Organization",
           name: "Tawala",
         },
-        url: `https://tawala.io/solutions/${ind.slug}`,
+        url: `https://tawala.nethub.co.ke/solutions/${ind.slug}`,
       },
     })),
   };

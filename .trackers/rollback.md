@@ -1,13 +1,6 @@
 # Rollback
 
-| Ref | Note |
-|-----|------|
-| dev before this branch | `499e40f` |
+**Branch:** `feat/homepage-ctr-conversion`
 
-```bash
-git checkout dev && git pull
-git revert <sha>
-git push origin dev
-```
-
-Frontend + backend stock routes/schemas only; no migrations.
+Revert this branch/PR or restore previous `frontend/src/app/(public)/page.tsx` from parent commit.
+No database or migration changes.
