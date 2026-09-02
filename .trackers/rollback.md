@@ -1,16 +1,13 @@
 # Rollback
 
-**Branch:** `feat/seo-marketing-readiness`  
-**Base:** `main` @ `d0c29ae`
+**Branch:** `feat/onboarding-auto-ndovu-trial`
 
-## How to recover
-- Revert the PR or delete the topic branch.
-- Or restore these paths from `main`:
-  - `frontend/src/app/(public)/page.tsx`
-  - `frontend/src/app/sitemap.ts`
-  - Remove added dirs: `solutions/{retail,pharmacy,hardware,wholesale}`, `blog/`, `support/layout.tsx`
+Revert the PR or restore:
+- `backend/app/api/routes/auth.py` (remove auto-trial)
+- `backend/app/crud/subscription.py` (`TRIAL_DAYS`)
+- `backend/app/utils/plans.py` (seed trial_days)
+- `backend/app/core/mailer.py`
+- Frontend onboarding forms/pages
+- `docs/billing.md`
 
-## Notes
-- No database or migration changes.
-- No production config or Docker changes.
-- Pure frontend/static content; revert is sufficient.
+No DB migration required beyond plan seed upsert on next prestart (trial_days values).

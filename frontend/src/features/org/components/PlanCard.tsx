@@ -97,7 +97,7 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
   const yearly = Number(plan.price_yearly ?? 0);
   const monthly = Number(plan.price_monthly ?? 0);
   const trialDays =
-    plan.trial_days > 0 ? plan.trial_days : isBasic || isNdovu ? 7 : 0;
+    plan.trial_days > 0 ? plan.trial_days : isBasic || isNdovu ? 14 : 0;
 
   const enabledFeatures = Object.entries(plan.features || {})
     .map(([k, v]) => {
@@ -180,7 +180,7 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
         {(isBasic || isNdovu) && (
           <StartTrialButton
             planCode={plan.code}
-            label={`Start ${trialDays || 7}-day free trial`}
+            label={`Start ${trialDays || 14}-day free trial`}
           />
         )}
         {isEnterprise && (

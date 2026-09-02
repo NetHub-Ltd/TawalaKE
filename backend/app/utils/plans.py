@@ -8,7 +8,7 @@ PLANS_SEED = [
         "currency": "KES",
         "is_active": True,
         "is_public": True,
-        "trial_days": 7,
+        "trial_days": 14,
         "sort_order": 1,
         "limits": {
             "max_businesses": 1,
@@ -66,7 +66,7 @@ PLANS_SEED = [
         "currency": "KES",
         "is_active": True,
         "is_public": True,
-        "trial_days": 7,
+        "trial_days": 14,
         "sort_order": 2,
         "limits": {
             "max_businesses": 5,

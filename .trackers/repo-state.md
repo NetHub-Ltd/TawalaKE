@@ -1,15 +1,13 @@
 # Repository State
 
-**Integration branch:** `dev` (create from `main` if missing)  
-**Topic branch:** `feat/seo-marketing-readiness`  
+**Integration branch:** `dev`  
+**Topic branch:** `feat/onboarding-auto-ndovu-trial`  
 **Preferred deploy:** k3s  
-**Base commit:** `d0c29ae` (main at branch start)
 
 ## Current focus
-SEO & marketing readiness: industry landing pages, blog foundation, structured data, sitemap expansion, homepage FAQ + conversion polish.
+Onboarding conversion: auto-start 14-day Ndovu trial after email verification + password setup; email + UI polish.
 
 ## Notes
 - Primary canonical: `https://tawala.nethub.co.ke`
 - Public trial entry: `/onboarding/personal-details`
-- Schema: Organization, Product, FAQPage, SoftwareApplication only — no invented phone/geo/sameAs
-- Prior homepage CTR work already on main (PRs #154 / #155)
+- Trial source of truth: `TRIAL_DAYS = 14` + plan seed `trial_days: 14` for Basic/Ndovu

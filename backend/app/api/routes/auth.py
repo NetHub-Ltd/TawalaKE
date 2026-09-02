@@ -29,6 +29,11 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_at: Optional[datetime.datetime] = None
     email: Optional[EmailStr] = None
+    # Onboarding completion hints (set-password auto-trial path)
+    trial_started: Optional[bool] = None
+    trial_days: Optional[int] = None
+    plan_code: Optional[str] = None
+    needs_org_profile: Optional[bool] = None
 
 
 class RefreshTokenRequest(BaseModel):
@@ -227,12 +232,15 @@ async def onboarding_set_password(
     response: Response,
     db: SessionDep,
     redis: RedisDep,
+    background_tasks: BackgroundTasks,
 ):
     """
     Complete email verification + password setup for a pending onboarded staff.
-    Activates the account and returns a login token set (auto-login).
+    Activates the account, auto-starts a 14-day Ndovu trial, and returns tokens.
     """
     from sqlalchemy.orm import selectinload
+    from app.crud import subscription as subscription_crud
+    from app.crud.organization import organization_crud
 
     staff_id_str = await security.verify_and_consume_password_reset_token(
         reset_token=body.token,
@@ -278,6 +286,53 @@ async def onboarding_set_password(
     tokens = security.create_tokens(user_data, business_id=assigned_business_id)
     set_refresh_cookie(response, tokens.refresh_token)
 
+    trial_started = False
+    trial_days: Optional[int] = None
+    plan_code: Optional[str] = None
+    needs_org_profile = True
+
+    if org_id:
+        try:
+            org = await organization_crud.get_organization_by_id(db=db, org_id=org_id)
+            sub, plan = await subscription_crud.start_plan_trial(
+                db, org_id, plan_code="NDOVU"
+            )
+            org = await subscription_crud.maybe_mark_onboarding_complete(db, org)
+            trial_started = True
+            plan_code = plan.code
+            if sub.start_date and sub.end_date:
+                trial_days = int((sub.end_date - sub.start_date).days)
+            else:
+                trial_days = subscription_crud.TRIAL_DAYS
+            needs_org_profile = not subscription_crud.profile_looks_complete(org)
+
+            start_s = sub.start_date.strftime("%Y-%m-%d") if sub.start_date else ""
+            end_s = sub.end_date.strftime("%Y-%m-%d") if sub.end_date else ""
+            frontend = (settings.frontend_url or "https://tawala.nethub.co.ke").rstrip("/")
+            if not frontend.startswith("http"):
+                frontend = f"https://{frontend}"
+            background_tasks.add_task(
+                mailer.send_trial_invoice,
+                to_email=staff.email,
+                org_name=org.name or "Your business",
+                plan_name=plan.name,
+                trial_days=trial_days,
+                start_date=start_s,
+                end_date=end_s,
+                currency=getattr(plan, "currency", None) or "KES",
+                dashboard_url=f"{frontend}/org",
+            )
+            logger.info(
+                f"Onboarding auto-trial NDOVU {trial_days}d for staff {staff.id} org {org_id}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            # Password is set; allow recovery via /onboarding/plans
+            logger.exception(
+                f"Onboarding auto-trial failed for staff {staff.id} org {org_id}: {exc}"
+            )
+            trial_started = False
+            needs_org_profile = True
+
     logger.info(f"Onboarding password set and account activated for staff {staff.id}")
     return TokenResponse(
         access_token=tokens.access_token,
@@ -285,6 +340,10 @@ async def onboarding_set_password(
         id_token=tokens.id_token,
         expires_at=utc_now() + datetime.timedelta(minutes=settings.access_token_expire_minutes),
         email=staff.email,
+        trial_started=trial_started,
+        trial_days=trial_days,
+        plan_code=plan_code,
+        needs_org_profile=needs_org_profile,
     )
 
 
