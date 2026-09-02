@@ -46,9 +46,21 @@ const BENEFITS = [
 ] as const;
 
 const STEPS = [
-  { n: "1", title: "Create your account", desc: "Name and email — about two minutes." },
-  { n: "2", title: "Set password & start trial", desc: "14 days of Ndovu. No credit card." },
-  { n: "3", title: "Run your shop", desc: "Add stock, staff PINs, and start selling." },
+  {
+    n: "1",
+    title: "Create your account",
+    desc: "Name and email — about two minutes.",
+  },
+  {
+    n: "2",
+    title: "Set password and start trial",
+    desc: "14 days of Ndovu. No credit card.",
+  },
+  {
+    n: "3",
+    title: "Run your shop",
+    desc: "Add stock, staff PINs, and start selling.",
+  },
 ] as const;
 
 const FAQS = [
@@ -67,6 +79,21 @@ const FAQS = [
   {
     q: "Can I manage multiple shops?",
     a: "Yes. Ndovu and above support multi-branch inventory, staff, and sales from one dashboard.",
+  },
+] as const;
+
+const PROOF = [
+  {
+    q: "Daily profit view alone paid for the subscription.",
+    who: "Minimart owner · Nairobi",
+  },
+  {
+    q: "Every sale and discount is tied to a person now.",
+    who: "Pharmacy manager · Kisumu",
+  },
+  {
+    q: "Two branches, one login — reports in minutes.",
+    who: "Hardware owner · Mombasa",
   },
 ] as const;
 
@@ -123,21 +150,8 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
 
       <div className="relative w-full text-foreground">
-        {/* HERO */}
         <section className="section-padding mx-auto max-w-3xl pt-12 text-center md:pt-20">
           <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1 text-xs font-bold text-brand-primary">
             <ShieldCheck size={14} aria-hidden="true" />
@@ -173,7 +187,8 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="mt-4 text-sm text-muted">
-            From <span className="font-semibold text-foreground">KSh 1,490/mo</span>
+            From{" "}
+            <span className="font-semibold text-foreground">KSh 1,490/mo</span>
             {" · "}
             <Link
               href={LOGIN_HREF}
@@ -184,12 +199,12 @@ export default function LandingPage() {
           </p>
         </section>
 
-        {/* BENEFITS */}
         <section className="section-padding mx-auto max-w-6xl border-t border-border/50">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <h2 className="text-h2">Built for how Kenyan shops actually run</h2>
             <p className="mt-3 text-muted">
-              Three things owners care about at the counter — speed, stock, and staff.
+              Three things owners care about at the counter — speed, stock, and
+              staff.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -203,16 +218,8 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-
-          <p className="mt-6 text-center text-xs text-muted">
-            Early owner feedback for layout — replace with verified customer quotes as they are collected.
-            <Link href="/onboarding/personal-details" className="ml-1 font-semibold text-brand-primary underline-offset-2 hover:underline">
-              Start your free trial
-            </Link>
-          </p>
         </section>
 
-        {/* HOW IT WORKS */}
         <section
           id="how-it-works"
           className="section-padding mx-auto max-w-6xl border-t border-border/50"
@@ -238,40 +245,26 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* SOCIAL PROOF — compact */}
         <section className="section-padding mx-auto max-w-6xl border-t border-border/50">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {[
-              {
-                q: "Daily profit view alone paid for the subscription.",
-                who: "Minimart owner · Nairobi",
-              },
-              {
-                q: "Every sale and discount is tied to a person now.",
-                who: "Pharmacy manager · Kisumu",
-              },
-              {
-                q: "Two branches, one login — reports in minutes.",
-                who: "Hardware owner · Mombasa",
-              },
-            ].map((t) => (
+            {PROOF.map((t) => (
               <figure
                 key={t.who}
                 className="rounded-2xl border border-border/60 bg-card p-5 shadow-card"
               >
                 <blockquote className="text-sm leading-relaxed text-foreground">
-                  “{t.q}”
+                  &ldquo;{t.q}&rdquo;
                 </blockquote>
                 <figcaption className="mt-3 text-xs text-muted">{t.who}</figcaption>
               </figure>
             ))}
           </div>
           <p className="mt-4 text-center text-xs text-muted">
-            Early owner feedback — verified quotes replace these as they are collected.
+            Early owner feedback — verified quotes replace these as they are
+            collected.
           </p>
         </section>
 
-        {/* FAQ */}
         <section
           id="faq"
           className="section-padding mx-auto max-w-2xl border-t border-border/50"
@@ -299,7 +292,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* FINAL CTA */}
         <section className="section-padding mx-auto max-w-3xl text-center">
           <div className="card-layered border-brand-primary/20 bg-linear-to-br from-card to-brand-primary/5 px-6 py-10 sm:px-12">
             <h2 className="text-h2">Ready to stop the leakage?</h2>
@@ -333,56 +325,6 @@ export default function LandingPage() {
 
         <footer className="border-t border-border/60 bg-card/40 py-12">
           <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
-
-        <section
-          id="faq"
-          aria-labelledby="faq-heading"
-          className="relative z-10 mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8"
-        >
-          <div className="mb-10 space-y-3 text-center">
-            <h2 id="faq-heading" className="text-h2">
-              Questions shop owners ask
-            </h2>
-            <p className="text-muted">
-              Straight answers before you start your 14-day trial.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {faqs.map((item) => (
-              <details
-                key={item.q}
-                className="group rounded-2xl border border-border/60 bg-card p-4 open:shadow-sm"
-              >
-                <summary className="cursor-pointer list-none text-sm font-bold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
-                  <span className="flex items-center justify-between gap-3">
-                    {item.q}
-                    <ChevronRight
-                      size={16}
-                      className="shrink-0 text-muted transition-transform group-open:rotate-90"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-muted">{item.a}</p>
-              </details>
-            ))}
-          </div>
-          <div className="mt-10 text-center">
-            <Link href={TRIAL_HREF}>
-              <Button
-                variant="primary"
-                size="lg"
-                className="min-h-[48px] gap-2"
-              >
-                Start 14-Day Free Trial
-                <ArrowRight size={16} aria-hidden="true" />
-              </Button>
-            </Link>
-          </div>
-        </section>
-
-        <footer className="relative z-10 w-full border-t border-border/60 bg-surface/30 py-12">
-          <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
               <div className="space-y-2 text-center sm:text-left">
                 <p className="text-sm font-bold text-foreground">Tawala</p>
@@ -394,31 +336,51 @@ export default function LandingPage() {
                 aria-label="Footer"
                 className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm"
               >
-                <Link href="/onboarding/plans" className="text-muted hover:text-foreground">
+                <Link
+                  href="/onboarding/plans"
+                  className="text-muted hover:text-foreground"
+                >
                   Pricing
                 </Link>
-                <Link href="/solutions" className="text-muted hover:text-foreground">
+                <Link
+                  href="/solutions"
+                  className="text-muted hover:text-foreground"
+                >
                   Solutions
                 </Link>
-                <Link href="/support" className="text-muted hover:text-foreground">
+                <Link
+                  href="/support"
+                  className="text-muted hover:text-foreground"
+                >
                   Support
                 </Link>
                 <Link href="/blog" className="text-muted hover:text-foreground">
                   Blog
                 </Link>
-                <Link href={LOGIN_HREF} className="text-muted hover:text-foreground">
+                <Link
+                  href={LOGIN_HREF}
+                  className="text-muted hover:text-foreground"
+                >
                   Log in
                 </Link>
-                <Link href="/legal/terms" className="text-muted hover:text-foreground">
+                <Link
+                  href="/legal/terms"
+                  className="text-muted hover:text-foreground"
+                >
                   Terms
                 </Link>
-                <Link href="/legal/privacy" className="text-muted hover:text-foreground">
+                <Link
+                  href="/legal/privacy"
+                  className="text-muted hover:text-foreground"
+                >
                   Privacy
                 </Link>
               </nav>
             </div>
             <p className="text-center text-xs text-muted sm:text-left">
-              &copy; {new Date().getFullYear()} Tawala · Nethub. All rights reserved.
+              {"© "}
+              {new Date().getFullYear()}
+              {" Tawala · Nethub. All rights reserved."}
             </p>
           </div>
         </footer>
