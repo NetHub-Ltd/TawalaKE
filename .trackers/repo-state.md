@@ -1,12 +1,15 @@
 # Repository State
 
-**Integration branch:** `dev`  
-**Topic branch:** `feat/homepage-ctr-conversion`  
-**Preferred deploy:** k3s
+**Integration branch:** `dev` (create from `main` if missing)  
+**Topic branch:** `feat/seo-marketing-readiness`  
+**Preferred deploy:** k3s  
+**Base commit:** `d0c29ae` (main at branch start)
 
 ## Current focus
-Homepage CTR conversion upgrades on top of technical SEO foundation.
+SEO & marketing readiness: industry landing pages, blog foundation, structured data, sitemap expansion, homepage FAQ + conversion polish.
 
 ## Notes
 - Primary canonical: `https://tawala.nethub.co.ke`
 - Public trial entry: `/onboarding/personal-details`
+- Schema: Organization, Product, FAQPage, SoftwareApplication only — no invented phone/geo/sameAs
+- Prior homepage CTR work already on main (PRs #154 / #155)
