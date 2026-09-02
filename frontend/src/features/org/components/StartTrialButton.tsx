@@ -53,7 +53,7 @@ export function StartTrialButton({
       disabled={loading}
       className="mt-6 w-full rounded-xl bg-brand-primary px-4 py-3.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-50"
     >
-      {loading ? "Starting trial…" : label || "Start 7-day free trial"}
+      {loading ? "Starting trial…" : label || "Start 14-day free trial"}
     </button>
   );
 }

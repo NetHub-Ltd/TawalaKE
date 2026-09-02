@@ -77,7 +77,7 @@ export default async function PlansOnboardingPage() {
           </h1>
           <p className="mt-3 text-muted">
             Clear limits, white label from Ndovu, and graded API access — built for Kenyan SMEs.
-            Start with a free trial on Basic or Ndovu; Enterprise includes a 14-day trial window.
+            New accounts auto-start a 14-day Ndovu trial after verification. Use this page to change plan or recover a trial.
           </p>
         </div>
 
