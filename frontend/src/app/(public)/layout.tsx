@@ -2,6 +2,9 @@ import React from "react";
 import NavBar from "@/lib/components/NavBar";
 
 /**
+ * Public routes (marketing, auth, onboarding): document scroll.
+ * Do not use h-full / nested overflow traps — parent height is not a fixed viewport.
+ * Org app shells under (organization) keep their own locked layouts.
  * Public marketing / onboarding shell.
  * Document scroll (not a locked nested viewport) so tall pages remain scrollable.
  */

@@ -13,14 +13,26 @@ export async function readBackendJson(res: Response): Promise<unknown> {
 }
 
 function errorMessage(data: unknown, fallback: string, status: number): string {
-  if (status === 403) {
-    return "You don’t have permission to change stock. Ask a manager.";
-  }
   if (data && typeof data === "object") {
     const d = data as Record<string, unknown>;
-    if (typeof d.error === "string") return d.error;
-    if (typeof d.message === "string") return d.message;
-    if (typeof d.detail === "string") return d.detail;
+    if (typeof d.error === "string" && d.error.trim()) return d.error;
+    if (typeof d.message === "string" && d.message.trim()) return d.message;
+    const detail = d.detail;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    if (detail && typeof detail === "object") {
+      const det = detail as Record<string, unknown>;
+      if (typeof det.message === "string" && det.message.trim()) return det.message;
+      if (typeof det.code === "string" && det.code === "RBAC_DENIED") {
+        const missing = det.permissions;
+        if (Array.isArray(missing) && missing.includes("stock:adjust")) {
+          return "You don’t have permission to change stock. Ask a manager.";
+        }
+        return "You don’t have permission to perform this action.";
+      }
+    }
+  }
+  if (status === 403) {
+    return fallback || "You don’t have permission to perform this action.";
   }
   return fallback;
 }
