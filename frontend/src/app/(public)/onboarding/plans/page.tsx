@@ -57,43 +57,43 @@ export default async function PlansOnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-full bg-background pb-16">
+    <div className="relative w-full bg-background pb-20">
       <div
-        className="pointer-events-none absolute -left-32 top-0 h-96 w-96 rounded-full bg-brand-primary/10 blur-3xl"
+        className="pointer-events-none absolute -left-24 top-10 h-72 w-72 rounded-full bg-brand-primary/15 blur-3xl"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-brand-secondary/10 blur-3xl"
+        className="pointer-events-none absolute -right-16 bottom-20 h-64 w-64 rounded-full bg-brand-secondary/10 blur-3xl"
         aria-hidden
       />
 
       <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:py-16">
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-brand-primary">
-            Tawala plans
+            Pricing
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Pricing that grows with your business
-          </h1>
+          <h1 className="text-h2">Plans that grow with your biashara</h1>
           <p className="mt-3 text-muted">
-            Clear limits, white label from Ndovu, and graded API access — built for Kenyan SMEs.
-            Start with a free trial on Basic or Ndovu; Enterprise includes a 14-day trial window.
+            New accounts start a 14-day Ndovu trial after verification. Use this
+            page to change plan or recover a trial. Clear limits — built for
+            Kenyan SMEs.
           </p>
         </div>
 
         {plans.length === 0 ? (
           <p className="text-center text-sm text-muted">
-            Plans could not be loaded. Confirm the API is reachable and plans are seeded.
+            Plans could not be loaded. Confirm the API is reachable and plans are
+            seeded.
           </p>
         ) : (
-          <div className="grid items-start gap-6 lg:grid-cols-3">
+          <div className="grid items-stretch gap-6 lg:grid-cols-3">
             {plans.map((plan) => (
               <PlanCard key={plan.id} plan={plan} />
             ))}
           </div>
         )}
 
-        <p className="mt-10 text-center text-xs text-muted">
+        <p className="mt-12 text-center text-sm text-muted">
           Need help choosing?{" "}
           <Link
             href="/org/contact-us"

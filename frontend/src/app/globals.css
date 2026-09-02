@@ -1,58 +1,62 @@
 @import "tailwindcss";
 
 /* =========================================================
-   1. Design Tokens & Variables (The Silk & Slate Theme)
+   1. Design Tokens — Silk & Slate (tuned for public polish)
 ========================================================= */
 :root {
-  /* Dynamic Base Font Scaling Controller - One variable rules the whole system */
   --base-font-size: 14px;
 
-  /* Light Mode - Soft, clean backgrounds with crisp contrast */
-  /* YOUR SIGNATURE SURFACE: Radial gradient applied as the true core canvas */
-  --surface: radial-gradient(circle at 95% 5%, #f0f3ff 0%, #fafbfc 45%, #f8fafc 100%);
-  --background: #f8fafc;     /* Clean, spacious fallback */
-  --foreground: #0f172a;     /* Deep slate for crisp readability */
-  --card: #ffffff;           /* Pure white for layered elevation */
-  --border: #e2e8f0;         /* Subtle, non-intrusive dividers */
-  --muted: #64748b;          /* Balanced cool gray for auxiliary text */
+  /* Canvas: soft indigo wash, crisp slate text */
+  --surface: radial-gradient(circle at 92% 0%, #eef2ff 0%, #f8fafc 42%, #f1f5f9 100%);
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --muted: #64748b;
 
-  /* Brand Functional Colors */
-  --brand-primary: #6366f1;   /* Indigo: Professional yet vibrant */
-  --brand-secondary: #06b6d4; /* Cyan: Fluid, modern accent for growth/metrics */
-  --brand-accent: #10b981;    /* Emerald: Trustworthy success/positive action state */
+  --brand-primary: #6366f1;
+  --brand-secondary: #06b6d4;
+  --brand-accent: #10b981;
 
-  /* Fluid Typography Scale Tokens (Isolated for your headings) */
-  --text-h1: clamp(2.25rem, 5vw, 4rem);
-  --text-h2: clamp(1.75rem, 3.5vw, 2.5rem);
-  --text-h3: clamp(1.25rem, 2vw, 1.75rem);
-  --text-regular: clamp(0.95rem, 0.15vw + 0.85rem, 1.05rem);
+  --text-h1: clamp(2.1rem, 4.5vw, 3.5rem);
+  --text-h2: clamp(1.5rem, 3vw, 2.25rem);
+  --text-h3: clamp(1.15rem, 1.8vw, 1.5rem);
+  --text-regular: clamp(0.95rem, 0.12vw + 0.9rem, 1.05rem);
+
+  --shadow-lift: 0 4px 6px -1px rgb(15 23 42 / 0.06), 0 10px 24px -4px rgb(15 23 42 / 0.08);
+  --shadow-glow: 0 8px 28px -6px rgb(99 102 241 / 0.35);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 20px -6px rgb(15 23 42 / 0.08);
+
+  --section-y: clamp(3rem, 6vw, 5.5rem);
+  --radius-card: 1.25rem;
 }
 
 @media (min-width: 768px) {
   :root {
-    --base-font-size: 16px;  /* Standard desktop calibration point */
+    --base-font-size: 16px;
   }
 }
 
 @media (min-width: 1440px) {
   :root {
-    --base-font-size: 17px;  /* Micro-upscale for high-res layout stability */
+    --base-font-size: 17px;
   }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Dark Mode - Low fatigue, high-end terminal vibe */
-    --surface: #0f1420;      /* Deep secondary background solid fallback */
-    --background: #090d16;   /* Rich midnight sky */
-    --foreground: #f8fafc;   /* Soft white to eliminate glare */
-    --card: #131926;         /* Elevated dark slate for cards */
-    --border: #1e293b;       /* Clean dark borders */
-    --muted: #94a3b8;        /* Highly legible muted gray */
-
-    --brand-primary: #818cf8;   
-    --brand-secondary: #22d3ee; 
-    --brand-accent: #34d399;    
+    --surface: #0f1420;
+    --background: #090d16;
+    --foreground: #f8fafc;
+    --card: #131926;
+    --border: #1e293b;
+    --muted: #94a3b8;
+    --brand-primary: #818cf8;
+    --brand-secondary: #22d3ee;
+    --brand-accent: #34d399;
+    --shadow-lift: 0 8px 24px rgb(0 0 0 / 0.35);
+    --shadow-glow: 0 8px 28px -6px rgb(129 140 248 / 0.4);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px rgb(0 0 0 / 0.25);
   }
 }
 
@@ -63,19 +67,21 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
-  --color-surface: var(--surface);
   --color-border: var(--border);
   --color-muted: var(--muted);
-
   --color-brand-primary: var(--brand-primary);
   --color-brand-secondary: var(--brand-secondary);
   --color-brand-accent: var(--brand-accent);
+  /* Solid for utility classes; gradient lives on body via --surface */
+  --color-surface: var(--background);
 
-  /* Silky Smooth Organic Shadows */
-  --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.2);
-  --shadow-lift: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+  --shadow-lift: 0 4px 6px -1px rgb(15 23 42 / 0.06), 0 10px 24px -4px rgb(15 23 42 / 0.08);
+  --shadow-glow: 0 8px 28px -6px rgb(99 102 241 / 0.35);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 20px -6px rgb(15 23 42 / 0.08);
 
-  /* Tailwind v4 CSS-Native Animation Injection */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+
   --animate-gradient: gradient 6s ease infinite;
 
   @keyframes gradient {
@@ -85,65 +91,100 @@
 }
 
 /* =========================================================
-   3. Base Layer HTML Tag Rules & Screen Scaling Engine
+   3. Base
 ========================================================= */
 html {
-  /* Clean absolute pixel target that controls rem fluid scales globally */
   font-size: var(--base-font-size);
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  /* Using your gradient as the primary document surface */
-  background: var(--surface);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-color: var(--background);
+  background-image: var(--surface);
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-regular);
-  letter-spacing: -0.015em;
-  @apply antialiased;
+  line-height: 1.6;
 }
 
-/* Automatic Element Font Scaling Rules
-   The :not([class*="text-"]) logic safeguards explicitly styled elements
-   so utility overrides like text-sm perform exactly as declared. */
-h1:not([class*="text-"]) { font-size: var(--text-h1); }
-h2:not([class*="text-"]) { font-size: var(--text-h2); }
-h3:not([class*="text-"]) { font-size: var(--text-h3); }
+/* Prefer explicit light product chrome; system dark only if class applied later */
+html.light body {
+  color-scheme: light;
+}
 
-h1 { @apply font-bold tracking-tight my-2; }
-h2 { @apply font-bold tracking-tight text-foreground my-1.5; }
-h3 { @apply font-semibold tracking-tight text-foreground my-1; }
-p  { @apply tracking-normal; }
+h1, h2, h3, h4 {
+  @apply tracking-tight text-foreground;
+}
+
+p {
+  @apply tracking-normal;
+}
 
 /* =========================================================
-   4. Semantic Component Classes
+   4. Semantic classes
 ========================================================= */
-.text-h1 { font-size: var(--text-h1); @apply font-extrabold tracking-tight block; line-height: 1.15; }
-.text-h2 { font-size: var(--text-h2); @apply font-bold tracking-tight text-foreground block; line-height: 1.25; }
-.text-h3 { font-size: var(--text-h3); @apply font-semibold tracking-tight text-foreground block; line-height: 1.35; }
+.text-h1 {
+  font-size: var(--text-h1);
+  @apply block font-extrabold tracking-tight;
+  line-height: 1.15;
+}
+.text-h2 {
+  font-size: var(--text-h2);
+  @apply block font-bold tracking-tight text-foreground;
+  line-height: 1.25;
+}
+.text-h3 {
+  font-size: var(--text-h3);
+  @apply block font-semibold tracking-tight text-foreground;
+  line-height: 1.35;
+}
 
-/* The signature playful-yet-pro layered container card */
 .card-layered {
-  @apply bg-card border border-border/60 rounded-[1.5rem] transition-all duration-500 ease-out;
-  background-image: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  box-shadow: var(--shadow-lift);
+  @apply rounded-[1.25rem] border border-border/70 bg-card transition-all duration-300 ease-out;
+  box-shadow: var(--shadow-card);
 }
 
 .card-layered:hover {
-  @apply -translate-y-1 border-brand-primary/20 shadow-glow;
+  @apply border-brand-primary/25;
+  box-shadow: var(--shadow-lift);
 }
 
 .section-padding {
-  @apply py-12 md:py-24 px-4 md:px-8;
+  padding-top: var(--section-y);
+  padding-bottom: var(--section-y);
+  @apply px-4 sm:px-6 lg:px-8;
+}
+
+.plan-card {
+  @apply relative flex h-full flex-col rounded-[1.25rem] border border-border/70 bg-card p-6 transition-shadow duration-300;
+  box-shadow: var(--shadow-card);
+}
+
+.plan-card-featured {
+  @apply border-2 border-brand-primary ring-4 ring-brand-primary/10;
+  box-shadow: var(--shadow-lift);
 }
 
 /* =========================================================
-   5. Custom Utilities (Tailwind v4 syntax)
+   5. Utilities
 ========================================================= */
 @utility text-gradient {
-  @apply bg-clip-text text-transparent bg-linear-to-r from-brand-primary via-brand-secondary to-brand-primary bg-[length:200%_auto] animate-gradient;
+  @apply bg-clip-text text-transparent bg-linear-to-r from-brand-primary via-brand-secondary to-brand-primary bg-[length:200%_auto];
+}
+
+@utility shadow-lift {
+  box-shadow: var(--shadow-lift);
+}
+
+@utility shadow-glow {
+  box-shadow: var(--shadow-glow);
+}
+
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
 }

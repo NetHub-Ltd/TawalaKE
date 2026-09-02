@@ -1,20 +1,19 @@
 # Task Tracker
 
-**Branch:** `feat/homepage-ctr-conversion`  
-**Base:** `chore/technical-seo-foundation` (includes PR #153 SEO work)
+**Branch:** `feat/public-ui-scroll-and-polish`  
+**PR target:** `dev`  
+**Tier:** 2
 
 ## Goal
-Raise homepage CTR for cold Kenyan shop owners.
+Public pages scroll; homepage simpler and polished; plans cards aligned to tuned Silk & Slate tokens.
 
 ## Done
-- [x] Primary trial CTAs → `/onboarding/personal-details` (not `/org`)
-- [x] Login path for existing users
-- [x] Pricing signal (from KSh 1,490/mo)
-- [x] Social proof block (illustrative, replaceable)
-- [x] Honest outcomes strip
-- [x] Footer nav (Pricing, Solutions, Support, Login, Legal)
-- [x] Typography uses design tokens (`.text-h1/h2/h3`, no arbitrary `text-[Npx]`)
+- [x] Public layout: document scroll (remove nested overflow trap)
+- [x] Root body/main allow overflow-y auto
+- [x] globals.css tokens, shadows, card/plan utilities
+- [x] Homepage simplified (hero, 3 benefits, steps, proof, FAQ, CTA)
+- [x] PlanCard + plans page polish
 
-## Follow-ups
-- Replace illustrative quotes with verified customer quotes
-- Pricing footer link currently points at onboarding plans (auth may be required) — consider public pricing page later
+## Out of scope
+- /org shell redesign
+- Backend trial logic

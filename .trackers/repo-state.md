@@ -1,12 +1,8 @@
 # Repository State
 
 **Integration branch:** `dev`  
-**Topic branch:** `feat/homepage-ctr-conversion`  
-**Preferred deploy:** k3s
+**Topic branch:** `feat/public-ui-scroll-and-polish`  
+**Preferred deploy:** k3s  
 
 ## Current focus
-Homepage CTR conversion upgrades on top of technical SEO foundation.
-
-## Notes
-- Primary canonical: `https://tawala.nethub.co.ke`
-- Public trial entry: `/onboarding/personal-details`
+Public document scroll fix; homepage simplification; plans card polish; globals token tuning.

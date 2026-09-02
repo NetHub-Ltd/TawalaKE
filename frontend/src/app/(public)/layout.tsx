@@ -2,8 +2,8 @@ import React from "react";
 import NavBar from "@/lib/components/NavBar";
 
 /**
- * Public shell inside the root locked viewport (body/main overflow-hidden).
- * Navbar is fixed-height; content region scrolls so tall pages (e.g. plans) are not clipped.
+ * Public marketing / onboarding shell.
+ * Document scroll (not a locked nested viewport) so tall pages remain scrollable.
  */
 export default function PublicLayout({
   children,
@@ -11,11 +11,9 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full min-h-0 w-full flex-col text-foreground antialiased">
+    <div className="flex min-h-dvh w-full flex-col bg-background text-foreground antialiased">
       <NavBar />
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain">
-        {children}
-      </div>
+      <div className="w-full flex-1">{children}</div>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 # Rollback
 
-**Branch:** `feat/homepage-ctr-conversion`
-
-Revert this branch/PR or restore previous `frontend/src/app/(public)/page.tsx` from parent commit.
-No database or migration changes.
+Revert PR or restore:
+- frontend/src/app/(public)/layout.tsx
+- frontend/src/app/layout.tsx
+- frontend/src/app/globals.css
+- frontend/src/app/(public)/page.tsx
+- frontend/src/features/org/components/PlanCard.tsx
+- frontend/src/app/(public)/onboarding/plans/page.tsx

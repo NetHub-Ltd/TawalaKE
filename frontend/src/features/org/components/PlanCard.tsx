@@ -97,7 +97,7 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
   const yearly = Number(plan.price_yearly ?? 0);
   const monthly = Number(plan.price_monthly ?? 0);
   const trialDays =
-    plan.trial_days > 0 ? plan.trial_days : isBasic || isNdovu ? 7 : 0;
+    plan.trial_days > 0 ? plan.trial_days : isBasic || isNdovu ? 14 : 0;
 
   const enabledFeatures = Object.entries(plan.features || {})
     .map(([k, v]) => {
@@ -116,8 +116,8 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
     <article
       className={
         isNdovu
-          ? "relative flex flex-col overflow-hidden rounded-2xl border-2 border-brand-primary bg-card p-6 pt-8 shadow-lift ring-4 ring-brand-primary/15"
-          : "relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/90 p-6 shadow-sm backdrop-blur"
+          ? "plan-card plan-card-featured overflow-hidden pt-8"
+          : "plan-card overflow-hidden"
       }
     >
       {/* Diagonal ribbon — Ndovu only */}
@@ -171,7 +171,7 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
 
       {trialDays > 0 && !isEnterprise && (
         <p className="mt-2 text-sm font-medium text-brand-accent">
-          {trialDays}-day free trial · invoice emailed (KES 0 today)
+          {trialDays}-day free trial · KES 0 today
         </p>
       )}
 
@@ -180,7 +180,7 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
         {(isBasic || isNdovu) && (
           <StartTrialButton
             planCode={plan.code}
-            label={`Start ${trialDays || 7}-day free trial`}
+            label={`Start ${trialDays || 14}-day free trial`}
           />
         )}
         {isEnterprise && (
