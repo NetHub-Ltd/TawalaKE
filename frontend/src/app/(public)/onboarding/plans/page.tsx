@@ -77,6 +77,8 @@ export default async function PlansOnboardingPage() {
             New accounts start a 14-day Ndovu trial after verification. Use this
             page to change plan or recover a trial. Clear limits — built for
             Kenyan SMEs.
+            Clear limits, white label from Ndovu, and graded API access — built for Kenyan SMEs.
+            New accounts auto-start a 14-day Ndovu trial after verification. Use this page to change plan or recover a trial.
           </p>
         </div>
 

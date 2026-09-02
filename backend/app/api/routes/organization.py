@@ -233,7 +233,7 @@ async def start_trial(
     background_tasks: BackgroundTasks,
     payload: Optional[TrialStartBody] = None,
 ):
-    """OWNER only: start a 7-day trial on BASIC or NDOVU; email zero-amount invoice."""
+    """OWNER only: start a 14-day trial on BASIC or NDOVU; email zero-amount invoice."""
     _require_owner(user)
     org_id = user.organization_id or user.tenant_id
     if not org_id:

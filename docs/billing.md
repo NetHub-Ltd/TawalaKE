@@ -26,7 +26,7 @@ All self-serve plans are billed **monthly** or **annually** (~20% discount on an
 | **Ndovu** | **KSh 2,499** | **KSh 29,988** | Growing SMEs (Recommended) |
 | **Enterprise** | **KSh 8,990** | Custom | Multi-branch / complex ops |
 
-**Trials:** Basic & Ndovu — 7 days; Enterprise — 14 days (self-serve trial of Ndovu features is the default onboarding path).
+**Trials:** Basic & Ndovu — 14 days; Enterprise — 14 days. Self-serve onboarding auto-starts a **14-day Ndovu** trial after email verification and password setup.
 
 ---
 

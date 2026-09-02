@@ -76,7 +76,7 @@ export function PersonalDetailsForm() {
 
       setSubmittedEmail(data.email);
       setIsSuccess(true);
-      toast.success("Check your email to continue");
+      toast.success("Check your email to start your trial");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Something went wrong. Please try again.";
@@ -107,9 +107,10 @@ export function PersonalDetailsForm() {
         <div className="space-y-2">
           <h2 className="text-xl font-semibold text-foreground">Check your email</h2>
           <p className="text-sm text-muted leading-relaxed">
-            We sent a verification link to{" "}
+            We sent a link to{" "}
             <span className="font-medium text-foreground">{submittedEmail}</span>.
-            Open it to set your password and activate your account.
+            Open it and tap <strong className="text-foreground">Set password &amp; start trial</strong>{" "}
+            to activate your 14-day Ndovu trial.
           </p>
         </div>
         <p className="text-xs text-muted">
@@ -215,7 +216,7 @@ export function PersonalDetailsForm() {
         disabled={isSubmitting || !acceptTerms}
         className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? "Creating account…" : "Continue"}
+        {isSubmitting ? "Creating account…" : "Continue — send me the link"}
       </button>
 
       <p className="text-center text-sm text-muted">

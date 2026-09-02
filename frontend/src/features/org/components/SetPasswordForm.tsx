@@ -62,7 +62,13 @@ export function SetPasswordForm() {
         );
       }
 
-      toast.success("Password set — signing you in…");
+      const trialStarted = result.trial_started === true;
+      const needsProfile = result.needs_org_profile !== false; // default true if missing
+      if (trialStarted) {
+        toast.success("Password set — your 14-day Ndovu trial is active");
+      } else {
+        toast.success("Password set — signing you in…");
+      }
       const email = typeof result.email === "string" ? result.email : "";
       if (email) {
         const signInResult = await signIn("credentials", {
@@ -75,7 +81,14 @@ export function SetPasswordForm() {
           router.replace("/login");
           return;
         }
-        router.replace("/org");
+        if (trialStarted && needsProfile) {
+          router.replace("/onboarding/organization");
+        } else if (trialStarted) {
+          router.replace("/org");
+        } else {
+          // Trial failed to start — recovery via plans
+          router.replace("/onboarding/plans");
+        }
         return;
       }
       router.replace("/login");
@@ -156,7 +169,7 @@ export function SetPasswordForm() {
         disabled={isSubmitting}
         className="flex w-full items-center justify-center rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? "Saving…" : "Set password & continue"}
+        {isSubmitting ? "Starting your trial…" : "Start my 14-day trial"}
       </button>
     </form>
   );

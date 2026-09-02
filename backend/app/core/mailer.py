@@ -371,35 +371,44 @@ class EmailService:
         ip_address: Optional[str] = None,
         expire_minutes: int = 60,
     ) -> None:
-        """Email new registrants a one-time link to verify identity and set a password."""
+        """Email new registrants a one-time link to set password and start the Ndovu trial."""
         greeting_name = (user_name or "").strip() or "there"
         request_ip = ip_address if ip_address else "Unknown"
         html_content = f"""
         <!DOCTYPE html>
-        <html>
-        <body style="margin:0;padding:0;background:#f8fafc;font-family:Inter,system-ui,sans-serif;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:40px 10px;">
+        <html lang="en">
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
             <tr><td align="center">
-              <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:8px;border:1px solid #e2e8f0;">
-                <tr><td style="background:#0f172a;padding:24px;text-align:center;">
-                  <h1 style="color:#ffffff;margin:0;font-size:20px;">Tawala</h1>
+              <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
+                <tr><td style="background:#0f172a;padding:28px 24px;text-align:center;">
+                  <p style="color:#94a3b8;margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Tawala</p>
+                  <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Start your 14-day trial</h1>
                 </td></tr>
-                <tr><td style="padding:32px 24px;">
-                  <h2 style="color:#0f172a;font-size:18px;margin:0 0 16px;">Confirm your email</h2>
-                  <p style="color:#334155;font-size:14px;line-height:1.6;">Hello {greeting_name},</p>
-                  <p style="color:#334155;font-size:14px;line-height:1.6;">
-                    Thanks for joining Tawala. Click the button below to verify your email and set your password.
-                    This link expires in <strong>{expire_minutes} minutes</strong>.
+                <tr><td style="padding:32px 28px;">
+                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">Hello {greeting_name},</p>
+                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">
+                    You are one step away from <strong>Ndovu</strong> — our recommended plan for Kenyan shops.
+                    Set your password to verify your email and activate <strong>14 days free</strong>. No credit card required.
                   </p>
-                  <div style="text-align:center;margin:32px 0;">
-                    <a href="{setup_url}" target="_blank"
-                       style="background-color:#6366f1;color:#ffffff;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;display:inline-block;">
-                      Set password &amp; continue
+                  <div style="text-align:center;margin:28px 0;">
+                    <a href="{setup_url}" target="_blank" rel="noopener"
+                       style="background-color:#4f46e5;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;display:inline-block;">
+                      Set password &amp; start trial
                     </a>
                   </div>
-                  <p style="color:#64748b;font-size:12px;line-height:1.5;">
-                    If you did not start a Tawala account, you can ignore this email.<br/>
+                  <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0 0 8px;">
+                    This link expires in <strong>{expire_minutes} minutes</strong>.
+                  </p>
+                  <p style="color:#94a3b8;font-size:12px;line-height:1.5;margin:0;">
+                    If you did not create a Tawala account, you can ignore this email.<br/>
                     Request IP: {request_ip}
+                  </p>
+                </td></tr>
+                <tr><td style="padding:16px 28px 24px;border-top:1px solid #f1f5f9;">
+                  <p style="color:#94a3b8;font-size:11px;margin:0;text-align:center;">
+                    Tawala · Control your biashara · <a href="https://tawala.nethub.co.ke" style="color:#64748b;">tawala.nethub.co.ke</a>
                   </p>
                 </td></tr>
               </table>
@@ -411,9 +420,10 @@ class EmailService:
         cls.send_transactional_email(
             sender=settings.email_from_tawala,
             to_addresses=[to_email],
-            subject="Verify your email and set your Tawala password",
+            subject="Set your password and start your 14-day Ndovu trial",
             html_content=html_content,
         )
+
 
 
     @classmethod
@@ -426,41 +436,61 @@ class EmailService:
         start_date: str,
         end_date: str,
         currency: str = "KES",
+        dashboard_url: Optional[str] = None,
     ) -> None:
-        """Email-only trial invoice (KES 0) after NDOVU trial start."""
+        """Confirm trial activation with next steps and zero-amount clarity."""
+        open_url = (dashboard_url or "").strip() or "https://tawala.nethub.co.ke/org"
         html_content = f"""
         <!DOCTYPE html>
-        <html>
-        <body style="margin:0;padding:0;background:#f8fafc;font-family:Inter,system-ui,sans-serif;">
-          <table role="presentation" width="100%" style="padding:40px 10px;">
+        <html lang="en">
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+        <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
             <tr><td align="center">
-              <table role="presentation" width="100%" style="max-width:560px;background:#fff;border-radius:8px;border:1px solid #e2e8f0;">
-                <tr><td style="background:#0f172a;padding:24px;text-align:center;">
-                  <h1 style="color:#fff;margin:0;font-size:20px;">Tawala Billing</h1>
+              <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
+                <tr><td style="background:#0f172a;padding:28px 24px;text-align:center;">
+                  <p style="color:#94a3b8;margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Tawala</p>
+                  <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Your trial is active</h1>
                 </td></tr>
-                <tr><td style="padding:32px 24px;color:#334155;font-size:14px;line-height:1.6;">
-                  <h2 style="color:#0f172a;margin:0 0 12px;">Trial invoice</h2>
-                  <p>Hello,</p>
-                  <p>
-                    Your organization <strong>{org_name}</strong> is on a
-                    <strong>{trial_days}-day free trial</strong> of <strong>{plan_name}</strong>.
+                <tr><td style="padding:32px 28px;color:#334155;font-size:15px;line-height:1.6;">
+                  <p style="margin:0 0 12px;">Hello,</p>
+                  <p style="margin:0 0 12px;">
+                    <strong>{org_name}</strong> is on a <strong>{trial_days}-day free trial</strong> of
+                    <strong>{plan_name}</strong>. Amount due today: <strong>0 {currency}</strong> — no card required.
                   </p>
-                  <table width="100%" style="margin:24px 0;border-collapse:collapse;font-size:14px;">
+                  <p style="margin:0 0 8px;font-weight:600;color:#0f172a;">Get value in the next 10 minutes:</p>
+                  <ol style="margin:0 0 20px;padding-left:20px;color:#475569;font-size:14px;">
+                    <li style="margin-bottom:6px;">Confirm your business name and phone</li>
+                    <li style="margin-bottom:6px;">Add your first products or import stock</li>
+                    <li style="margin-bottom:6px;">Create a staff PIN for the counter</li>
+                  </ol>
+                  <div style="text-align:center;margin:24px 0 8px;">
+                    <a href="{open_url}" target="_blank" rel="noopener"
+                       style="background-color:#4f46e5;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;display:inline-block;">
+                      Open Tawala
+                    </a>
+                  </div>
+                  <table width="100%" style="margin:28px 0 12px;border-collapse:collapse;font-size:13px;color:#64748b;">
                     <tr>
-                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;">Plan</td>
-                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">{plan_name}</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;">Plan</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;color:#0f172a;">{plan_name}</td>
                     </tr>
                     <tr>
-                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;">Trial window</td>
-                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;">{start_date} → {end_date}</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;">Trial window</td>
+                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;color:#0f172a;">{start_date} → {end_date}</td>
                     </tr>
                     <tr>
-                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;">Amount due today</td>
-                      <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;"><strong>0 {currency}</strong></td>
+                      <td style="padding:8px 0;">Amount due today</td>
+                      <td style="padding:8px 0;text-align:right;color:#0f172a;"><strong>0 {currency}</strong></td>
                     </tr>
                   </table>
-                  <p style="color:#64748b;font-size:12px;">
-                    No payment is required during the trial. You can upgrade or cancel before the trial ends.
+                  <p style="color:#94a3b8;font-size:12px;margin:0;">
+                    You can upgrade or cancel before the trial ends. Local support is available when you need it.
+                  </p>
+                </td></tr>
+                <tr><td style="padding:16px 28px 24px;border-top:1px solid #f1f5f9;">
+                  <p style="color:#94a3b8;font-size:11px;margin:0;text-align:center;">
+                    Tawala · Control your biashara · <a href="https://tawala.nethub.co.ke" style="color:#64748b;">tawala.nethub.co.ke</a>
                   </p>
                 </td></tr>
               </table>
@@ -472,9 +502,11 @@ class EmailService:
         cls.send_transactional_email(
             sender=settings.email_from_billing,
             to_addresses=[to_email],
-            subject=f"Tawala trial invoice — {plan_name} ({trial_days} days)",
+            subject=f"Your {trial_days}-day {plan_name} trial is active — KES 0 today",
             html_content=html_content,
         )
+
+
 
 # Global Service Instance
 mailer = EmailService()

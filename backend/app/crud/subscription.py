@@ -14,7 +14,7 @@ from app.utils.logging import logger
 from app.services.paywall import paywall
 from app.core.redis_client import redis_manager
 
-TRIAL_DAYS = 7
+TRIAL_DAYS = 14
 TRIAL_ELIGIBLE_CODES = {"BASIC", "NDOVU"}
 
 # Live Postgres subscription_tier_enum = FREE | BRONZE | SILVER | GOLD (issue #108).

@@ -123,6 +123,18 @@ export default function LandingPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
+      />
 
       <div className="relative w-full text-foreground">
         {/* HERO */}
@@ -191,6 +203,13 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+
+          <p className="mt-6 text-center text-xs text-muted">
+            Early owner feedback for layout — replace with verified customer quotes as they are collected.
+            <Link href="/onboarding/personal-details" className="ml-1 font-semibold text-brand-primary underline-offset-2 hover:underline">
+              Start your free trial
+            </Link>
+          </p>
         </section>
 
         {/* HOW IT WORKS */}
@@ -314,6 +333,56 @@ export default function LandingPage() {
 
         <footer className="border-t border-border/60 bg-card/40 py-12">
           <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
+
+        <section
+          id="faq"
+          aria-labelledby="faq-heading"
+          className="relative z-10 mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8"
+        >
+          <div className="mb-10 space-y-3 text-center">
+            <h2 id="faq-heading" className="text-h2">
+              Questions shop owners ask
+            </h2>
+            <p className="text-muted">
+              Straight answers before you start your 14-day trial.
+            </p>
+          </div>
+          <div className="space-y-3">
+            {faqs.map((item) => (
+              <details
+                key={item.q}
+                className="group rounded-2xl border border-border/60 bg-card p-4 open:shadow-sm"
+              >
+                <summary className="cursor-pointer list-none text-sm font-bold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center justify-between gap-3">
+                    {item.q}
+                    <ChevronRight
+                      size={16}
+                      className="shrink-0 text-muted transition-transform group-open:rotate-90"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted">{item.a}</p>
+              </details>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link href={TRIAL_HREF}>
+              <Button
+                variant="primary"
+                size="lg"
+                className="min-h-[48px] gap-2"
+              >
+                Start 14-Day Free Trial
+                <ArrowRight size={16} aria-hidden="true" />
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        <footer className="relative z-10 w-full border-t border-border/60 bg-surface/30 py-12">
+          <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
               <div className="space-y-2 text-center sm:text-left">
                 <p className="text-sm font-bold text-foreground">Tawala</p>

@@ -1,6 +1,7 @@
 # Task Tracker
 
-**Branch:** `feat/public-ui-scroll-and-polish`  
+**Branch:** `feat/onboarding-auto-ndovu-trial`  
+**Base:** `main`  
 **PR target:** `dev`  
 **Tier:** 2
 
