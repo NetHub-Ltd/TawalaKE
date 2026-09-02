@@ -1,6 +1,16 @@
 # Rollback
 
-**Branch:** `feat/homepage-ctr-conversion`
+**Branch:** `feat/seo-marketing-readiness`  
+**Base:** `main` @ `d0c29ae`
 
-Revert this branch/PR or restore previous `frontend/src/app/(public)/page.tsx` from parent commit.
-No database or migration changes.
+## How to recover
+- Revert the PR or delete the topic branch.
+- Or restore these paths from `main`:
+  - `frontend/src/app/(public)/page.tsx`
+  - `frontend/src/app/sitemap.ts`
+  - Remove added dirs: `solutions/{retail,pharmacy,hardware,wholesale}`, `blog/`, `support/layout.tsx`
+
+## Notes
+- No database or migration changes.
+- No production config or Docker changes.
+- Pure frontend/static content; revert is sufficient.
