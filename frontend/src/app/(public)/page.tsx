@@ -55,11 +55,136 @@ export default function LandingPage() {
     },
   };
 
+  const organizationLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": "https://tawala.nethub.co.ke/#organization",
+    name: "Tawala",
+    url: "https://tawala.nethub.co.ke",
+    logo: "https://tawala.nethub.co.ke/web-app-manifest-512x512.png",
+    description:
+      "Business management system for Kenyan SMEs. Stop stock leakages, manage staff with PIN login, track inventory, and see real daily net profit.",
+    areaServed: { "@type": "Country", name: "Kenya" },
+  };
+
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "Tawala Business Management System",
+    image: "https://tawala.nethub.co.ke/web-app-manifest-512x512.png",
+    description:
+      "Business management system for Kenyan SMEs. Stop stock leakages, manage staff with PIN login, track inventory, and see real daily net profit.",
+    brand: { "@type": "Brand", name: "Tawala" },
+    offers: {
+      "@type": "Offer",
+      url: "https://tawala.nethub.co.ke/onboarding/plans",
+      price: "1490",
+      priceCurrency: "KES",
+      priceValidUntil: "2026-12-31",
+      availability: "https://schema.org/InStock",
+      description: "Plans from KSh 1,490/month · 14-day free trial",
+    },
+  };
+
+  const faqLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: "How much does Tawala cost?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Tawala plans start at KSh 1,490 per month. All plans include a 14-day free trial with no credit card required.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Does Tawala work without internet?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Tawala is a cloud-based system that requires internet for real-time sync. Your data is backed up and accessible from any device with a connection.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I use Tawala on my phone?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. Tawala works on any Android phone, iPhone, tablet, or PC. No special hardware is required.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Is Tawala KRA compliant for eTIMS?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Tawala is built with Kenyan tax compliance in mind. eTIMS integration is on our roadmap and will be available to subscribers at no extra cost when released.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "How does Tawala stop stock theft?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Every sale, discount, and inventory adjustment is tied to a staff member via 4-digit PIN login. Real-time stock alerts flag discrepancies quickly.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I manage multiple shops with one account?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. Tawala is multi-branch ready. You can manage inventory, staff, and sales across multiple locations from a single dashboard.",
+        },
+      },
+    ],
+  };
+
+  const faqs = [
+    {
+      q: "How much does Tawala cost?",
+      a: "Plans start at KSh 1,490 per month. All plans include a 14-day free trial with no credit card required.",
+    },
+    {
+      q: "Does Tawala work without internet?",
+      a: "Tawala is cloud-based and needs internet for real-time sync. Your data is backed up and accessible from any connected device.",
+    },
+    {
+      q: "Can I use Tawala on my phone?",
+      a: "Yes. It works on Android phones, iPhones, tablets, and PCs. No special hardware is required.",
+    },
+    {
+      q: "Is Tawala KRA compliant for eTIMS?",
+      a: "Tawala is built with Kenyan tax compliance in mind. eTIMS integration is on the roadmap for all subscribers at no extra cost when released.",
+    },
+    {
+      q: "How does Tawala stop stock theft?",
+      a: "Every sale, discount, and inventory adjustment is tied to a staff member via 4-digit PIN login. Real-time alerts flag mismatches quickly.",
+    },
+    {
+      q: "Can I manage multiple shops with one account?",
+      a: "Yes. Tawala is multi-branch ready — inventory, staff, and sales across locations from one dashboard.",
+    },
+  ];
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
       />
 
       <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background text-foreground selection:bg-brand-primary/20">
@@ -284,7 +409,10 @@ export default function LandingPage() {
           </div>
 
           <p className="mt-6 text-center text-xs text-muted">
-            Illustrative owner feedback for layout — replace with verified customer quotes when available.
+            Early owner feedback for layout — replace with verified customer quotes as they are collected.
+            <Link href="/onboarding/personal-details" className="ml-1 font-semibold text-brand-primary underline-offset-2 hover:underline">
+              Start your free trial
+            </Link>
           </p>
         </section>
 
@@ -430,6 +558,54 @@ export default function LandingPage() {
           </div>
         </section>
 
+
+        <section
+          id="faq"
+          aria-labelledby="faq-heading"
+          className="relative z-10 mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8"
+        >
+          <div className="mb-10 space-y-3 text-center">
+            <h2 id="faq-heading" className="text-h2">
+              Questions shop owners ask
+            </h2>
+            <p className="text-muted">
+              Straight answers before you start your 14-day trial.
+            </p>
+          </div>
+          <div className="space-y-3">
+            {faqs.map((item) => (
+              <details
+                key={item.q}
+                className="group rounded-2xl border border-border/60 bg-card p-4 open:shadow-sm"
+              >
+                <summary className="cursor-pointer list-none text-sm font-bold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center justify-between gap-3">
+                    {item.q}
+                    <ChevronRight
+                      size={16}
+                      className="shrink-0 text-muted transition-transform group-open:rotate-90"
+                      aria-hidden="true"
+                    />
+                  </span>
+                </summary>
+                <p className="mt-3 text-sm leading-relaxed text-muted">{item.a}</p>
+              </details>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link href={TRIAL_HREF}>
+              <Button
+                variant="primary"
+                size="lg"
+                className="min-h-[48px] gap-2"
+              >
+                Start 14-Day Free Trial
+                <ArrowRight size={16} aria-hidden="true" />
+              </Button>
+            </Link>
+          </div>
+        </section>
+
         <footer className="relative z-10 w-full border-t border-border/60 bg-surface/30 py-12">
           <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
             <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
@@ -452,6 +628,9 @@ export default function LandingPage() {
                 </Link>
                 <Link href="/support" className="text-muted hover:text-foreground">
                   Support
+                </Link>
+                <Link href="/blog" className="text-muted hover:text-foreground">
+                  Blog
                 </Link>
                 <Link href={LOGIN_HREF} className="text-muted hover:text-foreground">
                   Log in
