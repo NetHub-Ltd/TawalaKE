@@ -3,6 +3,7 @@
 **Branch:** `feat/seo-marketing-readiness`  
 **Base:** `main` @ `d0c29ae`  
 **PR target:** `dev`  
+**PR:** https://github.com/NetHub-Ltd/TawalaKE/pull/156  
 **Tier:** 2
 
 ## Goal
@@ -31,11 +32,12 @@ Raise organic discovery and conversion readiness for cold Kenyan shop owners via
 - [x] Homepage schemas + FAQ + footer Blog link
 - [x] Support layout metadata
 - [x] Trackers updated
+- [x] Remote `dev` created from `main`
+- [x] PR #156 opened to `dev`
 
 ## Remaining
-- [ ] Frontend build verification
-- [ ] Push branch + open PR to `dev`
-- [ ] Create remote `dev` from main if absent
+- [ ] CI / `npm run build` on runner (local npm install failed with 502 in agent sandbox)
+- [ ] User review and merge
 
 ## Active follow-ups
 - Replace illustrative/early owner quotes with verified testimonials
@@ -45,15 +47,14 @@ Raise organic discovery and conversion readiness for cold Kenyan shop owners via
 - Marketing actions: GBP, directories, WhatsApp Business, review collection
 
 ## Risks
-- Public surface expansion — must pass Next.js build
+- Public surface expansion — confirm CI frontend build green
 - Schema accuracy — no false contact data
 - Solutions index still largely commented; industry pages are standalone
 
 ## Verification
-- `npm run build` (frontend) succeeds
-- New routes render; invalid blog slug → 404
-- Sitemap lists industry + blog paths
-- JSON-LD present without placeholder phone/sameAs
+- Code review of 13 files / +1184 lines
+- Local syntax checks on articles/sitemap
+- Full Next build deferred to CI due to sandbox npm registry 502
 
 ## Debt introduced
 None deliberate.
