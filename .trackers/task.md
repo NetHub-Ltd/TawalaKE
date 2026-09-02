@@ -18,3 +18,15 @@ Owner can receive stock when product.org is null; honest stock errors; dedicated
 ## Out of scope
 - Putting permissions on NextAuth session
 - Role matrix changes
+Public pages scroll; homepage simpler and polished; plans cards aligned to tuned Silk & Slate tokens.
+
+## Done
+- [x] Public layout: document scroll (remove nested overflow trap)
+- [x] Root body/main allow overflow-y auto
+- [x] globals.css tokens, shadows, card/plan utilities
+- [x] Homepage simplified (hero, 3 benefits, steps, proof, FAQ, CTA)
+- [x] PlanCard + plans page polish
+
+## Out of scope
+- /org shell redesign
+- Backend trial logic
