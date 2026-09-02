@@ -172,12 +172,18 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
         data?.status === false ||
         (!res.ok && data?.status !== true);
       if (explicitFail) {
+        let detailMsg: string | null = null;
+        if (data.detail && typeof data.detail === "object") {
+          const det = data.detail as Record<string, unknown>;
+          if (typeof det.message === "string") detailMsg = det.message;
+        }
         const msg =
           (typeof data.error === "string" && data.error) ||
           (typeof data.message === "string" && data.message) ||
           (typeof data.detail === "string" && data.detail) ||
+          detailMsg ||
           (res.status === 403
-            ? "You don’t have permission to change stock. Ask a manager."
+            ? "You don’t have permission to perform this action."
             : `Request failed (${res.status})`);
         throw new Error(msg);
       }

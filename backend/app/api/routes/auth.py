@@ -1,5 +1,5 @@
 import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response, BackgroundTasks, Body
@@ -56,6 +56,14 @@ class OnboardingSetPassword(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+class PermissionsResponse(BaseModel):
+    """Lean RBAC snapshot — not part of the NextAuth session."""
+    staff_id: str
+    organization_id: Optional[str] = None
+    role: Optional[str] = None
+    org_wide: bool = False
+    permissions: List[str] = []
 
 class LoginPayload(BaseModel):
     email: EmailStr
@@ -353,6 +361,32 @@ async def get_current_user_info(current_user: CurrentStaff):
 
     # logger.info(f"Fetching profile for authenticated user: {current_user.email} With business ID: {current_user.assigned_businesses}")
     return current_user
+
+
+@router.get("/permissions", response_model=PermissionsResponse)
+async def get_current_permissions(
+    current_user: CurrentStaff,
+    redis: RedisDep,
+):
+    """
+    Dedicated RBAC snapshot for UI gating.
+
+    Not stored in the NextAuth session (keeps hydration lean).
+    Permission list is Redis-cached (same key as require_permissions).
+    """
+    from app.api.rbac_deps import _cached_perm_values
+    from app.core.rbac import effective_role, is_org_wide_role
+
+    role = effective_role(current_user)
+    org_id = current_user.organization_id or current_user.tenant_id
+    perms = await _cached_perm_values(redis, current_user)
+    return PermissionsResponse(
+        staff_id=str(current_user.id),
+        organization_id=str(org_id) if org_id else None,
+        role=role.value if role else None,
+        org_wide=bool(is_org_wide_role(current_user)),
+        permissions=perms,
+    )
 
 
 @router.post("/logout", status_code=204)

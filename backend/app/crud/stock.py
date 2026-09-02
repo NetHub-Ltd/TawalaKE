@@ -51,19 +51,53 @@ class ProductAdjustRequest(BaseModel):
 class StockCrud:
     """Central stock operations for Tawala inventory workspace and POS."""
 
-    def _assert_tenant_product(self, product: Product, current_user: Staff) -> None:
-        """Reject cross-org product access (IDOR guard)."""
+    async def _assert_tenant_product(
+        self,
+        db: AsyncSession,
+        product: Product,
+        current_user: Staff,
+        *,
+        backfill_org: bool = True,
+    ) -> None:
+        """Reject cross-org product access (IDOR guard).
+
+        If product.organization_id is null (legacy rows), resolve org via the
+        product's business and optionally backfill the product row.
+        """
+        from app.models.models import Business
+
         caller_org = current_user.organization_id or getattr(current_user, "tenant_id", None)
         if caller_org is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "RBAC_DENIED", "message": "Staff must belong to an organization"},
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "Staff must belong to an organization",
+                },
             )
+
         prod_org = product.organization_id
+        if prod_org is None and product.business_id is not None:
+            biz = (
+                await db.exec(
+                    select(Business).where(Business.id == product.business_id)
+                )
+            ).first()
+            if biz is not None and biz.organization_id is not None:
+                prod_org = biz.organization_id
+                if backfill_org:
+                    product.organization_id = prod_org
+                    db.add(product)
+                    # Flush only — caller owns the transaction / commit path.
+                    await db.flush()
+
         if prod_org is None or str(caller_org) != str(prod_org):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "RBAC_DENIED", "message": "Product not in your organization"},
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "Product not in your organization",
+                },
             )
 
     async def get_product_for_update(
@@ -195,7 +229,7 @@ class StockCrud:
         product = await self.get_product_for_update(
             db, product_id=payload.product_id, business_id=payload.business_id
         )
-        self._assert_tenant_product(product, current_user)
+        await self._assert_tenant_product(db, product, current_user)
         product, _hist, before, after = await self.apply_movement(
             db,
             product=product,
@@ -245,7 +279,7 @@ class StockCrud:
         product = await self.get_product_for_update(
             db, product_id=payload.product_id, business_id=payload.business_id
         )
-        self._assert_tenant_product(product, current_user)
+        await self._assert_tenant_product(db, product, current_user)
         product, _hist, before, after = await self.apply_movement(
             db,
             product=product,
@@ -291,7 +325,7 @@ class StockCrud:
         product = await self.get_product_for_update(
             db, product_id=payload.product_id, business_id=payload.business_id
         )
-        self._assert_tenant_product(product, current_user)
+        await self._assert_tenant_product(db, product, current_user)
         product, _hist, before, after = await self.apply_movement(
             db,
             product=product,
