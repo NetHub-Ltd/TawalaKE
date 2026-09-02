@@ -88,19 +88,29 @@
    3. Base Layer HTML Tag Rules & Screen Scaling Engine
 ========================================================= */
 html {
-  /* Clean absolute pixel target that controls rem fluid scales globally */
   font-size: var(--base-font-size);
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  /* Using your gradient as the primary document surface */
-  background: var(--surface);
-  background-attachment: fixed;
+  min-height: 100dvh;
+  height: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background-color: var(--background);
+  background-image: var(--surface);
+  /* fixed attachment often breaks scroll on mobile WebKit — use scroll */
+  background-attachment: scroll;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-regular);
   letter-spacing: -0.015em;
-  @apply antialiased;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Automatic Element Font Scaling Rules
