@@ -95,16 +95,28 @@
 ========================================================= */
 html {
   font-size: var(--base-font-size);
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-height: 100dvh;
+  height: auto;
   overflow-x: hidden;
   overflow-y: auto;
   background-color: var(--background);
   background-image: var(--surface);
+  /* fixed attachment often breaks scroll on mobile WebKit — use scroll */
+  background-attachment: scroll;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-regular);
+  letter-spacing: -0.015em;
+  -webkit-font-smoothing: antialiased;
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-sans);
