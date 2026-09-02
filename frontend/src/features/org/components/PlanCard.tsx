@@ -116,8 +116,8 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
     <article
       className={
         isNdovu
-          ? "relative flex flex-col overflow-hidden rounded-2xl border-2 border-brand-primary bg-card p-6 pt-8 shadow-lift ring-4 ring-brand-primary/15"
-          : "relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card/90 p-6 shadow-sm backdrop-blur"
+          ? "plan-card plan-card-featured overflow-hidden pt-8"
+          : "plan-card overflow-hidden"
       }
     >
       {/* Diagonal ribbon — Ndovu only */}
@@ -171,7 +171,7 @@ export function PlanCard({ plan }: { plan: PlanCardData }) {
 
       {trialDays > 0 && !isEnterprise && (
         <p className="mt-2 text-sm font-medium text-brand-accent">
-          {trialDays}-day free trial · invoice emailed (KES 0 today)
+          {trialDays}-day free trial · KES 0 today
         </p>
       )}
 

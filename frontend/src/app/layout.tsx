@@ -80,9 +80,9 @@ export default function RootLayout({
       style={{ colorScheme: "light" }}
       suppressHydrationWarning
     >
-      <body className="min-h-screen w-full text-foreground antialiased selection:bg-brand-primary/20 m-0 p-0">
+      <body className="min-h-dvh w-full overflow-x-hidden overflow-y-auto text-foreground antialiased selection:bg-brand-primary/20 m-0 p-0">
         <Providers>
-          <main id="main-content" className="min-h-screen w-full bg-surface relative">
+          <main id="main-content" className="relative min-h-dvh w-full bg-background">
             {children}
           </main>
         </Providers>
