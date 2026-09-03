@@ -31,6 +31,7 @@ for k, v in {
     "ALLOWED_ORIGINS": "http://localhost:3000",
     "RESEND_API_KEY": "test_key",
     "REDIS_URL": "memory://",
+    "FRONTEND_URL": "http://localhost:3000",
 }.items():
     os.environ.setdefault(k, v)
 
