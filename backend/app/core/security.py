@@ -488,6 +488,57 @@ class SecurityService:
         await redis_client.delete(redis_key)
         return staff_id
 
+    # ------------------------------------------------------------------
+    # 5. STAFF INVITE TOKENS (REDIS)
+    # Single-use. Only ORG_STAFF_MANAGE holders can resend after expiry.
+    # ------------------------------------------------------------------
+    STAFF_INVITE_TTL_MINUTES = 48 * 60  # 48 hours
+
+    async def create_staff_invite_token(
+        self,
+        staff_id: Union[str, uuid.UUID],
+        redis_client: AsyncRedis,
+        expire_minutes: int | None = None,
+    ) -> str:
+        """Opaque invite token; invalidates any prior unused token for this staff."""
+        ttl = expire_minutes if expire_minutes is not None else self.STAFF_INVITE_TTL_MINUTES
+        sid = str(staff_id)
+        by_staff_key = f"auth:staff_invite_by_staff:{sid}"
+        old = await redis_client.get(by_staff_key)
+        if old:
+            old_token = old.decode("utf-8") if isinstance(old, bytes) else str(old)
+            await redis_client.delete(f"auth:staff_invite:{old_token}")
+        token = secrets.token_urlsafe(32)
+        await redis_client.set(f"auth:staff_invite:{token}", sid, ex=ttl * 60)
+        await redis_client.set(by_staff_key, token, ex=ttl * 60)
+        logger.info(f"Created staff-invite token for staff {sid} (ttl={ttl}m)")
+        return token
+
+    async def verify_and_consume_staff_invite_token(
+        self,
+        invite_token: str,
+        redis_client: AsyncRedis,
+    ) -> str:
+        """Validate and consume invite token. Returns staff_id string."""
+        redis_key = f"auth:staff_invite:{invite_token}"
+        staff_id_bytes = await redis_client.get(redis_key)
+        if not staff_id_bytes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Invalid or expired invite link. "
+                    "Ask a team manager to resend the invite."
+                ),
+            )
+        staff_id = (
+            staff_id_bytes.decode("utf-8")
+            if isinstance(staff_id_bytes, bytes)
+            else str(staff_id_bytes)
+        )
+        await redis_client.delete(redis_key)
+        await redis_client.delete(f"auth:staff_invite_by_staff:{staff_id}")
+        return staff_id
+
 
 # Global thread-safe instance used throughout the application
 security = SecurityService()

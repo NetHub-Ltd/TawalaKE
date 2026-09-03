@@ -424,7 +424,91 @@ class EmailService:
             html_content=html_content,
         )
 
-
+    @classmethod
+    def send_staff_invite(
+        cls,
+        to_email: str,
+        invite_url: str,
+        user_name: Optional[str] = None,
+        org_name: Optional[str] = None,
+        role_label: Optional[str] = None,
+        invited_by_name: Optional[str] = None,
+        expire_hours: int = 48,
+    ) -> None:
+        """Invite pending staff to set password and join the organization."""
+        greeting = (user_name or "").strip() or "there"
+        org = (org_name or "").strip() or "your team"
+        role = (role_label or "").strip() or "team member"
+        inviter = (invited_by_name or "").strip()
+        if inviter:
+            inviter_line = (
+                f'<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">'
+                f"<strong>{inviter}</strong> invited you to join as <strong>{role}</strong>.</p>"
+            )
+        else:
+            inviter_line = (
+                f'<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">'
+                f"You have been invited to join as <strong>{role}</strong>.</p>"
+            )
+        logo = "https://tawala.nethub.co.ke/logo.svg"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>You are invited to Tawala</title></head>
+        <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
+            <tr><td align="center">
+              <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
+                <tr><td style="padding:28px 24px 12px;text-align:center;">
+                  <img src="{logo}" width="72" alt="Tawala"
+                       style="display:inline-block;border:0;max-width:72px;height:auto;" />
+                </td></tr>
+                <tr><td style="padding:8px 28px 8px;text-align:center;">
+                  <p style="color:#003F4E;margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Tawala</p>
+                  <h1 style="color:#0f172a;margin:0;font-size:22px;font-weight:700;line-height:1.3;">
+                    You&rsquo;re invited to join {org}
+                  </h1>
+                </td></tr>
+                <tr><td style="padding:20px 28px 32px;">
+                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">Hello {greeting},</p>
+                  {inviter_line}
+                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">
+                    Set your password to activate your account and start working on Tawala.
+                  </p>
+                  <div style="text-align:center;margin:28px 0;">
+                    <a href="{invite_url}" target="_blank" rel="noopener"
+                       style="background-color:#003F4E;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;display:inline-block;">
+                      Set password &amp; join
+                    </a>
+                  </div>
+                  <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0 0 8px;">
+                    This link is single-use and expires in <strong>{expire_hours} hours</strong>.
+                    If it expires, ask a team manager to resend your invite.
+                  </p>
+                  <p style="color:#94a3b8;font-size:12px;line-height:1.5;margin:0;">
+                    If you were not expecting this invitation, you can ignore this email.
+                  </p>
+                </td></tr>
+                <tr><td style="padding:16px 28px 24px;border-top:1px solid #f1f5f9;">
+                  <p style="color:#94a3b8;font-size:11px;margin:0;text-align:center;">
+                    Tawala · Control your biashara ·
+                    <a href="https://tawala.nethub.co.ke" style="color:#64748b;text-decoration:none;">tawala.nethub.co.ke</a>
+                  </p>
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+        """
+        subject_org = org if org != "your team" else "Tawala"
+        cls.send_transactional_email(
+            sender=settings.email_from_tawala,
+            to_addresses=[to_email],
+            subject=f"Join {subject_org} on Tawala — set your password",
+            html_content=html_content,
+        )
 
     @classmethod
     def send_trial_invoice(

@@ -234,9 +234,9 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
             organization_id=org_id,
             email=str(payload.email),
             full_name=payload.full_name,
-            hashed_password=security.hash_password(payload.password),
+            hashed_password=None,
             role=payload.role,
-            active=True,
+            active=False,
         )
         db.add(staff)
         await db.flush()
@@ -254,6 +254,7 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
 
         await paywall_service.bump_usage(db, org_id, LIMIT_STAFF, redis=redis)
         await db.commit()
+        await db.refresh(staff)
         if redis is not None:
             from app.api.rbac_deps import purge_staff_rbac_cache
 
@@ -264,10 +265,93 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
             resource_type="staff",
             resource_id=staff.id,
             organization_id=org_id,
-            meta={"role": payload.role.value, "email": str(payload.email)},
+            meta={
+                "role": payload.role.value,
+                "email": str(payload.email),
+                "invite": True,
+            },
             independent=True,
         )
         return await self.to_response(db, staff)
+
+    def is_pending_invite(self, staff: Staff) -> bool:
+        """Pending invite: inactive and no password set."""
+        return (not bool(staff.active)) and (not staff.hashed_password)
+
+    async def issue_staff_invite_token(
+        self,
+        *,
+        staff: Staff,
+        redis: AsyncRedis,
+    ) -> str:
+        if not self.is_pending_invite(staff):
+            raise HTTPException(
+                400,
+                detail="Invite can only be sent for pending staff who have not set a password yet.",
+            )
+        return await security.create_staff_invite_token(
+            staff_id=staff.id,
+            redis_client=redis,
+        )
+
+    async def resend_invite(
+        self,
+        db: AsyncSession,
+        *,
+        actor: Staff,
+        staff_id: UUID,
+        redis: AsyncRedis,
+    ) -> StaffResponse:
+        """Resend gated by caller permission (ORG_STAFF_MANAGE), not ADMIN role."""
+        if not actor.organization_id:
+            raise HTTPException(400, detail="Actor has no organization")
+        target = await self.get_in_org(db, staff_id, actor.organization_id)
+        self.assert_can_manage_target(actor, target)
+        if not self.is_pending_invite(target):
+            raise HTTPException(
+                400,
+                detail="Only pending invites can be resent. This member already has an active account.",
+            )
+        await record_audit(
+            actor=actor,
+            action="staff.invite_resend",
+            resource_type="staff",
+            resource_id=target.id,
+            organization_id=actor.organization_id,
+            meta={"email": target.email},
+            independent=True,
+        )
+        return await self.to_response(db, target)
+
+    async def accept_invite(
+        self,
+        db: AsyncSession,
+        *,
+        staff_id: UUID | str,
+        new_password: str,
+        redis: Optional[AsyncRedis] = None,
+    ) -> Staff:
+        sid = staff_id if isinstance(staff_id, UUID) else UUID(str(staff_id))
+        stmt = select(Staff).where(Staff.id == sid)
+        staff = (await db.exec(stmt)).first()
+        if not staff or staff.deleted_at is not None:
+            raise HTTPException(400, detail="Invalid or expired invite link.")
+        if staff.hashed_password and staff.active:
+            raise HTTPException(
+                400,
+                detail="This invite was already accepted. Please sign in.",
+            )
+        staff.hashed_password = security.hash_password(new_password)
+        staff.active = True
+        db.add(staff)
+        await db.commit()
+        await db.refresh(staff)
+        if redis is not None:
+            from app.api.rbac_deps import purge_staff_rbac_cache
+
+            await purge_staff_rbac_cache(redis, staff.id)
+        logger.info(f"Staff invite accepted for {staff.id}")
+        return staff
 
     async def update_managed(
         self,
