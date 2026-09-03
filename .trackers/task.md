@@ -29,6 +29,8 @@ Polish self-serve onboarding and password management/resets; make `FRONTEND_URL`
 - [x] LoginForm: remove large dead commented block; keep link to `/forgot-password`
 - [x] Onboarding step labels on personal-details, set-password, organization
 - [x] CI/conftest: set `FRONTEND_URL` so pytest can load Settings
+- [x] Add `backend/.env.example` (tracked); CI + conftest load it as source of truth
+- [x] Un-ignore `!.env.example` in root `.gitignore` (was caught by `*.env*`)
 
 ## Out of scope
 - Platform roles implementation
