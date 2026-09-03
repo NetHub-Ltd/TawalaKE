@@ -55,7 +55,9 @@ class Settings(BaseSettings):
     email_from_support: str = "NetHub Support <support@nethub.co.ke>"
     email_from_tawala: str = "Tawala System <tawala@nethub.co.ke>"
     email_from_marketing: str = "NetHub Updates <newsletter@nethub.co.ke>"
-    frontend_url: str = "preview.nethub.co.ke"
+    # Public frontend origin used in emails (reset, onboarding setup, trial).
+    # Required from env — no hardcoded default. Accept host-only or full URL.
+    frontend_url: str
 
     redis_url: str
 
@@ -65,6 +67,23 @@ class Settings(BaseSettings):
             return []
         # Split by comma, strip whitespace, and filter out empty strings or "*"
         return [f.strip() for f in self.allowed_origins.split(",") if f.strip() and f.strip() != "*"]
+
+    @property
+    def frontend_origin(self) -> str:
+        """Absolute frontend origin (scheme + host, no trailing slash).
+
+        Normalizes host-only values from env (e.g. ``tawala.nethub.co.ke``)
+        to ``https://…``. Use this for all email action links.
+        """
+        url = (self.frontend_url or "").strip()
+        if not url:
+            raise ValueError(
+                "FRONTEND_URL is required and must be set in the environment "
+                "(e.g. https://tawala.nethub.co.ke)"
+            )
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = f"https://{url}"
+        return url.rstrip("/")
 
     @property
     def async_db_url(self) -> str:

@@ -2,7 +2,7 @@ name: Test Backend
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, dev]
     paths:
       - "backend/**"
       - ".github/workflows/test_backend.yml"
@@ -57,6 +57,35 @@ jobs:
           REDIS_URL: memory://
           FRONTEND_URL: http://localhost:3000
         run: |
+          set -euo pipefail
+          if [ ! -f .env.example ]; then
+            echo "backend/.env.example is missing — required for Settings + CI"
+            exit 1
+          fi
+          # Export KEY=value pairs from the maintained template (source of truth).
+          # Values with spaces are supported; comments and blank lines are skipped.
+          while IFS= read -r line || [ -n "$line" ]; do
+            case "$line" in
+              ''|\#*) continue ;;
+            esac
+            key="${line%%=*}"
+            val="${line#*=}"
+            key="$(echo "$key" | xargs)"
+            [ -n "$key" ] || continue
+            export "$key=$val"
+          done < .env.example
+          # CI-safe overrides (no external services)
+          export APP_NAME=TawalaTest
+          export ENVIRONMENT=development
+          export DATABASE_NAME=test_db
+          export DATABASE_USER=test_user
+          export DATABASE_PASSWORD=test_pass
+          export SECRET_KEY=test-secret-key-32-chars-long!!
+          export ADMIN_EMAIL=admin@test.com
+          export ADMIN_PASSWORD=testpass123
+          export RESEND_API_KEY=test_key
+          export REDIS_URL=memory://
+          export FRONTEND_URL=http://localhost:3000
           pytest testing/ -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=60
 
       - name: Upload coverage report
