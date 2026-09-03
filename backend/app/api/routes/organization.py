@@ -30,13 +30,8 @@ CACHE_TTL_SEC = 300
 
 
 def _frontend_base_url() -> str:
-    """Normalize settings.frontend_url into an absolute origin."""
-    url = (settings.frontend_url or "").strip()
-    if not url:
-        return "https://tawala.nethub.co.ke"
-    if not url.startswith("http://") and not url.startswith("https://"):
-        url = f"https://{url}"
-    return url.rstrip("/")
+    """Absolute frontend origin from required FRONTEND_URL env (via settings)."""
+    return settings.frontend_origin
 
 
 def _require_owner(user) -> None:

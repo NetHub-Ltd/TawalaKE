@@ -5,24 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { toast } from "sonner";
 import { signIn } from "next-auth/react";
+import {
+  passwordConfirmSchema,
+  type PasswordConfirmValues,
+} from "@/lib/auth/password-policy";
 
-const schema = z
-  .object({
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .max(128, "Password is too long"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
-  });
-
-type FormData = z.infer<typeof schema>;
+type FormData = PasswordConfirmValues;
 
 export function SetPasswordForm() {
   const searchParams = useSearchParams();
@@ -35,7 +25,7 @@ export function SetPasswordForm() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(passwordConfirmSchema),
     defaultValues: { password: "", confirmPassword: "" },
   });
 

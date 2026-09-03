@@ -36,7 +36,7 @@ export default async function OrganizationOnboardingPage() {
     <div className="flex min-h-full items-center justify-center bg-background p-4 py-10">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-lift">
         <p className="mb-1 text-xs font-medium uppercase tracking-wide text-brand-primary">
-          Organization profile
+          Step 3 of 3 · Organization profile
         </p>
         <h1 className="mb-2 text-2xl font-semibold text-foreground">
           Complete your organization

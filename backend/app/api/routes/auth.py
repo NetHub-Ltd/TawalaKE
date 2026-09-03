@@ -182,7 +182,7 @@ async def request_password_reset(
         )
 
         # 2. Build full action URL pointing to frontend app
-        frontend_reset_url = f"{settings.frontend_url}/auth/reset-password?token={reset_token}"
+        frontend_reset_url = f"{settings.frontend_origin}/auth/reset-password?token={reset_token}"
 
         # Extract client IP for security context in email
         client_ip = request.client.host if request.client else "Unknown"
@@ -316,9 +316,7 @@ async def onboarding_set_password(
 
             start_s = sub.start_date.strftime("%Y-%m-%d") if sub.start_date else ""
             end_s = sub.end_date.strftime("%Y-%m-%d") if sub.end_date else ""
-            frontend = (settings.frontend_url or "https://tawala.nethub.co.ke").rstrip("/")
-            if not frontend.startswith("http"):
-                frontend = f"https://{frontend}"
+            frontend = settings.frontend_origin
             background_tasks.add_task(
                 mailer.send_trial_invoice,
                 to_email=staff.email,
