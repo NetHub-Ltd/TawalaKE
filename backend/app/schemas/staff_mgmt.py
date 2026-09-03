@@ -19,9 +19,15 @@ class StaffResetPasswordIn(BaseModel):
 
 
 class StaffCreateManagedIn(BaseModel):
+    """Create staff and email an invite link (no password at create time)."""
+
     email: EmailStr
     full_name: str
     role: StaffRole = StaffRole.CASHIER
-    password: str = Field(min_length=8)
     business_ids: List[UUID] = Field(min_length=1)
     organization_id: Optional[UUID] = None
+
+
+class StaffInviteAcceptIn(BaseModel):
+    token: str
+    new_password: str = Field(min_length=8)

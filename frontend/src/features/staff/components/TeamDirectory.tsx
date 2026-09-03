@@ -23,17 +23,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 
-const passwordSchema = z
-  .string()
-  .min(8, "Min 8 characters")
-  .regex(/[A-Z]/, "Need uppercase")
-  .regex(/[a-z]/, "Need lowercase")
-  .regex(/[0-9]/, "Need a number");
-
 const createSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(2),
-  password: passwordSchema,
   role: z.enum(["OWNER", "ADMIN", "MANAGER", "CASHIER"]),
   business_ids: z.array(z.string()).min(1, "Assign at least one business"),
 });
@@ -75,7 +67,6 @@ export default function TeamDirectory({
     defaultValues: {
       email: "",
       full_name: "",
-      password: "",
       role: "CASHIER",
       business_ids: [],
     },
@@ -250,10 +241,10 @@ export default function TeamDirectory({
                       className={
                         s.active
                           ? "text-emerald-600"
-                          : "text-slate-400"
+                          : "text-amber-600"
                       }
                     >
-                      {s.active ? "Active" : "Inactive"}
+                      {s.active ? "Active" : "Pending invite"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-slate-400">
@@ -274,7 +265,7 @@ export default function TeamDirectory({
           >
             <h2 className="text-lg font-semibold">Invite member</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Creates an account with a temporary password (invite link comes in a later phase).
+              We will email them a secure link to set their own password (expires in 48 hours).
             </p>
             <form onSubmit={onCreate} className="mt-4 space-y-3">
               <input
@@ -286,12 +277,6 @@ export default function TeamDirectory({
                 {...createForm.register("email")}
                 placeholder="Email"
                 type="email"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              />
-              <input
-                {...createForm.register("password")}
-                placeholder="Temporary password"
-                type="password"
                 className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
               />
               <select

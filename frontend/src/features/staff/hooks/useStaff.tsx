@@ -22,7 +22,6 @@ export interface CreateStaffInput {
   email: string;
   full_name: string;
   role: StaffRoleName;
-  password: string;
   business_ids: string[];
   organization_id?: string;
 }
@@ -203,6 +202,24 @@ export function useResetStaffPassword(organizationId?: string) {
       return res.json();
     },
     onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["staff", organizationId, vars.staffId] });
+    },
+  });
+}
+
+export function useResendStaffInvite(organizationId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ staffId }: { staffId: string }) => {
+      const res = await fetch(`/api/v1/org/staff/${staffId}/resend-invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json() as Promise<StaffMember>;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["staff", organizationId] });
       qc.invalidateQueries({ queryKey: ["staff", organizationId, vars.staffId] });
     },
   });

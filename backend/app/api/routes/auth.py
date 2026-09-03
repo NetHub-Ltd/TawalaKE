@@ -233,6 +233,32 @@ async def confirm_password_reset(
     return MessageResponse(message="Password has been updated successfully.")
 
 
+@router.post("/staff-invite/accept", response_model=MessageResponse)
+async def accept_staff_invite(
+    body: PasswordResetConfirm,
+    db: SessionDep,
+    redis: RedisDep,
+):
+    """
+    Accept staff invite: consume token, set password, activate.
+    Expired links cannot be self-renewed — ORG_STAFF_MANAGE must resend.
+    """
+    from app.crud.staff import staff_crud
+
+    staff_id_str = await security.verify_and_consume_staff_invite_token(
+        invite_token=body.token,
+        redis_client=redis,
+    )
+    await staff_crud.accept_invite(
+        db,
+        staff_id=staff_id_str,
+        new_password=body.new_password,
+        redis=redis,
+    )
+    return MessageResponse(
+        message="Password set. You can sign in with your email and new password."
+    )
+
 
 @router.post("/onboarding/set-password", response_model=TokenResponse)
 async def onboarding_set_password(
