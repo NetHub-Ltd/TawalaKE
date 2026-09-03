@@ -55,6 +55,7 @@ jobs:
           ALLOWED_ORIGINS: http://localhost:3000
           RESEND_API_KEY: test_key
           REDIS_URL: memory://
+          FRONTEND_URL: http://localhost:3000
         run: |
           pytest testing/ -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=60
 
