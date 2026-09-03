@@ -265,7 +265,7 @@ export default function TeamDirectory({
           >
             <h2 className="text-lg font-semibold">Invite member</h2>
             <p className="mt-1 text-sm text-slate-500">
-              We'll email them a secure link to set their own password (expires in 48 hours).
+              We will email them a secure link to set their own password (expires in 48 hours).
             </p>
             <form onSubmit={onCreate} className="mt-4 space-y-3">
               <input
