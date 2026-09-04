@@ -1,32 +1,23 @@
 # Task Tracker
 
-**Branch:** `fix/stock-tenant-guard-and-permissions-api`  
+**Branch:** `chore/public-navbar-clean`  
 **Base:** `dev`  
 **PR target:** `dev`  
-**Tier:** 2
+**Tier:** 1  
 
 ## Goal
-Owner can receive stock when product.org is null; honest stock errors; dedicated Redis-cached permissions API (not in session).
+Replace public NavBar with a clean, typical marketing header: logo, Solutions dropdown (real routes), Blog, Pricing, Support, Sign in only — no trial button.
 
 ## Done
-- [x] `_assert_tenant_product` resolves org via business + optional backfill
-- [x] stockProxy / ProductWorkspace error passthrough
-- [x] `GET /auth/permissions` + Redis cache via `_cached_perm_values`
-- [x] BFF `GET /api/v1/auth/permissions` + `fetchPermissions()` helper
-- [x] Session unchanged (lean)
+- [x] Rewrite `frontend/src/lib/components/NavBar.tsx`
+- [x] Remove Start Free Trial (desktop + mobile)
+- [x] Add Blog link
+- [x] Point Pricing at `/onboarding/plans` (was `/billing`)
+- [x] Solutions links → `/solutions/{retail,pharmacy,hardware,wholesale}`
+- [x] Simpler brand mark; accessible focus states; mobile drawer
+- [ ] PR to `dev`
 
 ## Out of scope
-- Putting permissions on NextAuth session
-- Role matrix changes
-Public pages scroll; homepage simpler and polished; plans cards aligned to tuned Silk & Slate tokens.
-
-## Done
-- [x] Public layout: document scroll (remove nested overflow trap)
-- [x] Root body/main allow overflow-y auto
-- [x] globals.css tokens, shadows, card/plan utilities
-- [x] Homepage simplified (hero, 3 benefits, steps, proof, FAQ, CTA)
-- [x] PlanCard + plans page polish
-
-## Out of scope
-- /org shell redesign
-- Backend trial logic
+- Homepage / footer CTA changes
+- Org app Header
+- Design system overhaul

@@ -1,4 +1,20 @@
+import type { Metadata } from "next";
 import React from "react";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "How Tawala collects, uses, and protects personal and business data for Kenyan SME customers. Effective 9 August 2026.",
+  alternates: { canonical: "/legal/privacy" },
+  openGraph: {
+    title: "Privacy Policy | Tawala",
+    description:
+      "How Tawala collects, uses, and protects personal and business data for Kenyan SME customers.",
+    url: "https://tawala.nethub.co.ke/legal/privacy",
+    type: "website",
+  },
+  robots: { index: true, follow: true },
+};
 
 const PrivacyPolicyPage = () => {
   return (

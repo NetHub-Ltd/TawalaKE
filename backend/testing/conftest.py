@@ -8,31 +8,45 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-# Force test environment before any app imports
+# Force test environment before any app imports.
+# Load backend/.env.example first so the template stays the source of truth;
+# then apply test-only overrides (isolated DB name, memory redis, fixed secret).
+_BACKEND_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_ENV_EXAMPLE = os.path.join(_BACKEND_ROOT, ".env.example")
+
+
+def _load_env_file(path: str) -> None:
+    if not os.path.isfile(path):
+        return
+    with open(path, encoding="utf-8") as fh:
+        for raw in fh:
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, val = line.partition("=")
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            if key:
+                os.environ.setdefault(key, val)
+
+
+_load_env_file(_ENV_EXAMPLE)
+
+# Test-specific overrides (do not rely on production-ish example secrets)
 for k, v in {
     "APP_NAME": "TawalaTest",
-    "APP_VERSION": "0.0.1",
     "ENVIRONMENT": "development",
     "DATABASE_NAME": "test_db",
     "DATABASE_USER": "test_user",
-    "DATABASE_HOST": "localhost",
-    "DATABASE_PORT": "5432",
     "DATABASE_PASSWORD": "test_pass",
     "SECRET_KEY": "test-secret-key-32-chars-long!!",
-    "ISSUER": "test",
-    "AUDIENCE": "test",
-    "ACCESS_TOKEN_EXPIRE_MINUTES": "30",
-    "REFRESH_TOKEN_EXPIRE_DAYS": "7",
-    "PIN_TOKEN_EXPIRE_HOURS": "8",
-    "ADMIN_NAME": "Test Admin",
     "ADMIN_EMAIL": "admin@test.com",
     "ADMIN_PASSWORD": "testpass123",
-    "RESOURCE_SERVER": "http://localhost:8000",
-    "ALLOWED_ORIGINS": "http://localhost:3000",
     "RESEND_API_KEY": "test_key",
     "REDIS_URL": "memory://",
+    "FRONTEND_URL": "http://localhost:3000",
 }.items():
-    os.environ.setdefault(k, v)
+    os.environ[k] = v
 
 # Patch lifespan BEFORE importing create_application
 import app.main as main_module

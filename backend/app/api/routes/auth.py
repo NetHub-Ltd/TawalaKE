@@ -182,7 +182,7 @@ async def request_password_reset(
         )
 
         # 2. Build full action URL pointing to frontend app
-        frontend_reset_url = f"{settings.frontend_url}/auth/reset-password?token={reset_token}"
+        frontend_reset_url = f"{settings.frontend_origin}/auth/reset-password?token={reset_token}"
 
         # Extract client IP for security context in email
         client_ip = request.client.host if request.client else "Unknown"
@@ -232,6 +232,32 @@ async def confirm_password_reset(
     logger.info(f"✅ Password successfully updated for staff ID: {staff.id}")
     return MessageResponse(message="Password has been updated successfully.")
 
+
+@router.post("/staff-invite/accept", response_model=MessageResponse)
+async def accept_staff_invite(
+    body: PasswordResetConfirm,
+    db: SessionDep,
+    redis: RedisDep,
+):
+    """
+    Accept staff invite: consume token, set password, activate.
+    Expired links cannot be self-renewed — ORG_STAFF_MANAGE must resend.
+    """
+    from app.crud.staff import staff_crud
+
+    staff_id_str = await security.verify_and_consume_staff_invite_token(
+        invite_token=body.token,
+        redis_client=redis,
+    )
+    await staff_crud.accept_invite(
+        db,
+        staff_id=staff_id_str,
+        new_password=body.new_password,
+        redis=redis,
+    )
+    return MessageResponse(
+        message="Password set. You can sign in with your email and new password."
+    )
 
 
 @router.post("/onboarding/set-password", response_model=TokenResponse)
@@ -316,9 +342,7 @@ async def onboarding_set_password(
 
             start_s = sub.start_date.strftime("%Y-%m-%d") if sub.start_date else ""
             end_s = sub.end_date.strftime("%Y-%m-%d") if sub.end_date else ""
-            frontend = (settings.frontend_url or "https://tawala.nethub.co.ke").rstrip("/")
-            if not frontend.startswith("http"):
-                frontend = f"https://{frontend}"
+            frontend = settings.frontend_origin
             background_tasks.add_task(
                 mailer.send_trial_invoice,
                 to_email=staff.email,

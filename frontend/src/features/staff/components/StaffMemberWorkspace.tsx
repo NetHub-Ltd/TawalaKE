@@ -8,6 +8,7 @@ import {
   useUpdateStaff,
   useSetStaffBusinesses,
   useResetStaffPassword,
+  useResendStaffInvite,
   useStaffActivity,
 } from "@/features/staff/hooks/useStaff";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
@@ -22,6 +23,7 @@ import {
   UserX,
   UserCheck,
   AlertCircle,
+  Mail,
 } from "lucide-react";
 
 function roleBadge(role: string) {
@@ -58,6 +60,7 @@ export default function StaffMemberWorkspace({
   const updateMut = useUpdateStaff(organizationId);
   const assignMut = useSetStaffBusinesses(organizationId);
   const resetMut = useResetStaffPassword(organizationId);
+  const resendMut = useResendStaffInvite(organizationId);
   const { data: activity = [], isLoading: activityLoading } = useStaffActivity(
     organizationId,
     staffId,
@@ -168,6 +171,17 @@ export default function StaffMemberWorkspace({
       refetch();
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Update failed");
+    }
+  };
+
+  const resendInvite = async () => {
+    setMsg(null);
+    setErr(null);
+    try {
+      await resendMut.mutateAsync({ staffId });
+      setMsg("Invite resent. Previous link is no longer valid.");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not resend invite");
     }
   };
 
@@ -393,10 +407,30 @@ export default function StaffMemberWorkspace({
       )}
 
       {(tabParam === "security" || action === "reset-password") && (
-        <section className="max-w-lg rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-          <h2 className="font-semibold">Reset password</h2>
+        <section className="max-w-lg space-y-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+          {member && !member.active && (
+            <div>
+              <h2 className="font-semibold">Pending invite</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                This member has not set a password yet. Resend a new invite link
+                (previous links stop working). Anyone with staff management
+                permission can resend.
+              </p>
+              <button
+                type="button"
+                onClick={resendInvite}
+                disabled={resendMut.isPending || !canManage}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                <Mail className="h-4 w-4" />
+                {resendMut.isPending ? "Sending…" : "Resend invite"}
+              </button>
+            </div>
+          )}
+          <div>
+          <h2 className="font-semibold">Emergency set password</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Sets a temporary password. Invite-by-email is planned next.
+            Sets a password directly without email. Prefer resend invite for pending members.
           </p>
           <input
             type="password"
@@ -413,6 +447,7 @@ export default function StaffMemberWorkspace({
           >
             {resetMut.isPending ? "Saving…" : "Update password"}
           </button>
+          </div>
         </section>
       )}
       {tabParam === "activity" && (

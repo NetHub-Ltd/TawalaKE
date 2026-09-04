@@ -1,4 +1,20 @@
+import type { Metadata } from "next";
 import React from "react";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "Terms governing use of the Tawala business management platform for Kenyan SMEs. Effective 9 August 2026.",
+  alternates: { canonical: "/legal/terms" },
+  openGraph: {
+    title: "Terms of Service | Tawala",
+    description:
+      "Terms governing use of the Tawala business management platform for Kenyan SMEs.",
+    url: "https://tawala.nethub.co.ke/legal/terms",
+    type: "website",
+  },
+  robots: { index: true, follow: true },
+};
 
 const TermsPage = () => {
   return (
