@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import React, { Suspense } from "react";
 import { SetPasswordForm } from "@/features/org/components/SetPasswordForm";
+
+export const metadata: Metadata = {
+  title: "Set password",
+  description: "Set your Tawala account password and activate your trial.",
+  robots: { index: false, follow: true },
+};
 
 export default function SetPasswordPage() {
   return (

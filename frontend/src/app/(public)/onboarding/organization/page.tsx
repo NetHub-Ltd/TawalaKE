@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { backendUrl } from "@/lib/api/backend";
 import { OrganizationDetailsForm } from "@/features/org/components/OrganizationDetailsForm";
+
+export const metadata: Metadata = {
+  title: "Organization details",
+  description: "Complete your Tawala organization setup.",
+  robots: { index: false, follow: true },
+};
 
 export default async function OrganizationOnboardingPage() {
   const session = await auth();

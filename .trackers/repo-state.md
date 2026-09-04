@@ -1,6 +1,14 @@
 # Repository State
 
-**Branch:** `feat/staff-invite-email`  
+**Integration branch:** `dev`  
+**Topic branch:** `chore/seo-architecture-2026`  
 **PR target:** `dev`  
-**Focus:** Staff invite-by-email  
-**Note:** Rebased on dev after PR #163 (password recovery + FRONTEND_URL)
+**Preferred deploy:** k3s  
+
+## Current focus
+SEO Architecture 2026 — full approved proposal (indexing hygiene, legal metadata, onboarding robots policy, content depth, structured data, support alignment).
+
+## Notes
+- Primary canonical: `https://tawala.nethub.co.ke`
+- Public trial entry: `/onboarding/personal-details` (noindex recommended)
+- Plans page remains indexable

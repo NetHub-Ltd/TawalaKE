@@ -50,6 +50,16 @@ const FEATURES = [
 ] as const;
 
 export default function RetailSolutionsPage() {
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://tawala.nethub.co.ke" },
+      { "@type": "ListItem", position: 2, name: "Solutions", item: "https://tawala.nethub.co.ke/solutions" },
+      { "@type": "ListItem", position: 3, name: "Retail & Minimarts", item: "https://tawala.nethub.co.ke/solutions/retail" },
+    ],
+  };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Service",
@@ -72,6 +82,8 @@ export default function RetailSolutionsPage() {
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }} />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
