@@ -1,4 +1,20 @@
+import type { Metadata } from "next";
 import React from "react";
+
+export const metadata: Metadata = {
+  title: "Data Policy",
+  description:
+    "Tawala data handling, retention, and customer data rights for Kenyan SME businesses. Effective 9 August 2026.",
+  alternates: { canonical: "/legal/policy" },
+  openGraph: {
+    title: "Data Policy | Tawala",
+    description:
+      "Tawala data handling, retention, and customer data rights for Kenyan SME businesses.",
+    url: "https://tawala.nethub.co.ke/legal/policy",
+    type: "website",
+  },
+  robots: { index: true, follow: true },
+};
 
 const DataPolicyPage = () => {
   return (

@@ -1,5 +1,14 @@
+import type { Metadata } from "next";
 import React from "react";
 import { PersonalDetailsForm } from "@/features/org/components/PersonalDetailsForm";
+
+export const metadata: Metadata = {
+  title: "Start your free trial",
+  description:
+    "Start a 14-day free Ndovu trial on Tawala. No credit card required. Built for Kenyan shops.",
+  alternates: { canonical: "/onboarding/personal-details" },
+  robots: { index: false, follow: true },
+};
 
 export default function PersonalDetailsPage() {
   return (

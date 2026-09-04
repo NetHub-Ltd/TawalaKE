@@ -602,6 +602,29 @@ export default function SolutionsPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: "https://tawala.nethub.co.ke",
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Solutions",
+                item: "https://tawala.nethub.co.ke/solutions",
+              },
+            ],
+          }),
+        }}
+      />
 
       <main
         id="main-content"
