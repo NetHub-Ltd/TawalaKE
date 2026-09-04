@@ -232,52 +232,29 @@ async def async_process_document_generation(sale_id: UUID) -> str:
 
 async def async_update_sales_analytics(sale_id: UUID) -> str:
     """
-    Separate background task for updating sales analytics.
-    Can be triggered independently.
+    Upsert pre-aggregated rollups (daily business/product/staff + hourly bars)
+    and publish a Redis event for dashboard WebSockets.
     """
+    from app.services.analytics_rollup import apply_sale_to_rollups, publish_rollup_event
+    from app.core.redis_client import redis_manager
+
     async with AsyncSessionLocal() as db:
         try:
-            sale_res = await db.exec(
-                select(Sale).where(Sale.id == sale_id)
-            )
-            sale = sale_res.unique().one_or_none()
-
-            if not sale or sale.status != SaleStatus.COMPLETED:
-                return "Analytics skipped: Sale not completed or not found."
-
-            from app.utils.helpers import utc_now
-            now = utc_now()
-            date_dimension = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-
-            stmt = (
-                pg_insert(SaleAnalyticsSummary)
-                .values(
-                    business_id=sale.business_id,
-                    date_dimension=date_dimension,
-                    gross_sales_volume=sale.subtotal,
-                    total_tax_collected=getattr(sale, 'tax_amount', 0.0),
-                    total_discounts_granted=getattr(sale, 'discount', 0.0),
-                    net_revenue_collected=sale.total_amount,
-                    refund_deductions_volume=0.0,
-                    total_completed_orders_count=1
-                )
-                .on_conflict_do_update(
-                    index_elements=["business_id", "date_dimension"],
-                    set_={
-                        "gross_sales_volume": SaleAnalyticsSummary.gross_sales_volume + sale.subtotal,
-                        "total_tax_collected": SaleAnalyticsSummary.total_tax_collected + getattr(sale, 'tax_amount', 0.0),
-                        "total_discounts_granted": SaleAnalyticsSummary.total_discounts_granted + getattr(sale, 'discount', 0.0),
-                        "net_revenue_collected": SaleAnalyticsSummary.net_revenue_collected + sale.total_amount,
-                        "total_completed_orders_count": SaleAnalyticsSummary.total_completed_orders_count + 1
-                    }
-                )
-            )
-            await db.exec(stmt)
+            payload = await apply_sale_to_rollups(db, sale_id, sign=1)
+            if not payload:
+                return f"Analytics skipped: sale {sale_id} not completed or not found."
             await db.commit()
-
-            logger.info(f"✅ Analytics updated for Business ID: {sale.business_id} on {date_dimension.date()}")
-            return f"Analytics updated successfully for Sale ID: {sale.id}"
-
+            try:
+                redis = redis_manager.get_async_client()
+                await publish_rollup_event(redis, payload)
+            except Exception as pub_err:
+                logger.warning("Analytics published to DB but Redis fanout failed: {}", pub_err)
+            logger.info(
+                "Analytics rollups updated business={} date={}",
+                payload.get("business_id"),
+                payload.get("date"),
+            )
+            return f"Analytics updated successfully for Sale ID: {sale_id}"
         except Exception as error:
             await db.rollback()
             logger.error(f"Critical exception in analytics update: {str(error)}")

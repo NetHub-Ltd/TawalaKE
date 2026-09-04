@@ -1,4 +1,2 @@
 # Rollback
-
-Revert the PR or restore `frontend/src/lib/components/NavBar.tsx` from `dev` before this branch.
-No DB or backend changes.
+Revert PR. Downgrade migration e2f3a4b5c6d7. Old analytics worker path removed — restore from main if needed.

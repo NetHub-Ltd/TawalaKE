@@ -605,8 +605,96 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     net_revenue_collected: float = Field(default=0.0)
     refund_deductions_volume: float = Field(default=0.0)
     total_completed_orders_count: int = Field(default=0)
+    # Additive — gross profit from line cost_price_at_sale (not net of expenses)
+    cogs_volume: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
 
     business: Business = Relationship(back_populates="analytics_summaries")
+
+
+
+class ProductSalesSummary(BaseMixin, table=True):
+    """Pre-aggregated product performance per business per calendar day (UTC)."""
+    __tablename__ = "product_sales_summaries"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "date_dimension",
+            "product_id",
+            name="uq_product_sales_day",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    date_dimension: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    product_id: UUID = Field(index=True)
+    sku: str = Field(default="", max_length=50, index=True)
+    name: str = Field(default="", max_length=150)
+
+    quantity_sold: float = Field(default=0.0)
+    revenue: float = Field(default=0.0)
+    cogs: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
+    discount_amount: float = Field(default=0.0)
+    line_count: int = Field(default=0)
+
+
+class StaffSalesSummary(BaseMixin, table=True):
+    """Pre-aggregated cashier performance per business per calendar day (UTC)."""
+    __tablename__ = "staff_sales_summaries"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "date_dimension",
+            "staff_id",
+            name="uq_staff_sales_day",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    date_dimension: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    staff_id: UUID = Field(foreign_key="staff.id", index=True, ondelete="CASCADE")
+
+    orders_count: int = Field(default=0)
+    revenue: float = Field(default=0.0)
+    cogs: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
+    discounts: float = Field(default=0.0)
+
+
+class BusinessSalesHourly(BaseMixin, table=True):
+    """Hourly business revenue bars for near-realtime dashboard charts."""
+    __tablename__ = "business_sales_hourly"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "hour_dimension",
+            name="uq_business_sales_hour",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    hour_dimension: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), index=True),
+        description="UTC hour floor of the sale.",
+    )
+
+    gross_sales_volume: float = Field(default=0.0)
+    net_revenue_collected: float = Field(default=0.0)
+    cogs_volume: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
+    total_completed_orders_count: int = Field(default=0)
+    total_discounts_granted: float = Field(default=0.0)
+
 
 
 # =========================================================
