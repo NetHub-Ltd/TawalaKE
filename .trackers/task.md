@@ -27,7 +27,7 @@ Implement full SEO Architecture proposal: indexing & metadata hygiene, deepen ex
 - [x] Sitemap already listed correct public URLs (no change required)
 - [ ] Residual public host string cleanup (org routes left alone per scope)
 - [ ] Full npm lint/build blocked by registry 502 in this environment — manual structure checks done
-- [ ] PR opened to `dev`
+- [x] PR opened to `dev` — https://github.com/NetHub-Ltd/TawalaKE/pull/165
 
 ## Out of scope
 - Live Core Web Vitals measurement
