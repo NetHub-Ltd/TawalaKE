@@ -1,4 +1,7 @@
 # Rollback
 
-Revert the PR or restore `frontend/src/lib/components/NavBar.tsx` from `dev` before this branch.
-No DB or backend changes.
+Revert the PR.
+
+- Soft-deleted products remain with deleted_at set (data safe).
+- Drop `data_archive_jobs` via migration downgrade if needed.
+- ARCHIVE_ENABLED defaults false — no mass purge from this PR alone.

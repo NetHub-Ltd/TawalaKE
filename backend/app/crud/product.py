@@ -53,28 +53,34 @@ class ProductCrud(BaseCRUD[Product, ProductCreate, ProductUpdate]):
         
         return items, total
 
-    async def delete_product(self, product_id: UUID, db: AsyncSession) -> bool:
+    async def delete_product(
+        self,
+        product_id: UUID,
+        db: AsyncSession,
+        *,
+        actor_id: UUID | None = None,
+    ) -> bool:
         """
-        Removes a product cleanly by its primary key.
-        Maintains transactional boundary by committing inside the wrapper as per production constraints.
+        Soft-deletes a product so stock_history and sale line snapshots remain intact.
+        Commits inside the wrapper as per production constraints.
         """
-        prod = await self.get(db=db, id=product_id)
+        prod = await self.get(db=db, id=product_id, include_deleted=False)
         if prod is None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Product not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found",
             )
-        
-        await self.remove(db, id=product_id)
+
+        await self.soft_delete(db, id=product_id, actor_id=actor_id)
         try:
             await db.commit()
             return True
         except SQLAlchemyError as e:
             await db.rollback()
-            logger.error("Failed to commit product deletion for ID {}: {}", product_id, str(e))
+            logger.error("Failed to commit product soft-delete for ID {}: {}", product_id, str(e))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Could not finalize product deletion transaction."
+                detail="Could not finalize product deletion transaction.",
             )
 
     async def update_product(self, product_id: UUID, payload: ProductUpdate, db: AsyncSession) -> Product:
