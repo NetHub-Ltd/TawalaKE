@@ -22,22 +22,28 @@ export function StaffPanel({
   insights?: InsightsPayload;
   loading?: boolean;
 }) {
-  const items = staff?.items || [];
-  const active = items.filter((i) => (i.orders || 0) > 0 || (i.revenue || 0) > 0);
-  const top = active[0];
-  const avgTicket =
-    active.length > 0
-      ? active.reduce((a, i) => a + (i.avg_ticket || 0), 0) / active.length
-      : 0;
+  const items = staff?.items ?? [];
 
-  const barPoints = useMemo(
-    () =>
-      active.slice(0, 12).map((i) => ({
-        label: i.full_name || i.staff_id,
-        value: Number(i.revenue || 0),
-      })),
-    [active]
-  );
+  const { active, top, avgTicket, barPoints } = useMemo(() => {
+    const activeRows = items.filter(
+      (i) => (i.orders || 0) > 0 || (i.revenue || 0) > 0
+    );
+    const ticket =
+      activeRows.length > 0
+        ? activeRows.reduce((a, i) => a + (i.avg_ticket || 0), 0) /
+          activeRows.length
+        : 0;
+    const bars = activeRows.slice(0, 12).map((i) => ({
+      label: i.full_name || i.staff_id,
+      value: Number(i.revenue || 0),
+    }));
+    return {
+      active: activeRows,
+      top: activeRows[0],
+      avgTicket: ticket,
+      barPoints: bars,
+    };
+  }, [items]);
 
   if (loading && !staff) {
     return <div className="h-64 animate-pulse rounded-xl bg-slate-100" />;
