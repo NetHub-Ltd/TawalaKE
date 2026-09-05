@@ -23,10 +23,19 @@ async def test_dashboard_from_rollups(mock_session):
         refund_deductions_volume=0.0,
         total_completed_orders_count=2,
         deleted_at=None,
+        cogs_volume=40.0,
+        gross_profit=71.0,
+        cash_volume=80.0,
+        mpesa_volume=31.0,
+        missing_cost_line_count=0,
     )
-    result = MagicMock()
-    result.all.return_value = [row]
-    mock_session.exec = AsyncMock(return_value=result)
+    rollup_result = MagicMock()
+    rollup_result.all.return_value = [row]
+
+    credit_result = MagicMock()
+    credit_result.one.return_value = (2500.0, 3)
+
+    mock_session.exec = AsyncMock(side_effect=[rollup_result, credit_result])
 
     out = await reporting_crud.dashboard(
         mock_session, business_id=uuid4(), period=AnalyticsPeriod.DAYS_7
@@ -35,4 +44,7 @@ async def test_dashboard_from_rollups(mock_session):
     assert "series" in out
     assert out["period"] == "7d"
     assert out["summary"]["net_revenue_collected"] == 111.0
+    assert out["summary"]["credit_outstanding"] == 2500.0
+    assert out["summary"]["open_credit_sales"] == 3
+    assert out["summary"]["cash_volume"] == 80.0
     assert len(out["series"]) == 1

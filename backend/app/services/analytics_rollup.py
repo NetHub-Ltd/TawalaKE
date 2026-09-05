@@ -23,6 +23,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.models import (
     BusinessSalesHourly,
+    Payment,
+    PaymentMethod,
     ProductSalesSummary,
     Sale,
     SaleAnalyticsSummary,
@@ -98,14 +100,31 @@ async def apply_sale_to_rollups(
     day = _utc_day_floor(event_ts)
     hour = _utc_hour_floor(event_ts)
 
-    total_cogs = sum(_line_cogs(i) for i in items)
+    # Known COGS only — null cost_price_at_sale does not invent selling_price as cost
+    total_cogs = 0.0
+    missing_cost_lines = 0
+    for i in items:
+        if i.cost_price_at_sale is None:
+            missing_cost_lines += 1
+        else:
+            total_cogs += _line_cogs(i)
     gross_profit = float(sale.total_amount or 0) - total_cogs
-    # Prefer sum of line revenues for product rows; header for business
     subtotal = float(sale.subtotal or 0)
     tax = float(getattr(sale, "tax_amount", 0) or 0)
     discount = float(getattr(sale, "discount", 0) or 0)
     net = float(sale.total_amount or 0)
     s = float(sign)
+
+    # Payment mix from Payment rows (collected only)
+    cash_vol = mpesa_vol = 0.0
+    pay_res = await db.exec(select(Payment).where(Payment.sale_id == sale.id))
+    for pay in pay_res.all():
+        method = getattr(pay.method, "value", str(pay.method or "")).upper()
+        amt = float(pay.amount or 0) * s
+        if method == "CASH":
+            cash_vol += amt
+        elif method == "MPESA":
+            mpesa_vol += amt
 
     # --- Business daily ---
     biz_values = {
@@ -119,6 +138,9 @@ async def apply_sale_to_rollups(
         "total_completed_orders_count": int(s * 1),
         "cogs_volume": s * total_cogs,
         "gross_profit": s * gross_profit,
+        "cash_volume": cash_vol,
+        "mpesa_volume": mpesa_vol,
+        "missing_cost_line_count": int(s * missing_cost_lines),
     }
     stmt = pg_insert(SaleAnalyticsSummary).values(**biz_values)
     stmt = stmt.on_conflict_do_update(
@@ -136,6 +158,10 @@ async def apply_sale_to_rollups(
             + stmt.excluded.total_completed_orders_count,
             "cogs_volume": SaleAnalyticsSummary.cogs_volume + stmt.excluded.cogs_volume,
             "gross_profit": SaleAnalyticsSummary.gross_profit + stmt.excluded.gross_profit,
+            "cash_volume": SaleAnalyticsSummary.cash_volume + stmt.excluded.cash_volume,
+            "mpesa_volume": SaleAnalyticsSummary.mpesa_volume + stmt.excluded.mpesa_volume,
+            "missing_cost_line_count": SaleAnalyticsSummary.missing_cost_line_count
+            + stmt.excluded.missing_cost_line_count,
         },
     )
     await db.exec(stmt)
@@ -199,7 +225,7 @@ async def apply_sale_to_rollups(
     # --- Product daily (per line) ---
     for item in items:
         rev = _line_revenue(item)
-        cogs = _line_cogs(item)
+        cogs = _line_cogs(item) if item.cost_price_at_sale is not None else 0.0
         gp = rev - cogs
         pvals = {
             "business_id": sale.business_id,

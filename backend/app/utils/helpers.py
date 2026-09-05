@@ -142,6 +142,11 @@ def aggregate_rows(rows) -> dict:
     revenue = sum(r.net_revenue_collected for r in rows)
     refunds = sum(r.refund_deductions_volume for r in rows)
     orders = sum(r.total_completed_orders_count for r in rows)
+    cogs = sum(getattr(r, "cogs_volume", 0) or 0 for r in rows)
+    gp = sum(getattr(r, "gross_profit", 0) or 0 for r in rows)
+    cash = sum(getattr(r, "cash_volume", 0) or 0 for r in rows)
+    mpesa = sum(getattr(r, "mpesa_volume", 0) or 0 for r in rows)
+    missing_cost = sum(getattr(r, "missing_cost_line_count", 0) or 0 for r in rows)
 
     return {
         "gross_sales_volume": gross,
@@ -151,6 +156,11 @@ def aggregate_rows(rows) -> dict:
         "refund_deductions_volume": refunds,
         "total_completed_orders_count": orders,
         "average_order_value": (revenue / orders) if orders else 0.0,
+        "cogs_volume": cogs,
+        "gross_profit": gp,
+        "cash_volume": cash,
+        "mpesa_volume": mpesa,
+        "missing_cost_line_count": int(missing_cost),
     }
 
     

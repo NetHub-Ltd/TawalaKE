@@ -9,6 +9,8 @@ from sqlmodel import select, col, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.models import (
+    Sale,
+    SaleStatus,
     BusinessSalesHourly,
     ProductSalesSummary,
     SaleAnalyticsSummary,
@@ -463,6 +465,10 @@ class ReportingCrud:
         current_rows = [r for r in all_rows if cur_start <= r.date_dimension < cur_end]
         previous_rows = [r for r in all_rows if prev_start <= r.date_dimension < prev_end]
 
+        summary = aggregate_rows(current_rows)
+        credit = await self.credit_outstanding(db, business_id=business_id)
+        summary = {**summary, **credit}
+
         return {
             "period": period.value if hasattr(period, "value") else str(period),
             "window": {
@@ -473,7 +479,7 @@ class ReportingCrud:
                 "start": prev_start.isoformat(),
                 "end": prev_end.isoformat(),
             },
-            "summary": aggregate_rows(current_rows),
+            "summary": summary,
             "previous_summary": aggregate_rows(previous_rows),
             "series": [
                 {
@@ -485,9 +491,38 @@ class ReportingCrud:
                     "net_revenue_collected": r.net_revenue_collected,
                     "refund_deductions_volume": r.refund_deductions_volume,
                     "total_completed_orders_count": r.total_completed_orders_count,
+                    "cash_volume": getattr(r, "cash_volume", 0) or 0,
+                    "mpesa_volume": getattr(r, "mpesa_volume", 0) or 0,
+                    "gross_profit": getattr(r, "gross_profit", 0) or 0,
+                    "cogs_volume": getattr(r, "cogs_volume", 0) or 0,
+                    "missing_cost_line_count": getattr(r, "missing_cost_line_count", 0) or 0,
                 }
                 for r in sorted(current_rows, key=lambda x: x.date_dimension)
             ],
+        }
+
+
+    async def credit_outstanding(
+        self,
+        db: AsyncSession,
+        *,
+        business_id: UUID,
+    ) -> dict:
+        """Sum of PENDING_PAYMENT sales (credit issued, not yet collected)."""
+        stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(Sale.id),
+            )
+            .where(Sale.business_id == business_id)
+            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+        )
+        if hasattr(Sale, "deleted_at"):
+            stmt = stmt.where(col(Sale.deleted_at).is_(None))
+        total, count = (await db.exec(stmt)).one()
+        return {
+            "credit_outstanding": float(total or 0),
+            "open_credit_sales": int(count or 0),
         }
 
 
