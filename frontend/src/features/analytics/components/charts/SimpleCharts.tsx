@@ -170,6 +170,130 @@ export function BarChart({
   );
 }
 
+
+/** Revenue (line) + sales count (bars) on independent scales so the graph always moves. */
+export function DualTrendChart({
+  points,
+  height = 200,
+}: {
+  points: { label: string; revenue: number; orders: number }[];
+  height?: number;
+}) {
+  const maxRev = Math.max(...points.map((p) => p.revenue), 1);
+  const maxOrd = Math.max(...points.map((p) => p.orders), 1);
+  const hasData = points.some((p) => p.revenue > 0 || p.orders > 0);
+
+  if (!points.length || !hasData) {
+    return <EmptyChart label="No sales in this period yet" height={height} />;
+  }
+
+  const w = 360;
+  const h = 120;
+  const padT = 10;
+  const padB = 4;
+  const padL = 8;
+  const padR = 8;
+  const innerH = h - padT - padB;
+  const n = points.length;
+  const gap = 4;
+  const slot = (w - padL - padR) / n;
+  const barW = Math.max(4, slot - gap);
+
+  const linePts = points
+    .map((p, i) => {
+      const x = padL + slot * i + slot / 2;
+      const y = padT + innerH - (p.revenue / maxRev) * innerH;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="flex w-full flex-col" style={{ height }}>
+      <div className="mb-1 flex items-center gap-4 text-[10px] text-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-sm bg-brand-accent" /> Sales (count)
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-0.5 w-3 rounded bg-brand-primary" /> Revenue
+        </span>
+      </div>
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="min-h-0 w-full flex-1"
+        role="img"
+        aria-label="Daily sales count and revenue"
+      >
+        {[0.25, 0.5, 0.75].map((t) => {
+          const y = padT + innerH * (1 - t);
+          return (
+            <line
+              key={t}
+              x1={padL}
+              x2={w - padR}
+              y1={y}
+              y2={y}
+              stroke="var(--border)"
+              strokeWidth={0.5}
+              strokeDasharray="4 4"
+              opacity={0.6}
+            />
+          );
+        })}
+        {points.map((p, i) => {
+          const bh = (p.orders / maxOrd) * innerH;
+          const x = padL + slot * i + (slot - barW) / 2;
+          const y = padT + innerH - bh;
+          return (
+            <rect
+              key={"b" + i}
+              x={x}
+              y={y}
+              width={barW}
+              height={Math.max(bh, p.orders > 0 ? 2 : 0)}
+              rx={2}
+              fill="var(--brand-accent)"
+              opacity={p.orders > 0 ? 0.55 : 0.1}
+            >
+              <title>
+                {p.label}: {p.orders} sales · revenue {p.revenue}
+              </title>
+            </rect>
+          );
+        })}
+        <polyline
+          fill="none"
+          stroke="var(--brand-primary)"
+          strokeWidth={2.25}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={linePts}
+        />
+        {points.map((p, i) => {
+          if (p.revenue <= 0) return null;
+          const x = padL + slot * i + slot / 2;
+          const y = padT + innerH - (p.revenue / maxRev) * innerH;
+          return (
+            <circle
+              key={"c" + i}
+              cx={x}
+              cy={y}
+              r={2.5}
+              fill="var(--brand-primary)"
+            />
+          );
+        })}
+      </svg>
+      <div className="mt-1 flex justify-between text-[10px] text-muted">
+        {points.map((p) => (
+          <span key={p.label} className="truncate">
+            {p.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function EmptyChart({ label, height }: { label: string; height: number }) {
   return (
     <div

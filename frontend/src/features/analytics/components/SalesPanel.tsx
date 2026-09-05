@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { KpiCard, KpiRow } from "./KpiCard";
-import { LineChart, BarChart } from "./charts/SimpleCharts";
+import { BarChart, DualTrendChart } from "./charts/SimpleCharts";
 import { formatKES, formatPct, pctChange } from "@/features/analytics/lib/format";
 import type {
   DashboardPayload,
@@ -10,9 +10,8 @@ import type {
 } from "@/features/analytics/hooks/useDashboardData";
 
 /**
- * Sales tab — 15-second pulse only:
- * How much came in? Busy? Ticket size? Making money? When?
- * No insights, expenses placeholders, or equal-weight noise cards.
+ * Sales tab — 15-second pulse:
+ * How much came in? Cash vs credit? Busy? Ticket? Profit? When?
  */
 export function SalesPanel({
   dashboard,
@@ -41,8 +40,6 @@ export function SalesPanel({
   const cash = s?.cash_volume ?? 0;
   const mpesa = s?.mpesa_volume ?? 0;
   const credit = s?.credit_outstanding ?? 0;
-  const mixTotal = cash + mpesa;
-  const hasMix = mixTotal > 0;
 
   const delta = (cur: number, prev: number) => {
     const c = pctChange(cur, prev);
@@ -52,14 +49,27 @@ export function SalesPanel({
     };
   };
 
-  const seriesPoints = useMemo(
-    () =>
-      (dashboard?.series || []).map((pt) => ({
-        label: pt.date,
-        value: Number(pt.net_revenue_collected ?? pt.gross_sales_volume ?? 0),
-      })),
-    [dashboard?.series]
-  );
+  const dualPoints = useMemo(() => {
+    return (dashboard?.series || []).map((pt) => {
+      const raw = pt.date || "";
+      let label = raw;
+      // Prefer short weekday / day label
+      const d = new Date(raw);
+      if (!Number.isNaN(d.getTime())) {
+        label = d.toLocaleDateString("en-KE", {
+          weekday: "short",
+          day: "numeric",
+        });
+      } else if (raw.length >= 10) {
+        label = raw.slice(5); // MM-DD
+      }
+      return {
+        label,
+        revenue: Number(pt.net_revenue_collected ?? pt.gross_sales_volume ?? 0),
+        orders: Number(pt.total_completed_orders_count ?? 0),
+      };
+    });
+  }, [dashboard?.series]);
 
   const hourlyPoints = useMemo(
     () =>
@@ -84,7 +94,6 @@ export function SalesPanel({
 
   return (
     <div className="space-y-4">
-      {/* Primary pulse — four answers only */}
       <KpiRow className="lg:grid-cols-4">
         <KpiCard
           label="Net revenue"
@@ -120,14 +129,33 @@ export function SalesPanel({
         />
       </KpiRow>
 
-      {/* When did money come in */}
+      {/* Always show cash paid; credits when open */}
+      <div className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-card">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+          Settled &amp; open
+        </p>
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
+          <MixStat label="Cash paid" value={cash} />
+          <MixStat label="M-Pesa" value={mpesa} />
+          <MixStat
+            label="Credit open"
+            value={credit}
+            warn={credit > 0}
+            note={credit <= 0 ? "None open" : undefined}
+          />
+        </div>
+      </div>
+
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Daily net revenue
+            Sales &amp; revenue
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Bars = sales count · Line = revenue
           </p>
           <div className="mt-3 min-h-[200px]">
-            <LineChart points={seriesPoints} height={200} />
+            <DualTrendChart points={dualPoints} height={200} />
           </div>
         </div>
         <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
@@ -139,26 +167,6 @@ export function SalesPanel({
           </div>
         </div>
       </div>
-
-      {/* Where the money landed — only when we have signal */}
-      {(hasMix || credit > 0) && (
-        <div className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-card">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Collected
-          </p>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-            {hasMix && (
-              <>
-                <MixStat label="Cash" value={cash} share={(cash / mixTotal) * 100} />
-                <MixStat label="M-Pesa" value={mpesa} share={(mpesa / mixTotal) * 100} />
-              </>
-            )}
-            {credit > 0 && (
-              <MixStat label="Credit open" value={credit} warn />
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -166,25 +174,23 @@ export function SalesPanel({
 function MixStat({
   label,
   value,
-  share,
   warn,
+  note,
 }: {
   label: string;
   value: number;
-  share?: number;
   warn?: boolean;
+  note?: string;
 }) {
   return (
-    <div className="flex items-baseline gap-2">
-      <span className={warn ? "text-amber-600" : "text-muted"}>{label}</span>
-      <span className="font-mono font-semibold tabular-nums text-foreground">
+    <div className="flex min-w-[7rem] flex-col gap-0.5">
+      <span className={warn ? "text-xs text-amber-600" : "text-xs text-muted"}>
+        {label}
+      </span>
+      <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
         {formatKES(value)}
       </span>
-      {typeof share === "number" && (
-        <span className="text-[11px] tabular-nums text-muted">
-          {share.toFixed(0)}%
-        </span>
-      )}
+      {note && <span className="text-[11px] text-muted">{note}</span>}
     </div>
   );
 }
@@ -197,6 +203,7 @@ function PanelSkeleton() {
           <div key={i} className="min-h-[88px] rounded-xl bg-border/40" />
         ))}
       </div>
+      <div className="h-16 rounded-xl bg-border/40" />
       <div className="grid gap-3 lg:grid-cols-2">
         <div className="min-h-[240px] rounded-xl bg-border/40" />
         <div className="min-h-[240px] rounded-xl bg-border/40" />
