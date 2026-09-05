@@ -899,6 +899,68 @@ class DataDeletionRequest(BaseMixin, table=True):
     )
 
 
+
+
+# =========================================================
+# 7b. DATA ARCHIVE JOBS (soft-delete retention pipeline)
+# =========================================================
+
+class DataArchiveJob(BaseMixin, table=True):
+    """
+    Tracks archive → notify → purge lifecycle for soft-deleted (or scoped) data.
+
+    Production purge must only run when status reaches NOTIFIED (or ARCHIVED with
+    notify skipped by policy) and settings.archive_enabled is True.
+    """
+    __tablename__ = "data_archive_jobs"
+
+    organization_id: UUID = Field(
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    business_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="businesses.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+
+    status: str = Field(
+        default="PENDING",
+        index=True,
+        description="PENDING | ARCHIVING | ARCHIVED | NOTIFIED | PURGED | FAILED",
+    )
+    # Snapshot of plan retention at job creation time
+    retention_months: int = Field(default=6)
+    entity_scope: str = Field(
+        default="soft_deleted_catalog",
+        description="soft_deleted_catalog | organization_offboard | custom",
+    )
+    schema_version: str = Field(default="1")
+
+    archive_object_key: Optional[str] = Field(default=None, max_length=512)
+    archive_byte_size: Optional[int] = Field(default=None)
+    download_url_expires_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    notified_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    purged_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    error_message: Optional[str] = Field(default=None)
+    # Manifest / entity counts for audit
+    manifest: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB),
+    )
+
+
 # =========================================================
 # 8. AUDITING  (who did what, from → to)
 # =========================================================

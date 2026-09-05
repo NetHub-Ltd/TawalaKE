@@ -301,9 +301,7 @@ async def delete_product(
     """
     DELETE /products/{product_id}
 
-    PURPOSE:
-    --------
-    Safely purges a physical product while avoiding orphan record integrity states.
+    Soft-deletes the product (sets deleted_at). Stock history and sale snapshots are retained.
     """
     target_product = await product_crud.get(db, product_id)
     if not target_product:
@@ -316,9 +314,9 @@ async def delete_product(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"code": "RBAC_DENIED", "message": "Product not in your organization"},
         )
-        
+
     business_id = target_product.business_id
-    await product_crud.delete_product(product_id, db)
+    await product_crud.delete_product(product_id, db, actor_id=_user.id)
     
     # Cascade invalidations completely through isolated namespaces immediately
     await purge_cache_namespace(redis_client, namespace="products", product_id=product_id)
