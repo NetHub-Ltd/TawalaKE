@@ -32,11 +32,9 @@ async def test_dashboard_from_rollups(mock_session):
     rollup_result = MagicMock()
     rollup_result.all.return_value = [row]
 
-    # credit_outstanding → .one() → (total, count)
     credit_result = MagicMock()
     credit_result.one.return_value = (2500.0, 3)
 
-    # expense_crud.period_summary → total row then category rows
     expense_total_result = MagicMock()
     expense_total_result.one.return_value = (5000.0, 2)
     expense_cat_result = MagicMock()
@@ -50,14 +48,6 @@ async def test_dashboard_from_rollups(mock_session):
             expense_cat_result,
         ]
     )
-    )
-    rollup_result = MagicMock()
-    rollup_result.all.return_value = [row]
-
-    credit_result = MagicMock()
-    credit_result.one.return_value = (2500.0, 3)
-
-    mock_session.exec = AsyncMock(side_effect=[rollup_result, credit_result])
 
     out = await reporting_crud.dashboard(
         mock_session, business_id=uuid4(), period=AnalyticsPeriod.DAYS_7
@@ -67,8 +57,8 @@ async def test_dashboard_from_rollups(mock_session):
     assert out["period"] == "7d"
     assert out["summary"]["net_revenue_collected"] == 111.0
     assert out["summary"]["credit_outstanding"] == 2500.0
-    assert out["summary"]["expenses_total"] == 5000.0
-    assert out["summary"]["profit_after_expenses"] == pytest.approx(71.0 - 5000.0)
     assert out["summary"]["open_credit_sales"] == 3
     assert out["summary"]["cash_volume"] == 80.0
+    assert out["summary"]["expenses_total"] == 5000.0
+    assert out["summary"]["profit_after_expenses"] == pytest.approx(71.0 - 5000.0)
     assert len(out["series"]) == 1
