@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard
 from app.core.config import settings
 
 from app.utils.logging import logger
@@ -34,6 +34,20 @@ api_router.include_router(
     prefix="/business",
     tags=["Store Management"],
     dependencies=_commerce_gate,
+)
+
+api_router.include_router(
+    reports.router,
+    prefix="/reports",
+    tags=["Reporting & Analytics"],
+    dependencies=[
+        Depends(require_active_plan),
+        Depends(require_paywall("daily_sales_report", "pos_and_sales")),
+    ],
+)
+api_router.include_router(
+    ws_dashboard.router,
+    tags=["Dashboard WebSocket"],
 )
 # Staff management (organization-scoped). Sole dedicated surface.
 api_router.include_router(

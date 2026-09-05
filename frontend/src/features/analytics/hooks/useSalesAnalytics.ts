@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 // Types (match backend envelope + payload)
 // ---------------------------------------------------------------------------
 
-/** Period values accepted by GET /api/v1/business/analytics */
+/** Period values accepted by GET /api/v1/reports/{businessId}/dashboard */
 export type AnalyticsRange = "today" | "yesterday" | "3d" | "7d" | "month";
 
 export type AnalyticsWindow = {

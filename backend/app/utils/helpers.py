@@ -64,6 +64,7 @@ class AnalyticsPeriod(str, Enum):
     DAYS_3 = "3d"
     DAYS_7 = "7d"
     MONTH = "month"
+    CUSTOM = "custom"
 
 
 def period_windows(

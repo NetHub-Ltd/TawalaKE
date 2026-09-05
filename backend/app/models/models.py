@@ -605,8 +605,96 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     net_revenue_collected: float = Field(default=0.0)
     refund_deductions_volume: float = Field(default=0.0)
     total_completed_orders_count: int = Field(default=0)
+    # Additive — gross profit from line cost_price_at_sale (not net of expenses)
+    cogs_volume: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
 
     business: Business = Relationship(back_populates="analytics_summaries")
+
+
+
+class ProductSalesSummary(BaseMixin, table=True):
+    """Pre-aggregated product performance per business per calendar day (UTC)."""
+    __tablename__ = "product_sales_summaries"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "date_dimension",
+            "product_id",
+            name="uq_product_sales_day",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    date_dimension: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    product_id: UUID = Field(index=True)
+    sku: str = Field(default="", max_length=50, index=True)
+    name: str = Field(default="", max_length=150)
+
+    quantity_sold: float = Field(default=0.0)
+    revenue: float = Field(default=0.0)
+    cogs: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
+    discount_amount: float = Field(default=0.0)
+    line_count: int = Field(default=0)
+
+
+class StaffSalesSummary(BaseMixin, table=True):
+    """Pre-aggregated cashier performance per business per calendar day (UTC)."""
+    __tablename__ = "staff_sales_summaries"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "date_dimension",
+            "staff_id",
+            name="uq_staff_sales_day",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    date_dimension: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    staff_id: UUID = Field(foreign_key="staff.id", index=True, ondelete="CASCADE")
+
+    orders_count: int = Field(default=0)
+    revenue: float = Field(default=0.0)
+    cogs: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
+    discounts: float = Field(default=0.0)
+
+
+class BusinessSalesHourly(BaseMixin, table=True):
+    """Hourly business revenue bars for near-realtime dashboard charts."""
+    __tablename__ = "business_sales_hourly"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "hour_dimension",
+            name="uq_business_sales_hour",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    hour_dimension: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), index=True),
+        description="UTC hour floor of the sale.",
+    )
+
+    gross_sales_volume: float = Field(default=0.0)
+    net_revenue_collected: float = Field(default=0.0)
+    cogs_volume: float = Field(default=0.0)
+    gross_profit: float = Field(default=0.0)
+    total_completed_orders_count: int = Field(default=0)
+    total_discounts_granted: float = Field(default=0.0)
+
 
 
 # =========================================================
@@ -808,6 +896,68 @@ class DataDeletionRequest(BaseMixin, table=True):
         sa_column=Column(JSONB),
         default_factory=dict,
         description="Snapshot of anonymized/deleted entities and fields."
+    )
+
+
+
+
+# =========================================================
+# 7b. DATA ARCHIVE JOBS (soft-delete retention pipeline)
+# =========================================================
+
+class DataArchiveJob(BaseMixin, table=True):
+    """
+    Tracks archive → notify → purge lifecycle for soft-deleted (or scoped) data.
+
+    Production purge must only run when status reaches NOTIFIED (or ARCHIVED with
+    notify skipped by policy) and settings.archive_enabled is True.
+    """
+    __tablename__ = "data_archive_jobs"
+
+    organization_id: UUID = Field(
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    business_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="businesses.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+
+    status: str = Field(
+        default="PENDING",
+        index=True,
+        description="PENDING | ARCHIVING | ARCHIVED | NOTIFIED | PURGED | FAILED",
+    )
+    # Snapshot of plan retention at job creation time
+    retention_months: int = Field(default=6)
+    entity_scope: str = Field(
+        default="soft_deleted_catalog",
+        description="soft_deleted_catalog | organization_offboard | custom",
+    )
+    schema_version: str = Field(default="1")
+
+    archive_object_key: Optional[str] = Field(default=None, max_length=512)
+    archive_byte_size: Optional[int] = Field(default=None)
+    download_url_expires_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    notified_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    purged_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    error_message: Optional[str] = Field(default=None)
+    # Manifest / entity counts for audit
+    manifest: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB),
     )
 
 

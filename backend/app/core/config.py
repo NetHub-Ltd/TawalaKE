@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     rbac_cache_ttl_sec: int = 120
     audit_enabled: bool = True
 
+    # Soft-delete retention archive pipeline (purge/email off until ready)
+    archive_enabled: bool = False
+    archive_signed_url_ttl_days: int = 7
+    data_retention_fallback_months: int = 6
+
     resource_server: str
     allowed_origins: str
 
