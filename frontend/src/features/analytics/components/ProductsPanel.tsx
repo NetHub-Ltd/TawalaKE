@@ -39,7 +39,7 @@ export function ProductsPanel({
   }, [items]);
 
   if (loading && !products) {
-    return <div className="h-64 animate-pulse rounded-xl bg-slate-100" />;
+    return <div className="h-64 animate-pulse rounded-xl bg-border/40" />;
   }
 
   return (
@@ -77,15 +77,15 @@ export function ProductsPanel({
           {best.map((row) => (
             <div
               key={row.product_id}
-              className="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5 text-sm last:border-0"
+              className="flex items-center justify-between gap-3 border-b border-border/40 py-2.5 text-sm last:border-0"
             >
               <div className="min-w-0">
-                <p className="truncate font-medium text-slate-900">{row.name || row.sku || "Product"}</p>
-                <p className="text-xs text-slate-500">{row.sku}</p>
+                <p className="truncate font-medium text-foreground">{row.name || row.sku || "Product"}</p>
+                <p className="text-xs text-muted">{row.sku}</p>
               </div>
               <div className="shrink-0 text-right">
-                <p className="font-medium tabular-nums text-teal-700">{formatKES(row.gross_profit)}</p>
-                <p className="text-xs text-slate-500">{(row.margin_pct ?? 0).toFixed(0)}%</p>
+                <p className="font-medium tabular-nums text-brand-primary">{formatKES(row.gross_profit)}</p>
+                <p className="text-xs text-muted">{(row.margin_pct ?? 0).toFixed(0)}%</p>
               </div>
             </div>
           ))}
@@ -95,9 +95,9 @@ export function ProductsPanel({
           {attention.map((row) => (
             <div
               key={row.product_id}
-              className="border-b border-slate-100 py-2.5 text-sm last:border-0"
+              className="border-b border-border/40 py-2.5 text-sm last:border-0"
             >
-              <p className="font-medium text-slate-900">{row.name || row.sku}</p>
+              <p className="font-medium text-foreground">{row.name || row.sku}</p>
               <p className="text-xs text-amber-600">
                 Margin {(row.margin_pct ?? 0).toFixed(0)}% · {formatKES(row.revenue)} revenue
               </p>
@@ -105,7 +105,7 @@ export function ProductsPanel({
           ))}
           {missingCost > 0 && (
             <div className="py-2.5 text-sm">
-              <p className="font-medium text-slate-900">Unknown cost SKUs</p>
+              <p className="font-medium text-foreground">Unknown cost SKUs</p>
               <p className="text-xs text-amber-600">{missingCost} lines missing cost in rollups</p>
             </div>
           )}
@@ -119,13 +119,13 @@ export function ProductsPanel({
 
 function ListCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+    <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">{title}</p>
       <div className="mt-2">{children}</div>
     </div>
   );
 }
 
 function EmptyRow({ text = "No product sales in this period" }: { text?: string }) {
-  return <p className="py-6 text-center text-sm text-slate-400">{text}</p>;
+  return <p className="py-6 text-center text-sm text-muted">{text}</p>;
 }

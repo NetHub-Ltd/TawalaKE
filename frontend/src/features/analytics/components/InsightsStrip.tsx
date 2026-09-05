@@ -12,15 +12,15 @@ const severityDot: Record<string, string> = {
 export function InsightsStrip({ insights }: { insights: InsightCard[] }) {
   if (!insights?.length) {
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+      <div className="rounded-xl border border-dashed border-border/50 bg-card px-4 py-3 text-sm text-muted">
         No insights for this period yet.
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Insights</p>
+    <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted">Insights</p>
       <ul className="mt-3 space-y-2">
         {insights.slice(0, 5).map((ins) => (
           <li key={ins.code + ins.title} className="flex gap-2 text-sm text-slate-700">
@@ -29,8 +29,8 @@ export function InsightsStrip({ insights }: { insights: InsightCard[] }) {
               aria-hidden
             />
             <span>
-              <span className="font-medium text-slate-900">{ins.title}</span>
-              {ins.detail ? <span className="text-slate-600"> — {ins.detail}</span> : null}
+              <span className="font-medium text-foreground">{ins.title}</span>
+              {ins.detail ? <span className="text-muted"> — {ins.detail}</span> : null}
             </span>
           </li>
         ))}

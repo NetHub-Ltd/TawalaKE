@@ -30,7 +30,7 @@ export function OverviewClient({
   organizationId: propOrgId,
   businessId: propBusinessId,
 }: OverviewClientProps) {
-  const { businessId: ctxBusinessId, organizationId: ctxOrgId, businessName } =
+  const { businessId: ctxBusinessId, organizationId: ctxOrgId } =
     useBusinessContext();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -47,7 +47,7 @@ export function OverviewClient({
   const tab: DashboardTab =
     tabParam && VALID_TABS.has(tabParam) ? tabParam : "sales";
 
-  const [period, setPeriod] = useState<AnalyticsRange>("7d");
+  const [period, setPeriod] = useState<AnalyticsRange>("today");
 
   const setTab = (next: DashboardTab) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -58,25 +58,14 @@ export function OverviewClient({
   };
 
   const dash = useSalesDashboard(normalizedBusinessId, period);
-  const hourly = useHourlyReport(normalizedBusinessId, period, tab === "sales");
+  const hourly = useHourlyReport(normalizedBusinessId, period, true);
   const products = useProductsReport(
     normalizedBusinessId,
     period,
-    tab === "products"
+    true
   );
-  const staff = useStaffReport(normalizedBusinessId, period, tab === "staff");
+  const staff = useStaffReport(normalizedBusinessId, period, true);
   const insights = useInsightsReport(normalizedBusinessId, period, true);
-
-  const branchName = businessName || "Business";
-
-  const periodLabel =
-    period === "today"
-      ? "today"
-      : period === "3d"
-        ? "last 3 days"
-        : period === "month"
-          ? "this month"
-          : "last 7 days";
 
   const anyError = dash.isError || products.isError || staff.isError;
   const errorMessage =
@@ -86,19 +75,9 @@ export function OverviewClient({
     "Failed to load dashboard";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Overview
-          </p>
-          <h1 className="text-xl font-semibold text-slate-900">{branchName}</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            {tab === "sales" && `Sales snapshot · ${periodLabel}`}
-            {tab === "products" && `Product performance · ${periodLabel}`}
-            {tab === "staff" && `Staff contribution · ${periodLabel}`}
-          </p>
-        </div>
+    <div className="flex h-full min-h-0 w-full flex-col gap-3 px-1 pb-3 pt-1 sm:px-2">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2">
+        <DashboardTabs value={tab} onChange={setTab} />
         <div className="flex items-center gap-2">
           <PeriodPills value={period} onChange={setPeriod} />
           <button
@@ -110,7 +89,7 @@ export function OverviewClient({
               staff.refetch();
               insights.refetch();
             }}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
           >
             {dash.isFetching ? (
@@ -122,10 +101,8 @@ export function OverviewClient({
         </div>
       </div>
 
-      <DashboardTabs value={tab} onChange={setTab} />
-
       {anyError && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="rounded-xl border border-rose-200/80 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
           {errorMessage}
           <button
             type="button"
@@ -140,7 +117,7 @@ export function OverviewClient({
       <div
         role="tabpanel"
         aria-labelledby={`tab-${tab}`}
-        className="min-h-[320px]"
+        className="min-h-[480px] flex-1"
       >
         {tab === "sales" && (
           <SalesPanel
@@ -168,16 +145,16 @@ export function OverviewClient({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-4 text-sm">
+      <div className="flex shrink-0 flex-wrap gap-2 border-t border-border/40 pt-3 text-sm">
         <Link
           href={`/org/${normalizedOrgId}/${normalizedBusinessId}/terminal`}
-          className="rounded-lg bg-teal-600 px-3 py-1.5 font-medium text-white hover:bg-teal-700"
+          className="rounded-lg bg-brand-primary px-3 py-1.5 font-medium text-white hover:opacity-90"
         >
           New sale
         </Link>
         <Link
           href={`/org/${normalizedOrgId}/${normalizedBusinessId}/sale-history`}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-border/60 bg-card px-3 py-1.5 font-medium text-foreground hover:bg-background"
         >
           Sale history
         </Link>

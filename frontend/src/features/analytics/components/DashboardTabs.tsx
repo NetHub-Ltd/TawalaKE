@@ -19,7 +19,7 @@ export function DashboardTabs({
   onChange: (t: DashboardTab) => void;
 }) {
   return (
-    <div role="tablist" aria-label="Dashboard sections" className="flex gap-6 border-b border-slate-200">
+    <div role="tablist" aria-label="Dashboard sections" className="flex gap-6 border-b border-border/50">
       {TABS.map((tab) => {
         const active = tab.id === value;
         return (
@@ -32,12 +32,12 @@ export function DashboardTabs({
             onClick={() => onChange(tab.id)}
             className={clsx(
               "relative -mb-px pb-3 text-sm font-medium transition-colors",
-              active ? "text-slate-900" : "text-slate-500 hover:text-slate-800"
+              active ? "text-foreground" : "text-muted hover:text-slate-800"
             )}
           >
             {tab.label}
             {active && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-teal-600" />
+              <span className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-brand-primary" />
             )}
           </button>
         );

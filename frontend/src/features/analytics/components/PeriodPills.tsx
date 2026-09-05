@@ -22,7 +22,7 @@ export function PeriodPills({
     <div
       role="group"
       aria-label="Report period"
-      className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1"
+      className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card p-1"
     >
       {OPTIONS.map((opt) => {
         const active = opt.value === value;
@@ -34,8 +34,8 @@ export function PeriodPills({
             className={clsx(
               "rounded-full px-3 py-1 text-xs font-medium transition-colors",
               active
-                ? "bg-teal-600 text-white shadow-sm"
-                : "text-slate-600 hover:bg-white hover:text-slate-900"
+                ? "bg-brand-accent text-white shadow-sm"
+                : "text-muted hover:bg-background hover:text-foreground"
             )}
             aria-pressed={active}
           >
