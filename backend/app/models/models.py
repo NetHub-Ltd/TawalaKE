@@ -42,7 +42,20 @@ class PaymentMethod(str, Enum):
     CARD = "CARD"
 
 
+class ExpenseCategory(str, Enum):
+    RENT = "RENT"
+    UTILITIES = "UTILITIES"
+    SALARIES = "SALARIES"
+    TRANSPORT = "TRANSPORT"
+    SUPPLIES = "SUPPLIES"
+    MARKETING = "MARKETING"
+    MAINTENANCE = "MAINTENANCE"
+    TAXES = "TAXES"
+    OTHER = "OTHER"
+
+
 class SaleStatus(str, Enum):
+
     PENDING_PAYMENT = "PENDING_PAYMENT"
     COMPLETED = "COMPLETED"
     REFUNDED = "REFUNDED"
@@ -911,6 +924,50 @@ class DataDeletionRequest(BaseMixin, table=True):
 # =========================================================
 
 
+
+
+
+class Expense(BaseMixin, table=True):
+    """
+    Business operating expense (opex) — not COGS.
+    Used for period expense totals and gross-profit-after-expenses views.
+    """
+    __tablename__ = "expenses"
+
+    organization_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    business_id: UUID = Field(
+        foreign_key="businesses.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    recorded_by: Optional[UUID] = Field(
+        default=None,
+        foreign_key="staff.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+
+    category: ExpenseCategory = Field(
+        default=ExpenseCategory.OTHER,
+        sa_column=Column(SAEnum(ExpenseCategory, name="expense_category_enum")),
+    )
+    amount: float = Field(ge=0, description="Expense amount in business currency")
+    currency: str = Field(default="KES", max_length=3)
+    # When the expense was incurred (business day), not only created_at
+    incurred_on: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), index=True),
+        description="Business date/time the expense applies to.",
+    )
+    vendor: Optional[str] = Field(default=None, max_length=150)
+    notes: Optional[str] = Field(default=None, max_length=500)
+    reference: Optional[str] = Field(default=None, max_length=100, index=True)
+
+    deleted_by: Optional[UUID] = Field(default=None, index=True)
 
 class AnalyticsOutbox(BaseMixin, table=True):
     """

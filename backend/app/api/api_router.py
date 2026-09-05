@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses
 from app.core.config import settings
 
 from app.utils.logging import logger
@@ -48,6 +48,15 @@ api_router.include_router(
 api_router.include_router(
     ws_dashboard.router,
     tags=["Dashboard WebSocket"],
+)
+api_router.include_router(
+    expenses.router,
+    prefix="/expenses",
+    tags=["Expense Tracker"],
+    dependencies=[
+        Depends(require_active_plan),
+        Depends(require_paywall("expense_tracking")),
+    ],
 )
 # Staff management (organization-scoped). Sole dedicated surface.
 api_router.include_router(
