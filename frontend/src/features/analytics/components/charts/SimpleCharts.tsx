@@ -9,7 +9,7 @@ export function LineChart({
   points: { label: string; value: number }[];
   height?: number;
 }) {
-  const { line, area, max, hasData } = useMemo(() => {
+  const { line, area, hasData } = useMemo(() => {
     const vals = points.map((p) => p.value);
     const maxV = Math.max(...vals, 1);
     const has = vals.some((v) => v > 0);
@@ -22,7 +22,7 @@ export function LineChart({
     });
     const linePts = coords.map((c) => `${c.x},${c.y}`).join(" ");
     const areaPts = `0,${h} ${linePts} ${w},${h}`;
-    return { line: linePts, area: areaPts, max: maxV, hasData: has, coords };
+    return { line: linePts, area: areaPts, hasData: has };
   }, [points]);
 
   if (!points.length || !hasData) {
