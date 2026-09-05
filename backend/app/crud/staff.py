@@ -5,10 +5,11 @@ Onboarding (pending OWNER) also lives here so staff creation is not split across
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Type
 from uuid import UUID, uuid4
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy.orm import selectinload
 from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -550,6 +551,33 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
         logger.info(
             f"Created pending Staff: {staff.id} for Org: {staff.organization_id} (active=False)"
         )
+        return staff
+
+    async def soft_delete_staff(
+        self,
+        db: AsyncSession,
+        *,
+        staff_id: UUID,
+        actor_id: Optional[UUID] = None,
+    ) -> Staff:
+        """
+        Soft-delete staff: set deleted_at, deactivate, free unique email for re-invite.
+        Sales retain cashier_id; do not hard-delete.
+        """
+        staff = await self.get(db, staff_id, include_deleted=False)
+        if staff is None or staff.deleted_at is not None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff not found")
+
+        staff.deleted_at = datetime.now(timezone.utc)
+        if actor_id is not None:
+            staff.deleted_by = actor_id
+        staff.active = False
+        # Release global unique email constraint while preserving auditability
+        original = staff.email or ""
+        staff.email = f"deleted+{staff.id}.{original}"[:255]
+        db.add(staff)
+        await db.flush()
+        await db.refresh(staff)
         return staff
 
 
