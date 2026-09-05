@@ -33,6 +33,7 @@ from app.schemas.reporting import (
     StaffRow,
 )
 from app.utils.helpers import AnalyticsPeriod, period_windows, aggregate_rows
+from app.crud.expense import expense_crud
 
 
 def _margin(profit: float, revenue: float) -> float:
@@ -468,6 +469,22 @@ class ReportingCrud:
         summary = aggregate_rows(current_rows)
         credit = await self.credit_outstanding(db, business_id=business_id)
         summary = {**summary, **credit}
+        try:
+            exp = await expense_crud.period_summary(
+                db, business_id=business_id, start=cur_start, end=cur_end
+            )
+            summary["expenses_total"] = exp.total_amount
+            summary["expenses_count"] = exp.count
+            gp = float(summary.get("gross_profit") or 0)
+            summary["profit_after_expenses"] = round(gp - float(exp.total_amount or 0), 2)
+            summary["expenses_by_category"] = [
+                c.model_dump() for c in exp.by_category
+            ]
+        except Exception:
+            summary.setdefault("expenses_total", 0.0)
+            summary.setdefault("expenses_count", 0)
+            summary.setdefault("profit_after_expenses", summary.get("gross_profit") or 0)
+            summary.setdefault("expenses_by_category", [])
 
         return {
             "period": period.value if hasattr(period, "value") else str(period),
