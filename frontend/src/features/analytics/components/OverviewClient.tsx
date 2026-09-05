@@ -65,7 +65,11 @@ export function OverviewClient({
     true
   );
   const staff = useStaffReport(normalizedBusinessId, period, true);
-  const insights = useInsightsReport(normalizedBusinessId, period, true);
+  const insights = useInsightsReport(
+    normalizedBusinessId,
+    period,
+    tab === "products" || tab === "staff"
+  );
 
   const anyError = dash.isError || products.isError || staff.isError;
   const errorMessage =
@@ -123,7 +127,6 @@ export function OverviewClient({
           <SalesPanel
             dashboard={dash.data}
             hourly={hourly.data}
-            insights={insights.data}
             loading={dash.isLoading}
           />
         )}

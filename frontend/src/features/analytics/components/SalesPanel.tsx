@@ -2,90 +2,55 @@
 
 import React, { useMemo } from "react";
 import { KpiCard, KpiRow } from "./KpiCard";
-import { InsightsStrip } from "./InsightsStrip";
 import { LineChart, BarChart } from "./charts/SimpleCharts";
 import { formatKES, formatPct, pctChange } from "@/features/analytics/lib/format";
 import type {
   DashboardPayload,
   HourlyPayload,
-  InsightsPayload,
 } from "@/features/analytics/hooks/useDashboardData";
 
+/**
+ * Sales tab — 15-second pulse only:
+ * How much came in? Busy? Ticket size? Making money? When?
+ * No insights, expenses placeholders, or equal-weight noise cards.
+ */
 export function SalesPanel({
   dashboard,
   hourly,
-  insights,
   loading,
 }: {
   dashboard?: DashboardPayload;
   hourly?: HourlyPayload;
-  insights?: InsightsPayload;
   loading?: boolean;
 }) {
   const s = dashboard?.summary;
   const p = dashboard?.previous_summary;
 
-  const kpis = useMemo(() => {
-    const rev = s?.net_revenue_collected ?? 0;
-    const prevRev = p?.net_revenue_collected ?? 0;
-    const cash = s?.cash_volume ?? 0;
-    const prevCash = p?.cash_volume ?? 0;
-    const gp = s?.gross_profit ?? 0;
-    const prevGp = p?.gross_profit ?? 0;
-    const orders = s?.total_completed_orders_count ?? 0;
-    const prevOrders = p?.total_completed_orders_count ?? 0;
-    const aov = s?.average_order_value ?? (orders ? rev / orders : 0);
-    const credit = s?.credit_outstanding ?? 0;
-    const expenses = s?.expenses_total;
-    const hasExpenses = expenses !== undefined && expenses !== null;
+  const rev = s?.net_revenue_collected ?? 0;
+  const prevRev = p?.net_revenue_collected ?? 0;
+  const orders = s?.total_completed_orders_count ?? 0;
+  const prevOrders = p?.total_completed_orders_count ?? 0;
+  const aov = s?.average_order_value ?? (orders ? rev / orders : 0);
+  const prevAov =
+    p?.average_order_value ??
+    (prevOrders ? (p?.net_revenue_collected ?? 0) / prevOrders : 0);
+  const gp = s?.gross_profit ?? 0;
+  const prevGp = p?.gross_profit ?? 0;
+  const costsMissing = rev > 0 && gp === 0;
 
-    const d = (cur: number, prev: number) => {
-      const c = pctChange(cur, prev);
-      return {
-        delta: formatPct(c),
-        tone: (c >= 0 ? "good" : "bad") as "good" | "bad",
-      };
+  const cash = s?.cash_volume ?? 0;
+  const mpesa = s?.mpesa_volume ?? 0;
+  const credit = s?.credit_outstanding ?? 0;
+  const mixTotal = cash + mpesa;
+  const hasMix = mixTotal > 0;
+
+  const delta = (cur: number, prev: number) => {
+    const c = pctChange(cur, prev);
+    return {
+      delta: formatPct(c),
+      tone: (c >= 0 ? "good" : "bad") as "good" | "bad",
     };
-
-    return [
-      {
-        label: "Net revenue",
-        value: formatKES(rev),
-        ...d(rev, prevRev),
-      },
-      {
-        label: "Cash collected",
-        value: formatKES(cash),
-        ...d(cash, prevCash),
-      },
-      {
-        label: "Credit open",
-        value: formatKES(credit),
-        delta: credit > 0 ? "collect focus" : "clear",
-        tone: (credit > 0 ? "warn" : "muted") as "warn" | "muted",
-      },
-      {
-        label: "Gross profit",
-        value: formatKES(gp),
-        ...d(gp, prevGp),
-        hint:
-          rev > 0 ? `margin ${((gp / rev) * 100).toFixed(1)}%` : undefined,
-      },
-      {
-        label: "Orders / AOV",
-        value: `${orders.toLocaleString()} · ${formatKES(aov)}`,
-        ...d(orders, prevOrders),
-      },
-      {
-        label: "Expenses",
-        value: hasExpenses ? formatKES(expenses as number) : "—",
-        delta: hasExpenses
-          ? `after exp. ${formatKES(s?.profit_after_expenses ?? gp - (expenses as number))}`
-          : "Tracker when on plan",
-        tone: "muted" as const,
-      },
-    ];
-  }, [s, p]);
+  };
 
   const seriesPoints = useMemo(
     () =>
@@ -98,30 +63,65 @@ export function SalesPanel({
 
   const hourlyPoints = useMemo(
     () =>
-      (hourly?.series || []).map((pt, i) => ({
-        label: pt.hour || String(i),
-        value: Number(pt.net_revenue ?? 0),
-      })),
+      (hourly?.series || []).map((pt, i) => {
+        const raw = pt.hour || String(i);
+        let label = raw;
+        const d = new Date(raw);
+        if (!Number.isNaN(d.getTime())) {
+          label = d.toLocaleTimeString("en-KE", {
+            hour: "2-digit",
+            hour12: false,
+          });
+        }
+        return { label, value: Number(pt.net_revenue ?? 0) };
+      }),
     [hourly?.series]
   );
-
-  const mpesa = s?.mpesa_volume ?? 0;
-  const cash = s?.cash_volume ?? 0;
-  const mixTotal = cash + mpesa || 1;
 
   if (loading && !dashboard) {
     return <PanelSkeleton />;
   }
 
   return (
-    <div className="space-y-5">
-      <KpiRow>
-        {kpis.map((k) => (
-          <KpiCard key={k.label} {...k} />
-        ))}
+    <div className="space-y-4">
+      {/* Primary pulse — four answers only */}
+      <KpiRow className="lg:grid-cols-4">
+        <KpiCard
+          label="Net revenue"
+          value={formatKES(rev)}
+          {...delta(rev, prevRev)}
+          emphasis
+        />
+        <KpiCard
+          label="Orders"
+          value={orders.toLocaleString()}
+          {...delta(orders, prevOrders)}
+        />
+        <KpiCard
+          label="Avg ticket"
+          value={formatKES(aov)}
+          {...delta(aov, prevAov)}
+        />
+        <KpiCard
+          label="Gross profit"
+          value={costsMissing ? "—" : formatKES(gp)}
+          {...(costsMissing
+            ? {
+                hint: "Add product costs to track margin",
+                tone: "muted" as const,
+              }
+            : {
+                ...delta(gp, prevGp),
+                hint:
+                  rev > 0
+                    ? `margin ${((gp / rev) * 100).toFixed(0)}%`
+                    : undefined,
+              })}
+        />
       </KpiRow>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* When did money come in */}
+      <div className="grid gap-3 lg:grid-cols-2">
         <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
             Daily net revenue
@@ -132,7 +132,7 @@ export function SalesPanel({
         </div>
         <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
           <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Hourly bars
+            Hourly revenue
           </p>
           <div className="mt-3 min-h-[200px]">
             <BarChart points={hourlyPoints} height={200} />
@@ -140,51 +140,50 @@ export function SalesPanel({
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
-            Payment mix
+      {/* Where the money landed — only when we have signal */}
+      {(hasMix || credit > 0) && (
+        <div className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-card">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+            Collected
           </p>
-          <div className="mt-4 space-y-3">
-            <MixRow label="Cash" value={cash} pct={(cash / mixTotal) * 100} />
-            <MixRow label="M-Pesa" value={mpesa} pct={(mpesa / mixTotal) * 100} />
-            <MixRow
-              label="Credit open"
-              value={s?.credit_outstanding ?? 0}
-              pct={0}
-              note="Not in collected mix"
-            />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+            {hasMix && (
+              <>
+                <MixStat label="Cash" value={cash} share={(cash / mixTotal) * 100} />
+                <MixStat label="M-Pesa" value={mpesa} share={(mpesa / mixTotal) * 100} />
+              </>
+            )}
+            {credit > 0 && (
+              <MixStat label="Credit open" value={credit} warn />
+            )}
           </div>
         </div>
-        <InsightsStrip insights={insights?.insights || []} />
-      </div>
+      )}
     </div>
   );
 }
 
-function MixRow({
+function MixStat({
   label,
   value,
-  pct,
-  note,
+  share,
+  warn,
 }: {
   label: string;
   value: number;
-  pct: number;
-  note?: string;
+  share?: number;
+  warn?: boolean;
 }) {
   return (
-    <div>
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-muted">{label}</span>
-        <span className="font-medium tabular-nums text-foreground">{formatKES(value)}</span>
-      </div>
-      {note ? (
-        <p className="mt-1 text-xs text-muted">{note}</p>
-      ) : (
-        <div className="mt-1 h-2 overflow-hidden rounded-full bg-border/40">
-          <div className="h-full rounded-full bg-brand-accent" style={{ width: `${Math.min(100, pct)}%` }} />
-        </div>
+    <div className="flex items-baseline gap-2">
+      <span className={warn ? "text-amber-600" : "text-muted"}>{label}</span>
+      <span className="font-mono font-semibold tabular-nums text-foreground">
+        {formatKES(value)}
+      </span>
+      {typeof share === "number" && (
+        <span className="text-[11px] tabular-nums text-muted">
+          {share.toFixed(0)}%
+        </span>
       )}
     </div>
   );
@@ -193,14 +192,14 @@ function MixRow({
 function PanelSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-24 rounded-xl bg-border/40" />
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="min-h-[88px] rounded-xl bg-border/40" />
         ))}
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="h-48 rounded-xl bg-border/40" />
-        <div className="h-48 rounded-xl bg-border/40" />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="min-h-[240px] rounded-xl bg-border/40" />
+        <div className="min-h-[240px] rounded-xl bg-border/40" />
       </div>
     </div>
   );
