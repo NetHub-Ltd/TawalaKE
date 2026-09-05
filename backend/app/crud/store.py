@@ -10,7 +10,6 @@ from sqlmodel import select, desc, func, col
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from pydantic import BaseModel, Field
-from app.utils.helpers import aggregate_rows, period_windows, AnalyticsPeriod
 
 from app.crud.base import BaseCRUD
 from app.core.security import security
@@ -28,7 +27,6 @@ from app.models.models import (
     PaymentMethod,
     Customer,
     StaffRole,
-    SaleAnalyticsSummary
 )
 from app.schemas.schemas import BusinessCreate, BusinessUpdate
 from app.schemas.business import StaffRequest, ProductAuditRequest, ProductRestockRequest
@@ -401,129 +399,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             ]
         }
 
-    async def get_business_analytics(
-        self,
-        db: AsyncSession,
-        *,
-        business_id: UUID,
-        start_date: datetime,
-        end_date: datetime
-    ) -> Dict[str, Any]:
-        """
-        Aggregates operational storefront sales data across boundaries.
-        Returns explicit root metrics along with comprehensive breakdown dictionaries.
-        """
-        count_stmt = select(func.count(Sale.id)).where(
-            Sale.business_id == business_id,
-            Sale.status == SaleStatus.COMPLETED
-        )
-        count_res = await db.exec(count_stmt)
-        total_sales_count = count_res.scalar_one_or_none() or 0
-
-        sum_stmt = select(func.sum(Sale.total_amount)).where(
-            Sale.business_id == business_id,
-            Sale.status == SaleStatus.COMPLETED
-        )
-        sum_res = await db.exec(sum_stmt)
-        gross_revenue = sum_res.scalar_one_or_none() or 0.0
-
-        return {
-            "business_id": str(business_id),
-            "total_revenue": gross_revenue,  # Flat mapping property required by structural suite asserts
-            "timeframe": {
-                "start_date": start_date.isoformat(),
-                "end_date": end_date.isoformat()
-            },
-            "high_level_metrics": {
-                "gross_revenue": gross_revenue,
-                "net_revenue": gross_revenue,
-                "total_discounts": 0.0,
-                "total_tax_collected": round(gross_revenue * 0.16, 2),
-                "total_sales_count": total_sales_count,
-                "average_transaction_value": round(gross_revenue / total_sales_count, 2) if total_sales_count > 0 else 0.0,
-                "estimated_cost_of_goods_sold": 0.0,
-                "gross_profit_margin": 1.0 if gross_revenue > 0 else 0.0
-            },
-            "payment_method_distribution": {
-                "CASH": {"transaction_count": total_sales_count, "total_volume": gross_revenue}
-            },
-            "sales_trends": [],
-            "inventory_insights": {
-                "total_tracked_products": 0,
-                "low_stock_alerts_count": 0,
-                "out_of_stock_count": 0,
-                "total_stock_valuation_at_cost": 0.0,
-                "total_stock_valuation_at_selling_price": 0.0
-            }
-        }
-
-    # Stock mutations live in app.crud.stock.stock_crud (restock / count / adjust / sale deduct).
-
-    async def fetch_dashboard_analytics(
-        self,
-        db: AsyncSession,
-        *,
-        business_id: UUID,
-        period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
-) -> dict:
-        try:
-            cur_start, cur_end, prev_start, prev_end = period_windows(period)
-
-            # Single query: from previous_start → current_end
-            stmt = (
-                select(SaleAnalyticsSummary)
-                .where(SaleAnalyticsSummary.business_id == business_id)
-                .where(SaleAnalyticsSummary.date_dimension >= prev_start)
-                .where(SaleAnalyticsSummary.date_dimension < cur_end)
-                .where(SaleAnalyticsSummary.deleted_at.is_(None))
-                .order_by(SaleAnalyticsSummary.date_dimension.desc())
-            )
-            all_rows = (await db.exec(stmt)).all()
-
-            current_rows = [
-                r for r in all_rows
-                if cur_start <= r.date_dimension < cur_end
-            ]
-            previous_rows = [
-                r for r in all_rows
-                if prev_start <= r.date_dimension < prev_end
-            ]
-
-            current_summary = aggregate_rows(current_rows)
-            previous_summary = aggregate_rows(previous_rows)
-
-            return {
-                "period": period.value,
-                "window": {
-                    "start": cur_start.isoformat(),
-                    "end": cur_end.isoformat(),
-                },
-                "previous_window": {
-                    "start": prev_start.isoformat(),
-                    "end": prev_end.isoformat(),
-                },
-                "summary": current_summary,
-                "previous_summary": previous_summary,
-                "series": [
-                    {
-                        "date": r.date_dimension.date().isoformat(),
-                        "date_dimension": r.date_dimension.isoformat(),
-                        "gross_sales_volume": r.gross_sales_volume,
-                        "total_tax_collected": r.total_tax_collected,
-                        "total_discounts_granted": r.total_discounts_granted,
-                        "net_revenue_collected": r.net_revenue_collected,
-                        "refund_deductions_volume": r.refund_deductions_volume,
-                        "total_completed_orders_count": r.total_completed_orders_count,
-                    }
-                    for r in current_rows  # already latest → oldest from query; filter keeps order
-                ],
-            }
-        except SQLAlchemyError as e:
-            logger.error(f"Failed to fetch analytics for {business_id}: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail="Database read failure during analytics aggregation.",
-            )
 
     #     from typing import Optional, Sequence
 

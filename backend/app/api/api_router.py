@@ -38,7 +38,7 @@ api_router.include_router(
 
 api_router.include_router(
     reports.router,
-    prefix="/business",
+    prefix="/reports",
     tags=["Reporting & Analytics"],
     dependencies=[
         Depends(require_active_plan),
