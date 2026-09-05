@@ -608,6 +608,11 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     # Additive — gross profit from line cost_price_at_sale (not net of expenses)
     cogs_volume: float = Field(default=0.0)
     gross_profit: float = Field(default=0.0)
+    # Payment mix (COMPLETED collected only)
+    cash_volume: float = Field(default=0.0)
+    mpesa_volume: float = Field(default=0.0)
+    # Lines sold without known cost (honesty signal for Products tab)
+    missing_cost_line_count: int = Field(default=0)
 
     business: Business = Relationship(back_populates="analytics_summaries")
 
@@ -904,6 +909,35 @@ class DataDeletionRequest(BaseMixin, table=True):
 # =========================================================
 # 7b. DATA ARCHIVE JOBS (soft-delete retention pipeline)
 # =========================================================
+
+
+
+class AnalyticsOutbox(BaseMixin, table=True):
+    """
+    Durable queue for rollup application after COMPLETED sales.
+    Ensures dashboard analytics are not lost if in-process BackgroundTasks die.
+    """
+    __tablename__ = "analytics_outbox"
+    __table_args__ = (
+        sa.UniqueConstraint("sale_id", name="uq_analytics_outbox_sale"),
+    )
+
+    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    status: str = Field(
+        default="PENDING",
+        index=True,
+        description="PENDING | PROCESSING | DONE | FAILED",
+    )
+    attempts: int = Field(default=0)
+    last_error: Optional[str] = Field(default=None)
+    processed_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
 
 class DataArchiveJob(BaseMixin, table=True):
     """

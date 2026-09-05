@@ -93,6 +93,17 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         sale_items = []
         discount = float(getattr(payload, "discount", None) or 0.0)
 
+        # Resolve business for tax + scope checks
+        biz_res = await db.exec(select(Business).where(Business.id == payload.business_id))
+        business = biz_res.one_or_none()
+        if not business:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Business not found for checkout.",
+            )
+        if tax_rate == 0.0 and getattr(business, "tax_rate", None) is not None:
+            tax_rate = float(business.tax_rate or 0.0)
+
         for item in payload.items:
             stmt = select(Product).where(Product.id == item.product_id)
             res = await db.exec(stmt)
@@ -102,29 +113,61 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 logger.error(f"Checkout failure: Product ID {item.product_id} not found.")
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="One or more selected inventory items could not be found."
+                    detail="One or more selected inventory items could not be found.",
                 )
+            # Soft-delete / inactive / wrong store
+            if getattr(product, "deleted_at", None) is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product '{getattr(product, 'label', item.product_id)}' is deleted and cannot be sold.",
+                )
+            if hasattr(product, "active") and product.active is False:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Product '{product.label}' is inactive and cannot be sold.",
+                )
+            if product.business_id and str(product.business_id) != str(payload.business_id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Product does not belong to this business.",
+                )
+            qty = float(item.quantity)
+            if qty <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Quantity must be greater than zero.",
+                )
+            if product.track_stock and float(product.stock or 0) < qty:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=(
+                        f"Insufficient stock for '{product.label}': "
+                        f"available {product.stock}, requested {qty}."
+                    ),
+                )
+
             logger.info(f"Product data: {product.attributes.get('sku', 'N/A')} ")
-            item_total = product.selling_price * item.quantity
+            item_total = float(product.selling_price) * qty
             subtotal += item_total
 
+            # Honest cost: null stays null (do not invent selling_price as COGS)
             cost_at_sale = (
-                product.cost_price
+                float(product.cost_price)
                 if product.cost_price is not None
-                else product.selling_price
+                else None
             )
 
             sale_items.append(
                 SaleItem(
                     organization_id=current_user.organization_id,
                     product_id=product.id,
-                    quantity=item.quantity,
-                    unit_price=product.selling_price,
+                    quantity=qty,
+                    unit_price=float(product.selling_price),
                     total_price=item_total,
-                    sku=product.attributes.get('sku', 'N/A'),
+                    sku=(product.attributes or {}).get("sku", "N/A") or "N/A",
                     name=product.label,
                     subtotal=item_total,
-                    tax_rate=0.0,
+                    tax_rate=tax_rate,
                     cost_price_at_sale=cost_at_sale,
                 )
             )
@@ -132,7 +175,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         # Apply discount after line aggregation (never negative subtotal)
         subtotal = max(0.0, subtotal - discount)
 
-        # Standard Kenyan 16% VAT Configuration
         tax_amount = round(subtotal * tax_rate, 2)
         total_amount = subtotal + tax_amount
 
@@ -307,12 +349,23 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 )
 
         try:
+            # Durable analytics outbox for COMPLETED (collected) sales only
+            if sale.status == SaleStatus.COMPLETED:
+                from app.services.analytics_outbox import enqueue_analytics_outbox
+                await enqueue_analytics_outbox(
+                    db,
+                    sale_id=sale.id,
+                    business_id=sale.business_id,
+                    organization_id=sale.organization_id,
+                )
+
             await db.commit()
 
             # Document: invoice for credit (amount_paid=0), receipt for paid
             background_tasks.add_task(async_process_document_generation, sale.id)
-            # Analytics only count collected revenue for COMPLETED (paid) sales
-            background_tasks.add_task(async_update_sales_analytics, sale.id)
+            # Drain outbox soon after response (best-effort); durable row survives process death
+            if sale.status == SaleStatus.COMPLETED:
+                background_tasks.add_task(async_update_sales_analytics, sale.id)
 
             new_stmt = (
                 select(Sale)
@@ -336,6 +389,77 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Document sequencing integrity index crash. Transaction aborted.",
             )
 
+
+
+    async def collect_credit_sale(
+        self,
+        db: AsyncSession,
+        *,
+        sale_id: UUID,
+        payload: FinalizeCheckoutIn,
+        background_tasks: BackgroundTasks,
+    ) -> Sale:
+        """
+        Collect payment on a credit (PENDING_PAYMENT) sale → COMPLETED + Payment + analytics outbox.
+        """
+        stmt = (
+            select(Sale)
+            .where(Sale.id == sale_id)
+            .options(selectinload(Sale.items), selectinload(Sale.payments))
+        )
+        sale = (await db.exec(stmt)).one_or_none()
+        if not sale:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sale not found")
+        if sale.status == SaleStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Sale is already collected/completed.",
+            )
+        if sale.status != SaleStatus.PENDING_PAYMENT:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Sale status {sale.status} cannot be collected.",
+            )
+        if payload.payment_method == PaymentMethod.INVOICE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Collection requires CASH or MPESA (not another invoice).",
+            )
+
+        sale.status = SaleStatus.COMPLETED
+        db.add(sale)
+        payment = Payment(
+            organization_id=sale.organization_id,
+            business_id=sale.business_id,
+            sale_id=sale.id,
+            amount=sale.total_amount,
+            method=payload.payment_method,
+            reference=payload.payment_reference
+            or f"COLLECT-{uuid4().hex[:8].upper()}",
+        )
+        db.add(payment)
+
+        from app.services.analytics_outbox import enqueue_analytics_outbox
+        await enqueue_analytics_outbox(
+            db,
+            sale_id=sale.id,
+            business_id=sale.business_id,
+            organization_id=sale.organization_id,
+        )
+        await db.commit()
+        background_tasks.add_task(async_update_sales_analytics, sale.id)
+
+        new_stmt = (
+            select(Sale)
+            .where(Sale.id == sale_id)
+            .options(
+                selectinload(Sale.items),
+                selectinload(Sale.customer),
+                selectinload(Sale.cashier),
+                selectinload(Sale.payments),
+            )
+        )
+        return (await db.exec(new_stmt)).first()
 
     async def get_financial_document_json(
         self,

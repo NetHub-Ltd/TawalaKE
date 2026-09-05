@@ -346,6 +346,49 @@ async def checkout_sale(
     return sale
 
 
+
+
+@router.post("/sales/{sale_id}/collect", status_code=200)
+async def collect_credit_sale(
+    sale_id: UUID,
+    payload: FinalizeCheckoutIn,
+    db: SessionDep,
+    background_tasks: BackgroundTasks,
+    redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
+):
+    """
+    Collect payment on a credit sale (PENDING_PAYMENT → COMPLETED).
+    Enqueues durable analytics so Sales/Products/Staff dashboards update.
+    """
+    # Ensure path id wins
+    if getattr(payload, "sale_id", None) and str(payload.sale_id) != str(sale_id):
+        raise HTTPException(status_code=400, detail="sale_id mismatch")
+    # FinalizeCheckoutIn requires sale_id — set from path
+    data = payload.model_dump()
+    data["sale_id"] = sale_id
+    body = FinalizeCheckoutIn(**data)
+
+    sale = await store_crud.collect_credit_sale(
+        db=db,
+        sale_id=sale_id,
+        payload=body,
+        background_tasks=background_tasks,
+    )
+    await purge_cache_namespace(redis_client, namespace="sales")
+    await purge_cache_namespace(redis_client, namespace="analytics")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.collect",
+        outcome="success",
+        resource_type="sale",
+        resource_id=sale_id,
+        meta={"payment_method": str(body.payment_method)},
+    )
+    return sale
+
+
 @router.get("/receipts/{sale_id}", status_code=200, response_model=FinancialDocumentSnapshotSchema)
 async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
     """
