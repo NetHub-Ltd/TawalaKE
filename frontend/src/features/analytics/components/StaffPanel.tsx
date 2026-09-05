@@ -46,7 +46,7 @@ export function StaffPanel({
   }, [items]);
 
   if (loading && !staff) {
-    return <div className="h-64 animate-pulse rounded-xl bg-slate-100" />;
+    return <div className="h-64 animate-pulse rounded-xl bg-border/40" />;
   }
 
   return (
@@ -74,35 +74,35 @@ export function StaffPanel({
       </KpiRow>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm lg:col-span-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             Staff leaderboard
           </p>
           <div className="mt-2">
             {active.length === 0 && (
-              <p className="py-8 text-center text-sm text-slate-400">No staff sales in this period</p>
+              <p className="py-8 text-center text-sm text-muted">No staff sales in this period</p>
             )}
             {active.map((row) => (
               <div
                 key={row.staff_id}
-                className="flex items-center justify-between gap-3 border-b border-slate-100 py-2.5 text-sm last:border-0"
+                className="flex items-center justify-between gap-3 border-b border-border/40 py-2.5 text-sm last:border-0"
               >
                 <div>
-                  <p className="font-medium text-slate-900">{row.full_name || "Staff"}</p>
-                  <p className="text-xs text-slate-500">
+                  <p className="font-medium text-foreground">{row.full_name || "Staff"}</p>
+                  <p className="text-xs text-muted">
                     {(row.orders || 0).toLocaleString()} orders · AOV {formatKES(row.avg_ticket)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium tabular-nums text-teal-700">{formatKES(row.revenue)}</p>
-                  <p className="text-xs text-slate-500">{(row.revenue_share_pct ?? 0).toFixed(0)}% share</p>
+                  <p className="font-medium tabular-nums text-brand-primary">{formatKES(row.revenue)}</p>
+                  <p className="text-xs text-muted">{(row.revenue_share_pct ?? 0).toFixed(0)}% share</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm lg:col-span-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             Revenue by cashier
           </p>
           <div className="mt-4">

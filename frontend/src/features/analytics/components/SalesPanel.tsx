@@ -122,27 +122,27 @@ export function SalesPanel({
       </KpiRow>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
             Daily net revenue
           </p>
-          <div className="mt-3">
-            <LineChart points={seriesPoints} />
+          <div className="mt-3 min-h-[200px]">
+            <LineChart points={seriesPoints} height={200} />
           </div>
         </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
             Hourly bars
           </p>
-          <div className="mt-3">
-            <BarChart points={hourlyPoints} />
+          <div className="mt-3 min-h-[200px]">
+            <BarChart points={hourlyPoints} height={200} />
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
             Payment mix
           </p>
           <div className="mt-4 space-y-3">
@@ -176,14 +176,14 @@ function MixRow({
   return (
     <div>
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-600">{label}</span>
-        <span className="font-medium tabular-nums text-slate-900">{formatKES(value)}</span>
+        <span className="text-muted">{label}</span>
+        <span className="font-medium tabular-nums text-foreground">{formatKES(value)}</span>
       </div>
       {note ? (
-        <p className="mt-1 text-xs text-slate-400">{note}</p>
+        <p className="mt-1 text-xs text-muted">{note}</p>
       ) : (
-        <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full rounded-full bg-teal-500" style={{ width: `${Math.min(100, pct)}%` }} />
+        <div className="mt-1 h-2 overflow-hidden rounded-full bg-border/40">
+          <div className="h-full rounded-full bg-brand-accent" style={{ width: `${Math.min(100, pct)}%` }} />
         </div>
       )}
     </div>
@@ -195,12 +195,12 @@ function PanelSkeleton() {
     <div className="space-y-4 animate-pulse">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-24 rounded-xl bg-slate-100" />
+          <div key={i} className="h-24 rounded-xl bg-border/40" />
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="h-48 rounded-xl bg-slate-100" />
-        <div className="h-48 rounded-xl bg-slate-100" />
+        <div className="h-48 rounded-xl bg-border/40" />
+        <div className="h-48 rounded-xl bg-border/40" />
       </div>
     </div>
   );
