@@ -9,6 +9,8 @@ export type KpiCardProps = {
   hint?: string;
   delta?: string;
   tone?: "default" | "good" | "bad" | "warn" | "muted";
+  /** Stronger visual weight for the primary pulse metric (e.g. net revenue). */
+  emphasis?: boolean;
 };
 
 const toneClass: Record<NonNullable<KpiCardProps["tone"]>, string> = {
@@ -19,12 +21,35 @@ const toneClass: Record<NonNullable<KpiCardProps["tone"]>, string> = {
   muted: "text-muted",
 };
 
-export function KpiCard({ label, value, hint, delta, tone = "default" }: KpiCardProps) {
+export function KpiCard({
+  label,
+  value,
+  hint,
+  delta,
+  tone = "default",
+  emphasis = false,
+}: KpiCardProps) {
   return (
-    <div className="flex min-h-[88px] flex-col justify-between rounded-xl border border-border/50 bg-card px-3 py-3 shadow-card sm:px-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">{label}</p>
-      <p className="mt-1 truncate font-mono text-base font-semibold tabular-nums text-foreground sm:text-lg">{value}</p>
-      {(delta || hint) ? (
+    <div
+      className={clsx(
+        "flex min-h-[88px] flex-col justify-between rounded-xl border bg-card px-3 py-3 shadow-card sm:px-4",
+        emphasis
+          ? "border-brand-primary/30 sm:col-span-1"
+          : "border-border/50"
+      )}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+        {label}
+      </p>
+      <p
+        className={clsx(
+          "mt-1 truncate font-mono font-semibold tabular-nums text-foreground",
+          emphasis ? "text-lg sm:text-xl" : "text-base sm:text-lg"
+        )}
+      >
+        {value}
+      </p>
+      {delta || hint ? (
         <p className={clsx("mt-0.5 text-[11px]", toneClass[tone])}>
           {delta}
           {delta && hint ? " · " : ""}
@@ -37,8 +62,21 @@ export function KpiCard({ label, value, hint, delta, tone = "default" }: KpiCard
   );
 }
 
-export function KpiRow({ children }: { children: React.ReactNode }) {
+export function KpiRow({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">{children}</div>
+    <div
+      className={clsx(
+        "grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4",
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }
