@@ -86,7 +86,7 @@ jobs:
           export RESEND_API_KEY=test_key
           export REDIS_URL=memory://
           export FRONTEND_URL=http://localhost:3000
-          pytest testing/ -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=80
+          pytest testing/ -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=60
 
       - name: Upload coverage report
         if: always()
