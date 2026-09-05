@@ -240,34 +240,40 @@ async def test_update_not_found(mock_session):
 # ------------------------------------------------------------------
 @pytest.mark.asyncio
 async def test_remove_success(mock_session):
-    """remove() deletes the record and flushes."""
+    """remove() soft-deletes when model has deleted_at (sets marker, does not hard-delete)."""
     mock_product = MagicMock(spec=Product)
     mock_product.id = uuid4()
+    mock_product.deleted_at = None
+    mock_product.active = True
 
     mock_result = MagicMock()
     mock_result.one_or_none.return_value = mock_product
     mock_session.exec.return_value = mock_result
+    mock_session.refresh = AsyncMock()
 
     result = await product_crud.remove(mock_session, id=mock_product.id)
 
     assert result is not None
-    mock_session.delete.assert_called_once()
-    mock_session.flush.assert_called_once()
+    assert mock_product.deleted_at is not None
+    mock_session.delete.assert_not_called()
+    mock_session.flush.assert_called()
 
 
 @pytest.mark.asyncio
 async def test_remove_database_error(mock_session):
-    """remove() raises 500 on database failure."""
+    """remove() raises 500 when soft-delete flush fails."""
     mock_product = MagicMock(spec=Product)
     mock_product.id = uuid4()
+    mock_product.deleted_at = None
+    mock_product.active = True
 
     mock_result = MagicMock()
     mock_result.one_or_none.return_value = mock_product
     mock_session.exec.return_value = mock_result
-    mock_session.delete.side_effect = SQLAlchemyError("Foreign key constraint")
+    mock_session.flush = AsyncMock(side_effect=SQLAlchemyError("Foreign key constraint"))
 
     with pytest.raises(HTTPException) as exc_info:
-        await product_crud.remove(mock_session, id=uuid4())
+        await product_crud.remove(mock_session, id=mock_product.id)
 
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     mock_session.rollback.assert_called_once()
