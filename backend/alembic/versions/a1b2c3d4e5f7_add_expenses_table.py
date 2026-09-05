@@ -9,25 +9,33 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "a1b2c3d4e5f7"
 down_revision: Union[str, Sequence[str], None] = "f3a4b5c6d7e8"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
+_ENUM_VALUES = (
+    "RENT",
+    "UTILITIES",
+    "SALARIES",
+    "TRANSPORT",
+    "SUPPLIES",
+    "MARKETING",
+    "MAINTENANCE",
+    "TAXES",
+    "OTHER",
+)
+
 
 def upgrade() -> None:
-    expense_category = sa.Enum(
-        "RENT",
-        "UTILITIES",
-        "SALARIES",
-        "TRANSPORT",
-        "SUPPLIES",
-        "MARKETING",
-        "MAINTENANCE",
-        "TAXES",
-        "OTHER",
+    # Create the PG type once. create_type=False on the column prevents
+    # SQLAlchemy from issuing a second CREATE TYPE during create_table.
+    expense_category = postgresql.ENUM(
+        *_ENUM_VALUES,
         name="expense_category_enum",
+        create_type=False,
     )
     expense_category.create(op.get_bind(), checkfirst=True)
 
@@ -40,7 +48,12 @@ def upgrade() -> None:
         sa.Column("organization_id", sa.Uuid(), nullable=True),
         sa.Column("business_id", sa.Uuid(), nullable=False),
         sa.Column("recorded_by", sa.Uuid(), nullable=True),
-        sa.Column("category", expense_category, server_default="OTHER", nullable=False),
+        sa.Column(
+            "category",
+            expense_category,
+            server_default="OTHER",
+            nullable=False,
+        ),
         sa.Column("amount", sa.Float(), nullable=False),
         sa.Column("currency", sa.String(length=3), server_default="KES", nullable=False),
         sa.Column("incurred_on", sa.DateTime(timezone=True), nullable=False),
@@ -63,4 +76,4 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("expenses")
-    sa.Enum(name="expense_category_enum").drop(op.get_bind(), checkfirst=True)
+    postgresql.ENUM(name="expense_category_enum").drop(op.get_bind(), checkfirst=True)
