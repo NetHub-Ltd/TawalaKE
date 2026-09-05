@@ -23,6 +23,7 @@ from app.schemas.reporting import (
     StaffResponse,
 )
 from app.schemas.schemas import ApiResponse
+from app.schemas.analytics import DashboardAnalyticsResponse
 from app.services.analytics_rollup import backfill_business_rollups
 from app.utils.helpers import AnalyticsPeriod
 
