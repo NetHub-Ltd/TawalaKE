@@ -1,8 +1,10 @@
 """Reporting rollup tables: product/staff daily, hourly bars, COGS on business daily.
 
 Revision ID: e2f3a4b5c6d7
-Revises: c9e8f7a6b5d4
+Revises: d1e2f3a4b5c6
 Create Date: 2026-09-05
+
+Linearized after soft-delete archive migration so a single Alembic head exists.
 
 """
 from typing import Sequence, Union
@@ -12,7 +14,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "e2f3a4b5c6d7"
-down_revision: Union[str, Sequence[str], None] = "c9e8f7a6b5d4"
+down_revision: Union[str, Sequence[str], None] = "d1e2f3a4b5c6"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
