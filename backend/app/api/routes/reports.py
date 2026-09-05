@@ -23,6 +23,7 @@ from app.schemas.reporting import (
     StaffResponse,
 )
 from app.schemas.schemas import ApiResponse
+from app.schemas.analytics import DashboardAnalyticsResponse
 from app.services.analytics_rollup import backfill_business_rollups
 from app.utils.helpers import AnalyticsPeriod
 
@@ -45,8 +46,29 @@ def _parse_dt(value: Optional[str]) -> Optional[datetime]:
         ) from e
 
 
+
+
 @router.get(
-    "/{business_id}/reports/overview",
+    "/{business_id}/dashboard",
+    response_model=ApiResponse[DashboardAnalyticsResponse],
+)
+async def report_dashboard(
+    business_id: UUID,
+    db: SessionDep,
+    redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
+    period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
+):
+    """
+    Primary dashboard payload (compat with legacy /business/analytics).
+    Served only from pre-aggregated rollups.
+    """
+    await assert_business_access(db, user, business_id, redis_client)
+    data = await reporting_crud.dashboard(db, business_id=business_id, period=period)
+    return ApiResponse(status=True, status_code=200, message="dashboard retrieved successfully", data=data)
+
+@router.get(
+    "/{business_id}/overview",
     response_model=ApiResponse[OverviewResponse],
 )
 async def report_overview(
@@ -75,7 +97,7 @@ async def report_overview(
 
 
 @router.get(
-    "/{business_id}/reports/series",
+    "/{business_id}/series",
     response_model=ApiResponse[SeriesResponse],
 )
 async def report_series(
@@ -101,7 +123,7 @@ async def report_series(
 
 
 @router.get(
-    "/{business_id}/reports/hourly",
+    "/{business_id}/hourly",
     response_model=ApiResponse[HourlyResponse],
 )
 async def report_hourly(
@@ -123,7 +145,7 @@ async def report_hourly(
 
 
 @router.get(
-    "/{business_id}/reports/products",
+    "/{business_id}/products",
     response_model=ApiResponse[ProductsResponse],
 )
 async def report_products(
@@ -153,7 +175,7 @@ async def report_products(
 
 
 @router.get(
-    "/{business_id}/reports/staff",
+    "/{business_id}/staff",
     response_model=ApiResponse[StaffResponse],
 )
 async def report_staff(
@@ -181,7 +203,7 @@ async def report_staff(
 
 
 @router.get(
-    "/{business_id}/reports/insights",
+    "/{business_id}/insights",
     response_model=ApiResponse[InsightsResponse],
 )
 async def report_insights(
@@ -207,7 +229,7 @@ async def report_insights(
 
 
 @router.get(
-    "/{business_id}/reports/full",
+    "/{business_id}/full",
     response_model=ApiResponse[FullReportResponse],
 )
 async def report_full(
@@ -251,7 +273,7 @@ async def report_full(
 
 
 @router.post(
-    "/{business_id}/reports/backfill",
+    "/{business_id}/backfill",
     response_model=ApiResponse[BackfillResponse],
 )
 async def report_backfill(

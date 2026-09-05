@@ -23,7 +23,6 @@ from app.models.models import Sale, SaleAnalyticsSummary, Staff
 from app.schemas.schemas import ProductResponse
 from fastapi_cache.decorator import cache
 from app.core.redis_client import limiter
-from app.schemas.analytics import DashboardAnalyticsResponse
 from app.utils.helpers import AnalyticsPeriod
 from app.schemas.sale import SaleReadWithRelations
 from pydantic import BaseModel
@@ -356,22 +355,3 @@ async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
     return receipt
 
 
-@router.get("/analytics", response_model=ApiResponse[DashboardAnalyticsResponse])
-@limiter.limit("5/minute")
-@cache(expire=CACHE_TTL_SEC, namespace="analytics", key_builder=universal_key_builder)
-async def get_dashboard_analytics(
-    request: Request,
-    business_id: UUID,
-    db: SessionDep,
-    period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
-):
-    results = await store_crud.fetch_dashboard_analytics(
-        db, business_id=business_id, period=period
-    )
-
-    return ApiResponse(
-        status_code=200,
-        status=True,
-        message="dashboard retrieved succesfully",
-        data=results
-    )

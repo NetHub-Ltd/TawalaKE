@@ -57,31 +57,7 @@ async def test_initialize_checkout_product_not_found(mock_session, sample_busine
 
 
 @pytest.mark.asyncio
-async def test_get_business_analytics_returns_dict(mock_session, sample_business_id):
-    start_date = datetime.now(timezone.utc) - timedelta(days=7)
-    end_date = datetime.now(timezone.utc)
 
-    def analytics_router(stmt, *args, **kwargs):
-        res = MagicMock()
-        res.one.return_value = 15
-        res.one_or_none.return_value = 15
-        res.scalar_one_or_none.return_value = 45000.0
-        res.all.return_value = []
-        return res
-
-    mock_session.exec.side_effect = analytics_router
-
-    analytics = await store_crud.get_business_analytics(
-        db=mock_session,
-        business_id=sample_business_id,
-        start_date=start_date,
-        end_date=end_date,
-    )
-    assert isinstance(analytics, dict)
-    assert "business_id" in analytics or "total_revenue" in analytics or len(analytics) >= 0
-
-
-@pytest.mark.asyncio
 async def test_list_business_financial_documents_json(mock_session, sample_business_id):
     mock_doc = MagicMock(spec=FinancialDocument)
     mock_doc.id = uuid4()

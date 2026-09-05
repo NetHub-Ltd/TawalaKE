@@ -30,7 +30,7 @@ from app.schemas.reporting import (
     StaffResponse,
     StaffRow,
 )
-from app.utils.helpers import AnalyticsPeriod, period_windows
+from app.utils.helpers import AnalyticsPeriod, period_windows, aggregate_rows
 
 
 def _margin(profit: float, revenue: float) -> float:
@@ -431,6 +431,65 @@ class ReportingCrud:
             )
 
         return InsightsResponse(window=overview.window, insights=cards[:10])
+
+    async def dashboard(
+        self,
+        db: AsyncSession,
+        *,
+        business_id: UUID,
+        period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
+    ) -> dict:
+        """
+        Compat dashboard payload for the existing overview UI.
+        Built only from SaleAnalyticsSummary rollups (no live sale scans).
+        Shape matches legacy GET /business/analytics.
+        """
+        if period == AnalyticsPeriod.CUSTOM:
+            period = AnalyticsPeriod.DAYS_7
+        cur_start, cur_end, prev_start, prev_end = period_windows(period)
+
+        stmt = (
+            select(SaleAnalyticsSummary)
+            .where(SaleAnalyticsSummary.business_id == business_id)
+            .where(SaleAnalyticsSummary.date_dimension >= prev_start)
+            .where(SaleAnalyticsSummary.date_dimension < cur_end)
+            .order_by(col(SaleAnalyticsSummary.date_dimension).desc())
+        )
+        # Soft-delete aware if column present
+        if hasattr(SaleAnalyticsSummary, "deleted_at"):
+            stmt = stmt.where(col(SaleAnalyticsSummary.deleted_at).is_(None))
+
+        all_rows = (await db.exec(stmt)).all()
+        current_rows = [r for r in all_rows if cur_start <= r.date_dimension < cur_end]
+        previous_rows = [r for r in all_rows if prev_start <= r.date_dimension < prev_end]
+
+        return {
+            "period": period.value if hasattr(period, "value") else str(period),
+            "window": {
+                "start": cur_start.isoformat(),
+                "end": cur_end.isoformat(),
+            },
+            "previous_window": {
+                "start": prev_start.isoformat(),
+                "end": prev_end.isoformat(),
+            },
+            "summary": aggregate_rows(current_rows),
+            "previous_summary": aggregate_rows(previous_rows),
+            "series": [
+                {
+                    "date": r.date_dimension.date().isoformat(),
+                    "date_dimension": r.date_dimension.isoformat(),
+                    "gross_sales_volume": r.gross_sales_volume,
+                    "total_tax_collected": r.total_tax_collected,
+                    "total_discounts_granted": r.total_discounts_granted,
+                    "net_revenue_collected": r.net_revenue_collected,
+                    "refund_deductions_volume": r.refund_deductions_volume,
+                    "total_completed_orders_count": r.total_completed_orders_count,
+                }
+                for r in sorted(current_rows, key=lambda x: x.date_dimension)
+            ],
+        }
+
 
 
 reporting_crud = ReportingCrud()

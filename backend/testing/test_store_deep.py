@@ -61,31 +61,7 @@ async def test_audit_stock_path(mock_session, mock_staff_user):
 
 
 @pytest.mark.asyncio
-async def test_fetch_dashboard_analytics(mock_session, sample_business_id):
-    mock_result = MagicMock()
-    mock_result.one.return_value = 0
-    mock_result.one_or_none.return_value = 0
-    mock_result.all.return_value = []
-    mock_session.exec.return_value = mock_result
-    try:
-        await store_crud.fetch_dashboard_analytics(
-            db=mock_session, business_id=sample_business_id
-        )
-    except TypeError:
-        try:
-            await store_crud.fetch_dashboard_analytics(
-                db=mock_session,
-                business_id=sample_business_id,
-                start_date=datetime.now(timezone.utc) - timedelta(days=7),
-                end_date=datetime.now(timezone.utc),
-            )
-        except Exception:
-            pass
-    except Exception:
-        pass
 
-
-@pytest.mark.asyncio
 async def test_fetch_sales_list(mock_session, sample_business_id):
     mock_result = MagicMock()
     mock_result.all.return_value = []

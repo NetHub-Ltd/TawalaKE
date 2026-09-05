@@ -65,17 +65,13 @@ def test_get_sales(client_as_owner, sample_business_id):
         assert r.status_code in (200, 422, 500)
 
 
-def test_dashboard_analytics(client_as_owner, sample_business_id):
-    with patch(
-        "app.api.routes.stores.store_crud.fetch_dashboard_analytics",
-        new_callable=AsyncMock,
-    ) as analytics:
-        analytics.return_value = {"total_revenue": 0, "business_id": str(sample_business_id)}
-        r = client_as_owner.get(
-            "/api/v1/business/analytics",
-            params={"business_id": str(sample_business_id)},
-        )
-        assert r.status_code in (200, 422, 500)
+def test_business_analytics_route_removed(client_as_owner, sample_business_id):
+    """Legacy GET /business/analytics must not exist after reporting module solidify."""
+    r = client_as_owner.get(
+        "/api/v1/business/analytics",
+        params={"business_id": str(sample_business_id)},
+    )
+    assert r.status_code in (404, 405)
 
 
 def test_update_business(client_as_owner, sample_business_id):

@@ -123,8 +123,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const url = new URL("/api/v1/business/analytics", backendBase);
-  url.searchParams.set("business_id", businessId);
+  const url = new URL(`/api/v1/reports/${businessId}/dashboard`, backendBase);
   url.searchParams.set("period", period);
 
   try {
