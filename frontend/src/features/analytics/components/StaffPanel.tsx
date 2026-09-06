@@ -2,24 +2,20 @@
 
 import React, { useMemo } from "react";
 import { KpiCard, KpiRow } from "./KpiCard";
-import { InsightsStrip } from "./InsightsStrip";
 import { BarChart } from "./charts/SimpleCharts";
 import { formatKES } from "@/features/analytics/lib/format";
 import type {
   DashboardPayload,
   StaffPayload,
-  InsightsPayload,
 } from "@/features/analytics/hooks/useDashboardData";
 
 export function StaffPanel({
   dashboard,
   staff,
-  insights,
   loading,
 }: {
   dashboard?: DashboardPayload;
   staff?: StaffPayload;
-  insights?: InsightsPayload;
   loading?: boolean;
 }) {
   const items = staff?.items ?? [];
@@ -111,7 +107,6 @@ export function StaffPanel({
         </div>
       </div>
 
-      <InsightsStrip insights={insights?.insights || []} />
     </div>
   );
 }

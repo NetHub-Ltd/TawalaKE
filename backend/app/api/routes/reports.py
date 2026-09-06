@@ -58,13 +58,24 @@ async def report_dashboard(
     redis_client: AsyncRedis = Depends(get_redis),
     user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
     period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
+    date_value: Optional[date] = Query(None, alias="date"),
+    start: Optional[str] = None,
+    end: Optional[str] = None,
 ):
     """
     Primary dashboard payload (compat with legacy /business/analytics).
     Served only from pre-aggregated rollups.
+    Supports period presets and optional custom date.
     """
     await assert_business_access(db, user, business_id, redis_client)
-    data = await reporting_crud.dashboard(db, business_id=business_id, period=period)
+    data = await reporting_crud.dashboard(
+        db,
+        business_id=business_id,
+        period=period,
+        date_value=date_value,
+        start=_parse_dt(start),
+        end=_parse_dt(end),
+    )
     return ApiResponse(status=True, status_code=200, message="dashboard retrieved successfully", data=data)
 
 @router.get(
@@ -131,6 +142,8 @@ async def report_hourly(
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
     user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
+    period: AnalyticsPeriod = AnalyticsPeriod.TODAY,
+    date_value: Optional[date] = Query(None, alias="date"),
     start: Optional[str] = None,
     end: Optional[str] = None,
 ):
@@ -138,6 +151,8 @@ async def report_hourly(
     data = await reporting_crud.hourly(
         db,
         business_id=business_id,
+        period=period,
+        date_value=date_value,
         start=_parse_dt(start),
         end=_parse_dt(end),
     )

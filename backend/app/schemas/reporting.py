@@ -58,6 +58,7 @@ class HourlyPoint(BaseModel):
     net_revenue: float = 0
     gross_profit: float = 0
     orders: int = 0
+    total_discounts_granted: float = 0
 
 
 class HourlyResponse(BaseModel):
