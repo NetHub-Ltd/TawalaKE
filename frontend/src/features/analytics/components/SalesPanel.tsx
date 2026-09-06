@@ -142,9 +142,9 @@ export function SalesPanel({
     missingCosts > 0
       ? {
           value: formatKES(gp),
+          ...(gp !== 0 ? delta(gp, prevGp) : {}),
           hint: `${missingCosts} line${missingCosts === 1 ? "" : "s"} missing cost`,
           tone: "warn" as const,
-          ...(gp !== 0 ? delta(gp, prevGp) : { delta: undefined }),
         }
       : rev > 0 && gp === 0
         ? {

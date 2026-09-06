@@ -79,6 +79,16 @@ export type StaffRow = {
 
 export type StaffPayload = { items: StaffRow[] };
 
+export type InsightCard = {
+  code: string;
+  severity: string;
+  title: string;
+  detail: string;
+  metric?: number | null;
+};
+
+export type InsightsPayload = { insights: InsightCard[] };
+
 /** Shared query key period fragment */
 function periodKey(period: AnalyticsRange, date?: string) {
   return period === "custom" ? `custom:${date ?? ""}` : period;

@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { Loader2, RefreshCw } from "lucide-react";
-import { DashboardTabs, type OverviewTab } from "./DashboardTabs";
+import { DashboardTabs, type DashboardTab } from "./DashboardTabs";
 import { PeriodPills } from "./PeriodPills";
 import { SalesPanel } from "./SalesPanel";
 import { ProductsPanel } from "./ProductsPanel";
@@ -17,16 +17,16 @@ import {
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 
 export function OverviewClient({
-  orgId,
+  organizationId,
   businessId,
 }: {
-  orgId: string;
+  organizationId: string;
   businessId: string;
 }) {
-  const normalizedOrgId = orgId;
+  const normalizedOrgId = organizationId;
   const normalizedBusinessId = businessId;
 
-  const [tab, setTab] = useState<OverviewTab>("sales");
+  const [tab, setTab] = useState<DashboardTab>("sales");
   const [period, setPeriod] = useState<AnalyticsRange>("today");
   const [customDate, setCustomDate] = useState<string | undefined>();
 
