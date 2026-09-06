@@ -2,23 +2,19 @@
 
 import React, { useMemo } from "react";
 import { KpiCard, KpiRow } from "./KpiCard";
-import { InsightsStrip } from "./InsightsStrip";
 import { formatKES } from "@/features/analytics/lib/format";
 import type {
   DashboardPayload,
   ProductsPayload,
-  InsightsPayload,
 } from "@/features/analytics/hooks/useDashboardData";
 
 export function ProductsPanel({
   dashboard,
   products,
-  insights,
   loading,
 }: {
   dashboard?: DashboardPayload;
   products?: ProductsPayload;
-  insights?: InsightsPayload;
   loading?: boolean;
 }) {
   const items = products?.items || [];
@@ -112,7 +108,6 @@ export function ProductsPanel({
         </ListCard>
       </div>
 
-      <InsightsStrip insights={insights?.insights || []} />
     </div>
   );
 }

@@ -4,13 +4,14 @@
  * Query:
  * - businessId (required)
  * - resource: dashboard | hourly | products | staff | insights (default dashboard)
- * - period: today | 3d | 7d | month (default 7d)
+ * - period: today | yesterday | 3d | 7d | custom (default today)
+ * - date: YYYY-MM-DD (required when period=custom)
  * - limit, order_by (optional)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 
-const ALLOWED_PERIODS = new Set(["today", "yesterday", "3d", "7d", "month"]);
+const ALLOWED_PERIODS = new Set(["today", "yesterday", "3d", "7d", "custom", "month"]);
 const ALLOWED_RESOURCES = new Set([
   "dashboard",
   "hourly",
@@ -27,8 +28,9 @@ export async function GET(req: NextRequest) {
 
   const businessId = req.nextUrl.searchParams.get("businessId");
   const resource = req.nextUrl.searchParams.get("resource") ?? "dashboard";
-  const periodParam = req.nextUrl.searchParams.get("period") ?? "7d";
-  const period = ALLOWED_PERIODS.has(periodParam) ? periodParam : "7d";
+  const periodParam = req.nextUrl.searchParams.get("period") ?? "today";
+  const period = ALLOWED_PERIODS.has(periodParam) ? periodParam : "today";
+  const date = req.nextUrl.searchParams.get("date");
   const limit = req.nextUrl.searchParams.get("limit");
   const orderBy = req.nextUrl.searchParams.get("order_by");
 
@@ -37,6 +39,12 @@ export async function GET(req: NextRequest) {
   }
   if (!ALLOWED_RESOURCES.has(resource)) {
     return NextResponse.json({ error: "Invalid resource" }, { status: 400 });
+  }
+  if (period === "custom" && !date) {
+    return NextResponse.json(
+      { error: "date is required when period=custom" },
+      { status: 400 }
+    );
   }
 
   const backendBase = process.env.BACKEND_URL;
@@ -49,6 +57,7 @@ export async function GET(req: NextRequest) {
 
   const url = new URL(`/api/v1/reports/${businessId}/${resource}`, backendBase);
   url.searchParams.set("period", period);
+  if (date) url.searchParams.set("date", date);
   if (limit) url.searchParams.set("limit", limit);
   if (orderBy) url.searchParams.set("order_by", orderBy);
 

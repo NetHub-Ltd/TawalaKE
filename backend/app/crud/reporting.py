@@ -192,14 +192,21 @@ class ReportingCrud:
         db: AsyncSession,
         *,
         business_id: UUID,
+        period: AnalyticsPeriod = AnalyticsPeriod.TODAY,
+        date_value: Optional[date] = None,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> HourlyResponse:
-        now = datetime.now(timezone.utc)
-        if start is None:
-            start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-        if end is None:
-            end = start + timedelta(days=1)
+        """Hourly buckets for the same window as dashboard when period/date given."""
+        if start is None or end is None:
+            cs, ce, _, _, _ = resolve_window(
+                period, date_value=date_value, start=start, end=end
+            )
+            start, end = cs, ce
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
         stmt = (
             select(BusinessSalesHourly)
             .where(BusinessSalesHourly.business_id == business_id)
@@ -216,6 +223,7 @@ class ReportingCrud:
                     net_revenue=float(r.net_revenue_collected or 0),
                     gross_profit=float(r.gross_profit or 0),
                     orders=int(r.total_completed_orders_count or 0),
+                    total_discounts_granted=float(r.total_discounts_granted or 0),
                 )
                 for r in rows
             ],
@@ -441,15 +449,23 @@ class ReportingCrud:
         *,
         business_id: UUID,
         period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
+        date_value: Optional[date] = None,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
     ) -> dict:
         """
         Compat dashboard payload for the existing overview UI.
         Built only from SaleAnalyticsSummary rollups (no live sale scans).
         Shape matches legacy GET /business/analytics.
+        Supports period presets and optional custom date / start-end.
         """
-        if period == AnalyticsPeriod.CUSTOM:
-            period = AnalyticsPeriod.DAYS_7
-        cur_start, cur_end, prev_start, prev_end = period_windows(period)
+        cur_start, cur_end, prev_start, prev_end, period = resolve_window(
+            period, date_value=date_value, start=start, end=end
+        )
+        if prev_start is None:
+            prev_start = cur_start
+        if prev_end is None:
+            prev_end = cur_start
 
         stmt = (
             select(SaleAnalyticsSummary)
