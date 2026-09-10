@@ -1,39 +1,17 @@
-# Task: Dashboard foundation correctness (cohesive)
+# Task: Period-scoped credit on dashboard
 
 ## Status
-**APPROVED — implementing on `feat/dashboard-foundation-correctness`**
+**Implementing** on `feat/dashboard-period-credit`
 
 ## Goal
-One cohesive update so Overview metrics are trustworthy end-to-end.
+Every money figure on Overview reflects the selected period where possible; credit shows issued + collected in-period, plus open outstanding (all-time) clearly labeled.
 
-## Completed in this branch
-- [x] Discount source: `discount_applied` with fallback to `discount` in `apply_sale_to_rollups`
-- [x] Payment mix: `card_volume` + `other_volume` on model, migration, rollup writer, aggregate, series
-- [x] Credit: `credit_scope: outstanding_all_time` + UI label “Open credit (outstanding)”
-- [x] `profit_is_provisional` when missing_cost_line_count > 0
-- [x] `expenses_available` flag; log on expense failure (no silent zero without signal)
-- [x] Hourly zero-fill (cap 48h) in `reporting_crud.hourly`
-- [x] Schema `AnalyticsSummaryBlock` / series expanded for new fields
-- [x] UI: chart tab Orders; default metric Revenue; provisional profit label; settled Cash/M-Pesa/Card/Other/Open credit
-- [x] Types in `useDashboardData.ts`
-- [x] Tests: dashboard card/scope/provisional/expense failure; rollup discount_applied+CARD; aggregate provisional
-- [x] Outbox reverse: confirmed process_outbox only sign=+1; reverse left as follow-up (documented)
-- [x] Legacy dual path: not refactored; Overview remains rollup-only
+## Done
+- [x] `credit_period_metrics`: issued (open in window + COLLECT-linked created in window + invoice edge) and collected (COLLECT-* payments in window)
+- [x] Dashboard summary fields: credit_issued_period, credit_issued_count, credit_collected_period, credit_collected_count
+- [x] Schema + FE types + settled strip: Credit issued / Credit collected / Open credit (outstanding)
+- [x] Tests updated for extra queries
 
-## Out of scope (unchanged)
+## Out of scope
 - Nairobi timezone
-- Full Insights UI
-- Period-scoped credit engine
-- Merge to main
-
-## Verification
-- Smoke: aggregate_rows, dashboard, apply_sale discount_applied+CARD — passed in isolated runner
-- Full pytest suite requires full backend deps (not all installed in agent env)
-- Frontend: lint/build should be run in CI / local with node_modules
-
-## Follow-ups
-- Nairobi timezone
-- Insights tab
-- Period credit issued/collected
-- Audit cancel/void for sign=-1 outbox
-- Historical backfill after deploy for discount/payment mix accuracy
+- Changing how open outstanding is calculated (still all open PENDING_PAYMENT)

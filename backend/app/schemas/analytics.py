@@ -31,6 +31,10 @@ class AnalyticsSummaryBlock(BaseModel):
     credit_outstanding: float = 0
     open_credit_sales: int = 0
     credit_scope: Optional[str] = None
+    credit_issued_period: float = 0
+    credit_issued_count: int = 0
+    credit_collected_period: float = 0
+    credit_collected_count: int = 0
     expenses_total: float = 0
     expenses_count: int = 0
     profit_after_expenses: float = 0
