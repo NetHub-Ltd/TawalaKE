@@ -1,11 +1,11 @@
 name: Build & Push Backend to GHCR
 
+# Versioned images are produced from git tags (v*).
+# Tags are created automatically on main by auto_tag.yml when backend/** changes.
+# PRs still build without pushing.
 on:
   push:
-    branches: [main, master]
     tags: ["v*"]
-    paths:
-      - "backend/**"
   pull_request:
     paths:
       - "backend/**"
@@ -16,7 +16,7 @@ jobs:
     with:
       image_name: tawala-api
       registry: ghcr.io
-      context: backend # ← Important
+      context: backend
       push: ${{ github.event_name != 'pull_request' }}
       platforms: "linux/amd64,linux/arm64"
     secrets: inherit
