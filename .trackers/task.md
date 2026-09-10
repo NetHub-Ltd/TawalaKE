@@ -1,3 +1,3 @@
-# Auto tag on main
-- [x] auto_tag.yml bumps v0.0.* only
-- [x] build_and_push.yml: tag + PR only (no branch push image) to avoid double build
+# Combine auto-tag into build workflow
+- [x] Remove auto_tag.yml (GITHUB_TOKEN tag push cannot trigger other workflows)
+- [x] build_and_push.yml: prepare job bumps v0.0.* and tags; same run builds/pushes with version tags
