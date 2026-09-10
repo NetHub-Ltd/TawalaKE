@@ -59,7 +59,6 @@ export function SalesPanel({
   const card = s?.card_volume ?? 0;
   const other = s?.other_volume ?? 0;
   const credit = s?.credit_outstanding ?? 0;
-  const expensesAvailable = s?.expenses_available !== false;
   const profitProvisional =
     Boolean(s?.profit_is_provisional) || missingCosts > 0;
 

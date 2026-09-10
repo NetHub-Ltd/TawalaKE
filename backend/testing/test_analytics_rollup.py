@@ -226,12 +226,13 @@ async def test_reporting_overview_series_products_staff_insights(mock_session):
     series_result = MagicMock()
     series_result.all.return_value = [daily]
 
-    # hourly
+    # hourly (single day so zero-fill yields 24 buckets including the real hour)
     hour_row = MagicMock(
         hour_dimension=datetime(2026, 9, 5, 14, tzinfo=timezone.utc),
         net_revenue_collected=50,
         gross_profit=30,
         total_completed_orders_count=1,
+        total_discounts_granted=0,
     )
     hourly_result = MagicMock()
     hourly_result.all.return_value = [hour_row]
@@ -276,8 +277,18 @@ async def test_reporting_overview_series_products_staff_insights(mock_session):
     series = await crud.series(mock_session, business_id=biz, period=AnalyticsPeriod.DAYS_7)
     assert len(series.series) == 1
 
-    hourly = await crud.hourly(mock_session, business_id=biz)
-    assert len(hourly.series) == 1
+    hourly = await crud.hourly(
+        mock_session,
+        business_id=biz,
+        period=AnalyticsPeriod.CUSTOM,
+        date_value=date(2026, 9, 5),
+    )
+    # Single calendar day is zero-filled to 24 hourly buckets; real data must still appear
+    assert len(hourly.series) == 24
+    real = [p for p in hourly.series if p.orders > 0 or p.net_revenue > 0]
+    assert len(real) == 1
+    assert real[0].net_revenue == 50
+    assert real[0].orders == 1
 
     products = await crud.products(mock_session, business_id=biz, period=AnalyticsPeriod.DAYS_7)
     assert products.items[0].name == "Name"

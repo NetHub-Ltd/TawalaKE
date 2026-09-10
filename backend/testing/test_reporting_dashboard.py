@@ -119,8 +119,8 @@ async def test_dashboard_provisional_profit_and_expense_failure(mock_session):
         side_effect=RuntimeError("expense db down"),
     ):
         out = await reporting_crud.dashboard(
-            mock_session, business_id=uuid4(), period=AnalyticsPeriod.TODAY
+            mock_session, business_id=uuid4(), period=AnalyticsPeriod.DAYS_7
         )
-    assert out["summary"]["profit_is_provisional"] is True
     assert out["summary"]["missing_cost_line_count"] == 2
+    assert out["summary"]["profit_is_provisional"] is True
     assert out["summary"]["expenses_available"] is False
