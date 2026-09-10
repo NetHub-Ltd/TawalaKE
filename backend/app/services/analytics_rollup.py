@@ -111,12 +111,17 @@ async def apply_sale_to_rollups(
     gross_profit = float(sale.total_amount or 0) - total_cogs
     subtotal = float(sale.subtotal or 0)
     tax = float(getattr(sale, "tax_amount", 0) or 0)
-    discount = float(getattr(sale, "discount", 0) or 0)
+    # Checkout writes discount_applied; older rows may only have discount
+    discount = float(
+        getattr(sale, "discount_applied", None)
+        or getattr(sale, "discount", None)
+        or 0
+    )
     net = float(sale.total_amount or 0)
     s = float(sign)
 
     # Payment mix from Payment rows (collected only)
-    cash_vol = mpesa_vol = 0.0
+    cash_vol = mpesa_vol = card_vol = other_vol = 0.0
     pay_res = await db.exec(select(Payment).where(Payment.sale_id == sale.id))
     for pay in pay_res.all():
         method = getattr(pay.method, "value", str(pay.method or "")).upper()
@@ -125,6 +130,11 @@ async def apply_sale_to_rollups(
             cash_vol += amt
         elif method == "MPESA":
             mpesa_vol += amt
+        elif method == "CARD":
+            card_vol += amt
+        else:
+            # INVOICE residual on completed collect, unknown methods, etc.
+            other_vol += amt
 
     # --- Business daily ---
     biz_values = {
@@ -140,6 +150,8 @@ async def apply_sale_to_rollups(
         "gross_profit": s * gross_profit,
         "cash_volume": cash_vol,
         "mpesa_volume": mpesa_vol,
+        "card_volume": card_vol,
+        "other_volume": other_vol,
         "missing_cost_line_count": int(s * missing_cost_lines),
     }
     stmt = pg_insert(SaleAnalyticsSummary).values(**biz_values)
@@ -160,6 +172,8 @@ async def apply_sale_to_rollups(
             "gross_profit": SaleAnalyticsSummary.gross_profit + stmt.excluded.gross_profit,
             "cash_volume": SaleAnalyticsSummary.cash_volume + stmt.excluded.cash_volume,
             "mpesa_volume": SaleAnalyticsSummary.mpesa_volume + stmt.excluded.mpesa_volume,
+            "card_volume": SaleAnalyticsSummary.card_volume + stmt.excluded.card_volume,
+            "other_volume": SaleAnalyticsSummary.other_volume + stmt.excluded.other_volume,
             "missing_cost_line_count": SaleAnalyticsSummary.missing_cost_line_count
             + stmt.excluded.missing_cost_line_count,
         },

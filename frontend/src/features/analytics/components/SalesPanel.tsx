@@ -11,10 +11,10 @@ import type {
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 
-type ChartMetric = "sales" | "revenue" | "profit" | "discounts";
+type ChartMetric = "orders" | "revenue" | "profit" | "discounts";
 
 const METRIC_TABS: { id: ChartMetric; label: string }[] = [
-  { id: "sales", label: "Sales" },
+  { id: "orders", label: "Orders" },
   { id: "revenue", label: "Revenue" },
   { id: "profit", label: "Profit" },
   { id: "discounts", label: "Discounts" },
@@ -36,7 +36,7 @@ export function SalesPanel({
   period: AnalyticsRange;
   loading?: boolean;
 }) {
-  const [metric, setMetric] = useState<ChartMetric>("sales");
+  const [metric, setMetric] = useState<ChartMetric>("revenue");
   const hourlyGrain = useHourlyGrain(period);
 
   const s = dashboard?.summary;
@@ -56,7 +56,11 @@ export function SalesPanel({
 
   const cash = s?.cash_volume ?? 0;
   const mpesa = s?.mpesa_volume ?? 0;
+  const card = s?.card_volume ?? 0;
+  const other = s?.other_volume ?? 0;
   const credit = s?.credit_outstanding ?? 0;
+  const profitProvisional =
+    Boolean(s?.profit_is_provisional) || missingCosts > 0;
 
   const delta = (cur: number, prev: number) => {
     const c = pctChange(cur, prev);
@@ -79,7 +83,7 @@ export function SalesPanel({
           });
         }
         const value =
-          metric === "sales"
+          metric === "orders"
             ? Number(pt.orders ?? 0)
             : metric === "revenue"
               ? Number(pt.net_revenue ?? 0)
@@ -102,7 +106,7 @@ export function SalesPanel({
         label = raw.slice(5);
       }
       const value =
-        metric === "sales"
+        metric === "orders"
           ? Number(pt.total_completed_orders_count ?? 0)
           : metric === "revenue"
             ? Number(pt.net_revenue_collected ?? pt.gross_sales_volume ?? 0)
@@ -113,37 +117,43 @@ export function SalesPanel({
     });
   }, [hourlyGrain, hourly?.series, dashboard?.series, metric]);
 
-  // Settled: only methods with volume (plus credit if open)
+  // Settled mix + open credit (credit is outstanding all-time, not period)
   const settled = useMemo(() => {
     const rows: { label: string; value: number; warn?: boolean; note?: string }[] =
       [];
     if (cash > 0) rows.push({ label: "Cash", value: cash });
     if (mpesa > 0) rows.push({ label: "M-Pesa", value: mpesa });
-    if (credit > 0) {
-      rows.push({ label: "Credit open", value: credit, warn: true });
-    } else if (rows.length === 0 && rev > 0) {
-      // Revenue but no payment mix in rollup — still surface credit none
-      rows.push({
+    if (card > 0) rows.push({ label: "Card", value: card });
+    if (other > 0) rows.push({ label: "Other", value: other });
+    rows.push({
+      label: "Open credit (outstanding)",
+      value: credit,
+      warn: credit > 0,
+      note: credit > 0 ? "Not limited to this period" : "None open",
+    });
+    if (rows.length === 1 && rev > 0 && cash + mpesa + card + other === 0) {
+      rows.unshift({
         label: "Collected mix",
         value: 0,
-        note: "Payment mix not in rollup for these sales",
+        note: "No cash/M-Pesa/card in rollup for this window",
       });
-    } else if (rows.length === 0) {
-      rows.push({ label: "Credit open", value: 0, note: "None open" });
     }
     return rows;
-  }, [cash, mpesa, credit, rev]);
+  }, [cash, mpesa, card, other, credit, rev]);
 
   if (loading && !dashboard) {
     return <PanelSkeleton />;
   }
 
   const profitProps =
-    missingCosts > 0
+    profitProvisional
       ? {
           value: formatKES(gp),
           ...(gp !== 0 ? delta(gp, prevGp) : {}),
-          hint: `${missingCosts} line${missingCosts === 1 ? "" : "s"} missing cost`,
+          hint:
+            missingCosts > 0
+              ? `Estimated · ${missingCosts} line${missingCosts === 1 ? "" : "s"} missing cost`
+              : "Estimated (provisional)",
           tone: "warn" as const,
         }
       : rev > 0 && gp === 0
@@ -177,7 +187,10 @@ export function SalesPanel({
           value={formatKES(aov)}
           {...delta(aov, prevAov)}
         />
-        <KpiCard label="Gross profit" {...profitProps} />
+        <KpiCard
+          label={profitProvisional ? "Gross profit (est.)" : "Gross profit"}
+          {...profitProps}
+        />
       </KpiRow>
 
       <div className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-card">

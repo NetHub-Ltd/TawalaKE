@@ -18,12 +18,18 @@ export type DashboardSummary = {
   gross_profit?: number;
   cash_volume?: number;
   mpesa_volume?: number;
+  card_volume?: number;
+  other_volume?: number;
   missing_cost_line_count?: number;
+  profit_is_provisional?: boolean;
   credit_outstanding?: number;
   open_credit_sales?: number;
+  /** Live open credit — not limited to the selected period */
+  credit_scope?: string;
   expenses_total?: number;
   expenses_count?: number;
   profit_after_expenses?: number;
+  expenses_available?: boolean;
 };
 
 export type DashboardSeriesPoint = {
