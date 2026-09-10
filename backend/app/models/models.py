@@ -624,6 +624,8 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     # Payment mix (COMPLETED collected only)
     cash_volume: float = Field(default=0.0)
     mpesa_volume: float = Field(default=0.0)
+    card_volume: float = Field(default=0.0)
+    other_volume: float = Field(default=0.0)
     # Lines sold without known cost (honesty signal for Products tab)
     missing_cost_line_count: int = Field(default=0)
 

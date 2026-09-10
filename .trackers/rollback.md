@@ -1,8 +1,7 @@
 # Rollback
-Revert PR. Downgrade migration e2f3a4b5c6d7. Old analytics worker path removed — restore from main if needed.
 
-Revert the PR.
-
-- Soft-deleted products remain with deleted_at set (data safe).
-- Drop `data_archive_jobs` via migration downgrade if needed.
-- ARCHIVE_ENABLED defaults false — no mass purge from this PR alone.
+- **Previous known-good on dev:** 9aeaf525057c73ce383d9db808727b855ed1c6b9
+- **Migration:** b2c3d4e5f6a7_add_card_other_volume_analytics (additive card_volume, other_volume)
+- **Rollback code:** Revert PR on dev
+- **Rollback data:** `alembic downgrade a1b2c3d4e5f7` drops the two columns (safe if unused)
+- **Notes:** Discount write-path fix has no migration; re-backfill businesses if historical discounts were under-counted

@@ -319,3 +319,96 @@ async def test_apply_sale_missing_sale(mock_session):
     result.one_or_none.return_value = None
     mock_session.exec.return_value = result
     assert await apply_sale_to_rollups(mock_session, uuid4()) is None
+
+
+
+@pytest.mark.asyncio
+async def test_apply_sale_uses_discount_applied_and_card_volume(mock_session):
+    """Checkout sets discount_applied; CARD must land in card_volume."""
+    sale_id = uuid4()
+    biz_id = uuid4()
+    staff_id = uuid4()
+    product_id = uuid4()
+    sale = MagicMock()
+    sale.id = sale_id
+    sale.status = SaleStatus.COMPLETED
+    sale.business_id = biz_id
+    sale.organization_id = uuid4()
+    sale.cashier_id = staff_id
+    sale.subtotal = 100.0
+    sale.tax_amount = 0.0
+    sale.discount = 0.0
+    sale.discount_applied = 12.5
+    sale.total_amount = 87.5
+    sale.updated_at = datetime(2026, 9, 5, 14, 30, tzinfo=timezone.utc)
+    sale.created_at = sale.updated_at
+
+    item = MagicMock()
+    item.product_id = product_id
+    item.sku = "SKU1"
+    item.name = "Widget"
+    item.quantity = 1
+    item.subtotal = 100.0
+    item.cost_price_at_sale = 40.0
+
+    pay = MagicMock()
+    pay.method = "CARD"
+    pay.amount = 87.5
+
+    sale_result = MagicMock()
+    sale_result.one_or_none.return_value = sale
+    items_result = MagicMock()
+    items_result.all.return_value = [item]
+    pay_result = MagicMock()
+    pay_result.all.return_value = [pay]
+
+    mock_session.exec = AsyncMock(
+        side_effect=[sale_result, items_result, pay_result] + [MagicMock()] * 12
+    )
+    mock_session.flush = AsyncMock()
+
+    value_calls: list[dict] = []
+
+    with patch("app.services.analytics_rollup.pg_insert") as pg:
+        insert_mock = MagicMock()
+
+        def values_side_effect(**kwargs):
+            value_calls.append(dict(kwargs))
+            return insert_mock
+
+        insert_mock.values.side_effect = values_side_effect
+        insert_mock.on_conflict_do_update.return_value = insert_mock
+        insert_mock.excluded = MagicMock()
+        pg.return_value = insert_mock
+        out = await apply_sale_to_rollups(mock_session, sale_id, sign=1)
+
+    assert out is not None
+    assert value_calls, "expected pg_insert values"
+    daily = value_calls[0]
+    assert daily.get("total_discounts_granted") == 12.5
+    assert daily.get("card_volume") == 87.5
+    assert daily.get("cash_volume") == 0.0
+    assert daily.get("mpesa_volume") == 0.0
+    assert daily.get("other_volume") == 0.0
+
+
+def test_aggregate_rows_includes_card_and_provisional():
+    row = MagicMock(
+        gross_sales_volume=10,
+        total_tax_collected=1,
+        total_discounts_granted=2,
+        net_revenue_collected=9,
+        refund_deductions_volume=0,
+        total_completed_orders_count=1,
+        cogs_volume=0,
+        gross_profit=9,
+        cash_volume=0,
+        mpesa_volume=0,
+        card_volume=9,
+        other_volume=0,
+        missing_cost_line_count=1,
+    )
+    out = aggregate_rows([row])
+    assert out["card_volume"] == 9
+    assert out["profit_is_provisional"] is True
+    assert out["missing_cost_line_count"] == 1

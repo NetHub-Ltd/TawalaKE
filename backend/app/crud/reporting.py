@@ -215,18 +215,46 @@ class ReportingCrud:
             .order_by(col(BusinessSalesHourly.hour_dimension).asc())
         )
         rows = (await db.exec(stmt)).all()
+        by_hour = {
+            r.hour_dimension: HourlyPoint(
+                hour=r.hour_dimension,
+                net_revenue=float(r.net_revenue_collected or 0),
+                gross_profit=float(r.gross_profit or 0),
+                orders=int(r.total_completed_orders_count or 0),
+                total_discounts_granted=float(r.total_discounts_granted or 0),
+            )
+            for r in rows
+        }
+        # Zero-fill hourly buckets across the window so single-day charts are continuous
+        series: List[HourlyPoint] = []
+        cursor = start
+        # Cap fill at 48 hours to avoid pathological custom ranges
+        max_buckets = 48
+        filled = 0
+        while cursor < end and filled < max_buckets:
+            pt = by_hour.get(cursor)
+            if pt is None:
+                series.append(
+                    HourlyPoint(
+                        hour=cursor,
+                        net_revenue=0.0,
+                        gross_profit=0.0,
+                        orders=0,
+                        total_discounts_granted=0.0,
+                    )
+                )
+            else:
+                series.append(pt)
+            cursor = cursor + timedelta(hours=1)
+            filled += 1
+        # If window longer than cap, append any remaining real points after cursor
+        if filled >= max_buckets:
+            for h, pt in sorted(by_hour.items(), key=lambda x: x[0]):
+                if h >= cursor:
+                    series.append(pt)
         return HourlyResponse(
             window=ReportWindow(start=start, end=end),
-            series=[
-                HourlyPoint(
-                    hour=r.hour_dimension,
-                    net_revenue=float(r.net_revenue_collected or 0),
-                    gross_profit=float(r.gross_profit or 0),
-                    orders=int(r.total_completed_orders_count or 0),
-                    total_discounts_granted=float(r.total_discounts_granted or 0),
-                )
-                for r in rows
-            ],
+            series=series,
         )
 
     async def products(
@@ -484,7 +512,12 @@ class ReportingCrud:
 
         summary = aggregate_rows(current_rows)
         credit = await self.credit_outstanding(db, business_id=business_id)
-        summary = {**summary, **credit}
+        # Live open-credit totals (not period-scoped) — clients must label as outstanding
+        summary = {
+            **summary,
+            **credit,
+            "credit_scope": "outstanding_all_time",
+        }
         try:
             exp = await expense_crud.period_summary(
                 db, business_id=business_id, start=cur_start, end=cur_end
@@ -496,11 +529,21 @@ class ReportingCrud:
             summary["expenses_by_category"] = [
                 c.model_dump() for c in exp.by_category
             ]
+            summary["expenses_available"] = True
         except Exception:
+            from loguru import logger
+
+            logger.exception(
+                "dashboard expense summary failed business_id={}", business_id
+            )
             summary.setdefault("expenses_total", 0.0)
             summary.setdefault("expenses_count", 0)
             summary.setdefault("profit_after_expenses", summary.get("gross_profit") or 0)
             summary.setdefault("expenses_by_category", [])
+            summary["expenses_available"] = False
+
+        previous_summary = aggregate_rows(previous_rows)
+        # previous_summary intentionally omits credit/expenses (not period-comparable)
 
         return {
             "period": period.value if hasattr(period, "value") else str(period),
@@ -513,7 +556,7 @@ class ReportingCrud:
                 "end": prev_end.isoformat(),
             },
             "summary": summary,
-            "previous_summary": aggregate_rows(previous_rows),
+            "previous_summary": previous_summary,
             "series": [
                 {
                     "date": r.date_dimension.date().isoformat(),
@@ -526,6 +569,8 @@ class ReportingCrud:
                     "total_completed_orders_count": r.total_completed_orders_count,
                     "cash_volume": getattr(r, "cash_volume", 0) or 0,
                     "mpesa_volume": getattr(r, "mpesa_volume", 0) or 0,
+                    "card_volume": getattr(r, "card_volume", 0) or 0,
+                    "other_volume": getattr(r, "other_volume", 0) or 0,
                     "gross_profit": getattr(r, "gross_profit", 0) or 0,
                     "cogs_volume": getattr(r, "cogs_volume", 0) or 0,
                     "missing_cost_line_count": getattr(r, "missing_cost_line_count", 0) or 0,
@@ -541,7 +586,7 @@ class ReportingCrud:
         *,
         business_id: UUID,
     ) -> dict:
-        """Sum of PENDING_PAYMENT sales (credit issued, not yet collected)."""
+        """Live sum of PENDING_PAYMENT sales (open credit, not period-scoped)."""
         stmt = (
             select(
                 func.coalesce(func.sum(Sale.total_amount), 0.0),
