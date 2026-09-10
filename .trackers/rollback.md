@@ -1,4 +1,2 @@
 # Rollback
-
-- **Base on dev:** b6b71a0
-- **Rollback:** Revert PR on dev (no migration in this change)
+Revert PR on dev. No migration in this change (uses existing customers table).
