@@ -42,7 +42,20 @@ class PaymentMethod(str, Enum):
     CARD = "CARD"
 
 
+class ExpenseCategory(str, Enum):
+    RENT = "RENT"
+    UTILITIES = "UTILITIES"
+    SALARIES = "SALARIES"
+    TRANSPORT = "TRANSPORT"
+    SUPPLIES = "SUPPLIES"
+    MARKETING = "MARKETING"
+    MAINTENANCE = "MAINTENANCE"
+    TAXES = "TAXES"
+    OTHER = "OTHER"
+
+
 class SaleStatus(str, Enum):
+
     PENDING_PAYMENT = "PENDING_PAYMENT"
     COMPLETED = "COMPLETED"
     REFUNDED = "REFUNDED"
@@ -608,6 +621,13 @@ class SaleAnalyticsSummary(BaseMixin, table=True):
     # Additive — gross profit from line cost_price_at_sale (not net of expenses)
     cogs_volume: float = Field(default=0.0)
     gross_profit: float = Field(default=0.0)
+    # Payment mix (COMPLETED collected only)
+    cash_volume: float = Field(default=0.0)
+    mpesa_volume: float = Field(default=0.0)
+    card_volume: float = Field(default=0.0)
+    other_volume: float = Field(default=0.0)
+    # Lines sold without known cost (honesty signal for Products tab)
+    missing_cost_line_count: int = Field(default=0)
 
     business: Business = Relationship(back_populates="analytics_summaries")
 
@@ -904,6 +924,79 @@ class DataDeletionRequest(BaseMixin, table=True):
 # =========================================================
 # 7b. DATA ARCHIVE JOBS (soft-delete retention pipeline)
 # =========================================================
+
+
+
+
+
+class Expense(BaseMixin, table=True):
+    """
+    Business operating expense (opex) — not COGS.
+    Used for period expense totals and gross-profit-after-expenses views.
+    """
+    __tablename__ = "expenses"
+
+    organization_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    business_id: UUID = Field(
+        foreign_key="businesses.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    recorded_by: Optional[UUID] = Field(
+        default=None,
+        foreign_key="staff.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+
+    category: ExpenseCategory = Field(
+        default=ExpenseCategory.OTHER,
+        sa_column=Column(SAEnum(ExpenseCategory, name="expense_category_enum")),
+    )
+    amount: float = Field(ge=0, description="Expense amount in business currency")
+    currency: str = Field(default="KES", max_length=3)
+    # When the expense was incurred (business day), not only created_at
+    incurred_on: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), index=True),
+        description="Business date/time the expense applies to.",
+    )
+    vendor: Optional[str] = Field(default=None, max_length=150)
+    notes: Optional[str] = Field(default=None, max_length=500)
+    reference: Optional[str] = Field(default=None, max_length=100, index=True)
+
+    deleted_by: Optional[UUID] = Field(default=None, index=True)
+
+class AnalyticsOutbox(BaseMixin, table=True):
+    """
+    Durable queue for rollup application after COMPLETED sales.
+    Ensures dashboard analytics are not lost if in-process BackgroundTasks die.
+    """
+    __tablename__ = "analytics_outbox"
+    __table_args__ = (
+        sa.UniqueConstraint("sale_id", name="uq_analytics_outbox_sale"),
+    )
+
+    sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    status: str = Field(
+        default="PENDING",
+        index=True,
+        description="PENDING | PROCESSING | DONE | FAILED",
+    )
+    attempts: int = Field(default=0)
+    last_error: Optional[str] = Field(default=None)
+    processed_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
 
 class DataArchiveJob(BaseMixin, table=True):
     """

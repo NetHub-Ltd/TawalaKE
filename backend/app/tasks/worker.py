@@ -232,29 +232,49 @@ async def async_process_document_generation(sale_id: UUID) -> str:
 
 async def async_update_sales_analytics(sale_id: UUID) -> str:
     """
-    Upsert pre-aggregated rollups (daily business/product/staff + hourly bars)
-    and publish a Redis event for dashboard WebSockets.
+    Process durable analytics outbox for a sale (or apply rollup once).
+    Prefer outbox row so retries are idempotent.
     """
+    from app.services.analytics_outbox import process_outbox_entry, enqueue_analytics_outbox
     from app.services.analytics_rollup import apply_sale_to_rollups, publish_rollup_event
     from app.core.redis_client import redis_manager
+    from app.models.models import AnalyticsOutbox, Sale, SaleStatus
+    from sqlmodel import select
 
     async with AsyncSessionLocal() as db:
         try:
-            payload = await apply_sale_to_rollups(db, sale_id, sign=1)
-            if not payload:
-                return f"Analytics skipped: sale {sale_id} not completed or not found."
-            await db.commit()
+            sale = (await db.exec(select(Sale).where(Sale.id == sale_id))).one_or_none()
+            if not sale or sale.status != SaleStatus.COMPLETED:
+                return f"Analytics skipped: sale {sale_id} not completed."
+
+            await enqueue_analytics_outbox(
+                db,
+                sale_id=sale.id,
+                business_id=sale.business_id,
+                organization_id=sale.organization_id,
+            )
+            entry = (
+                await db.exec(
+                    select(AnalyticsOutbox).where(AnalyticsOutbox.sale_id == sale_id)
+                )
+            ).one_or_none()
+            if entry is None:
+                return f"Analytics outbox missing for {sale_id}"
+            if entry.status == "DONE":
+                return f"Analytics already applied for {sale_id}"
+
+            redis = None
             try:
                 redis = redis_manager.get_async_client()
-                await publish_rollup_event(redis, payload)
-            except Exception as pub_err:
-                logger.warning("Analytics published to DB but Redis fanout failed: {}", pub_err)
-            logger.info(
-                "Analytics rollups updated business={} date={}",
-                payload.get("business_id"),
-                payload.get("date"),
+            except Exception:
+                pass
+            ok = await process_outbox_entry(db, entry, redis=redis)
+            await db.commit()
+            return (
+                f"Analytics updated for Sale ID: {sale_id}"
+                if ok
+                else f"Analytics failed for Sale ID: {sale_id}"
             )
-            return f"Analytics updated successfully for Sale ID: {sale_id}"
         except Exception as error:
             await db.rollback()
             logger.error(f"Critical exception in analytics update: {str(error)}")

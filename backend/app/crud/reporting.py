@@ -9,11 +9,16 @@ from sqlmodel import select, col, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.models import (
+    Sale,
+    SaleStatus,
     BusinessSalesHourly,
     ProductSalesSummary,
     SaleAnalyticsSummary,
     Staff,
     StaffSalesSummary,
+    Payment,
+    FinancialDocument,
+    DocumentType,
 )
 from app.schemas.reporting import (
     HourlyPoint,
@@ -31,6 +36,7 @@ from app.schemas.reporting import (
     StaffRow,
 )
 from app.utils.helpers import AnalyticsPeriod, period_windows, aggregate_rows
+from app.crud.expense import expense_crud
 
 
 def _margin(profit: float, revenue: float) -> float:
@@ -189,14 +195,21 @@ class ReportingCrud:
         db: AsyncSession,
         *,
         business_id: UUID,
+        period: AnalyticsPeriod = AnalyticsPeriod.TODAY,
+        date_value: Optional[date] = None,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> HourlyResponse:
-        now = datetime.now(timezone.utc)
-        if start is None:
-            start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
-        if end is None:
-            end = start + timedelta(days=1)
+        """Hourly buckets for the same window as dashboard when period/date given."""
+        if start is None or end is None:
+            cs, ce, _, _, _ = resolve_window(
+                period, date_value=date_value, start=start, end=end
+            )
+            start, end = cs, ce
+        if start.tzinfo is None:
+            start = start.replace(tzinfo=timezone.utc)
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
         stmt = (
             select(BusinessSalesHourly)
             .where(BusinessSalesHourly.business_id == business_id)
@@ -205,17 +218,46 @@ class ReportingCrud:
             .order_by(col(BusinessSalesHourly.hour_dimension).asc())
         )
         rows = (await db.exec(stmt)).all()
+        by_hour = {
+            r.hour_dimension: HourlyPoint(
+                hour=r.hour_dimension,
+                net_revenue=float(r.net_revenue_collected or 0),
+                gross_profit=float(r.gross_profit or 0),
+                orders=int(r.total_completed_orders_count or 0),
+                total_discounts_granted=float(r.total_discounts_granted or 0),
+            )
+            for r in rows
+        }
+        # Zero-fill hourly buckets across the window so single-day charts are continuous
+        series: List[HourlyPoint] = []
+        cursor = start
+        # Cap fill at 48 hours to avoid pathological custom ranges
+        max_buckets = 48
+        filled = 0
+        while cursor < end and filled < max_buckets:
+            pt = by_hour.get(cursor)
+            if pt is None:
+                series.append(
+                    HourlyPoint(
+                        hour=cursor,
+                        net_revenue=0.0,
+                        gross_profit=0.0,
+                        orders=0,
+                        total_discounts_granted=0.0,
+                    )
+                )
+            else:
+                series.append(pt)
+            cursor = cursor + timedelta(hours=1)
+            filled += 1
+        # If window longer than cap, append any remaining real points after cursor
+        if filled >= max_buckets:
+            for h, pt in sorted(by_hour.items(), key=lambda x: x[0]):
+                if h >= cursor:
+                    series.append(pt)
         return HourlyResponse(
             window=ReportWindow(start=start, end=end),
-            series=[
-                HourlyPoint(
-                    hour=r.hour_dimension,
-                    net_revenue=float(r.net_revenue_collected or 0),
-                    gross_profit=float(r.gross_profit or 0),
-                    orders=int(r.total_completed_orders_count or 0),
-                )
-                for r in rows
-            ],
+            series=series,
         )
 
     async def products(
@@ -438,15 +480,23 @@ class ReportingCrud:
         *,
         business_id: UUID,
         period: AnalyticsPeriod = AnalyticsPeriod.DAYS_7,
+        date_value: Optional[date] = None,
+        start: Optional[datetime] = None,
+        end: Optional[datetime] = None,
     ) -> dict:
         """
         Compat dashboard payload for the existing overview UI.
         Built only from SaleAnalyticsSummary rollups (no live sale scans).
         Shape matches legacy GET /business/analytics.
+        Supports period presets and optional custom date / start-end.
         """
-        if period == AnalyticsPeriod.CUSTOM:
-            period = AnalyticsPeriod.DAYS_7
-        cur_start, cur_end, prev_start, prev_end = period_windows(period)
+        cur_start, cur_end, prev_start, prev_end, period = resolve_window(
+            period, date_value=date_value, start=start, end=end
+        )
+        if prev_start is None:
+            prev_start = cur_start
+        if prev_end is None:
+            prev_end = cur_start
 
         stmt = (
             select(SaleAnalyticsSummary)
@@ -463,6 +513,45 @@ class ReportingCrud:
         current_rows = [r for r in all_rows if cur_start <= r.date_dimension < cur_end]
         previous_rows = [r for r in all_rows if prev_start <= r.date_dimension < prev_end]
 
+        summary = aggregate_rows(current_rows)
+        credit = await self.credit_outstanding(db, business_id=business_id)
+        period_credit = await self.credit_period_metrics(
+            db, business_id=business_id, start=cur_start, end=cur_end
+        )
+        # Live open-credit totals (not period-scoped) + period issued/collected
+        summary = {
+            **summary,
+            **credit,
+            **period_credit,
+            "credit_scope": "outstanding_all_time",
+        }
+        try:
+            exp = await expense_crud.period_summary(
+                db, business_id=business_id, start=cur_start, end=cur_end
+            )
+            summary["expenses_total"] = exp.total_amount
+            summary["expenses_count"] = exp.count
+            gp = float(summary.get("gross_profit") or 0)
+            summary["profit_after_expenses"] = round(gp - float(exp.total_amount or 0), 2)
+            summary["expenses_by_category"] = [
+                c.model_dump() for c in exp.by_category
+            ]
+            summary["expenses_available"] = True
+        except Exception:
+            from loguru import logger
+
+            logger.exception(
+                "dashboard expense summary failed business_id={}", business_id
+            )
+            summary.setdefault("expenses_total", 0.0)
+            summary.setdefault("expenses_count", 0)
+            summary.setdefault("profit_after_expenses", summary.get("gross_profit") or 0)
+            summary.setdefault("expenses_by_category", [])
+            summary["expenses_available"] = False
+
+        previous_summary = aggregate_rows(previous_rows)
+        # previous_summary intentionally omits credit/expenses (not period-comparable)
+
         return {
             "period": period.value if hasattr(period, "value") else str(period),
             "window": {
@@ -473,8 +562,8 @@ class ReportingCrud:
                 "start": prev_start.isoformat(),
                 "end": prev_end.isoformat(),
             },
-            "summary": aggregate_rows(current_rows),
-            "previous_summary": aggregate_rows(previous_rows),
+            "summary": summary,
+            "previous_summary": previous_summary,
             "series": [
                 {
                     "date": r.date_dimension.date().isoformat(),
@@ -485,9 +574,144 @@ class ReportingCrud:
                     "net_revenue_collected": r.net_revenue_collected,
                     "refund_deductions_volume": r.refund_deductions_volume,
                     "total_completed_orders_count": r.total_completed_orders_count,
+                    "cash_volume": getattr(r, "cash_volume", 0) or 0,
+                    "mpesa_volume": getattr(r, "mpesa_volume", 0) or 0,
+                    "card_volume": getattr(r, "card_volume", 0) or 0,
+                    "other_volume": getattr(r, "other_volume", 0) or 0,
+                    "gross_profit": getattr(r, "gross_profit", 0) or 0,
+                    "cogs_volume": getattr(r, "cogs_volume", 0) or 0,
+                    "missing_cost_line_count": getattr(r, "missing_cost_line_count", 0) or 0,
                 }
                 for r in sorted(current_rows, key=lambda x: x.date_dimension)
             ],
+        }
+
+
+    async def credit_outstanding(
+        self,
+        db: AsyncSession,
+        *,
+        business_id: UUID,
+    ) -> dict:
+        """Live sum of PENDING_PAYMENT sales (open credit, not period-scoped)."""
+        stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(Sale.id),
+            )
+            .where(Sale.business_id == business_id)
+            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+        )
+        if hasattr(Sale, "deleted_at"):
+            stmt = stmt.where(col(Sale.deleted_at).is_(None))
+        total, count = (await db.exec(stmt)).one()
+        return {
+            "credit_outstanding": float(total or 0),
+            "open_credit_sales": int(count or 0),
+        }
+
+    async def credit_period_metrics(
+        self,
+        db: AsyncSession,
+        *,
+        business_id: UUID,
+        start: datetime,
+        end: datetime,
+    ) -> dict:
+        """
+        Period-scoped credit activity for the selected dashboard window.
+
+        - credit_issued_period: sales *created* in [start, end) that are (or were)
+          credit — still PENDING_PAYMENT, or linked to an INVOICE document, or
+          collected via a COLLECT-* payment.
+        - credit_collected_period: money collected on credit sales in [start, end)
+          (Payment rows whose reference starts with COLLECT-).
+        """
+        # Issued in period: open credit created in window
+        open_issued_stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(Sale.id),
+            )
+            .where(Sale.business_id == business_id)
+            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+            .where(Sale.created_at >= start)
+            .where(Sale.created_at < end)
+        )
+        if hasattr(Sale, "deleted_at"):
+            open_issued_stmt = open_issued_stmt.where(col(Sale.deleted_at).is_(None))
+        open_amt, open_cnt = (await db.exec(open_issued_stmt)).one()
+
+        # Issued in period then collected: sale created in window, has COLLECT payment
+        collected_issued_stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(func.distinct(Sale.id)),
+            )
+            .select_from(Sale)
+            .join(Payment, Payment.sale_id == Sale.id)
+            .where(Sale.business_id == business_id)
+            .where(Sale.created_at >= start)
+            .where(Sale.created_at < end)
+            .where(col(Payment.reference).like("COLLECT-%"))
+        )
+        if hasattr(Sale, "deleted_at"):
+            collected_issued_stmt = collected_issued_stmt.where(
+                col(Sale.deleted_at).is_(None)
+            )
+        coll_iss_amt, coll_iss_cnt = (await db.exec(collected_issued_stmt)).one()
+
+        # Also issued as invoice document in window (credit path) still open or collected
+        # Avoid double-count: only INVOICE docs whose sale is COMPLETED without COLLECT
+        # already counted above, or PENDING already in open_issued.
+        # Simpler: INVOICE sales created in window not already in open or collect sets.
+        invoice_issued_stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(func.distinct(Sale.id)),
+            )
+            .select_from(Sale)
+            .join(FinancialDocument, FinancialDocument.sale_id == Sale.id)
+            .where(Sale.business_id == business_id)
+            .where(Sale.created_at >= start)
+            .where(Sale.created_at < end)
+            .where(FinancialDocument.document_type == DocumentType.INVOICE)
+            .where(Sale.status == SaleStatus.COMPLETED)
+            .where(
+                ~Sale.id.in_(
+                    select(Payment.sale_id).where(
+                        col(Payment.reference).like("COLLECT-%")
+                    )
+                )
+            )
+        )
+        if hasattr(Sale, "deleted_at"):
+            invoice_issued_stmt = invoice_issued_stmt.where(
+                col(Sale.deleted_at).is_(None)
+            )
+        inv_amt, inv_cnt = (await db.exec(invoice_issued_stmt)).one()
+
+        issued_amount = float(open_amt or 0) + float(coll_iss_amt or 0) + float(inv_amt or 0)
+        issued_count = int(open_cnt or 0) + int(coll_iss_cnt or 0) + int(inv_cnt or 0)
+
+        # Collected in period (when money came in), regardless of issue date
+        collected_stmt = (
+            select(
+                func.coalesce(func.sum(Payment.amount), 0.0),
+                func.count(Payment.id),
+            )
+            .where(Payment.business_id == business_id)
+            .where(Payment.created_at >= start)
+            .where(Payment.created_at < end)
+            .where(col(Payment.reference).like("COLLECT-%"))
+        )
+        coll_amt, coll_cnt = (await db.exec(collected_stmt)).one()
+
+        return {
+            "credit_issued_period": round(issued_amount, 2),
+            "credit_issued_count": issued_count,
+            "credit_collected_period": round(float(coll_amt or 0), 2),
+            "credit_collected_count": int(coll_cnt or 0),
         }
 
 

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers
 from app.core.config import settings
 
 from app.utils.logging import logger
 from app.api.deps import AuthUser, get_current_staff
-from app.api.paywall_deps import require_paywall, require_active_plan
+from app.api.paywall_deps import require_paywall, require_paywall_any, require_active_plan
 
 
 api_router = APIRouter(prefix='/api/v1')
@@ -48,6 +48,24 @@ api_router.include_router(
 api_router.include_router(
     ws_dashboard.router,
     tags=["Dashboard WebSocket"],
+)
+api_router.include_router(
+    expenses.router,
+    prefix="/expenses",
+    tags=["Expense Tracker"],
+    dependencies=[
+        Depends(require_active_plan),
+        Depends(require_paywall("expense_tracking")),
+    ],
+)
+api_router.include_router(
+    customers.router,
+    prefix="/customers",
+    tags=["Customer Management"],
+    dependencies=[
+        Depends(require_active_plan),
+        Depends(require_paywall_any("customer_management", "pos_and_sales")),
+    ],
 )
 # Staff management (organization-scoped). Sole dedicated surface.
 api_router.include_router(
