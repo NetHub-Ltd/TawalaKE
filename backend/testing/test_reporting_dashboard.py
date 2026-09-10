@@ -2,13 +2,19 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 
 from app.crud.reporting import reporting_crud
 from app.utils.helpers import AnalyticsPeriod
+
+
+def _period_credit_zero():
+    r = MagicMock()
+    r.one.return_value = (0.0, 0)
+    return r
 
 
 @pytest.mark.asyncio
@@ -37,6 +43,16 @@ async def test_dashboard_from_rollups(mock_session):
     credit_result = MagicMock()
     credit_result.one.return_value = (2500.0, 3)
 
+    # credit_period_metrics: open issued, collected-issued, invoice-issued, collected payments
+    issued_open = MagicMock()
+    issued_open.one.return_value = (400.0, 1)
+    issued_collected = MagicMock()
+    issued_collected.one.return_value = (100.0, 1)
+    issued_invoice = MagicMock()
+    issued_invoice.one.return_value = (0.0, 0)
+    collected_pay = MagicMock()
+    collected_pay.one.return_value = (150.0, 1)
+
     expense_total_result = MagicMock()
     expense_total_result.one.return_value = (5000.0, 2)
     expense_cat_result = MagicMock()
@@ -46,6 +62,10 @@ async def test_dashboard_from_rollups(mock_session):
         side_effect=[
             rollup_result,
             credit_result,
+            issued_open,
+            issued_collected,
+            issued_invoice,
+            collected_pay,
             expense_total_result,
             expense_cat_result,
         ]
@@ -60,6 +80,8 @@ async def test_dashboard_from_rollups(mock_session):
     assert out["summary"]["net_revenue_collected"] == 111.0
     assert out["summary"]["credit_outstanding"] == 2500.0
     assert out["summary"]["open_credit_sales"] == 3
+    assert out["summary"]["credit_issued_period"] == 500.0  # 400 + 100 + 0
+    assert out["summary"]["credit_collected_period"] == 150.0
     assert out["summary"]["cash_volume"] == 80.0
     assert out["summary"]["card_volume"] == 10.0
     assert out["summary"]["credit_scope"] == "outstanding_all_time"
@@ -94,10 +116,7 @@ async def test_dashboard_provisional_profit_and_expense_failure(mock_session):
     rollup_result.all.return_value = [row]
     credit_result = MagicMock()
     credit_result.one.return_value = (0.0, 0)
-
-    async def _exec_side_effect(stmt):
-        # First call: rollups; second: credit; expense path raises via period_summary mock
-        return rollup_result if not hasattr(_exec_side_effect, "n") else credit_result
+    z = _period_credit_zero()
 
     calls = {"n": 0}
 
@@ -107,11 +126,11 @@ async def test_dashboard_provisional_profit_and_expense_failure(mock_session):
             return rollup_result
         if calls["n"] == 2:
             return credit_result
+        if calls["n"] <= 6:
+            return z
         raise RuntimeError("expense db down")
 
     mock_session.exec = AsyncMock(side_effect=exec_mock)
-
-    from unittest.mock import patch
 
     with patch(
         "app.crud.reporting.expense_crud.period_summary",
@@ -124,3 +143,5 @@ async def test_dashboard_provisional_profit_and_expense_failure(mock_session):
     assert out["summary"]["missing_cost_line_count"] == 2
     assert out["summary"]["profit_is_provisional"] is True
     assert out["summary"]["expenses_available"] is False
+    assert out["summary"]["credit_issued_period"] == 0.0
+    assert out["summary"]["credit_collected_period"] == 0.0

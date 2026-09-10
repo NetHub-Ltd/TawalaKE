@@ -26,6 +26,12 @@ export type DashboardSummary = {
   open_credit_sales?: number;
   /** Live open credit — not limited to the selected period */
   credit_scope?: string;
+  /** Credit sales created in the selected period (open + later collected) */
+  credit_issued_period?: number;
+  credit_issued_count?: number;
+  /** Collections on credit sales during the selected period */
+  credit_collected_period?: number;
+  credit_collected_count?: number;
   expenses_total?: number;
   expenses_count?: number;
   profit_after_expenses?: number;

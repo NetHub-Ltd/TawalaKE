@@ -16,6 +16,9 @@ from app.models.models import (
     SaleAnalyticsSummary,
     Staff,
     StaffSalesSummary,
+    Payment,
+    FinancialDocument,
+    DocumentType,
 )
 from app.schemas.reporting import (
     HourlyPoint,
@@ -512,10 +515,14 @@ class ReportingCrud:
 
         summary = aggregate_rows(current_rows)
         credit = await self.credit_outstanding(db, business_id=business_id)
-        # Live open-credit totals (not period-scoped) — clients must label as outstanding
+        period_credit = await self.credit_period_metrics(
+            db, business_id=business_id, start=cur_start, end=cur_end
+        )
+        # Live open-credit totals (not period-scoped) + period issued/collected
         summary = {
             **summary,
             **credit,
+            **period_credit,
             "credit_scope": "outstanding_all_time",
         }
         try:
@@ -601,6 +608,110 @@ class ReportingCrud:
         return {
             "credit_outstanding": float(total or 0),
             "open_credit_sales": int(count or 0),
+        }
+
+    async def credit_period_metrics(
+        self,
+        db: AsyncSession,
+        *,
+        business_id: UUID,
+        start: datetime,
+        end: datetime,
+    ) -> dict:
+        """
+        Period-scoped credit activity for the selected dashboard window.
+
+        - credit_issued_period: sales *created* in [start, end) that are (or were)
+          credit — still PENDING_PAYMENT, or linked to an INVOICE document, or
+          collected via a COLLECT-* payment.
+        - credit_collected_period: money collected on credit sales in [start, end)
+          (Payment rows whose reference starts with COLLECT-).
+        """
+        # Issued in period: open credit created in window
+        open_issued_stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(Sale.id),
+            )
+            .where(Sale.business_id == business_id)
+            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+            .where(Sale.created_at >= start)
+            .where(Sale.created_at < end)
+        )
+        if hasattr(Sale, "deleted_at"):
+            open_issued_stmt = open_issued_stmt.where(col(Sale.deleted_at).is_(None))
+        open_amt, open_cnt = (await db.exec(open_issued_stmt)).one()
+
+        # Issued in period then collected: sale created in window, has COLLECT payment
+        collected_issued_stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(func.distinct(Sale.id)),
+            )
+            .select_from(Sale)
+            .join(Payment, Payment.sale_id == Sale.id)
+            .where(Sale.business_id == business_id)
+            .where(Sale.created_at >= start)
+            .where(Sale.created_at < end)
+            .where(col(Payment.reference).like("COLLECT-%"))
+        )
+        if hasattr(Sale, "deleted_at"):
+            collected_issued_stmt = collected_issued_stmt.where(
+                col(Sale.deleted_at).is_(None)
+            )
+        coll_iss_amt, coll_iss_cnt = (await db.exec(collected_issued_stmt)).one()
+
+        # Also issued as invoice document in window (credit path) still open or collected
+        # Avoid double-count: only INVOICE docs whose sale is COMPLETED without COLLECT
+        # already counted above, or PENDING already in open_issued.
+        # Simpler: INVOICE sales created in window not already in open or collect sets.
+        invoice_issued_stmt = (
+            select(
+                func.coalesce(func.sum(Sale.total_amount), 0.0),
+                func.count(func.distinct(Sale.id)),
+            )
+            .select_from(Sale)
+            .join(FinancialDocument, FinancialDocument.sale_id == Sale.id)
+            .where(Sale.business_id == business_id)
+            .where(Sale.created_at >= start)
+            .where(Sale.created_at < end)
+            .where(FinancialDocument.document_type == DocumentType.INVOICE)
+            .where(Sale.status == SaleStatus.COMPLETED)
+            .where(
+                ~Sale.id.in_(
+                    select(Payment.sale_id).where(
+                        col(Payment.reference).like("COLLECT-%")
+                    )
+                )
+            )
+        )
+        if hasattr(Sale, "deleted_at"):
+            invoice_issued_stmt = invoice_issued_stmt.where(
+                col(Sale.deleted_at).is_(None)
+            )
+        inv_amt, inv_cnt = (await db.exec(invoice_issued_stmt)).one()
+
+        issued_amount = float(open_amt or 0) + float(coll_iss_amt or 0) + float(inv_amt or 0)
+        issued_count = int(open_cnt or 0) + int(coll_iss_cnt or 0) + int(inv_cnt or 0)
+
+        # Collected in period (when money came in), regardless of issue date
+        collected_stmt = (
+            select(
+                func.coalesce(func.sum(Payment.amount), 0.0),
+                func.count(Payment.id),
+            )
+            .where(Payment.business_id == business_id)
+            .where(Payment.created_at >= start)
+            .where(Payment.created_at < end)
+            .where(col(Payment.reference).like("COLLECT-%"))
+        )
+        coll_amt, coll_cnt = (await db.exec(collected_stmt)).one()
+
+        return {
+            "credit_issued_period": round(issued_amount, 2),
+            "credit_issued_count": issued_count,
+            "credit_collected_period": round(float(coll_amt or 0), 2),
+            "credit_collected_count": int(coll_cnt or 0),
         }
 
 

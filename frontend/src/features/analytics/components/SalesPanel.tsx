@@ -59,6 +59,8 @@ export function SalesPanel({
   const card = s?.card_volume ?? 0;
   const other = s?.other_volume ?? 0;
   const credit = s?.credit_outstanding ?? 0;
+  const creditIssued = s?.credit_issued_period ?? 0;
+  const creditCollected = s?.credit_collected_period ?? 0;
   const profitProvisional =
     Boolean(s?.profit_is_provisional) || missingCosts > 0;
 
@@ -117,7 +119,7 @@ export function SalesPanel({
     });
   }, [hourlyGrain, hourly?.series, dashboard?.series, metric]);
 
-  // Settled mix + open credit (credit is outstanding all-time, not period)
+  // Settled mix (period) + credit activity (period) + open credit (all-time)
   const settled = useMemo(() => {
     const rows: { label: string; value: number; warn?: boolean; note?: string }[] =
       [];
@@ -126,12 +128,27 @@ export function SalesPanel({
     if (card > 0) rows.push({ label: "Card", value: card });
     if (other > 0) rows.push({ label: "Other", value: other });
     rows.push({
+      label: "Credit issued",
+      value: creditIssued,
+      note: "In this period",
+    });
+    rows.push({
+      label: "Credit collected",
+      value: creditCollected,
+      note: "In this period",
+    });
+    rows.push({
       label: "Open credit (outstanding)",
       value: credit,
       warn: credit > 0,
-      note: credit > 0 ? "Not limited to this period" : "None open",
+      note: credit > 0 ? "All open balances" : "None open",
     });
-    if (rows.length === 1 && rev > 0 && cash + mpesa + card + other === 0) {
+    if (
+      cash + mpesa + card + other === 0 &&
+      rev > 0 &&
+      creditIssued === 0 &&
+      creditCollected === 0
+    ) {
       rows.unshift({
         label: "Collected mix",
         value: 0,
@@ -139,7 +156,7 @@ export function SalesPanel({
       });
     }
     return rows;
-  }, [cash, mpesa, card, other, credit, rev]);
+  }, [cash, mpesa, card, other, credit, creditIssued, creditCollected, rev]);
 
   if (loading && !dashboard) {
     return <PanelSkeleton />;
