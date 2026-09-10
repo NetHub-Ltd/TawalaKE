@@ -1,2 +1,2 @@
 # Rollback
-Revert PR on main. Resume manual tagging. Restore build_and_push branches: [main] if needed.
+Revert PR on main. Restore separate auto_tag.yml only if using a PAT that can trigger workflows.

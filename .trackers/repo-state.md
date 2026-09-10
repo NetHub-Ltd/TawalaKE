@@ -1,4 +1,4 @@
 # Repository State
-- Branch: chore/auto-tag-on-main
+- Branch: chore/combine-auto-tag-build
 - PR target: main
-- Focus: Auto-create v0.0.N tags on main backend pushes
+- Focus: Combine auto-tag + image build in one workflow
