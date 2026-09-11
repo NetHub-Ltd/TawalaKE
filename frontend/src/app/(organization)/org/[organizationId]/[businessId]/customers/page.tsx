@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import type { Metadata } from "next";
-import { CustomersWorkspace } from "@/features/customers/components/CustomersWorkspace";
+import { CustomersList } from "@/features/customers/components/CustomersList";
 
 interface PageProps {
   params: Promise<{ organizationId: string; businessId: string }>;
@@ -24,10 +24,7 @@ export default async function CustomersPage({ params }: PageProps) {
           </div>
         }
       >
-        <CustomersWorkspace
-          organizationId={organizationId}
-          businessId={businessId}
-        />
+        <CustomersList organizationId={organizationId} businessId={businessId} />
       </Suspense>
     </main>
   );

@@ -1,5 +1,5 @@
 # Repository State
-- Branch: feat/homepage-stitch-polish
-- PR: #187 → dev
-- Focus: Homepage visual polish from Stitch mock (look & feel only)
-- Commit: 450049d
+- Branch: feat/customers-workspace-ia
+- PR: #188 → dev
+- Focus: Phase 1 Customers workspace IA
+- Commit: 56cdba4
