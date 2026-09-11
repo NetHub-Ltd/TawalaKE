@@ -1,2 +1,2 @@
 # Rollback
-Revert PR. Frontend BFF-only; no migrations.
+Revert PR. Frontend-only CustomersList changes.

@@ -1,4 +1,7 @@
-# Fix customer detail BFF 404
-- [x] Use backendUrl() for GET/PATCH/DELETE single customer
-- [x] Align list/create proxy with backendUrl()
-- [x] Clearer workspace error message on failed detail load
+# Customers list polish (Pass A)
+- [x] Server pagination (skip/limit) + footer
+- [x] Debounced search
+- [x] Stronger row affordance + keyboard
+- [x] Glance layout (avatar, credit emphasis, open sales count)
+- [x] Empty / filter-empty states
+- [x] Mobile card list
