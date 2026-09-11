@@ -1,5 +1,4 @@
 # Repository State
-- Branch: feat/customers-workspace-ia
-- PR: #188 → dev
-- Focus: Phase 1 Customers workspace IA
-- Commit: 56cdba4
+- Branch: fix/customers-detail-bff-url
+- PR target: dev
+- Focus: Fix customer detail 404 when BACKEND_URL already includes /api/v1

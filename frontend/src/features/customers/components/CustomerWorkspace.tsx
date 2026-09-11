@@ -69,7 +69,14 @@ export function CustomerWorkspace({
       );
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(body.error || body.detail || body.message || "Failed to load");
+        const detail = body.error || body.detail || body.message;
+        const msg =
+          typeof detail === "string"
+            ? detail
+            : detail && typeof detail === "object" && "message" in detail
+              ? String((detail as { message?: string }).message)
+              : `Failed to load customer (${res.status})`;
+        throw new Error(msg);
       }
       const data = (body.data ?? body) as CustomerDetail;
       setDetail(data);
