@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Check, Search } from "lucide-react";
+import { Loader2, Check, Search, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import {
@@ -229,38 +229,38 @@ export function CheckoutForm({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        {/* Customer typeahead */}
-        <div className="relative">
-          <label
-            htmlFor="customer-search"
-            className="block text-sm font-medium text-foreground mb-1.5"
-          >
-            Find existing customer
-          </label>
-          <div className="relative">
-            <Search
-              size={14}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-            />
-            <input
-              id="customer-search"
-              value={customerQuery}
-              onChange={(e) => setCustomerQuery(e.target.value)}
-              placeholder="Search name or phone…"
-              className="w-full h-11 pl-9 pr-3 rounded-xl border border-border bg-background text-sm
-                         focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary"
-              autoComplete="off"
-            />
-            {searchingCustomers && (
-              <Loader2
-                size={14}
-                className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground"
-              />
-            )}
+      {/* Lookup — visually separate from the form fields below */}
+      <div className="relative mb-5 rounded-2xl border border-dashed border-brand-primary/25 bg-brand-primary/[0.04] p-3.5">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary">
+            <Search size={13} aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold text-foreground">
+              Look up customer
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Optional — pick someone to fill name and phone
+            </p>
           </div>
+        </div>
+        <div className="relative">
+          <input
+            id="customer-search"
+            value={customerQuery}
+            onChange={(e) => setCustomerQuery(e.target.value)}
+            placeholder="Type name or phone…"
+            className="h-10 w-full rounded-lg border border-border/50 bg-card pl-3 pr-9 text-sm shadow-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+            autoComplete="off"
+          />
+          {searchingCustomers && (
+            <Loader2
+              size={14}
+              className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground"
+            />
+          )}
           {customerHits.length > 0 && (
-            <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-xl border border-border bg-card shadow-lg">
+            <ul className="absolute z-20 mt-1.5 max-h-48 w-full overflow-auto rounded-xl border border-border bg-card py-1 shadow-lg">
               {customerHits.map((c) => (
                 <li key={c.id}>
                   <button
@@ -278,7 +278,9 @@ export function CheckoutForm({
             </ul>
           )}
         </div>
+      </div>
 
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <div>
           <label
             htmlFor="customerName"
@@ -329,43 +331,32 @@ export function CheckoutForm({
         </div>
 
         <div>
-          <p className="mb-1.5 block text-sm font-medium text-foreground">
-            Payment method
-          </p>
-          <div
-            className="grid grid-cols-2 gap-2"
-            role="group"
-            aria-label="Payment method"
+          <label
+            htmlFor="paymentMethod"
+            className="mb-1.5 block text-sm font-medium text-foreground"
           >
-            {methods.map((m) => {
-              const active = paymentMethod === m.code;
-              return (
-                <button
-                  key={m.code}
-                  type="button"
-                  disabled={isSubmitting || configLoading}
-                  onClick={() =>
-                    setValue("paymentMethod", m.code, { shouldValidate: true })
-                  }
-                  className={
-                    active
-                      ? "h-11 rounded-xl border border-brand-primary bg-brand-primary text-sm font-semibold text-white shadow-sm"
-                      : "h-11 rounded-xl border border-border/70 bg-background text-sm font-medium text-foreground hover:border-border"
-                  }
-                >
-                  {m.code === "INVOICE"
-                    ? "Credit"
-                    : m.code === "CASH"
-                      ? "Cash"
-                      : m.label}
-                </button>
-              );
-            })}
+            Payment method
+          </label>
+          <div className="relative">
+            <select
+              id="paymentMethod"
+              {...register("paymentMethod")}
+              disabled={isSubmitting || configLoading}
+              className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-border bg-background pl-3.5 pr-10 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30 disabled:opacity-50"
+            >
+              {methods.map((m) => (
+                <option key={m.code} value={m.code}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={16}
+              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
           </div>
-          {/* hidden field for RHF */}
-          <input type="hidden" {...register("paymentMethod")} />
           {selectedMeta && !selectedMeta.collects_money && (
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               Goods leave now · stock reduced · collect payment later
             </p>
           )}
