@@ -1,4 +1,4 @@
 # Repository State
-- Branch: feat/customers-collect-credit
+- Branch: fix/terminal-tax-and-payment-methods
 - PR target: dev
-- Focus: Pass B — Collect Credit
+- Focus: Terminal tax from business, POS methods API, customer required all methods, cart recovery

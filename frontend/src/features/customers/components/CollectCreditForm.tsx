@@ -59,21 +59,18 @@ export function CollectCreditForm({
         data.open_credit_sales?.filter((s) => s.status === "PENDING_PAYMENT") ||
         data.recent_sales?.filter((s) => s.status === "PENDING_PAYMENT") ||
         [];
-      if (open.length && !selectedId) {
-        setSelectedId(open[0].id);
-      }
+      setSelectedId((prev) => prev ?? (open[0]?.id ?? null));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
       setDetail(null);
     } finally {
       setLoading(false);
     }
-  }, [businessId, customerId, selectedId]);
+  }, [businessId, customerId]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial load only
-  }, [businessId, customerId]);
+  }, [load]);
 
   const openSales: CustomerSaleRow[] =
     detail?.open_credit_sales?.filter((s) => s.status === "PENDING_PAYMENT") ||
