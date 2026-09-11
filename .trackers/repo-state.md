@@ -1,4 +1,4 @@
 # Repository State
-- Branch: fix/terminal-tax-and-payment-methods
+- Branch: feat/terminal-p1-mobile-staged
 - PR target: dev
-- Focus: Terminal tax from business, POS methods API, customer required all methods, cart recovery
+- Focus: Terminal P1 (mobile cart, staged hygiene) + P2 (BFF, phone, stock messages)

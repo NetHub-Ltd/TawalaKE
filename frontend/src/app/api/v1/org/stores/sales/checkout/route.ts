@@ -1,3 +1,4 @@
+import { backendUrl } from "@/lib/api/backend";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const res = await fetch(`${process.env.BACKEND_URL}/business/checkout`, {
+    const res = await fetch(backendUrl(`/business/checkout`), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

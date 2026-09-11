@@ -177,8 +177,20 @@ export function CheckoutWorkspace({
         {/* RIGHT – Checkout form */}
         <section className="flex flex-col justify-center px-8 py-10 overflow-y-auto">
           <div className="w-full max-w-md mx-auto">
+            <div className="mb-4">
+              <Link
+                href={`/org/${organizationId}/${businessId}/terminal`}
+                className="text-xs font-medium text-brand-primary hover:underline"
+              >
+                ← Back to terminal
+              </Link>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Totals below come from the staged sale (business tax applied).
+                Your cart is kept until this sale completes successfully.
+              </p>
+            </div>
             <CheckoutForm
-              saleId={activeSale.id}          // ← guaranteed to exist here
+              saleId={activeSale.id}
               grandTotal={grandTotal}
               organizationId={organizationId}
               businessId={businessId}
