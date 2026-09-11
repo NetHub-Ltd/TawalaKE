@@ -87,3 +87,4 @@ class CustomerSaleRow(BaseModel):
 
 class CustomerDetailResponse(CustomerResponse):
     recent_sales: List[CustomerSaleRow] = Field(default_factory=list)
+    open_credit_sales: List[CustomerSaleRow] = Field(default_factory=list)

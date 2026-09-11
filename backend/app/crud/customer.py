@@ -164,7 +164,31 @@ class CustomerCRUD:
             )
             for s in sales
         ]
-        return CustomerDetailResponse(**base.model_dump(), recent_sales=recent)
+        open_stmt = (
+            select(Sale)
+            .where(Sale.customer_id == customer_id)
+            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+            .order_by(col(Sale.created_at).desc())
+            .limit(50)
+        )
+        if hasattr(Sale, "deleted_at"):
+            open_stmt = open_stmt.where(col(Sale.deleted_at).is_(None))
+        open_rows = list((await db.exec(open_stmt)).all())
+        open_credit_sales = [
+            CustomerSaleRow(
+                id=s.id,
+                status=s.status.value if hasattr(s.status, "value") else str(s.status),
+                total_amount=float(s.total_amount or 0),
+                created_at=getattr(s, "created_at", None),
+                updated_at=getattr(s, "updated_at", None),
+            )
+            for s in open_rows
+        ]
+        return CustomerDetailResponse(
+            **base.model_dump(),
+            recent_sales=recent,
+            open_credit_sales=open_credit_sales,
+        )
 
     async def create(
         self,

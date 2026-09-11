@@ -1,8 +1,10 @@
 /**
  * Proxy: GET list / POST create → FastAPI /api/v1/customers
+ * Uses backendUrl() so BACKEND_URL may or may not already include /api/v1.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { backendUrl } from "@/lib/api/backend";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -13,11 +15,7 @@ export async function GET(req: NextRequest) {
   if (!businessId) {
     return NextResponse.json({ error: "businessId is required" }, { status: 400 });
   }
-  const backendBase = process.env.BACKEND_URL;
-  if (!backendBase) {
-    return NextResponse.json({ error: "BACKEND_URL is not configured" }, { status: 500 });
-  }
-  const url = new URL(`/api/v1/customers/${businessId}`, backendBase);
+  const url = new URL(backendUrl(`/customers/${businessId}`));
   for (const key of ["q", "has_open_credit", "skip", "limit"]) {
     const v = req.nextUrl.searchParams.get(key);
     if (v) url.searchParams.set(key, v);
@@ -44,10 +42,6 @@ export async function POST(req: NextRequest) {
   if (!session?.user || !session.accessToken) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const backendBase = process.env.BACKEND_URL;
-  if (!backendBase) {
-    return NextResponse.json({ error: "BACKEND_URL is not configured" }, { status: 500 });
-  }
   const payload = await req.json().catch(() => null);
   if (!payload?.business_id || !payload?.name) {
     return NextResponse.json(
@@ -56,7 +50,7 @@ export async function POST(req: NextRequest) {
     );
   }
   try {
-    const res = await fetch(`${backendBase}/api/v1/customers`, {
+    const res = await fetch(backendUrl(`/customers`), {
       method: "POST",
       headers: {
         Accept: "application/json",
