@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useId } from "react";
+import React, { useEffect, useState, useCallback, useId } from "react";
 import {
   ShoppingCart,
   Trash2,
