@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * Post-finalize confirmation — professional success card.
+ * Presentational polish only; data from existing useSales.
+ */
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,7 +18,9 @@ import {
   User,
   Calendar,
   Hash,
+  Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -37,16 +43,12 @@ function formatMoney(amount: number, currency = "KES") {
   })}`;
 }
 
-/**
- * Credit sale detection — compatible with new and legacy shapes.
- * New credit: status PENDING_PAYMENT (outstanding).
- * Fallback: nested payments with method INVOICE, or top-level method fields.
- */
 function isCreditSale(sale: SaleResponse): boolean {
   if (sale.status === "PENDING_PAYMENT") return true;
 
-  const payments = (sale as { payments?: Array<{ method?: string; amount?: number }> })
-    .payments;
+  const payments = (
+    sale as { payments?: Array<{ method?: string; amount?: number }> }
+  ).payments;
   if (Array.isArray(payments)) {
     const hasInvoiceMethod = payments.some(
       (p) => String(p?.method || "").toUpperCase() === "INVOICE",
@@ -77,6 +79,27 @@ function customerLabel(sale: SaleResponse): string {
   return "—";
 }
 
+function customerId(sale: SaleResponse): string | null {
+  const c = sale.customer as { id?: string } | undefined;
+  if (c?.id) return String(c.id);
+  const top = (sale as { customer_id?: string }).customer_id;
+  return top ? String(top) : null;
+}
+
+function paymentMethodLabel(sale: SaleResponse, credit: boolean): string {
+  if (credit) return "Credit";
+  const payments = (
+    sale as { payments?: Array<{ method?: string }> }
+  ).payments;
+  if (Array.isArray(payments) && payments[0]?.method) {
+    const m = String(payments[0].method).toUpperCase();
+    if (m === "CASH") return "Cash";
+    if (m === "MPESA") return "M-Pesa";
+    return m;
+  }
+  return "Cash";
+}
+
 type Props = {
   organizationId: string;
   businessId: string;
@@ -101,121 +124,184 @@ export default function CompleteSaleClient({
 
   if (isLoading) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2">
-        <Loader2 className="animate-spin text-brand-primary" size={22} />
-        <p className="text-sm text-muted">Loading sale summary…</p>
+      <div className="flex min-h-[60vh] w-full items-center justify-center bg-background">
+        <Loader2 className="h-5 w-5 animate-spin text-brand-primary" />
       </div>
     );
   }
 
   if (error || !sale) {
     return (
-      <div className="mx-auto flex max-w-md flex-col items-center gap-3 px-4 py-16 text-center">
-        <AlertCircle className="text-brand-accent" size={22} />
-        <p className="text-sm font-medium text-foreground">
-          {error?.message || "Sale could not be loaded."}
-        </p>
-        <Link
-          href={terminalHref}
-          className="mt-2 rounded-xl bg-brand-primary px-5 py-2.5 text-sm font-semibold text-white"
+      <div className="flex min-h-[60vh] w-full flex-col items-center justify-center gap-4 bg-background p-6 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600">
+          <AlertCircle size={20} />
+        </div>
+        <div>
+          <h2 className="text-sm font-bold text-foreground">Sale not found</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            We could not load this sale summary.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => router.push(terminalHref)}
+          className="inline-flex h-11 items-center rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white"
         >
           Back to terminal
-        </Link>
+        </button>
       </div>
     );
   }
 
   const credit = isCreditSale(sale);
   const currency = (sale.currency as string) || "KES";
-  const itemCount = Array.isArray(sale.items) ? sale.items.length : 0;
-  const shortId = sale.id.slice(0, 8).toUpperCase();
+  const total = Number(sale.total_amount) || 0;
+  const items = (sale.items as unknown[]) || [];
+  const itemCount = items.length;
+  const cust = customerLabel(sale);
+  const method = paymentMethodLabel(sale, credit);
+  const shortRef = String(sale.id).slice(0, 8);
+  const cid = customerId(sale);
+  const collectHref = cid
+    ? `/org/${organizationId}/${businessId}/customers/${cid}/collect`
+    : null;
+
+  async function copyRef() {
+    try {
+      await navigator.clipboard.writeText(String(sale!.id));
+      toast.success("Reference copied");
+    } catch {
+      toast.error("Could not copy");
+    }
+  }
 
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col justify-center px-4 py-10">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-8">
-        <div className="mb-6 flex items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-accent/15 text-brand-accent">
-            <CheckCircle2 size={22} />
+    <div className="flex min-h-[70vh] w-full items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-md rounded-2xl border border-border/50 bg-card p-6 shadow-card sm:p-8">
+        {/* Hero */}
+        <div className="text-center">
+          <div
+            className={
+              credit
+                ? "mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700"
+                : "mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700"
+            }
+          >
+            <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
-              {credit ? "Credit sale" : "Sale recorded"}
-            </p>
-            <h1 className="text-xl font-semibold text-foreground">
-              {credit ? "Credit recorded — payment due" : "Payment complete"}
-            </h1>
-            <p className="mt-1 text-sm text-muted">
-              {credit
-                ? "Stock reduced. Invoice will be used to collect payment from the customer."
-                : "Brief summary — start another sale or open the document."}
-            </p>
-          </div>
+          <p className="mt-3 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+            {credit ? "Credit recorded" : "Sale recorded"}
+          </p>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
+            {credit ? "Credit sale recorded" : "Payment complete"}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {method} · {cust} · {formatMoney(total, currency)}
+            {credit ? " · collect later" : ""}
+          </p>
         </div>
 
-        <dl className="space-y-3 rounded-xl border border-border/60 bg-background/50 px-4 py-4 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-muted">
-              <Hash size={14} /> Reference
-            </dt>
-            <dd className="font-mono font-medium text-foreground">{shortId}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-muted">
-              <Calendar size={14} /> When
-            </dt>
-            <dd className="text-foreground">
-              {formatDate(
-                (sale.updated_at as string | undefined) || sale.created_at,
-              )}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-muted">Status</dt>
-            <dd className="font-medium text-foreground">
-              {credit
-                ? "Credit · payment due"
-                : String(sale.status).replace(/_/g, " ")}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-muted">
-              <User size={14} /> Customer
-            </dt>
-            <dd className="truncate text-foreground">{customerLabel(sale)}</dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="flex items-center gap-1.5 text-muted">
-              <Package size={14} /> Items
-            </dt>
-            <dd className="text-foreground">
-              {itemCount} {itemCount === 1 ? "item" : "items"}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-3">
-            <dt className="font-semibold text-foreground">Total</dt>
-            <dd className="text-lg font-semibold tabular-nums text-foreground">
-              {formatMoney(Number(sale.total_amount) || 0, currency)}
-            </dd>
-          </div>
-        </dl>
+        {/* Detail card */}
+        <div className="mt-6 rounded-xl border border-border/50 bg-surface/30 px-4 py-4">
+          <dl className="space-y-3 text-sm">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-muted-foreground">Total</dt>
+              <dd
+                className={
+                  credit
+                    ? "font-mono text-lg font-bold tabular-nums text-amber-700"
+                    : "font-mono text-lg font-bold tabular-nums text-emerald-700"
+                }
+              >
+                {formatMoney(total, currency)}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-muted-foreground">Status</dt>
+              <dd>
+                <span
+                  className={
+                    credit
+                      ? "inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800"
+                      : "inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800"
+                  }
+                >
+                  {credit ? "PENDING PAYMENT" : "COMPLETED"}
+                </span>
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="flex items-center gap-1.5 text-muted-foreground">
+                <User size={14} /> Customer
+              </dt>
+              <dd className="truncate font-medium text-foreground">{cust}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="flex items-center gap-1.5 text-muted-foreground">
+                <Calendar size={14} /> When
+              </dt>
+              <dd className="text-foreground">
+                {formatDate(
+                  (sale.updated_at as string | undefined) || sale.created_at,
+                )}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="flex items-center gap-1.5 text-muted-foreground">
+                <Hash size={14} /> Reference
+              </dt>
+              <dd className="flex items-center gap-1.5">
+                <span className="font-mono text-xs text-foreground">
+                  {shortRef}
+                </span>
+                <button
+                  type="button"
+                  onClick={copyRef}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground"
+                  aria-label="Copy full reference"
+                >
+                  <Copy size={13} />
+                </button>
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="flex items-center gap-1.5 text-muted-foreground">
+                <Package size={14} /> Items
+              </dt>
+              <dd className="text-foreground">
+                {itemCount} {itemCount === 1 ? "item" : "items"}
+              </dd>
+            </div>
+          </dl>
+        </div>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        {/* Actions */}
+        <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
           <button
             type="button"
             onClick={() => router.push(terminalHref)}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white transition hover:opacity-90"
+            className="inline-flex h-12 flex-[1.2] items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white transition hover:opacity-90"
           >
             <Zap size={16} />
             Quick sale
           </button>
           <Link
             href={previewHref}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-brand-primary bg-transparent text-sm font-semibold text-brand-primary transition hover:bg-brand-primary hover:text-white"
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-border/70 bg-background text-sm font-semibold text-foreground transition hover:bg-surface"
           >
             <Receipt size={16} />
             {credit ? "View invoice" : "View receipt"}
           </Link>
         </div>
+
+        {credit && collectHref && (
+          <Link
+            href={collectHref}
+            className="mt-3 block text-center text-xs font-semibold text-brand-primary hover:underline"
+          >
+            Collect credit for this customer
+          </Link>
+        )}
       </div>
     </div>
   );

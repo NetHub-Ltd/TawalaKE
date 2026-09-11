@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Check, ChevronDown, Search } from "lucide-react";
+import { Loader2, Check, Search } from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import {
@@ -221,12 +221,11 @@ export function CheckoutForm({
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Finish this sale
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Customer is required on every sale so you always know who paid or who
-          took credit.
+        <p className="mt-1 text-sm text-muted-foreground">
+          Customer required — we record who paid or who took credit.
         </p>
       </div>
 
@@ -330,36 +329,44 @@ export function CheckoutForm({
         </div>
 
         <div>
-          <label
-            htmlFor="paymentMethod"
-            className="block text-sm font-medium text-foreground mb-1.5"
-          >
+          <p className="mb-1.5 block text-sm font-medium text-foreground">
             Payment method
-          </label>
-          <div className="relative">
-            <select
-              id="paymentMethod"
-              {...register("paymentMethod")}
-              disabled={isSubmitting || configLoading}
-              className="w-full h-11 pl-3.5 pr-10 rounded-xl border border-border bg-background text-sm
-                         focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
-                         disabled:opacity-50 transition appearance-none cursor-pointer"
-            >
-              {methods.map((m) => (
-                <option key={m.code} value={m.code}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={16}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
-            />
+          </p>
+          <div
+            className="grid grid-cols-2 gap-2"
+            role="group"
+            aria-label="Payment method"
+          >
+            {methods.map((m) => {
+              const active = paymentMethod === m.code;
+              return (
+                <button
+                  key={m.code}
+                  type="button"
+                  disabled={isSubmitting || configLoading}
+                  onClick={() =>
+                    setValue("paymentMethod", m.code, { shouldValidate: true })
+                  }
+                  className={
+                    active
+                      ? "h-11 rounded-xl border border-brand-primary bg-brand-primary text-sm font-semibold text-white shadow-sm"
+                      : "h-11 rounded-xl border border-border/70 bg-background text-sm font-medium text-foreground hover:border-border"
+                  }
+                >
+                  {m.code === "INVOICE"
+                    ? "Credit"
+                    : m.code === "CASH"
+                      ? "Cash"
+                      : m.label}
+                </button>
+              );
+            })}
           </div>
+          {/* hidden field for RHF */}
+          <input type="hidden" {...register("paymentMethod")} />
           {selectedMeta && !selectedMeta.collects_money && (
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              Customer takes goods now. Stock is reduced. An invoice is issued
-              so you can collect payment later.
+            <p className="mt-2 text-xs text-muted-foreground">
+              Goods leave now · stock reduced · collect payment later
             </p>
           )}
           {errors.paymentMethod && (
@@ -372,11 +379,7 @@ export function CheckoutForm({
         <button
           type="submit"
           disabled={isSubmitting || configLoading}
-          className="w-full h-12 rounded-xl bg-brand-primary text-white text-sm font-semibold
-                     flex items-center justify-center gap-2
-                     hover:bg-brand-primary/90 active:scale-[0.99]
-                     disabled:opacity-50 disabled:cursor-not-allowed
-                     transition shadow-sm"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? (
             <>
