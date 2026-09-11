@@ -21,6 +21,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { fetchPosConfig } from "@/features/sales/lib/posConfig";
+import { setStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
 interface EditableQuantityProps {
@@ -261,8 +262,10 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       });
 
       // Keep cart until finalize succeeds (CheckoutForm clears on success).
-      // Service fee was already sent in stage payload — clear local fee only.
       setService(null);
+      if (pendingSaleData?.id && resolvedBusinessId) {
+        setStagedSaleId(resolvedBusinessId, pendingSaleData.id);
+      }
       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
     } catch (error: unknown) {
       console.error("Checkout Submission Error:", error);

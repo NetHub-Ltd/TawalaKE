@@ -16,7 +16,6 @@ export type PosConfig = {
   payment_methods: PosPaymentMethod[];
 };
 
-/** Fallback only if network fails — must match backend enabled set (no MPESA). */
 export const POS_METHODS_FALLBACK: PosPaymentMethod[] = [
   {
     code: "CASH",
@@ -32,7 +31,18 @@ export const POS_METHODS_FALLBACK: PosPaymentMethod[] = [
   },
 ];
 
+const cache = new Map<string, { at: number; config: PosConfig }>();
+const TTL_MS = 60_000;
+
+export function invalidatePosConfig(businessId?: string) {
+  if (businessId) cache.delete(businessId);
+  else cache.clear();
+}
+
 export async function fetchPosConfig(businessId: string): Promise<PosConfig> {
+  const hit = cache.get(businessId);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.config;
+
   const res = await fetch(`/api/v1/org/stores/${businessId}/pos-config`, {
     cache: "no-store",
   });
@@ -41,7 +51,7 @@ export async function fetchPosConfig(businessId: string): Promise<PosConfig> {
     throw new Error(body.error || body.detail || "Failed to load POS config");
   }
   const data = body as PosConfig;
-  return {
+  const config: PosConfig = {
     business_id: data.business_id || businessId,
     tax_rate: Number(data.tax_rate ?? 0),
     currency: data.currency || "KES",
@@ -50,4 +60,6 @@ export async function fetchPosConfig(businessId: string): Promise<PosConfig> {
         ? data.payment_methods
         : POS_METHODS_FALLBACK,
   };
+  cache.set(businessId, { at: Date.now(), config });
+  return config;
 }

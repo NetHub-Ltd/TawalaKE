@@ -17,6 +17,8 @@ import {
   POS_METHODS_FALLBACK,
   type PosPaymentMethod,
 } from "@/features/sales/lib/posConfig";
+import { normalizeKenyanPhone, isValidKenyanPhone } from "@/features/sales/lib/phone";
+import { clearStagedSaleId } from "@/features/sales/lib/stagedSale";
 
 interface CheckoutFormProps {
   saleId: string;
@@ -32,14 +34,11 @@ const schema = z.object({
     .max(80, "Name is too long"),
   customerPhone: z
     .string()
-    .transform((val) => val.replace(/\s+/g, ""))
-    .refine((val) => /^(07|01)\d{8}$/.test(val), {
-      message: "Use a valid Kenyan number (07xxxxxxxx or 01xxxxxxxx)",
+    .transform((val) => normalizeKenyanPhone(val))
+    .refine((val) => isValidKenyanPhone(val), {
+      message: "Use a valid Kenyan number (07xxxxxxxx, 01xxxxxxxx, or +254…)",
     }),
   paymentMethod: z.string().min(1, "Select a payment method"),
-  signSale: z.boolean().refine((val) => val === true, {
-    message: "Please confirm to complete this sale",
-  }),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -91,7 +90,6 @@ export function CheckoutForm({
       customerName: "",
       customerPhone: "",
       paymentMethod: "CASH",
-      signSale: false,
     },
   });
 
@@ -195,6 +193,7 @@ export function CheckoutForm({
 
       // Clear cart only after successful finalize
       clearCart();
+      clearStagedSaleId(businessId);
 
       const isCredit = data.paymentMethod === "INVOICE";
       toast.success(isCredit ? "Credit sale recorded" : "Sale completed", {
@@ -208,10 +207,13 @@ export function CheckoutForm({
         `/org/${organizationId}/${businessId}/complete-sale?saleId=${encodeURIComponent(saleId)}`
       );
     } catch (err) {
-      toast.error("Something went wrong", {
+      const msg = err instanceof Error ? err.message : "Please try again";
+      const stockIssue = /stock|insufficient/i.test(msg);
+      toast.error(stockIssue ? "Not enough stock" : "Could not complete sale", {
         id: toastId,
-        description:
-          err instanceof Error ? err.message : "Please try again",
+        description: stockIssue
+          ? `${msg} Go back to the terminal and reduce quantities.`
+          : msg,
       });
     }
   };
@@ -367,26 +369,6 @@ export function CheckoutForm({
           )}
         </div>
 
-        <div className="pt-1">
-          <label className="flex items-start gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              {...register("signSale")}
-              disabled={isSubmitting}
-              className="mt-0.5 h-4 w-4 rounded border-border text-brand-primary
-                         focus:ring-brand-primary/30 disabled:opacity-50"
-            />
-            <span className="text-sm text-foreground leading-snug">
-              Confirm customer and complete this sale
-            </span>
-          </label>
-          {errors.signSale && (
-            <p className="mt-1.5 text-sm text-destructive pl-6">
-              {errors.signSale.message}
-            </p>
-          )}
-        </div>
-
         <button
           type="submit"
           disabled={isSubmitting || configLoading}
@@ -405,8 +387,8 @@ export function CheckoutForm({
             <>
               <Check size={16} />
               {paymentMethod === "INVOICE"
-                ? "Record credit & issue invoice"
-                : "Complete sale"}
+                ? "Complete credit sale"
+                : "Complete cash sale"}
             </>
           )}
         </button>

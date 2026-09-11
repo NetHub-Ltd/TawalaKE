@@ -452,3 +452,40 @@ async def get_pos_config(
         message="POS config retrieved",
         data=data,
     )
+
+
+@router.post(
+    "/sales/{sale_id}/cancel-staged",
+    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[None],
+)
+async def cancel_staged_sale(
+    sale_id: UUID,
+    db: SessionDep,
+    business_id: UUID = Query(..., description="Business that owns the staged sale"),
+    redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
+):
+    """
+    Discard a staged sale that was never finalized.
+    No stock change — stock is only reduced on finalize.
+    """
+    await store_crud.cancel_staged_sale(
+        db, sale_id=sale_id, business_id=business_id
+    )
+    await purge_cache_namespace(redis_client, namespace="sales")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.cancel_staged",
+        outcome="success",
+        resource_type="sale",
+        resource_id=sale_id,
+        business_id=business_id,
+    )
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Staged sale cancelled",
+        data=None,
+    )
