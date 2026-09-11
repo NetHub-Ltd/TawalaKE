@@ -6,7 +6,7 @@
 - [x] Overview KPIs + recent activity
 - [x] History from recent_sales
 - [x] Settings PATCH name/phone/email
-- [x] PR → dev
+- [x] Rebased onto main; PR target: dev
 
 ## Next
 - Phase 2: Collect Credit inline screen
