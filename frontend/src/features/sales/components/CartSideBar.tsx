@@ -710,3 +710,4 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       )}
     </aside>
   );
+};
