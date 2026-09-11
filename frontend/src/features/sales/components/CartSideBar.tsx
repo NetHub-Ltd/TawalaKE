@@ -18,6 +18,7 @@
 // import { useSession } from "next-auth/react";
 // import { toast } from "sonner";
 // import { useCartStore } from "@/features/sales/stores/useCartStore";
+import { fetchPosConfig } from "@/features/sales/lib/posConfig";
 // import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
 // /**
@@ -1283,6 +1284,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     discount,
     setDiscount,
     validateAndSetScope,
+    setTaxRate,
   } = useCartStore();
 
   const [mounted, setMounted] = useState(false);
@@ -1308,6 +1310,22 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       validateAndSetScope(resolvedBusinessId, userId);
     }
   }, [mounted, resolvedBusinessId, userId, validateAndSetScope]);
+  useEffect(() => {
+    if (!mounted || !resolvedBusinessId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const cfg = await fetchPosConfig(resolvedBusinessId);
+        if (!cancelled) setTaxRate(cfg.tax_rate);
+      } catch {
+        /* cart still works; server applies business tax on stage */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [mounted, resolvedBusinessId, setTaxRate]);
+
 
   if (!mounted) {
     return (
@@ -1322,9 +1340,10 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const payableGrandTotal = Math.max(0, grandTotal + (service?.amount || 0));
 
   const handleExpand = () => {
-    if (resolvedBusinessId && resolvedOrgId) {
-      router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/cart`);
-    }
+    // Full-page cart route is not active; keep focus on terminal tray.
+    toast.info("Cart tray", {
+      description: "Use this panel to review items, then proceed to checkout.",
+    });
   };
 
   const handleClearCartWithFeedback = () => {
@@ -1409,7 +1428,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         description: `Sale ID: ${pendingSaleData.id.slice(0, 8)} • Total KES ${payableGrandTotal.toLocaleString()}`,
       });
 
-      clearCart();
+      // Keep cart until finalize succeeds (CheckoutForm clears on success).
+      // Service fee was already sent in stage payload — clear local fee only.
       setService(null);
       router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${pendingSaleData.id}`);
     } catch (error: unknown) {

@@ -1,2 +1,2 @@
 # Rollback
-Revert PR. Backend adds optional open_credit_sales field only.
+Revert PR. Backend: pos-config endpoint + stricter finalize customer validation.
