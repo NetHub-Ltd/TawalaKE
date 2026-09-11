@@ -1,2 +1,3 @@
 # Rollback
-Revert PR on main. Restore separate auto_tag.yml only if using a PAT that can trigger workflows.
+- Revert the PR / delete branch feat/homepage-stitch-polish
+- No migrations or backend changes; frontend-only
