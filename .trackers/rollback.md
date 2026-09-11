@@ -1,2 +1,2 @@
 # Rollback
-Revert PR. Frontend-only CustomersList changes.
+Revert PR. Backend adds optional open_credit_sales field only.
