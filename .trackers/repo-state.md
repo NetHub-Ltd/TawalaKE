@@ -1,4 +1,4 @@
 # Repository State
-- Branch: fix/customers-detail-bff-url
+- Branch: feat/customers-list-polish
 - PR target: dev
-- Focus: Fix customer detail 404 when BACKEND_URL already includes /api/v1
+- Focus: Pass A — Customers list UX polish
