@@ -458,10 +458,21 @@ export function CustomersList({
                       {c.completed_orders_count ?? 0}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <ChevronRight
-                        className="inline h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand-primary"
-                        aria-hidden="true"
-                      />
+                      <div className="inline-flex items-center gap-2">
+                        {hasCredit && (
+                          <Link
+                            href={`${base}/${c.id}/collect`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                          >
+                            Collect
+                          </Link>
+                        )}
+                        <ChevronRight
+                          className="inline h-4 w-4 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand-primary"
+                          aria-hidden="true"
+                        />
+                      </div>
                     </td>
                   </tr>
                 );
@@ -490,48 +501,58 @@ export function CustomersList({
               const hasCredit = (c.open_credit_total ?? 0) > 0;
               const openSales = c.open_credit_sales_count ?? 0;
               return (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => openWorkspace(c.id)}
-                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors active:bg-brand-primary/5"
-                    aria-label={`Open ${c.name}`}
-                  >
-                    <div
-                      className={clsx(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                        hasCredit
-                          ? "bg-rose-100 text-rose-800"
-                          : "bg-brand-primary/10 text-brand-primary"
-                      )}
+                <li key={c.id} className="px-4 py-3.5">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => openWorkspace(c.id)}
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left transition-colors"
+                      aria-label={`Open ${c.name}`}
                     >
-                      {initials(c.name)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="truncate font-semibold text-foreground">{c.name}</p>
-                        {hasCredit ? (
-                          <p className="shrink-0 font-mono text-sm font-bold text-rose-600 tabular-nums">
-                            {formatKES(c.open_credit_total)}
-                          </p>
-                        ) : null}
+                      <div
+                        className={clsx(
+                          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                          hasCredit
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-brand-primary/10 text-brand-primary"
+                        )}
+                      >
+                        {initials(c.name)}
                       </div>
-                      <p className="truncate text-xs text-muted">
-                        {c.phone || "No phone"}
-                        {" · "}
-                        {c.completed_orders_count ?? 0} order
-                        {(c.completed_orders_count ?? 0) === 1 ? "" : "s"}
-                        {" · "}
-                        {formatKES(c.lifetime_revenue)}
-                      </p>
-                      {hasCredit && openSales > 0 && (
-                        <p className="mt-0.5 text-[10px] font-medium text-rose-500">
-                          {openSales} open sale{openSales === 1 ? "" : "s"}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="truncate font-semibold text-foreground">{c.name}</p>
+                          {hasCredit ? (
+                            <p className="shrink-0 font-mono text-sm font-bold text-rose-600 tabular-nums">
+                              {formatKES(c.open_credit_total)}
+                            </p>
+                          ) : null}
+                        </div>
+                        <p className="truncate text-xs text-muted">
+                          {c.phone || "No phone"}
+                          {" · "}
+                          {c.completed_orders_count ?? 0} order
+                          {(c.completed_orders_count ?? 0) === 1 ? "" : "s"}
+                          {" · "}
+                          {formatKES(c.lifetime_revenue)}
                         </p>
-                      )}
-                    </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
-                  </button>
+                        {hasCredit && openSales > 0 && (
+                          <p className="mt-0.5 text-[10px] font-medium text-rose-500">
+                            {openSales} open sale{openSales === 1 ? "" : "s"}
+                          </p>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted" aria-hidden="true" />
+                    </button>
+                  </div>
+                  {hasCredit && (
+                    <Link
+                      href={`${base}/${c.id}/collect`}
+                      className="mt-2 ml-13 inline-flex h-9 items-center rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700"
+                    >
+                      Collect credit
+                    </Link>
+                  )}
                 </li>
               );
             })}

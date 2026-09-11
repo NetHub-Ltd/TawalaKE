@@ -1,4 +1,4 @@
 # Repository State
-- Branch: feat/customers-list-polish
+- Branch: feat/customers-collect-credit
 - PR target: dev
-- Focus: Pass A — Customers list UX polish
+- Focus: Pass B — Collect Credit

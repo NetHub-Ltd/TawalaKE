@@ -3,7 +3,7 @@
 /**
  * Customer workspace — Overview | History | Settings.
  * Phase 1: reuses existing customer detail + PATCH APIs only.
- * Collect Credit UI is Phase 2 (API already exists).
+ * Collect Credit: /customers/[id]/collect (Pass B).
  */
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -259,15 +259,25 @@ export function CustomerWorkspace({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled
-              title="Collect Credit ships in Phase 2"
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-4 text-sm font-medium text-muted opacity-70"
-            >
-              <Banknote className="h-4 w-4" />
-              Collect Credit
-            </button>
+            {hasCredit ? (
+              <Link
+                href={`${basePath}/collect`}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white"
+              >
+                <Banknote className="h-4 w-4" />
+                Collect Credit
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="No open credit"
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-4 text-sm font-medium text-muted opacity-60"
+              >
+                <Banknote className="h-4 w-4" />
+                Collect Credit
+              </button>
+            )}
             <button
               type="button"
               onClick={() => syncUrl("settings")}

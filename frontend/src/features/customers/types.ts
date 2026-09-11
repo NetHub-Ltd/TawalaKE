@@ -24,6 +24,8 @@ export type CustomerSaleRow = {
 
 export type CustomerDetail = CustomerRow & {
   recent_sales?: CustomerSaleRow[];
+  /** PENDING_PAYMENT sales for collect-credit UI */
+  open_credit_sales?: CustomerSaleRow[];
 };
 
 export function formatKES(n?: number) {
