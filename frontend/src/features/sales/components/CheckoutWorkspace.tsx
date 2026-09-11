@@ -6,7 +6,7 @@
  */
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { CheckoutForm } from "@/features/sales/components/CheckoutForm";
 import { useSales } from "@/features/sales/hooks/useSales";
 
@@ -82,27 +82,8 @@ export function CheckoutWorkspace({
   const taxAmount = Number(activeSale.tax_amount) || 0;
   const discount = Number(activeSale.discount) || 0;
   const grandTotal = Number(activeSale.total_amount) || 0;
-  const shortId = String(activeSale.id || saleId).slice(0, 8);
-
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col bg-background">
-      {/* Top bar */}
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 bg-card/80 px-4 py-3 sm:px-6">
-        <Link
-          href={terminalHref}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-primary hover:underline"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Terminal
-        </Link>
-        <div className="text-center">
-          <p className="text-sm font-semibold text-foreground">Checkout</p>
-        </div>
-        <p className="font-mono text-[11px] text-muted-foreground tabular-nums">
-          {shortId}
-        </p>
-      </header>
-
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col lg:flex-row">
         {/* ORDER SUMMARY */}
         <section className="border-b border-border/50 bg-card/40 lg:w-[42%] lg:border-r lg:border-b-0">
