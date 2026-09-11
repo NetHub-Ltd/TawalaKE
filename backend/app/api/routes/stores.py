@@ -17,7 +17,7 @@ from app.utils.logging import logger
 from app.crud.store import store_crud
 from app.crud.stock import stock_crud, ProductAdjustRequest
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
-from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema
+from app.schemas.store import SaleResponse, FinalizeCheckoutIn, FinancialDocumentSnapshotSchema, PosConfigOut, PosPaymentMethodOut
 from sqlmodel import select
 from app.models.models import Sale, SaleAnalyticsSummary, Staff
 from app.schemas.schemas import ProductResponse
@@ -398,3 +398,94 @@ async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
     return receipt
 
 
+
+
+@router.get(
+    "/{business_id}/pos-config",
+    response_model=ApiResponse[PosConfigOut],
+    status_code=status.HTTP_200_OK,
+)
+async def get_pos_config(
+    business_id: UUID,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
+    redis_client: AsyncRedis = Depends(get_redis),
+):
+    """
+    Terminal configuration for a business location.
+    - tax_rate from Business model (source of truth for cart preview)
+    - payment_methods: only tenders enabled for POS (Cash + Credit today; MPESA later)
+    """
+    from app.models.models import Business
+
+    biz = (
+        await db.exec(select(Business).where(Business.id == business_id))
+    ).one_or_none()
+    if not biz:
+        raise HTTPException(status_code=404, detail="Business not found")
+
+    tax_rate = float(getattr(biz, "tax_rate", None) or 0.0)
+    # Enabled POS methods only — MPESA/CARD stay out until product ships
+    methods = [
+        PosPaymentMethodOut(
+            code="CASH",
+            label="Cash (paid now)",
+            collects_money=True,
+            requires_customer=True,
+        ),
+        PosPaymentMethodOut(
+            code="INVOICE",
+            label="Credit (pay later)",
+            collects_money=False,
+            requires_customer=True,
+        ),
+    ]
+    data = PosConfigOut(
+        business_id=business_id,
+        tax_rate=tax_rate,
+        currency="KES",
+        payment_methods=methods,
+    )
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="POS config retrieved",
+        data=data,
+    )
+
+
+@router.post(
+    "/sales/{sale_id}/cancel-staged",
+    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[None],
+)
+async def cancel_staged_sale(
+    sale_id: UUID,
+    db: SessionDep,
+    business_id: UUID = Query(..., description="Business that owns the staged sale"),
+    redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
+):
+    """
+    Discard a staged sale that was never finalized.
+    No stock change — stock is only reduced on finalize.
+    """
+    await store_crud.cancel_staged_sale(
+        db, sale_id=sale_id, business_id=business_id
+    )
+    await purge_cache_namespace(redis_client, namespace="sales")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.cancel_staged",
+        outcome="success",
+        resource_type="sale",
+        resource_id=sale_id,
+        business_id=business_id,
+    )
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Staged sale cancelled",
+        data=None,
+    )

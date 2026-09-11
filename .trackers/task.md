@@ -1,6 +1,4 @@
-# Pass B Collect Credit
-- [x] open_credit_sales on customer detail API
-- [x] BFF POST collect
-- [x] CollectCreditForm + /customers/[id]/collect
-- [x] Workspace Collect enabled
-- [x] List Collect on credit rows
+# Checkout + complete-sale UI polish
+- [x] CheckoutWorkspace: top bar, hero total, mobile accordion
+- [x] CheckoutForm: segmented Cash/Credit, tighter copy
+- [x] CompleteSaleClient: success hierarchy, method·customer·total, pills, CTAs

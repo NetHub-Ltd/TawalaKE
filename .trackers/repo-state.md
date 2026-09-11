@@ -1,4 +1,4 @@
 # Repository State
-- Branch: feat/customers-collect-credit
+- Branch: feat/terminal-p1-mobile-staged
 - PR target: dev
-- Focus: Pass B — Collect Credit
+- Focus: Terminal P1 (mobile cart, staged hygiene) + P2 (BFF, phone, stock messages)

@@ -1,12 +1,24 @@
 "use client";
 
-import React from "react";
+/**
+ * Finalize sale: customer required for every method (who paid / who took credit).
+ * Payment methods loaded from backend POS config (Cash + Credit today).
+ */
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Check, ChevronDown } from "lucide-react";
+import { Loader2, Check, Search, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
+import { useCartStore } from "@/features/sales/stores/useCartStore";
+import {
+  fetchPosConfig,
+  POS_METHODS_FALLBACK,
+  type PosPaymentMethod,
+} from "@/features/sales/lib/posConfig";
+import { normalizeKenyanPhone, isValidKenyanPhone } from "@/features/sales/lib/phone";
+import { clearStagedSaleId } from "@/features/sales/lib/stagedSale";
 
 interface CheckoutFormProps {
   saleId: string;
@@ -15,22 +27,18 @@ interface CheckoutFormProps {
   businessId: string;
 }
 
-/** Must match backend PaymentMethod: CASH | MPESA | INVOICE | CARD */
 const schema = z.object({
   customerName: z
     .string()
-    .min(2, "Please enter the customer’s name")
+    .min(2, "Customer name is required")
     .max(80, "Name is too long"),
   customerPhone: z
     .string()
-    .transform((val) => val.replace(/\s+/g, ""))
-    .refine((val) => /^(07|01)\d{8}$/.test(val), {
-      message: "Use a valid Kenyan number (07xxxxxxxx or 01xxxxxxxx)",
+    .transform((val) => normalizeKenyanPhone(val))
+    .refine((val) => isValidKenyanPhone(val), {
+      message: "Use a valid Kenyan number (07xxxxxxxx, 01xxxxxxxx, or +254…)",
     }),
-  paymentMethod: z.enum(["CASH", "INVOICE"]),
-  signSale: z.boolean().refine((val) => val === true, {
-    message: "Please confirm to complete this sale",
-  }),
+  paymentMethod: z.string().min(1, "Select a payment method"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -48,6 +56,12 @@ function extractErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
+type CustomerHit = {
+  id: string;
+  name: string;
+  phone?: string | null;
+};
+
 export function CheckoutForm({
   saleId,
   grandTotal,
@@ -55,11 +69,20 @@ export function CheckoutForm({
   businessId,
 }: CheckoutFormProps) {
   const router = useRouter();
+  const clearCart = useCartStore((s) => s.clearCart);
+  const setTaxRate = useCartStore((s) => s.setTaxRate);
+
+  const [methods, setMethods] = useState<PosPaymentMethod[]>(POS_METHODS_FALLBACK);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerHits, setCustomerHits] = useState<CustomerHit[]>([]);
+  const [searchingCustomers, setSearchingCustomers] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -67,11 +90,80 @@ export function CheckoutForm({
       customerName: "",
       customerPhone: "",
       paymentMethod: "CASH",
-      signSale: false,
     },
   });
 
   const paymentMethod = watch("paymentMethod");
+  const selectedMeta = methods.find((m) => m.code === paymentMethod);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setConfigLoading(true);
+      try {
+        const cfg = await fetchPosConfig(businessId);
+        if (cancelled) return;
+        setMethods(cfg.payment_methods);
+        setTaxRate(cfg.tax_rate);
+        if (cfg.payment_methods[0]?.code) {
+          setValue("paymentMethod", cfg.payment_methods[0].code);
+        }
+      } catch {
+        if (!cancelled) setMethods(POS_METHODS_FALLBACK);
+      } finally {
+        if (!cancelled) setConfigLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId, setTaxRate, setValue]);
+
+  // Debounced customer search for typeahead
+  useEffect(() => {
+    const q = customerQuery.trim();
+    if (q.length < 2) {
+      setCustomerHits([]);
+      return;
+    }
+    const t = window.setTimeout(async () => {
+      setSearchingCustomers(true);
+      try {
+        const params = new URLSearchParams({
+          businessId,
+          q,
+          limit: "8",
+        });
+        const res = await fetch(`/api/v1/customers?${params}`, {
+          cache: "no-store",
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setCustomerHits([]);
+          return;
+        }
+        const data = body.data ?? body;
+        const items = (data.items || []) as CustomerHit[];
+        setCustomerHits(items);
+      } catch {
+        setCustomerHits([]);
+      } finally {
+        setSearchingCustomers(false);
+      }
+    }, 280);
+    return () => window.clearTimeout(t);
+  }, [customerQuery, businessId]);
+
+  function pickCustomer(c: CustomerHit) {
+    setValue("customerName", c.name, { shouldValidate: true });
+    if (c.phone) {
+      setValue("customerPhone", c.phone.replace(/\s+/g, ""), {
+        shouldValidate: true,
+      });
+    }
+    setCustomerQuery("");
+    setCustomerHits([]);
+  }
 
   const onSubmit = async (data: FormValues) => {
     const toastId = toast.loading("Completing sale...");
@@ -99,25 +191,29 @@ export function CheckoutForm({
         );
       }
 
-      toast.success(
-        data.paymentMethod === "INVOICE" ? "Credit sale recorded" : "Sale completed",
-        {
-          id: toastId,
-          description:
-            data.paymentMethod === "INVOICE"
-              ? `Credit · payment due · KES ${grandTotal.toLocaleString()} — invoice will be generated`
-              : `KES ${grandTotal.toLocaleString()} recorded`,
-        },
-      );
+      // Clear cart only after successful finalize
+      clearCart();
+      clearStagedSaleId(businessId);
+
+      const isCredit = data.paymentMethod === "INVOICE";
+      toast.success(isCredit ? "Credit sale recorded" : "Sale completed", {
+        id: toastId,
+        description: isCredit
+          ? `Credit · ${data.customerName} · KES ${grandTotal.toLocaleString()}`
+          : `${data.customerName} · KES ${grandTotal.toLocaleString()}`,
+      });
 
       router.push(
         `/org/${organizationId}/${businessId}/complete-sale?saleId=${encodeURIComponent(saleId)}`
       );
     } catch (err) {
-      toast.error("Something went wrong", {
+      const msg = err instanceof Error ? err.message : "Please try again";
+      const stockIssue = /stock|insufficient/i.test(msg);
+      toast.error(stockIssue ? "Not enough stock" : "Could not complete sale", {
         id: toastId,
-        description:
-          err instanceof Error ? err.message : "Please try again",
+        description: stockIssue
+          ? `${msg} Go back to the terminal and reduce quantities.`
+          : msg,
       });
     }
   };
@@ -125,12 +221,63 @@ export function CheckoutForm({
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Finish this sale
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Add the customer and choose cash or credit (pay later).
+        <p className="mt-1 text-sm text-muted-foreground">
+          Customer required — we record who paid or who took credit.
         </p>
+      </div>
+
+      {/* Lookup — visually separate from the form fields below */}
+      <div className="relative mb-5 rounded-2xl border border-dashed border-brand-primary/25 bg-brand-primary/[0.04] p-3.5">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary">
+            <Search size={13} aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-semibold text-foreground">
+              Look up customer
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              Optional — pick someone to fill name and phone
+            </p>
+          </div>
+        </div>
+        <div className="relative">
+          <input
+            id="customer-search"
+            value={customerQuery}
+            onChange={(e) => setCustomerQuery(e.target.value)}
+            placeholder="Type name or phone…"
+            className="h-10 w-full rounded-lg border border-border/50 bg-card pl-3 pr-9 text-sm shadow-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+            autoComplete="off"
+          />
+          {searchingCustomers && (
+            <Loader2
+              size={14}
+              className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground"
+            />
+          )}
+          {customerHits.length > 0 && (
+            <ul className="absolute z-20 mt-1.5 max-h-48 w-full overflow-auto rounded-xl border border-border bg-card py-1 shadow-lg">
+              {customerHits.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => pickCustomer(c)}
+                    className="flex w-full flex-col items-start px-3 py-2.5 text-left text-sm hover:bg-brand-primary/5"
+                  >
+                    <span className="font-medium text-foreground">{c.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {c.phone || "No phone"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
@@ -139,18 +286,17 @@ export function CheckoutForm({
             htmlFor="customerName"
             className="block text-sm font-medium text-foreground mb-1.5"
           >
-            Customer name
+            Customer name <span className="text-rose-600">*</span>
           </label>
           <input
             id="customerName"
-            type="text"
-            disabled={isSubmitting}
-            placeholder="e.g. Jane Doe"
             {...register("customerName")}
+            disabled={isSubmitting}
             className="w-full h-11 px-3.5 rounded-xl border border-border bg-background text-sm
-                       placeholder:text-muted-foreground/60
                        focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
-                       disabled:opacity-50 transition"
+                       disabled:opacity-50"
+            placeholder="Who is paying / taking credit?"
+            autoComplete="name"
           />
           {errors.customerName && (
             <p className="mt-1.5 text-sm text-destructive">
@@ -164,19 +310,18 @@ export function CheckoutForm({
             htmlFor="customerPhone"
             className="block text-sm font-medium text-foreground mb-1.5"
           >
-            Phone number
+            Customer phone <span className="text-rose-600">*</span>
           </label>
           <input
             id="customerPhone"
-            type="text"
-            inputMode="numeric"
-            disabled={isSubmitting}
-            placeholder="0712 345 678"
             {...register("customerPhone")}
-            className="w-full h-11 px-3.5 rounded-xl border border-border bg-background text-sm font-mono
-                       placeholder:text-muted-foreground/60
+            disabled={isSubmitting}
+            className="w-full h-11 px-3.5 rounded-xl border border-border bg-background text-sm
                        focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
-                       disabled:opacity-50 transition"
+                       disabled:opacity-50"
+            placeholder="07xxxxxxxx"
+            inputMode="tel"
+            autoComplete="tel"
           />
           {errors.customerPhone && (
             <p className="mt-1.5 text-sm text-destructive">
@@ -188,62 +333,44 @@ export function CheckoutForm({
         <div>
           <label
             htmlFor="paymentMethod"
-            className="block text-sm font-medium text-foreground mb-1.5"
+            className="mb-1.5 block text-sm font-medium text-foreground"
           >
-            Payment
+            Payment method
           </label>
           <div className="relative">
             <select
               id="paymentMethod"
-              disabled={isSubmitting}
               {...register("paymentMethod")}
-              className="w-full h-11 pl-3.5 pr-10 rounded-xl border border-border bg-background text-sm
-                         focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
-                         disabled:opacity-50 transition appearance-none cursor-pointer"
+              disabled={isSubmitting || configLoading}
+              className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-border bg-background pl-3.5 pr-10 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30 disabled:opacity-50"
             >
-              <option value="CASH">Cash (paid now)</option>
-              <option value="INVOICE">Credit (pay later)</option>
+              {methods.map((m) => (
+                <option key={m.code} value={m.code}>
+                  {m.label}
+                </option>
+              ))}
             </select>
             <ChevronDown
               size={16}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
           </div>
-          {paymentMethod === "INVOICE" && (
+          {selectedMeta && !selectedMeta.collects_money && (
             <p className="mt-1.5 text-xs text-muted-foreground">
-              Customer takes goods now. Stock is reduced. An invoice is issued so you can collect payment later.
+              Goods leave now · stock reduced · collect payment later
             </p>
           )}
-        </div>
-
-        <div className="pt-1">
-          <label className="flex items-start gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              {...register("signSale")}
-              disabled={isSubmitting}
-              className="mt-0.5 h-4 w-4 rounded border-border text-brand-primary
-                         focus:ring-brand-primary/30 disabled:opacity-50"
-            />
-            <span className="text-sm text-foreground leading-snug">
-              Sign this sale
-            </span>
-          </label>
-          {errors.signSale && (
-            <p className="mt-1.5 text-sm text-destructive pl-6">
-              {errors.signSale.message}
+          {errors.paymentMethod && (
+            <p className="mt-1.5 text-sm text-destructive">
+              {errors.paymentMethod.message}
             </p>
           )}
         </div>
 
         <button
           type="submit"
-          disabled={isSubmitting}
-          className="w-full h-12 rounded-xl bg-brand-primary text-white text-sm font-semibold
-                     flex items-center justify-center gap-2
-                     hover:bg-brand-primary/90 active:scale-[0.99]
-                     disabled:opacity-50 disabled:cursor-not-allowed
-                     transition shadow-sm"
+          disabled={isSubmitting || configLoading}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? (
             <>
@@ -253,9 +380,9 @@ export function CheckoutForm({
           ) : (
             <>
               <Check size={16} />
-              {paymentMethod === "CASH"
-                ? "Complete cash sale"
-                : "Record credit & issue invoice"}
+              {paymentMethod === "INVOICE"
+                ? "Complete credit sale"
+                : "Complete cash sale"}
             </>
           )}
         </button>
