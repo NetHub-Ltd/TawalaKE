@@ -5,14 +5,14 @@
 - No route, CTA, auth, onboarding, or business-logic changes
 
 ## Done criteria
-- [ ] Product preview card (presentational, decorative metrics only)
-- [ ] Tighter benefit / step / proof card hierarchy
-- [ ] Mobile-friendly proof scroll where useful
-- [ ] FAQ remains accessible (native details or equivalent)
-- [ ] All CTAs still point to /onboarding/personal-details and /login
-- [ ] SEO JSON-LD preserved
-- [ ] npm run lint + npm run build pass
-- [ ] PR opened
+- [x] Product preview card (presentational, decorative metrics only)
+- [x] Tighter benefit / step / proof card hierarchy
+- [x] Mobile-friendly proof scroll where useful
+- [x] FAQ remains accessible (native details)
+- [x] All CTAs still point to /onboarding/personal-details and /login
+- [x] SEO JSON-LD preserved
+- [ ] npm run lint + npm run build pass (blocked locally by registry 502; CI)
+- [x] PR opened → https://github.com/NetHub-Ltd/TawalaKE/pull/187
 
 ## Explicitly out of scope
 - Fixed mobile bottom nav
