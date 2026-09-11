@@ -1,8 +1,10 @@
 /**
- * Proxy: GET/PATCH/DELETE single customer
+ * Proxy: GET/PATCH/DELETE single customer.
+ * Uses backendUrl() so BACKEND_URL may or may not already include /api/v1.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { backendUrl } from "@/lib/api/backend";
 
 type Ctx = { params: Promise<{ customerId: string }> };
 
@@ -16,19 +18,17 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (!businessId) {
     return NextResponse.json({ error: "businessId is required" }, { status: 400 });
   }
-  const backendBase = process.env.BACKEND_URL;
-  if (!backendBase) {
-    return NextResponse.json({ error: "BACKEND_URL is not configured" }, { status: 500 });
-  }
-  const url = `${backendBase}/api/v1/customers/${businessId}/${customerId}`;
   try {
-    const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${session.accessToken}`,
-      },
-      cache: "no-store",
-    });
+    const res = await fetch(
+      backendUrl(`/customers/${businessId}/${customerId}`),
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        cache: "no-store",
+      }
+    );
     const body = await res.json().catch(() => ({}));
     return NextResponse.json(body, { status: res.status });
   } catch (err) {
@@ -47,14 +47,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (!businessId) {
     return NextResponse.json({ error: "businessId is required" }, { status: 400 });
   }
-  const backendBase = process.env.BACKEND_URL;
-  if (!backendBase) {
-    return NextResponse.json({ error: "BACKEND_URL is not configured" }, { status: 500 });
-  }
   const payload = await req.json().catch(() => ({}));
   try {
     const res = await fetch(
-      `${backendBase}/api/v1/customers/${businessId}/${customerId}`,
+      backendUrl(`/customers/${businessId}/${customerId}`),
       {
         method: "PATCH",
         headers: {
@@ -83,13 +79,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   if (!businessId) {
     return NextResponse.json({ error: "businessId is required" }, { status: 400 });
   }
-  const backendBase = process.env.BACKEND_URL;
-  if (!backendBase) {
-    return NextResponse.json({ error: "BACKEND_URL is not configured" }, { status: 500 });
-  }
   try {
     const res = await fetch(
-      `${backendBase}/api/v1/customers/${businessId}/${customerId}`,
+      backendUrl(`/customers/${businessId}/${customerId}`),
       {
         method: "DELETE",
         headers: {
