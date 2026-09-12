@@ -1,4 +1,4 @@
-export type AnalyticsRange = "today" | "yesterday" | "3d" | "7d" | "month";
+export type AnalyticsRange = "today" | "yesterday" | "3d" | "7d" | "custom";
 export type ReportResource =
   | "dashboard"
   | "hourly"
@@ -29,6 +29,5 @@ export async function fetchReport<T>(
       body.error || body.detail || body.message || "Failed to load report"
     );
   }
-  // Backend often wraps in { status, data }
   return (body?.data !== undefined ? body.data : body) as T;
 }

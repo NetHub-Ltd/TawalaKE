@@ -230,12 +230,21 @@ class TenantResponse(TenantBase):
     address: str
     created_at: datetime
 
-class OrganizationResponse(TenantBase):
+class OrganizationResponse(BaseModel):
+    """Matches Organization model fields used by HQ settings."""
+
     id: UUID
     name: str
-    active: bool
-    address: str
-    created_at: datetime
+    email: EmailStr
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tax_number: Optional[str] = None
+    logo_url: Optional[str] = None
+    active: bool = True
+    onboarding: Optional[bool] = False
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BusinessBase(BaseModel):
@@ -250,6 +259,12 @@ class BusinessCreate(BusinessBase):
 
 class BusinessUpdate(BaseModel):
     name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tax_rate: Optional[float] = None
+    active: Optional[bool] = None
+    config: Optional[dict] = None
+
 
 class BusinessResponse(BusinessBase):
     id: UUID
@@ -257,6 +272,10 @@ class BusinessResponse(BusinessBase):
     organization_id: Optional[UUID] = None
     active: bool
     created_at: datetime
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tax_rate: Optional[float] = None
+    config: Optional[dict] = None
 
 class MiniStoreResponse(BaseModel):
     name: str

@@ -18,12 +18,24 @@ export type DashboardSummary = {
   gross_profit?: number;
   cash_volume?: number;
   mpesa_volume?: number;
+  card_volume?: number;
+  other_volume?: number;
   missing_cost_line_count?: number;
+  profit_is_provisional?: boolean;
   credit_outstanding?: number;
   open_credit_sales?: number;
+  /** Live open credit — not limited to the selected period */
+  credit_scope?: string;
+  /** Credit sales created in the selected period (open + later collected) */
+  credit_issued_period?: number;
+  credit_issued_count?: number;
+  /** Collections on credit sales during the selected period */
+  credit_collected_period?: number;
+  credit_collected_count?: number;
   expenses_total?: number;
   expenses_count?: number;
   profit_after_expenses?: number;
+  expenses_available?: boolean;
 };
 
 export type DashboardSeriesPoint = {
@@ -31,6 +43,7 @@ export type DashboardSeriesPoint = {
   net_revenue_collected?: number;
   gross_sales_volume?: number;
   total_completed_orders_count?: number;
+  total_discounts_granted?: number;
   gross_profit?: number;
 };
 
@@ -43,7 +56,14 @@ export type DashboardPayload = {
 };
 
 export type HourlyPayload = {
-  series: { hour: string; net_revenue?: number; orders?: number }[];
+  series: {
+    hour: string;
+    net_revenue?: number;
+    orders?: number;
+    gross_profit?: number;
+    total_discounts_granted?: number;
+  }[];
+  window?: { start: string; end: string };
 };
 
 export type ProductRow = {
@@ -81,52 +101,77 @@ export type InsightCard = {
 
 export type InsightsPayload = { insights: InsightCard[] };
 
-export function useSalesDashboard(businessId: string, period: AnalyticsRange) {
+/** Shared query key period fragment */
+function periodKey(period: AnalyticsRange, date?: string) {
+  return period === "custom" ? `custom:${date ?? ""}` : period;
+}
+
+export function useSalesDashboard(
+  businessId: string,
+  period: AnalyticsRange,
+  date?: string
+) {
   return useQuery({
-    queryKey: ["report", "dashboard", businessId, period],
-    queryFn: () => fetchReport<DashboardPayload>(businessId, "dashboard", period),
-    enabled: Boolean(businessId),
+    queryKey: ["report", "dashboard", businessId, periodKey(period, date)],
+    queryFn: () =>
+      fetchReport<DashboardPayload>(businessId, "dashboard", period, {
+        ...(period === "custom" && date ? { date } : {}),
+      }),
+    enabled: Boolean(businessId) && (period !== "custom" || Boolean(date)),
     staleTime: 30_000,
   });
 }
 
-export function useHourlyReport(businessId: string, period: AnalyticsRange, enabled: boolean) {
+export function useHourlyReport(
+  businessId: string,
+  period: AnalyticsRange,
+  enabled: boolean,
+  date?: string
+) {
   return useQuery({
-    queryKey: ["report", "hourly", businessId, period],
-    queryFn: () => fetchReport<HourlyPayload>(businessId, "hourly", period),
-    enabled: Boolean(businessId) && enabled,
+    queryKey: ["report", "hourly", businessId, periodKey(period, date)],
+    queryFn: () =>
+      fetchReport<HourlyPayload>(businessId, "hourly", period, {
+        ...(period === "custom" && date ? { date } : {}),
+      }),
+    enabled: Boolean(businessId) && enabled && (period !== "custom" || Boolean(date)),
     staleTime: 30_000,
   });
 }
 
-export function useProductsReport(businessId: string, period: AnalyticsRange, enabled: boolean) {
+export function useProductsReport(
+  businessId: string,
+  period: AnalyticsRange,
+  enabled: boolean,
+  date?: string
+) {
   return useQuery({
-    queryKey: ["report", "products", businessId, period],
+    queryKey: ["report", "products", businessId, periodKey(period, date)],
     queryFn: () =>
       fetchReport<ProductsPayload>(businessId, "products", period, {
         limit: "20",
         order_by: "gross_profit",
+        ...(period === "custom" && date ? { date } : {}),
       }),
-    enabled: Boolean(businessId) && enabled,
+    enabled: Boolean(businessId) && enabled && (period !== "custom" || Boolean(date)),
     staleTime: 30_000,
   });
 }
 
-export function useStaffReport(businessId: string, period: AnalyticsRange, enabled: boolean) {
+export function useStaffReport(
+  businessId: string,
+  period: AnalyticsRange,
+  enabled: boolean,
+  date?: string
+) {
   return useQuery({
-    queryKey: ["report", "staff", businessId, period],
+    queryKey: ["report", "staff", businessId, periodKey(period, date)],
     queryFn: () =>
-      fetchReport<StaffPayload>(businessId, "staff", period, { limit: "50" }),
-    enabled: Boolean(businessId) && enabled,
-    staleTime: 30_000,
-  });
-}
-
-export function useInsightsReport(businessId: string, period: AnalyticsRange, enabled: boolean) {
-  return useQuery({
-    queryKey: ["report", "insights", businessId, period],
-    queryFn: () => fetchReport<InsightsPayload>(businessId, "insights", period),
-    enabled: Boolean(businessId) && enabled,
+      fetchReport<StaffPayload>(businessId, "staff", period, {
+        limit: "50",
+        ...(period === "custom" && date ? { date } : {}),
+      }),
+    enabled: Boolean(businessId) && enabled && (period !== "custom" || Boolean(date)),
     staleTime: 30_000,
   });
 }

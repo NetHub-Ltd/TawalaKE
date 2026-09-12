@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { orgMatchesSession } from "@/lib/auth/require-api-auth";
 import { OrgShell } from "@/features/org/components/OrgShell";
+import { permissionsForRole, can, Permission } from "@/lib/rbac";
 
 interface StaffLayoutProps {
   children: React.ReactNode;
@@ -10,8 +11,8 @@ interface StaffLayoutProps {
 }
 
 /**
- * Organization shell for Team — not the business POS sidebar.
- * Staff is org-scoped; URL is /org/{organizationId}/staff (no businessId).
+ * Organization shell for Team — org-scoped (no businessId).
+ * Requires org:staff:manage.
  */
 export default async function OrgStaffLayout({
   children,
@@ -31,8 +32,11 @@ export default async function OrgStaffLayout({
   }
 
   const userRole = (session.user.role || "").toUpperCase().trim();
-  if (!userRole) {
-    redirect("/org");
+  if (!userRole) redirect("/org");
+
+  const perms = permissionsForRole(userRole);
+  if (!can(perms, Permission.ORG_STAFF_MANAGE)) {
+    redirect(`/org/${organizationId}`);
   }
 
   return (

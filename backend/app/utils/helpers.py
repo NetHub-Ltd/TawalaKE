@@ -146,7 +146,10 @@ def aggregate_rows(rows) -> dict:
     gp = sum(getattr(r, "gross_profit", 0) or 0 for r in rows)
     cash = sum(getattr(r, "cash_volume", 0) or 0 for r in rows)
     mpesa = sum(getattr(r, "mpesa_volume", 0) or 0 for r in rows)
+    card = sum(getattr(r, "card_volume", 0) or 0 for r in rows)
+    other = sum(getattr(r, "other_volume", 0) or 0 for r in rows)
     missing_cost = sum(getattr(r, "missing_cost_line_count", 0) or 0 for r in rows)
+    missing_cost_i = int(missing_cost)
 
     return {
         "gross_sales_volume": gross,
@@ -160,7 +163,10 @@ def aggregate_rows(rows) -> dict:
         "gross_profit": gp,
         "cash_volume": cash,
         "mpesa_volume": mpesa,
-        "missing_cost_line_count": int(missing_cost),
+        "card_volume": card,
+        "other_volume": other,
+        "missing_cost_line_count": missing_cost_i,
+        "profit_is_provisional": missing_cost_i > 0,
     }
 
     

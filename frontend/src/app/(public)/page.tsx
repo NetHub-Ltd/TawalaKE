@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/lib/components/ui/Button";
+import { ProductPreviewCard } from "@/lib/components/marketing/ProductPreviewCard";
 import {
   ArrowRight,
   CheckCircle2,
@@ -32,16 +33,19 @@ const BENEFITS = [
     icon: Zap,
     title: "Fast counter sales",
     desc: "Record cash, M-Pesa, and store credit in seconds on any phone or PC.",
+    metric: "Any phone or PC",
   },
   {
     icon: Package,
     title: "Stock leak control",
     desc: "Every sale updates inventory. Low-stock and mismatch alerts keep shelves honest.",
+    metric: "Real-time alerts",
   },
   {
     icon: Users,
     title: "Staff PIN accountability",
     desc: "4-digit PIN on shared devices. Every sale and discount is tied to a person.",
+    metric: "PIN-tied sales",
   },
 ] as const;
 
@@ -152,53 +156,66 @@ export default function LandingPage() {
       />
 
       <div className="relative w-full text-foreground">
-        <section className="section-padding mx-auto max-w-3xl pt-12 text-center md:pt-20">
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1 text-xs font-bold text-brand-primary">
-            <ShieldCheck size={14} aria-hidden="true" />
-            14-day free trial · No credit card · M-Pesa ready
-          </p>
-          <h1 className="text-h1">
-            Tawala biashara yako{" "}
-            <span className="text-gradient">bila stress na leakage.</span>
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-base text-muted sm:text-lg">
-            Stop relying on exercise books. Track sales, block stock theft, and
-            see true daily net profit — built for Kenyan shops.
-          </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href={TRIAL_HREF} className="w-full sm:w-auto">
-              <Button
-                variant="primary"
-                size="lg"
-                className="min-h-[48px] w-full gap-2 shadow-glow sm:min-w-[220px]"
-              >
-                Start 14-day free trial
-                <ArrowRight size={16} aria-hidden="true" />
-              </Button>
-            </Link>
-            <Link href="#how-it-works" className="w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="lg"
-                className="min-h-[48px] w-full sm:min-w-[180px]"
-              >
-                How it works
-              </Button>
-            </Link>
+        {/* Hero + decorative product preview */}
+        <section className="section-padding mx-auto max-w-6xl pt-12 md:pt-16">
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-12">
+            <div className="text-center lg:text-left">
+              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1 text-xs font-bold text-brand-primary">
+                <ShieldCheck size={14} aria-hidden="true" />
+                14-day free trial · No credit card · M-Pesa ready
+              </p>
+              <h1 className="text-h1">
+                Tawala biashara yako{" "}
+                <span className="text-gradient">bila stress na leakage.</span>
+              </h1>
+              <p className="mx-auto mt-5 max-w-xl text-base text-muted sm:text-lg lg:mx-0">
+                Stop relying on exercise books. Track sales, block stock theft,
+                and see true daily net profit — built for Kenyan shops.
+              </p>
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
+                <Link href={TRIAL_HREF} className="w-full sm:w-auto">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="min-h-[48px] w-full gap-2 shadow-glow sm:min-w-[220px]"
+                  >
+                    Start 14-day free trial
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Button>
+                </Link>
+                <Link href="#how-it-works" className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="min-h-[48px] w-full sm:min-w-[180px]"
+                  >
+                    How it works
+                  </Button>
+                </Link>
+              </div>
+              <p className="mt-4 text-sm text-muted">
+                From{" "}
+                <span className="font-semibold text-foreground">
+                  KSh 1,490/mo
+                </span>
+                {" · "}
+                <Link
+                  href={LOGIN_HREF}
+                  className="font-semibold text-brand-primary underline-offset-2 hover:underline"
+                >
+                  Log in
+                </Link>
+              </p>
+            </div>
+
+            {/* Presentational only — no live data, no product links */}
+            <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
+              <ProductPreviewCard />
+            </div>
           </div>
-          <p className="mt-4 text-sm text-muted">
-            From{" "}
-            <span className="font-semibold text-foreground">KSh 1,490/mo</span>
-            {" · "}
-            <Link
-              href={LOGIN_HREF}
-              className="font-semibold text-brand-primary underline-offset-2 hover:underline"
-            >
-              Log in
-            </Link>
-          </p>
         </section>
 
+        {/* Benefits */}
         <section className="section-padding mx-auto max-w-6xl border-t border-border/50">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <h2 className="text-h2">Built for how Kenyan shops actually run</h2>
@@ -209,17 +226,26 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
             {BENEFITS.map((b) => (
-              <div key={b.title} className="card-layered space-y-3 p-6">
+              <div
+                key={b.title}
+                className="card-layered flex flex-col space-y-3 p-6"
+              >
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
                   <b.icon size={22} aria-hidden="true" />
                 </div>
                 <h3 className="text-h3">{b.title}</h3>
-                <p className="text-sm leading-relaxed text-muted">{b.desc}</p>
+                <p className="flex-1 text-sm leading-relaxed text-muted">
+                  {b.desc}
+                </p>
+                <p className="border-t border-border/50 pt-3 text-xs font-semibold text-brand-primary">
+                  {b.metric}
+                </p>
               </div>
             ))}
           </div>
         </section>
 
+        {/* Steps */}
         <section
           id="how-it-works"
           className="section-padding mx-auto max-w-6xl border-t border-border/50"
@@ -245,17 +271,20 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Social proof — horizontal scroll on small screens */}
         <section className="section-padding mx-auto max-w-6xl border-t border-border/50">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 snap-x snap-mandatory sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0">
             {PROOF.map((t) => (
               <figure
                 key={t.who}
-                className="rounded-2xl border border-border/60 bg-card p-5 shadow-card"
+                className="min-w-[85%] shrink-0 snap-center rounded-2xl border border-border/60 bg-card p-5 shadow-card sm:min-w-0"
               >
                 <blockquote className="text-sm leading-relaxed text-foreground">
                   &ldquo;{t.q}&rdquo;
                 </blockquote>
-                <figcaption className="mt-3 text-xs text-muted">{t.who}</figcaption>
+                <figcaption className="mt-3 text-xs text-muted">
+                  {t.who}
+                </figcaption>
               </figure>
             ))}
           </div>
@@ -265,6 +294,7 @@ export default function LandingPage() {
           </p>
         </section>
 
+        {/* FAQ — native details accordion (accessible, no behavior change) */}
         <section
           id="faq"
           className="section-padding mx-auto max-w-2xl border-t border-border/50"
@@ -286,12 +316,15 @@ export default function LandingPage() {
                     />
                   </span>
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-muted">{item.a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted">
+                  {item.a}
+                </p>
               </details>
             ))}
           </div>
         </section>
 
+        {/* Closing CTA — same targets */}
         <section className="section-padding mx-auto max-w-3xl text-center">
           <div className="card-layered border-brand-primary/20 bg-linear-to-br from-card to-brand-primary/5 px-6 py-10 sm:px-12">
             <h2 className="text-h2">Ready to stop the leakage?</h2>

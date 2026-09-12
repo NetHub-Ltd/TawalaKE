@@ -1,22 +1,137 @@
 name: Build & Push Backend to GHCR
 
+# Single pipeline:
+# 1) On push to main (backend/**): create next v0.0.N git tag
+# 2) Build & push image with that version (same run — no second workflow)
+# Tag-only pushes and PRs still supported.
 on:
   push:
     branches: [main, master]
     tags: ["v*"]
     paths:
       - "backend/**"
+      - ".github/workflows/build_and_push.yml"
   pull_request:
     paths:
       - "backend/**"
+      - ".github/workflows/build_and_push.yml"
+
+concurrency:
+  group: build-backend-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
+  # ----------------------------------------------------------
+  # Resolve version: bump v0.0.* on main, or use existing tag ref
+  # ----------------------------------------------------------
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag_name: ${{ steps.resolve.outputs.tag_name }}
+      extra_tags: ${{ steps.resolve.outputs.extra_tags }}
+      should_push: ${{ steps.resolve.outputs.should_push }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve version / create tag
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force origin
+
+          SHOULD_PUSH="false"
+          VERSION=""
+          TAG_NAME=""
+          EXTRA_TAGS=""
+
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            VERSION="pr"
+            TAG_NAME=""
+            SHOULD_PUSH="false"
+            EXTRA_TAGS=""
+            echo "PR build — no version tag, no push"
+          elif [[ "${REF}" == refs/tags/v* ]]; then
+            # Manual or prior tag push
+            TAG_NAME="${REF_NAME}"
+            VERSION="${TAG_NAME#v}"
+            SHOULD_PUSH="true"
+            EXTRA_TAGS="type=raw,value=${VERSION}"$'\n'"type=raw,value=$(echo "${VERSION}" | cut -d. -f1-2)"$'\n'"type=raw,value=latest"
+            echo "Building from existing tag ${TAG_NAME}"
+          elif [[ "${REF}" == refs/heads/main || "${REF}" == refs/heads/master ]]; then
+            # Auto-bump v0.0.* only
+            LATEST="$(git tag -l 'v0.0.*' | sort -V | tail -n 1 || true)"
+            if [ -z "${LATEST}" ]; then
+              TAG_NAME="v0.0.1"
+            else
+              PATCH="${LATEST##*.}"
+              if ! [[ "${PATCH}" =~ ^[0-9]+$ ]]; then
+                echo "Unparseable tag: ${LATEST}"
+                exit 1
+              fi
+              TAG_NAME="v0.0.$((PATCH + 1))"
+            fi
+
+            # If HEAD already tagged with v0.0.*, reuse that tag (no double bump)
+            EXISTING="$(git tag --points-at HEAD | grep -E '^v0\.0\.[0-9]+$' | sort -V | tail -n 1 || true)"
+            if [ -n "${EXISTING}" ]; then
+              TAG_NAME="${EXISTING}"
+              echo "HEAD already tagged ${TAG_NAME}; reusing"
+            elif git rev-parse -q --verify "refs/tags/${TAG_NAME}" >/dev/null; then
+              echo "Tag ${TAG_NAME} already exists; reusing without recreate"
+            else
+              git tag -a "${TAG_NAME}" -m "Release ${TAG_NAME}"
+              git push origin "refs/tags/${TAG_NAME}"
+              echo "Created and pushed ${TAG_NAME}"
+            fi
+
+            VERSION="${TAG_NAME#v}"
+            SHOULD_PUSH="true"
+            EXTRA_TAGS="type=raw,value=${VERSION}"$'\n'"type=raw,value=$(echo "${VERSION}" | cut -d. -f1-2)"$'\n'"type=raw,value=latest"
+            echo "Release version ${VERSION}"
+          else
+            echo "Unexpected ref ${REF}; skipping push"
+            VERSION="dev"
+            SHOULD_PUSH="false"
+          fi
+
+          {
+            echo "version=${VERSION}"
+            echo "tag_name=${TAG_NAME}"
+            echo "should_push=${SHOULD_PUSH}"
+            echo "extra_tags<<EOF"
+            echo "${EXTRA_TAGS}"
+            echo "EOF"
+          } >> "${GITHUB_OUTPUT}"
+
+          echo "Outputs: version=${VERSION} tag=${TAG_NAME} push=${SHOULD_PUSH}"
+
+  # ----------------------------------------------------------
+  # Build (and push when should_push)
+  # ----------------------------------------------------------
   build-backend:
+    needs: prepare
     uses: daviekaranja/workflows/.github/workflows/build_and_push_v2.yaml@master
     with:
       image_name: tawala-api
       registry: ghcr.io
-      context: backend # ← Important
-      push: ${{ github.event_name != 'pull_request' }}
+      context: backend
+      push: ${{ needs.prepare.outputs.should_push == 'true' }}
       platforms: "linux/amd64,linux/arm64"
+      tags: ${{ needs.prepare.outputs.extra_tags }}
     secrets: inherit

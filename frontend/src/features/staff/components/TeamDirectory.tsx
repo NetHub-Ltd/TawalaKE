@@ -26,7 +26,7 @@ import { useBusiness } from "@/features/business/hooks/useBusiness";
 const createSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(2),
-  role: z.enum(["OWNER", "ADMIN", "MANAGER", "CASHIER"]),
+  role: z.enum(["ADMIN", "MANAGER", "CASHIER"]),
   business_ids: z.array(z.string()).min(1, "Assign at least one business"),
 });
 
@@ -40,6 +40,15 @@ function roleBadge(role: string) {
     CASHIER: "bg-slate-500/10 text-slate-700 border-slate-500/25",
   };
   return styles[role] || styles.CASHIER;
+}
+
+/** Roles the actor may assign on invite (design: ADMIN → Manager/Cashier only). */
+/** Roles assignable on invite. OWNER is never inviteable (single org initiator). */
+function inviteableRoles(actor: string | null | undefined): StaffRoleName[] {
+  const a = (actor || "").toUpperCase();
+  if (a === "OWNER") return ["ADMIN", "MANAGER", "CASHIER"];
+  if (a === "ADMIN") return ["MANAGER", "CASHIER"];
+  return ["CASHIER"];
 }
 
 export default function TeamDirectory({
@@ -232,17 +241,29 @@ export default function TeamDirectory({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                    {s.assigned_businesses?.length
-                      ? s.assigned_businesses.map((b) => b.name).join(", ")
-                      : "—"}
+                    {s.assigned_businesses?.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {s.assigned_businesses.map((b) => (
+                          <span
+                            key={b.id}
+                            className="inline-flex max-w-[9rem] truncate rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            title={b.name}
+                          >
+                            {b.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                         s.active
-                          ? "text-emerald-600"
-                          : "text-amber-600"
-                      }
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-amber-50 text-amber-800"
+                      }`}
                     >
                       {s.active ? "Active" : "Pending invite"}
                     </span>
@@ -263,34 +284,49 @@ export default function TeamDirectory({
             className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold">Invite member</h2>
+            <h2 className="text-lg font-semibold">Invite teammate</h2>
             <p className="mt-1 text-sm text-slate-500">
-              We will email them a secure link to set their own password (expires in 48 hours).
+              Emails a secure link to set a password (48h). Assign at least one branch.
+              Owner is only the account that signed up — you cannot invite another owner.
             </p>
             <form onSubmit={onCreate} className="mt-4 space-y-3">
-              <input
-                {...createForm.register("full_name")}
-                placeholder="Full name"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              />
-              <input
-                {...createForm.register("email")}
-                placeholder="Email"
-                type="email"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              />
-              <select
-                {...createForm.register("role")}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                {STAFF_ROLES.filter(
-                  (r) => r !== "OWNER" || actorRole === "OWNER",
-                ).map((r) => (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Full name</label>
+                <input
+                  {...createForm.register("full_name")}
+                  placeholder="Full name"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Email</label>
+                <input
+                  {...createForm.register("email")}
+                  placeholder="name@company.com"
+                  type="email"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Role</label>
+                <select
+                  {...createForm.register("role")}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                >
+                {inviteableRoles(actorRole).map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
                 ))}
-              </select>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Branches</label>
+              {!(businesses || []).length ? (
+                <p className="rounded-xl border border-dashed border-slate-200 p-3 text-xs text-slate-500">
+                  No branches yet. Create a branch first, then invite staff to it.
+                </p>
+              ) : (
               <div className="max-h-32 space-y-1 overflow-auto rounded-xl border border-slate-200 p-2 text-sm dark:border-slate-700">
                 {(businesses || []).map((b: { id: string; name: string }) => (
                   <label key={b.id} className="flex items-center gap-2">
@@ -313,13 +349,35 @@ export default function TeamDirectory({
                   </label>
                 ))}
               </div>
+              )}
+              {createForm.formState.errors.business_ids && (
+                <p className="text-xs text-red-600">
+                  {createForm.formState.errors.business_ids.message}
+                </p>
+              )}
+              </div>
               {formError && (
-                <p className="text-sm text-red-600">{formError}</p>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                  <p>{formError}</p>
+                  {(formError.toLowerCase().includes("limit") ||
+                    formError.toLowerCase().includes("plan")) &&
+                    actorRole === "OWNER" && (
+                      <a
+                        href={`/org/${organizationId}/billing`}
+                        className="mt-1 inline-block font-semibold underline"
+                      >
+                        Open Billing to upgrade →
+                      </a>
+                    )}
+                </div>
               )}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowCreate(false)}
+                  onClick={() => {
+                    setShowCreate(false);
+                    setFormError(null);
+                  }}
                   className="rounded-xl px-3 py-2 text-sm text-slate-600"
                 >
                   Cancel
@@ -329,7 +387,7 @@ export default function TeamDirectory({
                   disabled={createMut.isPending}
                   className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {createMut.isPending ? "Creating…" : "Create"}
+                  {createMut.isPending ? "Sending invite…" : "Send invite"}
                 </button>
               </div>
             </form>

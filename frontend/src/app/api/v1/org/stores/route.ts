@@ -76,9 +76,16 @@ export async function POST(req: NextRequest) {
 
   if (!res.ok) {
     console.error("Backend error", res.status, res.statusText, responseBody);
+    const detail = responseBody?.detail;
+    const message =
+      typeof detail === "string"
+        ? detail
+        : detail?.message || responseBody?.error || responseBody?.message || res.statusText;
     return NextResponse.json(
       {
-        error: responseBody?.detail || responseBody?.error || res.statusText,
+        error: message,
+        detail,
+        code: typeof detail === "object" ? detail?.code : undefined,
       },
       { status: res.status },
     );

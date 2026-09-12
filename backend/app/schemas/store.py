@@ -215,3 +215,19 @@ class StoreCreate(StoreBase):
 class StoreResponse(StoreBase):
     id: UUID
     created_at: datetime
+
+
+class PosPaymentMethodOut(BaseModel):
+    """Enabled POS tender for the terminal checkout form."""
+    code: str
+    label: str
+    collects_money: bool
+    requires_customer: bool = True
+
+
+class PosConfigOut(BaseModel):
+    """Terminal config: tax from business model + enabled payment methods."""
+    business_id: UUID
+    tax_rate: float
+    currency: str = "KES"
+    payment_methods: list[PosPaymentMethodOut]

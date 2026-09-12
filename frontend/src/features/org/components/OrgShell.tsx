@@ -16,47 +16,58 @@ import {
   LogOut,
   type LucideIcon,
 } from "lucide-react";
+import {
+  Permission,
+  type PermissionKey,
+  canAny,
+  permissionsForRole,
+} from "@/lib/rbac";
 
 type OrgNavItem = {
   id: string;
   label: string;
   href: (orgId: string) => string;
   icon: LucideIcon;
-  /** If set, only these roles see the item (uppercase). Empty = all authenticated. */
-  roles?: string[];
+  /** Any of these permissions unlocks the link. Empty = all authenticated org members. */
+  anyOf?: PermissionKey[];
 };
 
 const ORG_NAV: OrgNavItem[] = [
   {
     id: "dashboard",
-    label: "Dashboard",
+    label: "Home",
     href: (orgId) => `/org/${orgId}`,
     icon: LayoutDashboard,
+    anyOf: [Permission.ORG_READ],
   },
   {
     id: "stores",
-    label: "Stores",
+    label: "Branches",
     href: (orgId) => `/org/${orgId}/stores`,
     icon: Store,
+    anyOf: [Permission.ORG_READ, Permission.ORG_WRITE],
   },
   {
     id: "staff",
     label: "Team",
     href: (orgId) => `/org/${orgId}/staff`,
     icon: Users,
+    anyOf: [Permission.ORG_STAFF_MANAGE],
   },
   {
     id: "billing",
     label: "Billing",
     href: (orgId) => `/org/${orgId}/billing`,
     icon: CreditCard,
+    // OWNER only — matches backend org:billing
+    anyOf: [Permission.ORG_BILLING],
   },
   {
     id: "settings",
     label: "Settings",
     href: (orgId) => `/org/${orgId}/settings`,
     icon: Settings,
-    roles: ["OWNER", "ADMIN"],
+    anyOf: [Permission.ORG_WRITE],
   },
 ];
 
@@ -74,9 +85,11 @@ export function OrgShell({
   const [collapsed, setCollapsed] = useState(false);
   const role = (userRole || "").toUpperCase().trim();
 
-  const items = ORG_NAV.filter(
-    (item) => !item.roles || item.roles.includes(role),
-  );
+  const perms = permissionsForRole(role);
+  const items = ORG_NAV.filter((item) => {
+    if (!item.anyOf || item.anyOf.length === 0) return true;
+    return canAny(perms, item.anyOf);
+  });
 
   const displayName =
     session?.user?.name ||
@@ -119,10 +132,13 @@ export function OrgShell({
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2.5" aria-label="Organization">
           {items.map((item) => {
             const href = item.href(organizationId);
+            // Home is exact match only — otherwise every /org/{id}/… path marks Home active.
             const active =
-              item.id === "staff"
-                ? pathname.includes(`/org/${organizationId}/staff`)
-                : pathname === href || pathname.startsWith(`${href}/`);
+              item.id === "dashboard"
+                ? pathname === href || pathname === `${href}/`
+                : item.id === "staff"
+                  ? pathname.includes(`/org/${organizationId}/staff`)
+                  : pathname === href || pathname.startsWith(`${href}/`);
             const Icon = item.icon;
             return (
               <Link

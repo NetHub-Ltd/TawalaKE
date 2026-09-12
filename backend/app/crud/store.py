@@ -273,13 +273,18 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="This sale already has a financial document and cannot be finalized again.",
             )
 
-        # Credit requires an identifiable customer for collection
+        # Every completed sale must identify who paid / who took credit
         customer_name = (payload.customer_name or "").strip() if payload.customer_name else ""
         customer_phone = (payload.customer_phone or "").strip() if payload.customer_phone else ""
-        if is_credit and not customer_name:
+        if not customer_name:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Customer name is required for credit sales.",
+                detail="Customer name is required to complete a sale.",
+            )
+        if not customer_phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Customer phone is required to complete a sale.",
             )
 
         # 2. Status: credit remains outstanding; paid methods complete
@@ -304,10 +309,14 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         # 4. Customer: reuse by phone within business when possible; never pass removed sale_id
         customer = None
         if customer_phone:
-            cust_stmt = select(Customer).where(
-                Customer.business_id == sale.business_id,
-                Customer.phone == customer_phone,
+            from sqlmodel import col
+            cust_stmt = (
+                select(Customer)
+                .where(Customer.business_id == sale.business_id)
+                .where(Customer.phone == customer_phone)
             )
+            if hasattr(Customer, "deleted_at"):
+                cust_stmt = cust_stmt.where(col(Customer.deleted_at).is_(None))
             customer = (await db.exec(cust_stmt)).first()
 
         if customer is None and (customer_name or customer_phone):
@@ -326,7 +335,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             sale.customer_id = customer.id
             db.add(sale)
 
-        # 5. Stock deduction — always (cash and credit). Goods left the shelf.
+        # 5. Stock deduction — ALWAYS for cash and credit: customer walked out with goods.
         # 4. Stock deduction ALWAYS (paid or credit) via stock_crud.
         for item in sale.items:
             prod_stmt = select(Product).where(Product.id == item.product_id).with_for_update()
@@ -460,6 +469,70 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
         )
         return (await db.exec(new_stmt)).first()
+
+
+    async def cancel_staged_sale(
+        self,
+        db: AsyncSession,
+        *,
+        sale_id: UUID,
+        business_id: UUID,
+    ) -> None:
+        """
+        Discard a staged checkout that never finalized.
+        Allowed only when: PENDING_PAYMENT, no financial document, no payments.
+        Does not touch stock (stock is only cut on finalize).
+        """
+        from app.models.models import FinancialDocument, Payment, SaleItem
+
+        stmt = (
+            select(Sale)
+            .where(Sale.id == sale_id)
+            .where(Sale.business_id == business_id)
+            .options(selectinload(Sale.items))
+        )
+        sale = (await db.exec(stmt)).one_or_none()
+        if not sale:
+            raise HTTPException(status_code=404, detail="Sale not found")
+
+        if sale.status != SaleStatus.PENDING_PAYMENT:
+            raise HTTPException(
+                status_code=409,
+                detail="Only unfinished (staged) sales can be cancelled.",
+            )
+
+        doc = (
+            await db.exec(
+                select(FinancialDocument).where(FinancialDocument.sale_id == sale.id)
+            )
+        ).first()
+        if doc is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="This sale already has a document and cannot be discarded.",
+            )
+
+        pay = (
+            await db.exec(select(Payment).where(Payment.sale_id == sale.id))
+        ).first()
+        if pay is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="This sale already has a payment and cannot be discarded.",
+            )
+
+        # Delete line items then sale (no stock movements for pure stage)
+        for item in list(sale.items or []):
+            await db.delete(item)
+        await db.delete(sale)
+        try:
+            await db.commit()
+        except SQLAlchemyError as e:
+            await db.rollback()
+            logger.error("cancel staged sale failed: {}", e)
+            raise HTTPException(
+                status_code=500, detail="Failed to cancel staged sale."
+            ) from e
 
     async def get_financial_document_json(
         self,

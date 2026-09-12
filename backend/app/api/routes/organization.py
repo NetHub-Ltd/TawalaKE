@@ -411,7 +411,7 @@ async def get_billing_by_tenant(
 
 
 # Parameterized catch-all for org by id — MUST remain after static paths
-@router.get("/{organization_id}", response_model=OrganizationResponse)
+@router.get("/{organization_id}", response_model=ApiResponse[OrganizationResponse])
 @cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
 async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
     caller_org = user.organization_id or getattr(user, "tenant_id", None)

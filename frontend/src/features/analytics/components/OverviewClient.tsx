@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { Loader2, RefreshCw } from "lucide-react";
-import { PeriodPills } from "./PeriodPills";
 import { DashboardTabs, type DashboardTab } from "./DashboardTabs";
+import { PeriodPills } from "./PeriodPills";
 import { SalesPanel } from "./SalesPanel";
 import { ProductsPanel } from "./ProductsPanel";
 import { StaffPanel } from "./StaffPanel";
@@ -15,75 +13,71 @@ import {
   useHourlyReport,
   useProductsReport,
   useStaffReport,
-  useInsightsReport,
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 
-interface OverviewClientProps {
+export function OverviewClient({
+  organizationId,
+  businessId,
+}: {
   organizationId: string;
   businessId: string;
-}
+}) {
+  const normalizedOrgId = organizationId;
+  const normalizedBusinessId = businessId;
 
-const VALID_TABS = new Set<DashboardTab>(["sales", "products", "staff"]);
-
-export function OverviewClient({
-  organizationId: propOrgId,
-  businessId: propBusinessId,
-}: OverviewClientProps) {
-  const { businessId: ctxBusinessId, organizationId: ctxOrgId } =
-    useBusinessContext();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const normalizedBusinessId =
-    propBusinessId ||
-    (Array.isArray(ctxBusinessId) ? ctxBusinessId[0] : ctxBusinessId) ||
-    "";
-  const normalizedOrgId =
-    propOrgId || (Array.isArray(ctxOrgId) ? ctxOrgId[0] : ctxOrgId) || "";
-
-  const tabParam = searchParams.get("tab") as DashboardTab | null;
-  const tab: DashboardTab =
-    tabParam && VALID_TABS.has(tabParam) ? tabParam : "sales";
-
+  const [tab, setTab] = useState<DashboardTab>("sales");
   const [period, setPeriod] = useState<AnalyticsRange>("today");
+  const [customDate, setCustomDate] = useState<string | undefined>();
 
-  const setTab = (next: DashboardTab) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next === "sales") params.delete("tab");
-    else params.set("tab", next);
-    const q = params.toString();
-    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
-  };
+  const dateArg = period === "custom" ? customDate : undefined;
+  const hourlyGrain =
+    period === "today" || period === "yesterday" || period === "custom";
 
-  const dash = useSalesDashboard(normalizedBusinessId, period);
-  const hourly = useHourlyReport(normalizedBusinessId, period, true);
+  const dash = useSalesDashboard(normalizedBusinessId, period, dateArg);
+  const hourly = useHourlyReport(
+    normalizedBusinessId,
+    period,
+    tab === "sales" && hourlyGrain,
+    dateArg
+  );
   const products = useProductsReport(
     normalizedBusinessId,
     period,
-    true
+    tab === "products",
+    dateArg
   );
-  const staff = useStaffReport(normalizedBusinessId, period, true);
-  const insights = useInsightsReport(
+  const staff = useStaffReport(
     normalizedBusinessId,
     period,
-    tab === "products" || tab === "staff"
+    tab === "staff",
+    dateArg
   );
 
-  const anyError = dash.isError || products.isError || staff.isError;
-  const errorMessage =
-    (dash.error as Error)?.message ||
-    (products.error as Error)?.message ||
-    (staff.error as Error)?.message ||
-    "Failed to load dashboard";
+  const anyError = dash.isError || hourly.isError || products.isError || staff.isError;
+  const errorMessage = useMemo(() => {
+    const e =
+      (dash.error as Error) ||
+      (hourly.error as Error) ||
+      (products.error as Error) ||
+      (staff.error as Error);
+    return e?.message || "Failed to load report";
+  }, [dash.error, hourly.error, products.error, staff.error]);
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col gap-3 px-1 pb-3 pt-1 sm:px-2">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6 pt-2 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <DashboardTabs value={tab} onChange={setTab} />
         <div className="flex items-center gap-2">
-          <PeriodPills value={period} onChange={setPeriod} />
+          <PeriodPills
+            value={period}
+            customDate={customDate}
+            onChange={(p, d) => {
+              setPeriod(p);
+              if (p === "custom" && d) setCustomDate(d);
+              if (p !== "custom") setCustomDate(undefined);
+            }}
+          />
           <button
             type="button"
             onClick={() => {
@@ -91,7 +85,6 @@ export function OverviewClient({
               hourly.refetch();
               products.refetch();
               staff.refetch();
-              insights.refetch();
             }}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
@@ -127,14 +120,14 @@ export function OverviewClient({
           <SalesPanel
             dashboard={dash.data}
             hourly={hourly.data}
-            loading={dash.isLoading}
+            period={period}
+            loading={dash.isLoading || (hourlyGrain && hourly.isLoading)}
           />
         )}
         {tab === "products" && (
           <ProductsPanel
             dashboard={dash.data}
             products={products.data}
-            insights={insights.data}
             loading={products.isLoading}
           />
         )}
@@ -142,7 +135,6 @@ export function OverviewClient({
           <StaffPanel
             dashboard={dash.data}
             staff={staff.data}
-            insights={insights.data}
             loading={staff.isLoading}
           />
         )}

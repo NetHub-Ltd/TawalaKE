@@ -35,7 +35,7 @@ export function BusinessSwitcher({ isCollapsed }: BusinessSwitcherProps) {
   // Authorization and role extraction
   const rawRole = session?.user?.role;
   const userRole = rawRole ? rawRole.toUpperCase() : "CASHIER";
-  const isAuthorized = ["OWNER", "MANAGER"].includes(userRole);
+  const isAuthorized = ["OWNER", "ADMIN", "MANAGER"].includes(userRole);
 
   // Business Context Extraction
   const assignedBusinesses: AssignedBusiness[] =

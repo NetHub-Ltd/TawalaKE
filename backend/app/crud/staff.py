@@ -195,12 +195,23 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
         redis: Optional[AsyncRedis] = None,
     ) -> StaffResponse:
         actor_role = self.role_val(actor)
-        if payload.role == StaffRole.OWNER and actor_role != StaffRole.OWNER:
+        # Single owner rule: OWNER is only the org initiator (onboarding).
+        # Managed invite/create must never assign OWNER.
+        if payload.role == StaffRole.OWNER:
             raise HTTPException(
                 403,
                 detail={
                     "code": "RBAC_DENIED",
-                    "message": "Only OWNER may create OWNER",
+                    "message": "Cannot invite an OWNER. Each organization has a single owner set at signup.",
+                },
+            )
+        # ADMIN may invite MANAGER / CASHIER only (not peer ADMIN)
+        if actor_role == StaffRole.ADMIN and payload.role == StaffRole.ADMIN:
+            raise HTTPException(
+                403,
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "ADMIN may only invite MANAGER or CASHIER",
                 },
             )
 
@@ -371,12 +382,21 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
 
         actor_role = self.role_val(actor)
         if payload.role is not None:
-            if payload.role == StaffRole.OWNER and actor_role != StaffRole.OWNER:
+            # Single owner rule: never promote anyone to OWNER via managed update
+            if payload.role == StaffRole.OWNER:
                 raise HTTPException(
                     403,
                     detail={
                         "code": "RBAC_DENIED",
-                        "message": "Only OWNER may promote to OWNER",
+                        "message": "Cannot assign OWNER. Each organization has a single owner set at signup.",
+                    },
+                )
+            if actor_role == StaffRole.ADMIN and payload.role == StaffRole.ADMIN:
+                raise HTTPException(
+                    403,
+                    detail={
+                        "code": "RBAC_DENIED",
+                        "message": "ADMIN may only assign MANAGER or CASHIER",
                     },
                 )
             if (
