@@ -173,10 +173,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const payableGrandTotal = Math.max(0, grandTotal + (service?.amount || 0));
 
   const handleExpand = () => {
-    // Full-page cart route is not active; keep focus on terminal tray.
-    toast.info("Cart tray", {
-      description: "Use this panel to review items, then proceed to checkout.",
-    });
+    if (resolvedBusinessId && resolvedOrgId) {
+      router.push(`/org/${resolvedOrgId}/${resolvedBusinessId}/cart`);
+    }
   };
 
   const handleClearCartWithFeedback = () => {
