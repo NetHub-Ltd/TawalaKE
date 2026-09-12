@@ -62,28 +62,30 @@ function isSaleRow(row: unknown): boolean {
 /** Map API line shapes → SaleLineItem. */
 export function normalizeLineItems(raw: unknown): SaleLineItem[] {
   if (!Array.isArray(raw)) return [];
-  return raw
-    .map((row) => {
-      if (!row || typeof row !== "object") return null;
-      const r = row as Record<string, unknown>;
-      const unit = Number(r.unit_price ?? r.unitPrice ?? 0);
-      const qty = Number(r.quantity ?? r.qty ?? 0);
-      const sub = Number(
-        r.subtotal ?? r.total_price ?? r.line_total ?? unit * qty,
-      );
-      const name = String(
-        r.name ?? r.product_name ?? r.label ?? r.sku ?? "Item",
-      );
-      return {
-        name,
-        unit_price: unit,
-        quantity: qty,
-        subtotal: sub,
-        cost_price_at_sale:
-          r.cost_price_at_sale != null ? Number(r.cost_price_at_sale) : null,
-      } satisfies SaleLineItem;
-    })
-    .filter((x): x is SaleLineItem => x != null);
+  const out: SaleLineItem[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const unit = Number(r.unit_price ?? r.unitPrice ?? 0);
+    const qty = Number(r.quantity ?? r.qty ?? 0);
+    const sub = Number(
+      r.subtotal ?? r.total_price ?? r.line_total ?? unit * qty,
+    );
+    const name = String(
+      r.name ?? r.product_name ?? r.label ?? r.sku ?? "Item",
+    );
+    const item: SaleLineItem = {
+      name,
+      unit_price: unit,
+      quantity: qty,
+      subtotal: sub,
+    };
+    if (r.cost_price_at_sale != null) {
+      item.cost_price_at_sale = Number(r.cost_price_at_sale);
+    }
+    out.push(item);
+  }
+  return out;
 }
 
 function normalizeOneSale(raw: Record<string, unknown>): SaleResponse {
