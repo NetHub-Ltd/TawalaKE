@@ -39,31 +39,105 @@ export interface SaleResponse {
   [key: string]: unknown;
 }
 
+/** Line-item rows (not whole sales). */
+function isLineItemRow(row: unknown): boolean {
+  if (!row || typeof row !== "object") return false;
+  const r = row as Record<string, unknown>;
+  const hasLineFields =
+    "unit_price" in r || "quantity" in r || "product_id" in r;
+  const hasSaleFields = "status" in r || "cashier_id" in r || "business_id" in r;
+  return hasLineFields && !hasSaleFields;
+}
+
+/** Sale header rows in a list envelope. */
+function isSaleRow(row: unknown): boolean {
+  if (!row || typeof row !== "object") return false;
+  const r = row as Record<string, unknown>;
+  return (
+    ("status" in r || "total_amount" in r || "cashier_id" in r) &&
+    !isLineItemRow(r)
+  );
+}
+
+/** Map API line shapes → SaleLineItem. */
+export function normalizeLineItems(raw: unknown): SaleLineItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const r = row as Record<string, unknown>;
+      const unit = Number(r.unit_price ?? r.unitPrice ?? 0);
+      const qty = Number(r.quantity ?? r.qty ?? 0);
+      const sub = Number(
+        r.subtotal ?? r.total_price ?? r.line_total ?? unit * qty,
+      );
+      const name = String(
+        r.name ?? r.product_name ?? r.label ?? r.sku ?? "Item",
+      );
+      return {
+        name,
+        unit_price: unit,
+        quantity: qty,
+        subtotal: sub,
+        cost_price_at_sale:
+          r.cost_price_at_sale != null ? Number(r.cost_price_at_sale) : null,
+      } satisfies SaleLineItem;
+    })
+    .filter((x): x is SaleLineItem => x != null);
+}
+
+function normalizeOneSale(raw: Record<string, unknown>): SaleResponse {
+  const lineSource =
+    raw.items ?? raw.sale_items ?? raw.line_items ?? raw.saleItems;
+  const items = normalizeLineItems(lineSource);
+  return {
+    ...(raw as SaleResponse),
+    items,
+    item_count:
+      typeof raw.item_count === "number"
+        ? raw.item_count
+        : items.length > 0
+          ? items.length
+          : (raw.item_count as number | null | undefined) ?? items.length,
+  };
+}
+
 /**
  * Normalize any backend response into a clean SaleResponse[].
+ * Paginated envelope `{ items: Sale[], meta }` vs single sale with line `items`.
  */
 function normalizeSalesResponse(data: unknown): SaleResponse[] {
   if (Array.isArray(data)) {
-    return data as SaleResponse[];
+    return data
+      .filter((row) => isSaleRow(row))
+      .map((row) => normalizeOneSale(row as Record<string, unknown>));
   }
 
   if (data && typeof data === "object") {
     const obj = data as Record<string, unknown>;
 
-    if (Array.isArray(obj.items)) {
-      // Distinguish paginated envelope vs a sale that has line items
-      const first = obj.items[0] as Record<string, unknown> | undefined;
-      const looksLikeSalesList =
-        first &&
-        typeof first === "object" &&
-        ("status" in first || "total_amount" in first || "cashier_id" in first);
-      if (looksLikeSalesList || obj.meta) {
-        return obj.items as SaleResponse[];
-      }
+    // Nested data envelope
+    if (obj.data && typeof obj.data === "object") {
+      const nested = normalizeSalesResponse(obj.data);
+      if (nested.length) return nested;
     }
 
-    if (typeof obj.id === "string" && ("status" in obj || "total_amount" in obj)) {
-      return [obj as SaleResponse];
+    if (Array.isArray(obj.items)) {
+      const first = obj.items[0];
+      // Paginated sales list (or single-sale list)
+      if (obj.meta != null || isSaleRow(first)) {
+        return obj.items
+          .filter((row) => isSaleRow(row))
+          .map((row) => normalizeOneSale(row as Record<string, unknown>));
+      }
+      // Single sale whose `items` are line items only — handled below via id
+    }
+
+    if (
+      (typeof obj.id === "string" || typeof obj.id === "object") &&
+      ("status" in obj || "total_amount" in obj)
+    ) {
+      return [normalizeOneSale(obj)];
     }
   }
 
