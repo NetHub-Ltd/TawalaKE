@@ -42,6 +42,14 @@ function roleBadge(role: string) {
   return styles[role] || styles.CASHIER;
 }
 
+/** Roles the actor may assign on invite (design: ADMIN → Manager/Cashier only). */
+function inviteableRoles(actor: string | null | undefined): StaffRoleName[] {
+  const a = (actor || "").toUpperCase();
+  if (a === "OWNER") return ["OWNER", "ADMIN", "MANAGER", "CASHIER"];
+  if (a === "ADMIN") return ["MANAGER", "CASHIER"];
+  return ["CASHIER"];
+}
+
 export default function TeamDirectory({
   organizationId,
 }: {
@@ -263,34 +271,43 @@ export default function TeamDirectory({
             className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-semibold">Invite member</h2>
+            <h2 className="text-lg font-semibold">Invite teammate</h2>
             <p className="mt-1 text-sm text-slate-500">
-              We will email them a secure link to set their own password (expires in 48 hours).
+              Emails a secure link to set a password (48h). Assign at least one branch.
             </p>
             <form onSubmit={onCreate} className="mt-4 space-y-3">
-              <input
-                {...createForm.register("full_name")}
-                placeholder="Full name"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              />
-              <input
-                {...createForm.register("email")}
-                placeholder="Email"
-                type="email"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              />
-              <select
-                {...createForm.register("role")}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-              >
-                {STAFF_ROLES.filter(
-                  (r) => r !== "OWNER" || actorRole === "OWNER",
-                ).map((r) => (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Full name</label>
+                <input
+                  {...createForm.register("full_name")}
+                  placeholder="Full name"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Email</label>
+                <input
+                  {...createForm.register("email")}
+                  placeholder="name@company.com"
+                  type="email"
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Role</label>
+                <select
+                  {...createForm.register("role")}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                >
+                {inviteableRoles(actorRole).map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>
                 ))}
-              </select>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">Branches</label>
               <div className="max-h-32 space-y-1 overflow-auto rounded-xl border border-slate-200 p-2 text-sm dark:border-slate-700">
                 {(businesses || []).map((b: { id: string; name: string }) => (
                   <label key={b.id} className="flex items-center gap-2">
@@ -313,13 +330,34 @@ export default function TeamDirectory({
                   </label>
                 ))}
               </div>
+              {createForm.formState.errors.business_ids && (
+                <p className="text-xs text-red-600">
+                  {createForm.formState.errors.business_ids.message}
+                </p>
+              )}
+              </div>
               {formError && (
-                <p className="text-sm text-red-600">{formError}</p>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                  <p>{formError}</p>
+                  {(formError.toLowerCase().includes("limit") ||
+                    formError.toLowerCase().includes("plan")) &&
+                    actorRole === "OWNER" && (
+                      <a
+                        href={`/org/${organizationId}/billing`}
+                        className="mt-1 inline-block font-semibold underline"
+                      >
+                        Open Billing to upgrade →
+                      </a>
+                    )}
+                </div>
               )}
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowCreate(false)}
+                  onClick={() => {
+                    setShowCreate(false);
+                    setFormError(null);
+                  }}
                   className="rounded-xl px-3 py-2 text-sm text-slate-600"
                 >
                   Cancel
@@ -329,7 +367,7 @@ export default function TeamDirectory({
                   disabled={createMut.isPending}
                   className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {createMut.isPending ? "Creating…" : "Create"}
+                  {createMut.isPending ? "Sending invite…" : "Send invite"}
                 </button>
               </div>
             </form>

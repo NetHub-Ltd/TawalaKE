@@ -203,6 +203,18 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
                     "message": "Only OWNER may create OWNER",
                 },
             )
+        # ADMIN may invite MANAGER / CASHIER only (not peer ADMIN)
+        if actor_role == StaffRole.ADMIN and payload.role in (
+            StaffRole.OWNER,
+            StaffRole.ADMIN,
+        ):
+            raise HTTPException(
+                403,
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "ADMIN may only invite MANAGER or CASHIER",
+                },
+            )
 
         org_id = actor.organization_id or getattr(actor, "tenant_id", None)
         if not org_id:
@@ -377,6 +389,17 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
                     detail={
                         "code": "RBAC_DENIED",
                         "message": "Only OWNER may promote to OWNER",
+                    },
+                )
+            if actor_role == StaffRole.ADMIN and payload.role in (
+                StaffRole.OWNER,
+                StaffRole.ADMIN,
+            ):
+                raise HTTPException(
+                    403,
+                    detail={
+                        "code": "RBAC_DENIED",
+                        "message": "ADMIN may only assign MANAGER or CASHIER",
                     },
                 )
             if (

@@ -1,39 +1,28 @@
 import { Metadata } from "next";
-// import StoreForm from "./store-form";
-import StoreForm from "@/features/store/components/store-form"
-
-interface NewStorePageParams {
-  organizationId: string
-}
+import StoreForm from "@/features/store/components/store-form";
 
 interface PageProps {
-  params: Promise<NewStorePageParams>;
+  params: Promise<{ organizationId: string }>;
 }
 
 export const metadata: Metadata = {
-  title: "Provision New Store Outlet | NetHub PaaS",
-  description:
-    "Provision and configure new store outlets, regional branch locations, and POS industry rules on the NetHub PaaS platform.",
-  alternates: {
-    canonical: "https://nethub.co.ke/org/stores/new",
-  },
+  title: "New branch | Tawala",
+  description: "Create a new branch / store location.",
 };
 
 export default async function NewStorePage({ params }: PageProps) {
-  const { organizationId} = await params;
-
-  if (!organizationId){
+  const { organizationId } = await params;
+  if (!organizationId) {
     return (
-      <div>
-        <h1>Organization is required!</h1>
+      <div className="p-6">
+        <h1 className="text-lg font-semibold">Organization is required</h1>
       </div>
-    )
+    );
   }
 
   return (
-    <main id="main-content" className="min-h-screen w-full flex items-center justify-center p-4 md:p-8">
-      
+    <div className="mx-auto flex w-full max-w-xl justify-center p-2 sm:p-4">
       <StoreForm organizationId={organizationId} />
-    </main>
+    </div>
   );
 }

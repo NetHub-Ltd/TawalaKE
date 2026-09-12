@@ -29,17 +29,33 @@ export interface CreateStaffInput {
 async function parseError(res: Response) {
   const body = await res.json().catch(() => ({}));
   const detail = body?.detail;
-  if (typeof detail === "string") return detail;
-  if (detail && typeof detail === "object" && "message" in detail) {
-    return String((detail as { message?: string }).message);
+
+  function fromDetail(d: unknown): string | null {
+    if (typeof d === "string") return d;
+    if (d && typeof d === "object") {
+      const o = d as Record<string, unknown>;
+      if (typeof o.message === "string") {
+        const code = typeof o.code === "string" ? o.code : "";
+        if (code === "PLAN_LIMIT_REACHED" || res.status === 402) {
+          return o.message;
+        }
+        return o.message;
+      }
+    }
+    return null;
   }
+
+  const primary = fromDetail(detail);
+  if (primary) return primary;
+
   // BFF diagnostic shape from upstream FastAPI
   const upstream = body?.upstream_body;
   if (upstream?.detail) {
-    if (typeof upstream.detail === "string") return upstream.detail;
-    if (typeof upstream.detail === "object" && upstream.detail?.message) {
-      return String(upstream.detail.message);
-    }
+    const u = fromDetail(upstream.detail);
+    if (u) return u;
+  }
+  if (res.status === 402) {
+    return "Plan staff limit reached. Upgrade billing or deactivate a seat.";
   }
   if (body?.error && body?.upstream_status) {
     return `${body.error} (${body.upstream_status})`;
