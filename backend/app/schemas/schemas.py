@@ -250,6 +250,12 @@ class BusinessCreate(BusinessBase):
 
 class BusinessUpdate(BaseModel):
     name: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tax_rate: Optional[float] = None
+    active: Optional[bool] = None
+    config: Optional[dict] = None
+
 
 class BusinessResponse(BusinessBase):
     id: UUID
@@ -257,6 +263,10 @@ class BusinessResponse(BusinessBase):
     organization_id: Optional[UUID] = None
     active: bool
     created_at: datetime
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tax_rate: Optional[float] = None
+    config: Optional[dict] = None
 
 class MiniStoreResponse(BaseModel):
     name: str

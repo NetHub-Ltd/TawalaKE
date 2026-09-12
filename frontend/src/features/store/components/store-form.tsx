@@ -621,7 +621,13 @@ export default function StoreForm({
           (response.status === 402
             ? "Plan branch limit reached. Upgrade billing or archive a branch."
             : "Failed to create branch.");
-        setServerError(String(msg));
+        const suffix =
+          response.status === 402 ||
+          detail?.code === "PLAN_LIMIT_REACHED" ||
+          /limit|upgrade|plan/i.test(String(msg))
+            ? ` Open Billing: /org/${organizationId}/billing`
+            : "";
+        setServerError(String(msg) + (suffix ? " —" + suffix : ""));
         return;
       }
 

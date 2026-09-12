@@ -1,15 +1,11 @@
-"use client";
-// import { useBusinessContext } from "../layout";
-import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+import type { Metadata } from "next";
+import { BusinessSettingsForm } from "@/features/business/components/BusinessSettingsForm";
 
+export const metadata: Metadata = {
+  title: "Branch settings | Tawala",
+  description: "Tax rate, receipt footer, and branch profile.",
+};
 
-export default function SettingsPage() {
-  const { businessId: _businessId, businessName } = useBusinessContext();
-
-  return (
-    <div>
-      <h1>Settings for Business: {businessName}</h1>
-      {/* Your settings logic here */}
-    </div>
-  );
+export default function BusinessSettingsPage() {
+  return <BusinessSettingsForm />;
 }
