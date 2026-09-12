@@ -58,9 +58,10 @@ async def test_resolve_no_subscription():
     db.exec = AsyncMock(
         side_effect=[
             MagicMock(__iter__=lambda self: iter([])),
-            MagicMock(one=lambda: 0),
-            MagicMock(one=lambda: 0),
-            MagicMock(one=lambda: 0),
+            MagicMock(one=lambda: 0),  # businesses
+            MagicMock(one=lambda: 0),  # staff
+            MagicMock(all=lambda: []),  # product biz ids
+            MagicMock(one=lambda: 0),  # products
         ]
     )
     ent = await svc.resolve_from_db(db, uuid4())
@@ -79,6 +80,7 @@ async def test_require_feature_denied():
             MagicMock(__iter__=lambda self: iter([sub])),
             MagicMock(one=lambda: 0),
             MagicMock(one=lambda: 0),
+            MagicMock(all=lambda: []),
             MagicMock(one=lambda: 0),
         ]
     )
@@ -101,6 +103,7 @@ async def test_check_limit_blocks_at_cap():
             MagicMock(__iter__=lambda self: iter([sub])),
             MagicMock(one=lambda: 1),
             MagicMock(one=lambda: 0),
+            MagicMock(all=lambda: []),
             MagicMock(one=lambda: 0),
         ]
     )
@@ -214,20 +217,30 @@ def _detail_code(exc: HTTPException) -> str:
     return str(d)
 
 
+def _product_count_effects(products=0, biz_ids=None):
+    """Two exec results for _count_products: business id list, then count."""
+    ids = list(biz_ids) if biz_ids is not None else []
+    return [
+        MagicMock(all=lambda: ids),
+        MagicMock(one=lambda: products),
+    ]
+
+
 def _db_with_sub_plan(sub, plan, *, biz=0, staff=0, products=0, extra_product_counts=0):
     """resolve_from_db: load sub → live counts → get plan.
 
+    _live_usage exec order: businesses, staff, then _count_products (biz ids + count).
     enforce_create_product does another _count_products after resolve;
-    pass extra_product_counts=1 (or more) for those follow-up execs.
+    pass extra_product_counts=1 (or more) for those follow-up pairs.
     """
     effects = [
         MagicMock(__iter__=lambda self: iter([sub])),
         MagicMock(one=lambda: biz),
         MagicMock(one=lambda: staff),
-        MagicMock(one=lambda: products),
+        *_product_count_effects(products),
     ]
     for _ in range(extra_product_counts):
-        effects.append(MagicMock(one=lambda: products))
+        effects.extend(_product_count_effects(products))
     db = AsyncMock()
     db.exec = AsyncMock(side_effect=effects)
     db.get = AsyncMock(return_value=plan)
@@ -363,6 +376,7 @@ async def test_resolve_unknown_plan():
             MagicMock(__iter__=lambda self: iter([sub])),
             MagicMock(one=lambda: 0),
             MagicMock(one=lambda: 0),
+            MagicMock(all=lambda: []),
             MagicMock(one=lambda: 0),
         ]
     )
@@ -407,8 +421,15 @@ async def test_bump_usage_persists_and_invalidates():
 
     async def exec_side(stmt):
         call_n["i"] += 1
-        if call_n["i"] <= 3:
+        i = call_n["i"]
+        # _live_usage: biz count, staff count, product biz ids, product count
+        if i in (1, 2):
             return MagicMock(one=lambda: 1)
+        if i == 3:
+            return MagicMock(all=lambda: [])
+        if i == 4:
+            return MagicMock(one=lambda: 1)
+        # persist_usage → _load_active_sub
         return MagicMock(__iter__=lambda self: iter([sub]))
 
     db.exec = AsyncMock(side_effect=exec_side)
@@ -521,3 +542,35 @@ def test_entitlements_limit_helpers():
     assert ent.limit("bad") is None
     assert ent.has_feature("flag") is True
     assert ent.has_feature("off") is False
+
+
+@pytest.mark.asyncio
+async def test_count_products_includes_business_scoped():
+    """Legacy products counted via business_id under the org."""
+    svc = PaywallService()
+    org = uuid4()
+    bid = uuid4()
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            MagicMock(all=lambda: [bid]),
+            MagicMock(one=lambda: 42),
+        ]
+    )
+    n = await svc._count_products(db, org)
+    assert n == 42
+    assert db.exec.await_count == 2
+
+
+@pytest.mark.asyncio
+async def test_count_products_org_id_only_when_no_branches():
+    svc = PaywallService()
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=[
+            MagicMock(all=lambda: []),
+            MagicMock(one=lambda: 7),
+        ]
+    )
+    n = await svc._count_products(db, uuid4())
+    assert n == 7
