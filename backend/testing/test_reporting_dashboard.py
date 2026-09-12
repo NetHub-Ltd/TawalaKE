@@ -17,9 +17,15 @@ def _period_credit_zero():
     return r
 
 
+def _rollup_day_in_7d_window() -> datetime:
+    """UTC midnight today — always inside AnalyticsPeriod.DAYS_7 current window."""
+    now = datetime.now(timezone.utc)
+    return datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+
+
 @pytest.mark.asyncio
 async def test_dashboard_from_rollups(mock_session):
-    day = datetime(2026, 9, 5, tzinfo=timezone.utc)
+    day = _rollup_day_in_7d_window()
     row = MagicMock(
         date_dimension=day,
         gross_sales_volume=100.0,
@@ -94,7 +100,7 @@ async def test_dashboard_from_rollups(mock_session):
 
 @pytest.mark.asyncio
 async def test_dashboard_provisional_profit_and_expense_failure(mock_session):
-    day = datetime(2026, 9, 5, tzinfo=timezone.utc)
+    day = _rollup_day_in_7d_window()
     row = MagicMock(
         date_dimension=day,
         gross_sales_volume=100.0,
