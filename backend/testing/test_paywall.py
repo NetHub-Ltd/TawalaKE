@@ -214,17 +214,22 @@ def _detail_code(exc: HTTPException) -> str:
     return str(d)
 
 
-def _db_with_sub_plan(sub, plan, *, biz=0, staff=0, products=0):
-    """resolve_from_db: load sub → live counts → get plan."""
+def _db_with_sub_plan(sub, plan, *, biz=0, staff=0, products=0, extra_product_counts=0):
+    """resolve_from_db: load sub → live counts → get plan.
+
+    enforce_create_product does another _count_products after resolve;
+    pass extra_product_counts=1 (or more) for those follow-up execs.
+    """
+    effects = [
+        MagicMock(__iter__=lambda self: iter([sub])),
+        MagicMock(one=lambda: biz),
+        MagicMock(one=lambda: staff),
+        MagicMock(one=lambda: products),
+    ]
+    for _ in range(extra_product_counts):
+        effects.append(MagicMock(one=lambda: products))
     db = AsyncMock()
-    db.exec = AsyncMock(
-        side_effect=[
-            MagicMock(__iter__=lambda self: iter([sub])),
-            MagicMock(one=lambda: biz),
-            MagicMock(one=lambda: staff),
-            MagicMock(one=lambda: products),
-        ]
-    )
+    db.exec = AsyncMock(side_effect=effects)
     db.get = AsyncMock(return_value=plan)
     db.add = MagicMock()
     db.flush = AsyncMock()
@@ -374,7 +379,7 @@ async def test_enforce_create_product_blocks_at_cap():
     plan = _plan(limits={"max_businesses": 5, "max_staff": 10, "max_products": 2})
     sub = _sub(plan_id=plan.id)
     # live product count already at cap
-    db = _db_with_sub_plan(sub, plan, products=2)
+    db = _db_with_sub_plan(sub, plan, products=2, extra_product_counts=1)
     with pytest.raises(HTTPException) as exc:
         await svc.enforce_create_product(db, sub.organization_id)
     assert exc.value.status_code in (402, 403)
@@ -386,7 +391,7 @@ async def test_enforce_create_product_allows_under_cap():
     svc = PaywallService()
     plan = _plan(limits={"max_businesses": 5, "max_staff": 10, "max_products": 10})
     sub = _sub(plan_id=plan.id)
-    db = _db_with_sub_plan(sub, plan, products=3)
+    db = _db_with_sub_plan(sub, plan, products=3, extra_product_counts=1)
     ent = await svc.enforce_create_product(db, sub.organization_id)
     assert ent.plan_code == "BASIC"
 
@@ -478,21 +483,22 @@ async def test_module_wrappers_delegate():
     """Smoke: module-level helpers resolve via singleton (no active sub → inactive)."""
     from app.services import paywall as paywall_mod
 
+    def _no_sub_exec(_stmt=None):
+        # Alternating empty sub list vs count .one() — enough for many resolve calls
+        return MagicMock(
+            __iter__=lambda self: iter([]),
+            one=lambda: 0,
+        )
+
     db = AsyncMock()
-    db.exec = AsyncMock(
-        side_effect=[
-            MagicMock(__iter__=lambda self: iter([])),
-            MagicMock(one=lambda: 0),
-            MagicMock(one=lambda: 0),
-            MagicMock(one=lambda: 0),
-        ]
-    )
+    db.exec = AsyncMock(side_effect=lambda *a, **k: _no_sub_exec())
     org = uuid4()
     snap = await paywall_mod.get_usage_snapshot(db, org)
-    assert "usage" in snap or isinstance(snap, dict)
+    assert isinstance(snap, dict)
 
-    with pytest.raises(HTTPException):
+    with pytest.raises(HTTPException) as exc:
         await paywall_mod.require_active_subscription(db, org)
+    assert exc.value.status_code == 403
 
 
 def test_entitlements_limit_helpers():
