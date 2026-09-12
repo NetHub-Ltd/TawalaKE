@@ -4,8 +4,7 @@
 // import { Suspense } from "react";
 // import { OrgDecisionLoading } from "@/features/org/components/OrgDecisionLoading";
 // import { OrgDecisionError } from "@/features/org/components/OrgDecisionError";
-// import { OrgCommandCenterClient } from "@/features/org/components/OrgCommandCenterClient";
-
+// 
 // export const metadata: Metadata = {
 //   title: "Organization Command Center & Footprint | Tawala",
 //   description:
@@ -154,12 +153,11 @@ import { Suspense } from "react";
 import { AlertCircle } from "lucide-react";
 import { OrgDecisionLoading } from "@/features/org/components/OrgDecisionLoading";
 import { OrgDecisionError } from "@/features/org/components/OrgDecisionError";
-import { OrgCommandCenterClient } from "@/features/org/components/OrgCommandCenterClient";
 
 export const metadata: Metadata = {
-  title: "Organization Command Center",
+  title: "Organization | Tawala",
   description:
-    "Manage organization settings, staff, billing, and active store terminals in Tawala.",
+    "Organization home — branches, team, billing, and settings in Tawala.",
   robots: {
     index: false,
     follow: false,
@@ -196,9 +194,6 @@ type ResolveResult =
       userName: string;
       businesses: BusinessItem[];
     };
-
-/** Roles that may pick a business on /org */
-const SELECTOR_ROLES = new Set(["OWNER", "MANAGER", "ADMIN"]);
 
 /**
  * Wait for a real session + profile role before any business routing.
@@ -247,12 +242,6 @@ async function resolveOrganization(): Promise<ResolveResult> {
 
     const assignedBusinesses = (profile.assigned_businesses ?? []);
 
-    const userName =
-      profile.name ||
-      profile.full_name ||
-      session.user.name ||
-      "User";
-
     // OWNER: incomplete onboarding or missing plan → onboarding entrypoints
     if (userRole === "OWNER") {
       try {
@@ -288,25 +277,29 @@ async function resolveOrganization(): Promise<ResolveResult> {
       }
     }
 
-    // Non-selector roles (e.g. CASHIER) → first assigned store
-    if (!SELECTOR_ROLES.has(userRole)) {
-      const businessId = assignedBusinesses[0]?.id;
-      if (!businessId) {
-        return { type: "no-store" };
-      }
+    // HQ roles → new org shell home (/org/{orgId}) — replaces Command Center
+    if (userRole === "OWNER" || userRole === "ADMIN") {
       return {
         type: "redirect",
-        destination: `/org/${resolvedOrgId}/${businessId}/overview`,
+        destination: `/org/${resolvedOrgId}`,
       };
     }
 
-    // OWNER / MANAGER / ADMIN → command center (even if business list is empty)
+    // MANAGER / CASHIER / others → first assigned store (floor)
+    const businessId = assignedBusinesses[0]?.id;
+    if (!businessId) {
+      // Manager with no assignment can still open HQ to see branches
+      if (userRole === "MANAGER") {
+        return {
+          type: "redirect",
+          destination: `/org/${resolvedOrgId}`,
+        };
+      }
+      return { type: "no-store" };
+    }
     return {
-      type: "select-business",
-      orgId: resolvedOrgId,
-      userRole,
-      userName,
-      businesses: assignedBusinesses,
+      type: "redirect",
+      destination: `/org/${resolvedOrgId}/${businessId}/overview`,
     };
   } catch (error) {
     console.error("[OrgResolution] Failed:", error);
@@ -363,16 +356,12 @@ async function OrgDecisionWrapper() {
     redirect(result.destination);
   }
 
-  const { orgId, userRole, userName, businesses } = result;
+  // Legacy select-business → always prefer new HQ shell
+  if (result.type === "select-business") {
+    redirect(`/org/${result.orgId}`);
+  }
 
-  return (
-    <OrgCommandCenterClient
-      orgId={orgId}
-      userRole={userRole}
-      userName={userName}
-      businesses={businesses}
-    />
-  );
+  return <OrgDecisionError />;
 }
 
 /** Simple server-friendly fallback when we refuse to guess role/session */
