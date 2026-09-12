@@ -242,12 +242,6 @@ async function resolveOrganization(): Promise<ResolveResult> {
 
     const assignedBusinesses = (profile.assigned_businesses ?? []);
 
-    const userName =
-      profile.name ||
-      profile.full_name ||
-      session.user.name ||
-      "User";
-
     // OWNER: incomplete onboarding or missing plan → onboarding entrypoints
     if (userRole === "OWNER") {
       try {
