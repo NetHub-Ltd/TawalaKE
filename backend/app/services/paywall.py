@@ -26,7 +26,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from redis.asyncio.client import Redis as AsyncRedis
 from sqlalchemy import func
-from sqlmodel import select
+from sqlmodel import or_, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.models import (
@@ -310,10 +310,29 @@ class PaywallService:
         return int((await db.exec(stmt)).one())
 
     async def _count_products(self, db: AsyncSession, org_id: UUID) -> int:
+        """Count catalog rows for the org.
+
+        Prefer organization_id; also include products that only have business_id
+        (legacy rows) via businesses under this organization. Active only.
+        """
+        biz_ids = (
+            await db.exec(
+                select(Business.id).where(Business.organization_id == org_id)
+            )
+        ).all()
+        # .all() may return scalars or rows depending on SQLAlchemy version
+        ids = []
+        for row in biz_ids:
+            ids.append(row[0] if isinstance(row, (tuple, list)) else row)
+
+        conditions = [Product.organization_id == org_id]
+        if ids:
+            conditions.append(Product.business_id.in_(ids))
+
         stmt = (
             select(func.count())
             .select_from(Product)
-            .where(Product.organization_id == org_id)
+            .where(or_(*conditions))
         )
         return int((await db.exec(stmt)).one())
 
