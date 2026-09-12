@@ -13,7 +13,7 @@ import {
 } from "@/features/staff/hooks/useStaff";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
-import { Permission, STAFF_ROLES, StaffRoleName } from "@/lib/rbac";
+import { Permission, StaffRoleName } from "@/lib/rbac";
 import {
   ArrowLeft,
   Loader2,
