@@ -13,7 +13,7 @@ import {
 } from "@/features/staff/hooks/useStaff";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
-import { Permission, STAFF_ROLES, StaffRoleName } from "@/lib/rbac";
+import { Permission, StaffRoleName } from "@/lib/rbac";
 import {
   ArrowLeft,
   Loader2,
@@ -34,6 +34,13 @@ function roleBadge(role: string) {
     CASHIER: "bg-slate-500/10 text-slate-700 border-slate-500/25",
   };
   return styles[role] || styles.CASHIER;
+}
+
+function assignableRoles(actor: string | null | undefined): StaffRoleName[] {
+  const a = (actor || "").toUpperCase();
+  if (a === "OWNER") return ["OWNER", "ADMIN", "MANAGER", "CASHIER"];
+  if (a === "ADMIN") return ["MANAGER", "CASHIER"];
+  return ["CASHIER"];
 }
 
 type Tab = "overview" | "access" | "security" | "activity";
@@ -353,9 +360,7 @@ export default function StaffMemberWorkspace({
                 onChange={(e) => setNewRole(e.target.value)}
                 className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
               >
-                {STAFF_ROLES.filter(
-                  (r) => r !== "OWNER" || actorRole === "OWNER" || role === "OWNER",
-                ).map((r) => (
+                {assignableRoles(actorRole).map((r) => (
                   <option key={r} value={r}>
                     {r}
                   </option>

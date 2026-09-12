@@ -609,15 +609,33 @@ export default function StoreForm({
         body: JSON.stringify(data),
       });
 
+      const body = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error("Failed to provision store location.");
+        const detail = body?.detail;
+        const msg =
+          (typeof detail === "string" && detail) ||
+          detail?.message ||
+          body?.error ||
+          body?.message ||
+          (response.status === 402
+            ? "Plan branch limit reached. Upgrade billing or archive a branch."
+            : "Failed to create branch.");
+        setServerError(String(msg));
+        return;
       }
 
       if (onSuccess) onSuccess(data);
-      router.back();
-    } catch {
-      if (onSuccess) onSuccess(data);
-      router.back();
+      const createdId = body?.id || body?.data?.id;
+      if (createdId) {
+        router.push(`/org/${organizationId}/${createdId}/overview`);
+      } else {
+        router.push(`/org/${organizationId}/stores`);
+      }
+    } catch (e) {
+      setServerError(
+        e instanceof Error ? e.message : "Network error creating branch.",
+      );
     } finally {
       setIsSubmitting(false);
     }

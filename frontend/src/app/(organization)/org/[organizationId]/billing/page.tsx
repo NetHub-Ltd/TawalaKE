@@ -17,7 +17,7 @@ type Entitlements = {
 
 /**
  * Org billing surface: current plan, usage vs limits, upgrade path.
- * Data from GET /api/v1/organizations/entitlements (BFF or direct).
+ * Data from GET /api/v1/org/entitlements (BFF or direct).
  */
 export default function BillingPage() {
   const params = useParams();
@@ -36,7 +36,7 @@ export default function BillingPage() {
           credentials: "include",
         });
         // Prefer dedicated entitlements when available via org API proxy
-        const entRes = await fetch("/api/v1/organizations/entitlements", {
+        const entRes = await fetch("/api/v1/org/entitlements", {
           credentials: "include",
         }).catch(() => null);
 
