@@ -132,10 +132,13 @@ export function OrgShell({
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2.5" aria-label="Organization">
           {items.map((item) => {
             const href = item.href(organizationId);
+            // Home is exact match only — otherwise every /org/{id}/… path marks Home active.
             const active =
-              item.id === "staff"
-                ? pathname.includes(`/org/${organizationId}/staff`)
-                : pathname === href || pathname.startsWith(`${href}/`);
+              item.id === "dashboard"
+                ? pathname === href || pathname === `${href}/`
+                : item.id === "staff"
+                  ? pathname.includes(`/org/${organizationId}/staff`)
+                  : pathname === href || pathname.startsWith(`${href}/`);
             const Icon = item.icon;
             return (
               <Link
