@@ -5,28 +5,24 @@ import { orgMatchesSession } from "@/lib/auth/require-api-auth";
 import { OrgShell } from "@/features/org/components/OrgShell";
 import { permissionsForRole, can, Permission } from "@/lib/rbac";
 
-interface StaffLayoutProps {
+interface LayoutProps {
   children: React.ReactNode;
   params: Promise<{ organizationId: string }>;
 }
 
-/**
- * Organization shell for Team — org-scoped (no businessId).
- * Requires org:staff:manage.
- */
-export default async function OrgStaffLayout({
+/** Org profile settings — org:write (OWNER, ADMIN) */
+export default async function OrgSettingsLayout({
   children,
   params,
-}: StaffLayoutProps) {
+}: LayoutProps) {
   const { organizationId } = await params;
   const session = await auth();
 
   if (!session?.user || session.error) {
     redirect(
-      `/login?callbackUrl=${encodeURIComponent(`/org/${organizationId}/staff`)}`,
+      `/login?callbackUrl=${encodeURIComponent(`/org/${organizationId}/settings`)}`,
     );
   }
-
   if (!orgMatchesSession(organizationId, session.user.organization_id)) {
     notFound();
   }
@@ -34,8 +30,7 @@ export default async function OrgStaffLayout({
   const userRole = (session.user.role || "").toUpperCase().trim();
   if (!userRole) redirect("/org");
 
-  const perms = permissionsForRole(userRole);
-  if (!can(perms, Permission.ORG_STAFF_MANAGE)) {
+  if (!can(permissionsForRole(userRole), Permission.ORG_WRITE)) {
     redirect(`/org/${organizationId}`);
   }
 
