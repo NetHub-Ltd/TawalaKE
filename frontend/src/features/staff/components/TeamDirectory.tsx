@@ -26,7 +26,7 @@ import { useBusiness } from "@/features/business/hooks/useBusiness";
 const createSchema = z.object({
   email: z.string().email(),
   full_name: z.string().min(2),
-  role: z.enum(["OWNER", "ADMIN", "MANAGER", "CASHIER"]),
+  role: z.enum(["ADMIN", "MANAGER", "CASHIER"]),
   business_ids: z.array(z.string()).min(1, "Assign at least one business"),
 });
 
@@ -43,9 +43,10 @@ function roleBadge(role: string) {
 }
 
 /** Roles the actor may assign on invite (design: ADMIN → Manager/Cashier only). */
+/** Roles assignable on invite. OWNER is never inviteable (single org initiator). */
 function inviteableRoles(actor: string | null | undefined): StaffRoleName[] {
   const a = (actor || "").toUpperCase();
-  if (a === "OWNER") return ["OWNER", "ADMIN", "MANAGER", "CASHIER"];
+  if (a === "OWNER") return ["ADMIN", "MANAGER", "CASHIER"];
   if (a === "ADMIN") return ["MANAGER", "CASHIER"];
   return ["CASHIER"];
 }
@@ -240,17 +241,29 @@ export default function TeamDirectory({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
-                    {s.assigned_businesses?.length
-                      ? s.assigned_businesses.map((b) => b.name).join(", ")
-                      : "—"}
+                    {s.assigned_businesses?.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {s.assigned_businesses.map((b) => (
+                          <span
+                            key={b.id}
+                            className="inline-flex max-w-[9rem] truncate rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            title={b.name}
+                          >
+                            {b.name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span
-                      className={
+                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                         s.active
-                          ? "text-emerald-600"
-                          : "text-amber-600"
-                      }
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-amber-50 text-amber-800"
+                      }`}
                     >
                       {s.active ? "Active" : "Pending invite"}
                     </span>
@@ -274,6 +287,7 @@ export default function TeamDirectory({
             <h2 className="text-lg font-semibold">Invite teammate</h2>
             <p className="mt-1 text-sm text-slate-500">
               Emails a secure link to set a password (48h). Assign at least one branch.
+              Owner is only the account that signed up — you cannot invite another owner.
             </p>
             <form onSubmit={onCreate} className="mt-4 space-y-3">
               <div>
@@ -308,6 +322,11 @@ export default function TeamDirectory({
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-600">Branches</label>
+              {!(businesses || []).length ? (
+                <p className="rounded-xl border border-dashed border-slate-200 p-3 text-xs text-slate-500">
+                  No branches yet. Create a branch first, then invite staff to it.
+                </p>
+              ) : (
               <div className="max-h-32 space-y-1 overflow-auto rounded-xl border border-slate-200 p-2 text-sm dark:border-slate-700">
                 {(businesses || []).map((b: { id: string; name: string }) => (
                   <label key={b.id} className="flex items-center gap-2">
@@ -330,6 +349,7 @@ export default function TeamDirectory({
                   </label>
                 ))}
               </div>
+              )}
               {createForm.formState.errors.business_ids && (
                 <p className="text-xs text-red-600">
                   {createForm.formState.errors.business_ids.message}

@@ -124,6 +124,7 @@
 //   const router = useRouter();
 //   const [isSubmitting, setIsSubmitting] = useState(false);
 //   const [serverError, setServerError] = useState<string | null>(null);
+  const [billingHref, setBillingHref] = useState<string | null>(null);
 
 //   const {
 //   register,
@@ -229,7 +230,7 @@
 //               htmlFor="store-name"
 //               className="block text-xs font-semibold text-foreground"
 //             >
-//               Store / Branch Name <span className="text-rose-500">*</span>
+//               Branch name <span className="text-rose-500">*</span>
 //             </label>
 //             <div className="relative">
 //               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -487,43 +488,43 @@ const INDUSTRY_CONFIGS: Record<IndustryType, IndustryMeta> = {
   GENERAL_RETAIL: {
     label: "General Retail",
     icon: ShoppingBag,
-    alertTitle: "Standard Inventory",
-    alertMessage: "Barcoding and SKU variants enabled.",
+    alertTitle: "Default tax",
+    alertMessage: "VAT default set to 16%. You can change tax anytime in branch settings.",
     defaultTax: 16,
   },
   PHARMACY: {
     label: "Pharmacy & Healthcare",
     icon: Pill,
-    alertTitle: "Regulatory Compliance",
-    alertMessage: "Batch & expiry tracking activated.",
+    alertTitle: "Default tax",
+    alertMessage: "Tax default set to 0% (common for exempt lines). Adjust per branch if needed.",
     defaultTax: 0,
   },
   GROCERY_SUPERMARKET: {
     label: "Grocery & Supermarket",
     icon: ShoppingBag,
-    alertTitle: "Produce Scaling",
-    alertMessage: "Integrated scale calibration enabled.",
+    alertTitle: "Default tax",
+    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
     defaultTax: 16,
   },
   RESTAURANT_HOSPITALITY: {
     label: "Restaurant & Hospitality",
     icon: Utensils,
-    alertTitle: "Kitchen Routing",
-    alertMessage: "KDS ticket routing & table management enabled.",
+    alertTitle: "Default tax",
+    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
     defaultTax: 16,
   },
   ELECTRONICS_HARDWARE: {
     label: "Electronics & Hardware",
     icon: Laptop,
-    alertTitle: "Serial Tracking",
-    alertMessage: "IMEI and warranty logging enabled.",
+    alertTitle: "Default tax",
+    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
     defaultTax: 16,
   },
   BEAUTY_WELLNESS: {
     label: "Beauty & Wellness",
     icon: Sparkles,
-    alertTitle: "Service Hybrid",
-    alertMessage: "Appointments & therapist commissions enabled.",
+    alertTitle: "Default tax",
+    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
     defaultTax: 16,
   },
 };
@@ -565,6 +566,7 @@ export default function StoreForm({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [billingHref, setBillingHref] = useState<string | null>(null);
 
   const {
     register,
@@ -601,6 +603,7 @@ export default function StoreForm({
   const onSubmit = async (data: StoreFormValues) => {
     setIsSubmitting(true);
     setServerError(null);
+    setBillingHref(null);
 
     try {
       const response = await fetch("/api/v1/org/stores", {
@@ -621,13 +624,14 @@ export default function StoreForm({
           (response.status === 402
             ? "Plan branch limit reached. Upgrade billing or archive a branch."
             : "Failed to create branch.");
-        const suffix =
+        const isLimit =
           response.status === 402 ||
           detail?.code === "PLAN_LIMIT_REACHED" ||
-          /limit|upgrade|plan/i.test(String(msg))
-            ? ` Open Billing: /org/${organizationId}/billing`
-            : "";
-        setServerError(String(msg) + (suffix ? " —" + suffix : ""));
+          /limit|upgrade|plan/i.test(String(msg));
+        setServerError(String(msg));
+        if (isLimit) {
+          setBillingHref(`/org/${organizationId}/billing`);
+        }
         return;
       }
 
@@ -657,10 +661,10 @@ export default function StoreForm({
           </div>
           <div>
             <h1 className="text-h3 font-bold tracking-tight text-foreground">
-              Provision New Store Outlet
+              New branch
             </h1>
             <p className="text-xs text-muted">
-              Configure store details and POS industry rules.
+              Name, contact, industry (for tax default), and location.
             </p>
           </div>
         </div>
@@ -681,7 +685,20 @@ export default function StoreForm({
             className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs flex items-center gap-2"
           >
             <ShieldAlert className="w-4 h-4 shrink-0" />
-            <span>{serverError}</span>
+            <span className="flex-1">
+              {serverError}
+              {billingHref && (
+                <>
+                  {" "}
+                  <a
+                    href={billingHref}
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    Open Billing to upgrade
+                  </a>
+                </>
+              )}
+            </span>
           </div>
         )}
 
@@ -694,7 +711,7 @@ export default function StoreForm({
               htmlFor="store-name"
               className="block text-xs font-semibold text-foreground"
             >
-              Store / Branch Name <span className="text-rose-500">*</span>
+              Branch name <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -891,12 +908,12 @@ export default function StoreForm({
             {isSubmitting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Provisioning...</span>
+                <span>Creating…</span>
               </>
             ) : (
               <>
                 <Store className="w-4 h-4" />
-                <span>Provision Store</span>
+                <span>Create branch</span>
               </>
             )}
           </button>
