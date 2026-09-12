@@ -195,9 +195,6 @@ type ResolveResult =
       businesses: BusinessItem[];
     };
 
-/** Roles that may pick a business on /org */
-const SELECTOR_ROLES = new Set(["OWNER", "MANAGER", "ADMIN"]);
-
 /**
  * Wait for a real session + profile role before any business routing.
  * Never default role to CASHIER for decisions.
