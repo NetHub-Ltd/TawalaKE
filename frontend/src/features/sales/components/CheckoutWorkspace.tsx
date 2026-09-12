@@ -8,7 +8,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { CheckoutForm } from "@/features/sales/components/CheckoutForm";
-import { useSales } from "@/features/sales/hooks/useSales";
+import { useSales, normalizeLineItems, getSaleItemCount } from "@/features/sales/hooks/useSales";
 
 interface CheckoutWorkspaceProps {
   saleId: string;
@@ -77,7 +77,15 @@ export function CheckoutWorkspace({
   }
 
   const currency = activeSale.currency || "KES";
-  const items: LineItem[] = activeSale.items || [];
+  const items: LineItem[] =
+    (activeSale.items && activeSale.items.length > 0
+      ? activeSale.items
+      : normalizeLineItems(
+          (activeSale as { sale_items?: unknown; line_items?: unknown })
+            .sale_items ??
+            (activeSale as { line_items?: unknown }).line_items,
+        )) || [];
+  const itemCount = Math.max(getSaleItemCount(activeSale), items.length);
   const subtotal = Number(activeSale.subtotal) || 0;
   const taxAmount = Number(activeSale.tax_amount) || 0;
   const discount = Number(activeSale.discount) || 0;
@@ -102,7 +110,7 @@ export function CheckoutWorkspace({
                 {formatMoney(currency, grandTotal)}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {items.length} {items.length === 1 ? "item" : "items"}
+                {itemCount} {itemCount === 1 ? "item" : "items"}
               </p>
             </div>
             {itemsOpen ? (
@@ -126,28 +134,35 @@ export function CheckoutWorkspace({
             </div>
 
             <p className="mb-3 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
-              Items ({items.length})
+              Items ({itemCount})
             </p>
-            <ul className="space-y-3">
-              {items.map((item, idx) => (
-                <li
-                  key={`${item.name}-${idx}`}
-                  className="flex items-start justify-between gap-3 text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">
-                      {item.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      {item.quantity} × {formatMoney(currency, item.unit_price)}
-                    </p>
-                  </div>
-                  <span className="shrink-0 font-medium tabular-nums text-foreground">
-                    {formatMoney(currency, item.subtotal)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            {items.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border/60 bg-surface/30 px-3 py-4 text-xs text-muted-foreground">
+                Line items could not be loaded for this staged sale. Totals below
+                are still from the server — you can complete the sale safely.
+              </p>
+            ) : (
+              <ul className="space-y-3">
+                {items.map((item, idx) => (
+                  <li
+                    key={`${item.name}-${idx}`}
+                    className="flex items-start justify-between gap-3 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground tabular-nums">
+                        {item.quantity} × {formatMoney(currency, item.unit_price)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 font-medium tabular-nums text-foreground">
+                      {formatMoney(currency, item.subtotal)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm">
               <div className="flex justify-between text-muted-foreground">

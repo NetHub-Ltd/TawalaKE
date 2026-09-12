@@ -256,7 +256,10 @@ async def get_sales(
             sale = await store_crud.fetch_sale_by_id(
                 db=db, business_id=business_id, sale_id=sale_id, user=user
             )
-            items = [sale] if sale else []
+            # Explicit schema so line items are always present in JSON
+            items = (
+                [SaleReadWithRelations.model_validate(sale)] if sale else []
+            )
             total = len(items)
 
             return ApiResponse(
