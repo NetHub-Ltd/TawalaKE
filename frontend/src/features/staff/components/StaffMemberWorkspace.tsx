@@ -36,9 +36,10 @@ function roleBadge(role: string) {
   return styles[role] || styles.CASHIER;
 }
 
+/** Roles assignable on change-role. OWNER cannot be assigned (single org initiator). */
 function assignableRoles(actor: string | null | undefined): StaffRoleName[] {
   const a = (actor || "").toUpperCase();
-  if (a === "OWNER") return ["OWNER", "ADMIN", "MANAGER", "CASHIER"];
+  if (a === "OWNER") return ["ADMIN", "MANAGER", "CASHIER"];
   if (a === "ADMIN") return ["MANAGER", "CASHIER"];
   return ["CASHIER"];
 }
@@ -352,8 +353,13 @@ export default function StaffMemberWorkspace({
           {(action === "role" || tabParam === "access") && (
             <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
               <h2 className="font-semibold">Change role</h2>
+              {role === "OWNER" && (
+                <p className="mt-1 text-xs text-amber-700">
+                  This account is the organization owner (set at signup). Role cannot be changed to or from Owner here.
+                </p>
+              )}
               <p className="mt-1 text-sm text-slate-500">
-                Current: {role}. Only OWNER may assign OWNER.
+                Current: {role}. Owner cannot be reassigned — only Admin, Manager, or Cashier.
               </p>
               <select
                 value={newRole}
