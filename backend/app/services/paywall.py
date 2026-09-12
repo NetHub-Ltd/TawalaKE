@@ -172,7 +172,10 @@ class Entitlements:
             return True
         if val is False or val is None:
             return False
-        if isinstance(val, str) and val.strip().lower() not in ("", "false", "off", "none"):
+        if isinstance(val, str):
+            s = val.strip().lower()
+            if s in ("", "false", "off", "none", "0", "no"):
+                return False
             return True
         return bool(val)
 
