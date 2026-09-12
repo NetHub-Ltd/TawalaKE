@@ -230,12 +230,21 @@ class TenantResponse(TenantBase):
     address: str
     created_at: datetime
 
-class OrganizationResponse(TenantBase):
+class OrganizationResponse(BaseModel):
+    """Matches Organization model fields used by HQ settings."""
+
     id: UUID
     name: str
-    active: bool
-    address: str
-    created_at: datetime
+    email: EmailStr
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    tax_number: Optional[str] = None
+    logo_url: Optional[str] = None
+    active: bool = True
+    onboarding: Optional[bool] = False
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BusinessBase(BaseModel):
