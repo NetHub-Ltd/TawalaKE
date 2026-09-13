@@ -379,3 +379,149 @@ p {
   background-clip: text;
   color: transparent;
 }
+
+/* =========================================================
+   6. Theme variants (DESIGN.md only — comparison lab)
+   All values are from DESIGN.md; only emphasis/rhythm differs.
+========================================================= */
+
+/* --- V1 Canonical: exact DESIGN.md mapping (default :root) --- */
+[data-theme-variant="canonical"] {
+  /* inherits :root — petrol command, terracotta attention, mint settle */
+}
+
+/* --- V2 Register Dense: same palette, tighter POS rhythm --- */
+[data-theme-variant="register-dense"] {
+  --section-y: clamp(1.25rem, 3vw, 2rem);
+  --radius-default: 0.5rem;
+  --radius-card: 0.5rem;
+  --background: #f4f3f3; /* surface-container-low as floor — recessed register feel */
+  --surface: #f4f3f3;
+  --card: #ffffff;
+  --register-surface: #eeeeed; /* surface-container */
+  --border: #e3e2e2; /* surface-container-highest as structure line */
+  --shadow-lift: none; /* pure planar density on terminals */
+  --shadow-glow: 0 8px 20px -4px rgba(0, 63, 78, 0.1);
+}
+
+/* --- V3 Command Chrome: primary-container structural weight --- */
+[data-theme-variant="command-chrome"] {
+  --brand-primary: #002832; /* primary (darker anchor) for fills */
+  --primary-container: #003f4e;
+  --background: #faf9f9;
+  --surface: #faf9f9;
+  --card: #ffffff;
+  --register-surface: #f4f3f3;
+  --border: #c0c8cb; /* outline-variant — stronger structural lines */
+  --shadow-lift: 0 4px 12px -2px rgba(0, 40, 50, 0.1), 0 2px 6px -1px rgba(0, 40, 50, 0.06);
+  --shadow-glow: 0 16px 32px -4px rgba(0, 40, 50, 0.14), 0 4px 12px -2px rgba(0, 40, 50, 0.08);
+}
+
+/* --- V4 Settlement Focus: tertiary/success surfaces for money zones --- */
+[data-theme-variant="settlement-focus"] {
+  --brand-accent: #059669; /* emerald edge of tertiary family in DESIGN.md */
+  --success: #0f766e;
+  --success-soft: #ecfdf5;
+  --success-border: #059669;
+  --background: #faf9f9;
+  --register-surface: #f4f3f3;
+  --card: #ffffff;
+  /* amounts lean on success for positive confirmation contexts via utility */
+}
+
+/* --- V5 Ledger Contrast: charcoal figures, quieter meta --- */
+[data-theme-variant="ledger-contrast"] {
+  --foreground: #121b1e; /* charcoal from DESIGN.md body copy */
+  --on-surface: #121b1e;
+  --muted: #5a6468; /* subdued slate */
+  --on-surface-variant: #40484b;
+  --background: #fbfbf9; /* warm alabaster alternate spelling in prose */
+  --surface: #fbfbf9;
+  --card: #ffffff;
+  --border: #e5e3dc;
+  --register-surface: #f4f3f0;
+  --text-amount-lg: 1.75rem;
+  --text-amount-md: 1.125rem;
+}
+
+/* Shared lab helpers */
+.theme-lab-chrome {
+  background-color: var(--primary-container, var(--brand-primary));
+  color: var(--on-primary, #ffffff);
+}
+
+.theme-lab-amount-positive {
+  color: var(--success, var(--brand-accent));
+}
+
+/* =========================================================
+   6. Theme variants (DESIGN.md only — comparison lab)
+   All values are from DESIGN.md; only emphasis/rhythm differs.
+========================================================= */
+
+/* --- V1 Canonical: exact DESIGN.md mapping (default :root) --- */
+[data-theme-variant="canonical"] {
+  /* inherits :root — petrol command, terracotta attention, mint settle */
+}
+
+/* --- V2 Register Dense: same palette, tighter POS rhythm --- */
+[data-theme-variant="register-dense"] {
+  --section-y: clamp(1.25rem, 3vw, 2rem);
+  --radius-default: 0.5rem;
+  --radius-card: 0.5rem;
+  --background: #f4f3f3;
+  --surface: #f4f3f3;
+  --card: #ffffff;
+  --register-surface: #eeeeed;
+  --border: #e3e2e2;
+  --shadow-lift: none;
+  --shadow-glow: 0 8px 20px -4px rgba(0, 63, 78, 0.1);
+}
+
+/* --- V3 Command Chrome: primary-container structural weight --- */
+[data-theme-variant="command-chrome"] {
+  --brand-primary: #002832;
+  --primary-container: #003f4e;
+  --background: #faf9f9;
+  --surface: #faf9f9;
+  --card: #ffffff;
+  --register-surface: #f4f3f3;
+  --border: #c0c8cb;
+  --shadow-lift: 0 4px 12px -2px rgba(0, 40, 50, 0.1), 0 2px 6px -1px rgba(0, 40, 50, 0.06);
+  --shadow-glow: 0 16px 32px -4px rgba(0, 40, 50, 0.14), 0 4px 12px -2px rgba(0, 40, 50, 0.08);
+}
+
+/* --- V4 Settlement Focus: tertiary/success surfaces for money zones --- */
+[data-theme-variant="settlement-focus"] {
+  --brand-accent: #059669;
+  --success: #0f766e;
+  --success-soft: #ecfdf5;
+  --success-border: #059669;
+  --background: #faf9f9;
+  --register-surface: #f4f3f3;
+  --card: #ffffff;
+}
+
+/* --- V5 Ledger Contrast: charcoal figures, quieter meta --- */
+[data-theme-variant="ledger-contrast"] {
+  --foreground: #121b1e;
+  --on-surface: #121b1e;
+  --muted: #5a6468;
+  --on-surface-variant: #40484b;
+  --background: #fbfbf9;
+  --surface: #fbfbf9;
+  --card: #ffffff;
+  --border: #e5e3dc;
+  --register-surface: #f4f3f0;
+  --text-amount-lg: 1.75rem;
+  --text-amount-md: 1.125rem;
+}
+
+.theme-lab-chrome {
+  background-color: var(--primary-container, var(--brand-primary));
+  color: var(--on-primary, #ffffff);
+}
+
+.theme-lab-amount-positive {
+  color: var(--success, var(--brand-accent));
+}
