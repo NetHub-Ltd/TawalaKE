@@ -1,11 +1,10 @@
 # Task: Theme & UX remediation
 
 ## Current
-Phase C.1–C.3 complete on chore/theme-retail-os
+**Phase C complete (C.1–C.6)** on chore/theme-retail-os
 
 ## Next
-C.4 Complete-sale success, C.5 mobile sticky, C.6 loading states
-Then Phase D customers/stock
+Phase D — Customers, credit, inventory/stock (D.1–D.3 first)
 
 ## Hard rules
 AGENTS.md §5

@@ -23,6 +23,7 @@ import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { fetchPosConfig } from "@/features/sales/lib/posConfig";
 import { setStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+import { Spinner } from "@/lib/components/ui";
 
 interface EditableQuantityProps {
   itemId: string;

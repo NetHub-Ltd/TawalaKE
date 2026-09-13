@@ -79,7 +79,7 @@
 //   };
 
 //   return (
-//     <main id="main-content" className="h-screen w-full bg-background text-foreground overflow-hidden relative flex flex-col p-6 lg:p-8 print:p-0 print:bg-white selection:bg-brand-primary/10">
+//     <main id="main-content" className="h-screen w-full bg-background text-foreground overflow-hidden relative flex flex-col p-6 lg:p-8 print:p-0 print:bg-card selection:bg-brand-primary/10">
       
 //       {/* --- RECIPIENT ACTIONS CONTROLS BAR (HIDDEN ON RAW PRINT OVERLAYS) --- */}
 //       <header className="w-full flex items-center justify-between pb-5 border-b border-border/40 shrink-0 relative z-10 print:hidden">
@@ -88,7 +88,7 @@
 //             type="button"
 //             onClick={() => router.back()}
 //             disabled={isNavigating}
-//             className="h-11 w-11 rounded-xl bg-card border border-border/40 flex items-center justify-center text-foreground hover:text-brand-primary transition-all active:scale-95 disabled:opacity-50"
+//             className="h-11 w-11 rounded-md bg-card border border-border/40 flex items-center justify-center text-foreground hover:text-brand-primary transition-all active:scale-95 disabled:opacity-50"
 //             title="Return to operational paths"
 //             aria-label="Navigate back to previous transaction checkpoint"
 //           >
@@ -108,7 +108,7 @@
 //           <button 
 //             type="button"
 //             onClick={handlePrintReceipt}
-//             className="h-11 px-4 bg-card border border-border/40 hover:border-brand-primary/30 rounded-xl text-xs font-bold flex items-center gap-2 transition-all text-foreground"
+//             className="h-11 px-4 bg-card border border-border/40 hover:border-brand-primary/30 rounded-md text-xs font-bold flex items-center gap-2 transition-all text-foreground"
 //           >
 //             <Printer size={14} aria-hidden="true" />
 //             <span>Print {documentMode === "invoice" ? "Invoice" : "Receipt"}</span>
@@ -118,7 +118,7 @@
 //             type="button"
 //             onClick={handleNewSaleCycle}
 //             disabled={isNavigating}
-//             className="h-11 px-4 bg-foreground text-background hover:bg-foreground/90 rounded-xl text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50"
+//             className="h-11 px-4 bg-foreground text-background hover:bg-foreground/90 rounded-md text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50"
 //           >
 //             {isNavigating ? (
 //               <RefreshCcw size={13} className="animate-spin" aria-hidden="true" />
@@ -154,7 +154,7 @@
 //           <div className="flex items-center justify-center lg:justify-start gap-4 pt-2 text-muted">
 //             <button 
 //               type="button" 
-//               className="p-3 bg-card border border-border/40 rounded-xl hover:text-brand-primary transition-colors shadow-xs" 
+//               className="p-3 bg-card border border-border/40 rounded-md hover:text-brand-primary transition-colors shadow-xs" 
 //               title="Export as PDF Document"
 //               aria-label="Download document as PDF record"
 //             >
@@ -162,7 +162,7 @@
 //             </button>
 //             <button 
 //               type="button" 
-//               className="p-3 bg-card border border-border/40 rounded-xl hover:text-brand-primary transition-colors shadow-xs" 
+//               className="p-3 bg-card border border-border/40 rounded-md hover:text-brand-primary transition-colors shadow-xs" 
 //               title="Forward Document to WhatsApp/Email"
 //               aria-label="Share this transaction record"
 //             >
@@ -175,17 +175,17 @@
 //         <section className="lg:col-span-7 flex items-center justify-center h-full min-h-0 print:p-0 print:w-full">
 //           <div 
 //             ref={printAreaRef}
-//             className="w-full max-w-[380px] bg-card border border-border/40 shadow-xl rounded-2xl p-6 md:p-8 flex flex-col justify-between overflow-y-auto no-scrollbar max-h-[500px] relative font-mono text-xs text-foreground border-dashed print:border-none print:shadow-none print:p-0 print:max-h-none print:w-full"
+//             className="w-full max-w-[380px] bg-card border border-border/40 shadow-xl rounded-md p-6 md:p-8 flex flex-col justify-between overflow-y-auto no-scrollbar max-h-[500px] relative font-mono text-xs text-foreground border-dashed print:border-none print:shadow-none print:p-0 print:max-h-none print:w-full"
 //           >
 //             {/* Top Thermal Header Stack */}
 //             <div className="text-center space-y-1 pb-4 border-b border-dashed border-border/60">
 //               <h3 className="text-sm font-black uppercase tracking-wider text-foreground">TAWALA RETAIL LTD</h3>
-//               <p className="text-[10px] text-muted font-medium">Mombasa Road, Nairobi, KE</p>
-//               <p className="text-[10px] text-muted font-medium">PIN: P051234567Z</p>
+//               <p className="text-xs text-muted font-medium">Mombasa Road, Nairobi, KE</p>
+//               <p className="text-xs text-muted font-medium">PIN: P051234567Z</p>
 //             </div>
 
 //             {/* Metadata Reference Fields Matrix */}
-//             <div className="py-4 space-y-1 text-[11px] border-b border-border/40">
+//             <div className="py-4 space-y-1 text-xs border-b border-border/40">
 //               <div className="flex justify-between">
 //                 <span className="text-muted">DOCUMENT TYPE:</span>
 //                 <span className="font-bold text-foreground uppercase">{documentMode}</span>
@@ -206,7 +206,7 @@
 
 //             {/* Detailed Scanned Items Breakdowns Grid */}
 //             <div className="py-4 flex-1 overflow-y-auto no-scrollbar space-y-3 my-2 border-b border-dashed border-border/60 min-h-[120px]">
-//               <div className="flex justify-between font-bold text-[10px] text-muted uppercase tracking-wider">
+//               <div className="flex justify-between font-bold text-xs text-muted uppercase tracking-wider">
 //                 <span>Description Item</span>
 //                 <span>Total Cost</span>
 //               </div>
@@ -217,7 +217,7 @@
 //                     <span className="uppercase truncate max-w-[200px]">{item.name}</span>
 //                     <span className="tabular-nums font-bold">{(item.price * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
 //                   </div>
-//                   <div className="text-[10px] text-muted">
+//                   <div className="text-xs text-muted">
 //                     {item.qty} units x KES {item.price.toLocaleString()}
 //                   </div>
 //                 </div>
@@ -225,7 +225,7 @@
 //             </div>
 
 //             {/* Summarized Aggregations Balance */}
-//             <div className="pt-2 space-y-1.5 text-[11px]">
+//             <div className="pt-2 space-y-1.5 text-xs">
 //               <div className="flex justify-between">
 //                 <span className="text-muted">Gross Subtotal</span>
 //                 <span className="font-bold text-foreground tabular-nums">KES {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -253,7 +253,7 @@
 //             </div>
 
 //             {/* Tiny Bottom Thermal Salutation Greeting */}
-//             <div className="text-center pt-6 space-y-1 text-[10px] text-muted font-medium">
+//             <div className="text-center pt-6 space-y-1 text-xs text-muted font-medium">
 //               <p className="uppercase tracking-wider">
 //                 {documentMode === "invoice" ? "Payment terms: Net 30" : "Thank you for your business!"}
 //               </p>
@@ -265,7 +265,7 @@
 //       </div>
 
 //       {/* FOOTER BAR */}
-//       <footer className="w-full pt-4 border-t border-border/40 shrink-0 text-muted font-medium text-[11px] z-10 text-center lg:text-left print:hidden">
+//       <footer className="w-full pt-4 border-t border-border/40 shrink-0 text-muted font-medium text-xs z-10 text-center lg:text-left print:hidden">
 //         Tawala Settlement Framework &copy; {new Date().getFullYear()}. Secure audit streams recorded locally.
 //       </footer>
 
@@ -412,7 +412,7 @@ export default function ReceiptClientView() {
   };
 
   return (
-    <main id="main-content" className="min-h-screen w-full bg-background text-foreground overflow-y-auto relative flex flex-col p-6 lg:p-8 print:p-0 print:bg-white selection:bg-brand-primary/10">
+    <main id="main-content" className="min-h-screen w-full bg-background text-foreground overflow-y-auto relative flex flex-col p-6 lg:p-8 print:p-0 print:bg-card selection:bg-brand-primary/10">
       
       {/* --- RECIPIENT ACTIONS CONTROLS BAR (HIDDEN ON RAW PRINT OVERLAYS) --- */}
       <header className="w-full flex items-center justify-between pb-5 border-b border-border/40 shrink-0 relative z-10 print:hidden">
@@ -421,7 +421,7 @@ export default function ReceiptClientView() {
             type="button"
             onClick={() => router.back()}
             disabled={isNavigating}
-            className="h-11 w-11 rounded-xl bg-card border border-border/40 flex items-center justify-center text-foreground hover:text-brand-primary transition-all active:scale-95 disabled:opacity-50"
+            className="h-11 w-11 rounded-md bg-card border border-border/40 flex items-center justify-center text-foreground hover:text-brand-primary transition-all active:scale-95 disabled:opacity-50"
             title="Return to operational paths"
             aria-label="Navigate back to previous transaction checkpoint"
           >
@@ -441,7 +441,7 @@ export default function ReceiptClientView() {
           <button 
             type="button"
             onClick={handlePrintReceipt}
-            className="h-11 px-4 bg-card border border-border/40 hover:border-brand-primary/30 rounded-xl text-xs font-bold flex items-center gap-2 transition-all text-foreground"
+            className="h-11 px-4 bg-card border border-border/40 hover:border-brand-primary/30 rounded-md text-xs font-bold flex items-center gap-2 transition-all text-foreground"
           >
             <Printer size={14} aria-hidden="true" />
             <span>Print {documentMode === "invoice" ? "Invoice" : "Receipt"}</span>
@@ -451,7 +451,7 @@ export default function ReceiptClientView() {
             type="button"
             onClick={handleNewSaleCycle}
             disabled={isNavigating}
-            className="h-11 px-4 bg-foreground text-background hover:bg-foreground/90 rounded-xl text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50"
+            className="h-11 px-4 bg-foreground text-background hover:bg-foreground/90 rounded-md text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50"
           >
             {isNavigating ? (
               <RefreshCcw size={13} className="animate-spin" aria-hidden="true" />
@@ -471,7 +471,7 @@ export default function ReceiptClientView() {
           <div 
             id="receipt-print-window"
             ref={printAreaRef}
-            className="w-full max-w-[380px] bg-card border border-border/40 shadow-xl rounded-2xl p-6 md:p-8 flex flex-col justify-between relative font-mono text-xs text-foreground border-dashed print:border-none print:shadow-none print:p-0 print:w-full"
+            className="w-full max-w-[380px] bg-card border border-border/40 shadow-xl rounded-md p-6 md:p-8 flex flex-col justify-between relative font-mono text-xs text-foreground border-dashed print:border-none print:shadow-none print:p-0 print:w-full"
           >
             {/* Inner Wrapper Layer with Explicit Unique ID for Safe html2canvas Hook Cloning Override */}
             <div id="receipt-capture-node" className="w-full flex flex-col justify-between bg-transparent text-foreground print:text-black">
@@ -479,12 +479,12 @@ export default function ReceiptClientView() {
               {/* Top Thermal Header Stack */}
               <div className="text-center space-y-1 pb-4 border-b border-dashed border-border/60 print:border-black/40">
                 <h2 className="text-sm font-black uppercase tracking-wider text-foreground print:text-black">TAWALA RETAIL LTD</h2>
-                <p className="text-[10px] text-muted font-medium print:text-black/70">Mombasa Road, Nairobi, KE</p>
-                <p className="text-[10px] text-muted font-medium print:text-black/70">PIN: P051234567Z</p>
+                <p className="text-xs text-muted font-medium print:text-black/70">Mombasa Road, Nairobi, KE</p>
+                <p className="text-xs text-muted font-medium print:text-black/70">PIN: P051234567Z</p>
               </div>
 
               {/* Metadata Reference Fields Matrix */}
-              <div className="py-4 space-y-1 text-[11px] border-b border-border/40 print:border-black/20">
+              <div className="py-4 space-y-1 text-xs border-b border-border/40 print:border-black/20">
                 <div className="flex justify-between">
                   <span className="text-muted print:text-black/60">DOCUMENT TYPE:</span>
                   <span className="font-bold text-foreground uppercase print:text-black">{documentMode}</span>
@@ -505,7 +505,7 @@ export default function ReceiptClientView() {
 
               {/* Detailed Scanned Items Breakdowns Grid */}
               <div className="py-4 space-y-3 my-2 border-b border-dashed border-border/60 print:border-black/40 min-h-[120px]">
-                <div className="flex justify-between font-bold text-[10px] text-muted uppercase tracking-wider print:text-black/60">
+                <div className="flex justify-between font-bold text-xs text-muted uppercase tracking-wider print:text-black/60">
                   <span>Description Item</span>
                   <span className="text-right">Total Cost</span>
                 </div>
@@ -516,7 +516,7 @@ export default function ReceiptClientView() {
                       <span className="uppercase truncate max-w-[200px] print:max-w-[160px]">{item.name}</span>
                       <span className="tabular-nums font-bold text-right">{(item.price * item.qty).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
-                    <div className="text-[10px] text-muted print:text-black/60">
+                    <div className="text-xs text-muted print:text-black/60">
                       {item.qty} units x KES {item.price.toLocaleString()}
                     </div>
                   </div>
@@ -524,7 +524,7 @@ export default function ReceiptClientView() {
               </div>
 
               {/* Summarized Aggregations Balance */}
-              <div className="pt-2 space-y-1.5 text-[11px]">
+              <div className="pt-2 space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted print:text-black/60">Gross Subtotal</span>
                   <span className="font-bold text-foreground print:text-black tabular-nums">KES {subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -552,7 +552,7 @@ export default function ReceiptClientView() {
               </div>
 
               {/* Tiny Bottom Thermal Salutation Greeting */}
-              <div className="text-center pt-6 space-y-1 text-[10px] text-muted font-medium print:text-black/60">
+              <div className="text-center pt-6 space-y-1 text-xs text-muted font-medium print:text-black/60">
                 <p className="uppercase tracking-wider">
                   {documentMode === "invoice" ? "Payment terms: Net 30" : "Thank you for your business!"}
                 </p>
@@ -565,7 +565,7 @@ export default function ReceiptClientView() {
                   type="button" 
                   onClick={handleDownloadPDF}
                   disabled={isDownloading}
-                  className="p-3 bg-background border border-border/40 rounded-xl hover:text-brand-primary transition-colors shadow-sm disabled:opacity-50" 
+                  className="p-3 bg-background border border-border/40 rounded-md hover:text-brand-primary transition-colors shadow-sm disabled:opacity-50" 
                   title="Export as Native Thermal PDF"
                   aria-label="Download thermal receipt file"
                 >
@@ -573,7 +573,7 @@ export default function ReceiptClientView() {
                 </button>
                 <button 
                   type="button" 
-                  className="p-3 bg-background border border-border/40 rounded-xl hover:text-brand-primary transition-colors shadow-sm" 
+                  className="p-3 bg-background border border-border/40 rounded-md hover:text-brand-primary transition-colors shadow-sm" 
                   title="Forward Document Record"
                   aria-label="Share transaction details"
                 >
@@ -587,7 +587,7 @@ export default function ReceiptClientView() {
       </div>
 
       {/* FOOTER BAR */}
-      <footer className="w-full pt-4 border-t border-border/40 shrink-0 text-muted font-medium text-[11px] z-10 text-center print:hidden">
+      <footer className="w-full pt-4 border-t border-border/40 shrink-0 text-muted font-medium text-xs z-10 text-center print:hidden">
         Tawala Settlement Framework &copy; {new Date().getFullYear()}. Secure audit streams recorded locally.
       </footer>
 

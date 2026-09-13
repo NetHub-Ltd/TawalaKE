@@ -19,6 +19,7 @@ import {
 } from "@/features/sales/lib/posConfig";
 import { normalizeKenyanPhone, isValidKenyanPhone } from "@/features/sales/lib/phone";
 import { clearStagedSaleId } from "@/features/sales/lib/stagedSale";
+import { Spinner } from "@/lib/components/ui";
 
 interface CheckoutFormProps {
   saleId: string;
@@ -378,7 +379,7 @@ export function CheckoutForm({
         >
           {isSubmitting ? (
             <>
-              <Loader2 size={16} className="animate-spin" />
+              <Spinner size="sm" />
               Completing...
             </>
           ) : (

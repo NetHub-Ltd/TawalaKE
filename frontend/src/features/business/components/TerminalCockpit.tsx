@@ -10,7 +10,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Loader2,
   ShoppingCart,
   X,
 } from "lucide-react";
@@ -26,6 +25,7 @@ import {
 // import { ProductCard } from "./ProductCard";
 import { ProductCard } from "./product-card";
 import { ProductResponse } from "@/lib/api/generated/models";
+import { Spinner } from "@/lib/components/ui";
 
 /**
  * @Scribe_Audit
@@ -46,7 +46,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
   const categorySelectId = useId();
   const pageSizeSelectId = useId();
 
-  const { addToCart, removeFromCart, cart } = useCartStore();
+  const { addToCart, removeFromCart, cart, getFinancials } = useCartStore();
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [stagedSaleId, setStagedSaleIdState] = useState<string | null>(null);
 
@@ -255,11 +255,12 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
                   className="w-full min-h-[44px] pl-9 pr-8 rounded-md text-xs font-medium border border-border/60 focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/10 text-foreground placeholder-muted/50 transition-all"
                 />
                 {(isPending || isFetching) && (
-                  <Loader2
-                    size={14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-brand-primary pointer-events-none"
+                  <span
+                    className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
                     aria-hidden="true"
-                  />
+                  >
+                    <Spinner size="sm" />
+                  </span>
                 )}
               </div>
 
@@ -477,14 +478,17 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
         {/* Mobile cart FAB */}
         <button
           type="button"
-          className="lg:hidden fixed bottom-5 right-5 z-40 inline-flex h-14 min-w-[56px] items-center justify-center gap-2 rounded-full bg-brand-primary px-5 text-sm font-semibold text-white shadow-lg"
+          className="lg:hidden fixed bottom-5 right-5 left-5 z-40 inline-flex h-14 items-center justify-between gap-3 rounded-md bg-brand-accent px-5 text-sm font-semibold text-white shadow-glow"
           onClick={() => setMobileCartOpen(true)}
           aria-label={`Open cart, ${cart.length} items`}
         >
-          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-          {cart.length > 0 && (
-            <span className="tabular-nums">{cart.length}</span>
-          )}
+          <span className="inline-flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+            <span className="tabular-nums">{cart.length} items</span>
+          </span>
+          <span className="tabular amount-md text-white">
+            KES {getFinancials().grandTotal.toLocaleString()}
+          </span>
         </button>
 
         {/* Mobile cart sheet */}
@@ -496,7 +500,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
               aria-label="Close cart"
               onClick={() => setMobileCartOpen(false)}
             />
-            <div className="relative z-10 flex h-[85dvh] flex-col overflow-hidden rounded-t-2xl border border-border bg-card shadow-xl">
+            <div className="relative z-10 flex h-[85dvh] flex-col overflow-hidden rounded-t-md border border-border bg-card shadow-xl">
               <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
                 <p className="text-sm font-semibold text-foreground">Current sale</p>
                 <button
@@ -518,9 +522,9 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
 
       {/* Staged sale banner */}
       {stagedSaleId && businessId && organizationId && (
-        <div className="fixed bottom-20 left-4 right-4 z-30 mx-auto max-w-lg rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg lg:bottom-6 lg:right-auto lg:left-6">
+        <div className="fixed bottom-20 left-4 right-4 z-30 mx-auto max-w-lg rounded-md border border-brand-secondary/30 bg-[#fdf2f0] px-4 py-3 text-sm text-brand-secondary shadow-lg lg:bottom-6 lg:right-auto lg:left-6">
           <p className="font-semibold">Unfinished checkout</p>
-          <p className="mt-0.5 text-xs text-amber-900/80">
+          <p className="mt-0.5 text-xs text-brand-secondary/80">
             A sale was staged but not completed. Resume or discard it (no stock
             change until you finish).
           </p>
@@ -533,7 +537,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
             </Link>
             <button
               type="button"
-              className="inline-flex h-9 items-center rounded-md border border-amber-300 bg-card px-3 text-xs font-semibold"
+              className="inline-flex h-9 items-center rounded-md border border-brand-secondary/40 bg-card px-3 text-xs font-semibold"
               onClick={async () => {
                 try {
                   const res = await fetch(
@@ -556,7 +560,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
             </button>
             <button
               type="button"
-              className="inline-flex h-9 items-center px-2 text-xs font-medium text-amber-900/70"
+              className="inline-flex h-9 items-center px-2 text-xs font-medium text-brand-secondary/80"
               onClick={() => {
                 clearStagedSaleId(businessId);
                 setStagedSaleIdState(null);

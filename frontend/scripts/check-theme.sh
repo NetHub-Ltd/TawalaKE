@@ -21,6 +21,8 @@ STRICT_PATHS=(
   "$ROOT/src/features/sales/components/CartFullPage.tsx"
   "$ROOT/src/features/sales/components/CheckoutForm.tsx"
   "$ROOT/src/features/sales/components/CheckoutWorkspace.tsx"
+  "$ROOT/src/features/sales/components/CompleteSaleClient.tsx"
+  "$ROOT/src/features/sales/components/ReceiptClientView.tsx"
 )
 
 fail=0

@@ -68,9 +68,9 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 | C.1 | Terminal cockpit product grid + search chrome → tokens/kit; stock badge via Badge | [x] | 2026-09-14 — tokens on cockpit + product-card |
 | C.2 | Cart sidebar / full cart → kit Button, amount classes, secondary for void | [x] | 2026-09-14 — settle CTAs brand-accent; tabular totals |
 | C.3 | Checkout form: Total → method → customer(if credit) → Confirm; kit Input/Select/Button success | [x] | 2026-09-14 — total hero + success complete button |
-| C.4 | Complete-sale success hierarchy + SuccessBanner patterns | [ ] | `CompleteSaleClient.tsx`, receipt views |
-| C.5 | Mobile sticky charge pattern aligned with DESIGN.md (&lt;768px) | [ ] | terminal/checkout layouts |
-| C.6 | Loading/empty/error: Spinner/Skeleton/Modal only; staged-sale recovery visible if present | [ ] | terminal + sales hooks |
+| C.4 | Complete-sale success hierarchy + SuccessBanner patterns | [x] | 2026-09-14 — mint success / terracotta credit; amount-lg total |
+| C.5 | Mobile sticky charge pattern aligned with DESIGN.md (&lt;768px) | [x] | 2026-09-14 — full-width bottom bar with item count + total |
+| C.6 | Loading/empty/error: Spinner/Skeleton/Modal only; staged-sale recovery visible if present | [x] | 2026-09-14 — Spinner on complete-sale + terminal search; staged banner tokens |
 
 **Phase C exit criteria:** Cashier can complete cash/M-Pesa/credit sale with canonical controls; tabular totals; no forbidden palette classes on these surfaces.
 
