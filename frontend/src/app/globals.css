@@ -7,9 +7,17 @@
 :root {
   --base-font-size: 14px;
 
-  /* Surfaces — warm alabaster / register (glare-safe under retail light) */
+  /* Surfaces — warm alabaster / register (glare-safe under retail light)
+     Canonical surface: smooth petrol-tinted wash on alabaster (DESIGN.md only) */
   --background: #faf9f9;
-  --surface: #faf9f9;
+  --surface: radial-gradient(
+    ellipse 130% 90% at 100% -10%,
+    color-mix(in srgb, #79aabc 14%, #faf9f9) 0%,
+    #faf9f9 38%,
+    #f4f3f3 72%,
+    #f4f3f0 100%
+  );
+  --surface-solid: #faf9f9;
   --surface-dim: #dadada;
   --surface-bright: #faf9f9;
   --surface-container-lowest: #ffffff;
@@ -207,7 +215,11 @@ body {
   height: auto;
   overflow-x: hidden;
   overflow-y: auto;
-  background-color: var(--background);
+  background-color: var(--surface-solid, var(--background));
+  background-image: var(--surface);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: scroll;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-body-md);
@@ -524,4 +536,14 @@ p {
 
 .theme-lab-amount-positive {
   color: var(--success, var(--brand-accent));
+}
+
+
+/* Canonical surface gradient utility (lab + optional page shells) */
+@utility surface-gradient {
+  background-color: var(--surface-solid, #faf9f9);
+  background-image: var(--surface);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
