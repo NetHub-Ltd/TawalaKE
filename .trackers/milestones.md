@@ -85,8 +85,8 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 | D.1 | Customers list: kit Input/Switch/Button/Table/Skeleton; empty state CTA | [x] | 2026-09-14 — semantic tokens; tabular open credit |
 | D.2 | Customer detail tabs + collect credit: currency Input, success Button, SuccessBanner | [x] | 2026-09-14 — collect CTA brand-accent; workspace tokens |
 | D.3 | Inventory product workspace chrome → tokens/kit | [x] | 2026-09-14 — ProductWorkspace/SmartRow/AssetComposer tokens |
-| D.4 | Stock audit/restock **copy rewrite**: System qty / Counted qty / Difference / Why? | [ ] | `AuditForm.tsx`, stock rows |
-| D.5 | Stock forms controls migrated to kit | [ ] | same |
+| D.4 | Stock audit/restock **copy rewrite**: System qty / Counted qty / Difference / Why? | [x] | 2026-09-14 — AuditForm + RestockForm shop language |
+| D.5 | Stock forms controls migrated to kit | [x] | 2026-09-14 — Button/Input/Select/Label/Textarea; StockTakingTableRow tokens |
 
 **Phase D exit criteria:** Open-credit filter + collect path and stock count use plain language + kit.
 

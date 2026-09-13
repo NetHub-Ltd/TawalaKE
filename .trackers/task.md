@@ -1,11 +1,10 @@
 # Task: Theme & UX remediation
 
 ## Current
-Phase D.1–D.3 done on chore/theme-retail-os
+**Phase D complete (D.1–D.5)** on chore/theme-retail-os
 
 ## Next
-D.4 Stock audit copy rewrite · D.5 stock form kit controls
-Then Phase E staff
+Phase E — Staff directory + member workspace + store/settings forms
 
 ## Hard rules
 AGENTS.md §5

@@ -30,6 +30,9 @@ STRICT_PATHS=(
   "$ROOT/src/features/inventory/ProductSmartRow.tsx"
   "$ROOT/src/features/inventory/AssetComposer.tsx"
   "$ROOT/src/features/inventory/AuditTableRow.tsx"
+  "$ROOT/src/features/stock/AuditForm.tsx"
+  "$ROOT/src/features/stock/RestockForm.tsx"
+  "$ROOT/src/features/stock/StockTakingTableRow.tsx"
 )
 
 fail=0
