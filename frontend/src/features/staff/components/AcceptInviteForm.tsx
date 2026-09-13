@@ -120,7 +120,7 @@ export function AcceptInviteForm() {
             {errors.password.message}
           </p>
         )}
-        <p className="text-[11px] text-muted">At least 8 characters.</p>
+        <p className="text-xs text-muted">At least 8 characters.</p>
       </div>
       <div className="space-y-1.5">
         <label

@@ -34,10 +34,10 @@ type CreateValues = z.infer<typeof createSchema>;
 
 function roleBadge(role: string) {
   const styles: Record<string, string> = {
-    OWNER: "bg-violet-500/10 text-violet-700 border-violet-500/25",
+    OWNER: "bg-brand-primary/10 text-brand-primary border-brand-primary/25",
     ADMIN: "bg-sky-500/10 text-sky-700 border-sky-500/25",
     MANAGER: "bg-amber-500/10 text-amber-700 border-amber-500/25",
-    CASHIER: "bg-slate-500/10 text-slate-700 border-slate-500/25",
+    CASHIER: "bg-register text-muted border-border",
   };
   return styles[role] || styles.CASHIER;
 }
@@ -123,7 +123,7 @@ export default function TeamDirectory({
 
   if (!canManage) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 p-12 text-slate-600">
+      <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
         <AlertCircle className="h-8 w-8 text-amber-500" />
         <p className="text-sm font-medium">You do not have permission to manage team members.</p>
       </div>
@@ -134,10 +134,10 @@ export default function TeamDirectory({
     <div className="flex h-full min-h-0 flex-col gap-4 p-4 sm:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
             Team
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-foreground0">
             {staff.length} member{staff.length === 1 ? "" : "s"} · click a row to open workspace
           </p>
         </div>
@@ -145,7 +145,7 @@ export default function TeamDirectory({
           <button
             type="button"
             onClick={() => refetch()}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted hover:bg-register dark:border-border dark:text-foreground"
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
             Refresh
@@ -153,7 +153,7 @@ export default function TeamDirectory({
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+            className="inline-flex items-center gap-1.5 rounded-md bg-brand-primary px-3 py-2 text-sm font-semibold text-white hover:bg-brand-accent"
           >
             <UserPlus className="h-4 w-4" />
             Invite member
@@ -163,18 +163,18 @@ export default function TeamDirectory({
 
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-[200px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name or email…"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+            className="w-full rounded-md border border-border bg-card py-2 pl-9 pr-3 text-sm dark:border-border dark:bg-card"
           />
         </div>
         <select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-border dark:bg-card"
         >
           <option value="ALL">All roles</option>
           {STAFF_ROLES.map((r) => (
@@ -186,7 +186,7 @@ export default function TeamDirectory({
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
+          className="rounded-md border border-border bg-card px-3 py-2 text-sm dark:border-border dark:bg-card"
         >
           <option value="ALL">All status</option>
           <option value="ACTIVE">Active</option>
@@ -195,23 +195,23 @@ export default function TeamDirectory({
       </div>
 
       {isLoading ? (
-        <div className="flex flex-1 items-center justify-center gap-2 text-slate-500">
+        <div className="flex flex-1 items-center justify-center gap-2 text-foreground0">
           <Loader2 className="h-5 w-5 animate-spin" />
           Loading team…
         </div>
       ) : isError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] p-4 text-sm text-[var(--on-error-container)]">
           {error instanceof Error ? error.message : "Failed to load staff"}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 p-12 text-slate-500">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border p-12 text-foreground0">
           <Users className="h-8 w-8" />
           <p className="text-sm font-medium">No team members match</p>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+        <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border">
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-900/80">
+            <thead className="sticky top-0 bg-register text-xs uppercase tracking-wide text-foreground0 dark:bg-card/80">
               <tr>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Role</th>
@@ -225,13 +225,13 @@ export default function TeamDirectory({
                 <tr
                   key={s.id}
                   onClick={() => openWorkspace(s)}
-                  className="cursor-pointer bg-white hover:bg-slate-50 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  className="cursor-pointer bg-card hover:bg-background dark:hover:bg-register"
                 >
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-900 dark:text-slate-50">
+                    <div className="font-medium text-foreground">
                       {s.full_name}
                     </div>
-                    <div className="text-xs text-slate-500">{s.email}</div>
+                    <div className="text-xs text-foreground0">{s.email}</div>
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -240,13 +240,13 @@ export default function TeamDirectory({
                       {String(s.role).toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                  <td className="px-4 py-3 text-muted dark:text-muted">
                     {s.assigned_businesses?.length ? (
                       <div className="flex flex-wrap gap-1">
                         {s.assigned_businesses.map((b) => (
                           <span
                             key={b.id}
-                            className="inline-flex max-w-[9rem] truncate rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                            className="inline-flex max-w-[9rem] truncate rounded-md bg-register px-2 py-0.5 text-xs font-medium text-muted dark:bg-register dark:text-foreground"
                             title={b.name}
                           >
                             {b.name}
@@ -254,21 +254,21 @@ export default function TeamDirectory({
                         ))}
                       </div>
                     ) : (
-                      <span className="text-slate-400">—</span>
+                      <span className="text-muted">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                         s.active
-                          ? "bg-emerald-50 text-emerald-700"
+                          ? "bg-[var(--success-soft)] text-[var(--success)]"
                           : "bg-amber-50 text-amber-800"
                       }`}
                     >
                       {s.active ? "Active" : "Pending invite"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-400">
+                  <td className="px-4 py-3 text-right text-muted">
                     <ChevronRight className="ml-auto h-4 w-4" />
                   </td>
                 </tr>
@@ -281,37 +281,37 @@ export default function TeamDirectory({
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
           <div
-            className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
+            className="w-full max-w-lg rounded-md bg-card p-5 shadow-xl dark:bg-card"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-semibold">Invite teammate</h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-foreground0">
               Emails a secure link to set a password (48h). Assign at least one branch.
               Owner is only the account that signed up — you cannot invite another owner.
             </p>
             <form onSubmit={onCreate} className="mt-4 space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Full name</label>
+                <label className="mb-1 block text-xs font-medium text-muted">Full name</label>
                 <input
                   {...createForm.register("full_name")}
                   placeholder="Full name"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm dark:border-border dark:bg-background"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Email</label>
+                <label className="mb-1 block text-xs font-medium text-muted">Email</label>
                 <input
                   {...createForm.register("email")}
                   placeholder="name@company.com"
                   type="email"
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm dark:border-border dark:bg-background"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Role</label>
+                <label className="mb-1 block text-xs font-medium text-muted">Role</label>
                 <select
                   {...createForm.register("role")}
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm dark:border-border dark:bg-background"
                 >
                 {inviteableRoles(actorRole).map((r) => (
                   <option key={r} value={r}>
@@ -321,13 +321,13 @@ export default function TeamDirectory({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-600">Branches</label>
+                <label className="mb-1 block text-xs font-medium text-muted">Branches</label>
               {!(businesses || []).length ? (
-                <p className="rounded-xl border border-dashed border-slate-200 p-3 text-xs text-slate-500">
+                <p className="rounded-md border border-dashed border-border p-3 text-xs text-foreground0">
                   No branches yet. Create a branch first, then invite staff to it.
                 </p>
               ) : (
-              <div className="max-h-32 space-y-1 overflow-auto rounded-xl border border-slate-200 p-2 text-sm dark:border-slate-700">
+              <div className="max-h-32 space-y-1 overflow-auto rounded-md border border-border p-2 text-sm dark:border-border">
                 {(businesses || []).map((b: { id: string; name: string }) => (
                   <label key={b.id} className="flex items-center gap-2">
                     <input
@@ -357,7 +357,7 @@ export default function TeamDirectory({
               )}
               </div>
               {formError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                <div className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-3 py-2 text-sm text-[var(--on-error-container)] dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
                   <p>{formError}</p>
                   {(formError.toLowerCase().includes("limit") ||
                     formError.toLowerCase().includes("plan")) &&
@@ -378,14 +378,14 @@ export default function TeamDirectory({
                     setShowCreate(false);
                     setFormError(null);
                   }}
-                  className="rounded-xl px-3 py-2 text-sm text-slate-600"
+                  className="rounded-md px-3 py-2 text-sm text-muted"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={createMut.isPending}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="rounded-md bg-brand-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {createMut.isPending ? "Sending invite…" : "Send invite"}
                 </button>

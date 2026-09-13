@@ -212,7 +212,7 @@ export default function StoreForm({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border pb-4">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold shrink-0">
+          <div className="h-11 w-11 rounded-md bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold shrink-0">
             <Store className="w-5 h-5" />
           </div>
           <div>
@@ -238,7 +238,7 @@ export default function StoreForm({
         {serverError && (
           <div
             role="alert"
-            className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 text-xs flex items-center gap-2"
+            className="p-3 rounded-md bg-[var(--error-container)] border border-[var(--error)]/30 text-[var(--error)] text-xs flex items-center gap-2"
           >
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span className="flex-1">
@@ -267,7 +267,7 @@ export default function StoreForm({
               htmlFor="store-name"
               className="block text-xs font-semibold text-foreground"
             >
-              Branch name <span className="text-rose-500">*</span>
+              Branch name <span className="text-[var(--error)]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -280,13 +280,13 @@ export default function StoreForm({
                 aria-invalid={errors.name ? "true" : "false"}
                 aria-describedby={errors.name ? "name-error" : undefined}
                 {...register("name")}
-                className={`w-full h-11 pl-10 pr-3 text-xs rounded-xl border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
-                  errors.name ? "border-rose-500" : "border-border"
+                className={`w-full h-11 pl-10 pr-3 text-xs rounded-md border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+                  errors.name ? "border-[var(--error)]" : "border-border"
                 }`}
               />
             </div>
             {errors.name && (
-              <p id="name-error" className="text-[11px] text-rose-500 font-medium">
+              <p id="name-error" className="text-xs text-[var(--error)] font-medium">
                 {errors.name.message}
               </p>
             )}
@@ -298,7 +298,7 @@ export default function StoreForm({
               htmlFor="industry-select"
               className="block text-xs font-semibold text-foreground"
             >
-              Industry Category <span className="text-rose-500">*</span>
+              Industry Category <span className="text-[var(--error)]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -310,8 +310,8 @@ export default function StoreForm({
                 onChange={handleIndustryChange}
                 aria-invalid={errors.industry ? "true" : "false"}
                 aria-describedby={errors.industry ? "industry-error" : undefined}
-                className={`w-full h-11 pl-10 pr-8 text-xs rounded-xl border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary appearance-none cursor-pointer ${
-                  errors.industry ? "border-rose-500" : "border-border"
+                className={`w-full h-11 pl-10 pr-8 text-xs rounded-md border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary appearance-none cursor-pointer ${
+                  errors.industry ? "border-[var(--error)]" : "border-border"
                 }`}
               >
                 <option value="" disabled>
@@ -325,7 +325,7 @@ export default function StoreForm({
               </select>
             </div>
             {errors.industry && (
-              <p id="industry-error" className="text-[11px] text-rose-500 font-medium">
+              <p id="industry-error" className="text-xs text-[var(--error)] font-medium">
                 {errors.industry.message}
               </p>
             )}
@@ -336,7 +336,7 @@ export default function StoreForm({
             <div
               role="region"
               aria-live="polite"
-              className="sm:col-span-2 p-3 rounded-xl bg-brand-primary/10 border border-brand-primary/20 flex items-center gap-3 text-xs transition-all duration-200"
+              className="sm:col-span-2 p-3 rounded-md bg-brand-primary/10 border border-brand-primary/20 flex items-center gap-3 text-xs transition-all duration-200"
             >
               <div className="p-2 rounded-lg bg-brand-primary/20 text-brand-primary shrink-0">
                 <currentIndustryMeta.icon className="w-4 h-4" />
@@ -358,7 +358,7 @@ export default function StoreForm({
               htmlFor="store-phone"
               className="block text-xs font-semibold text-foreground"
             >
-              Contact Phone <span className="text-rose-500">*</span>
+              Contact Phone <span className="text-[var(--error)]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -371,13 +371,13 @@ export default function StoreForm({
                 aria-invalid={errors.phone ? "true" : "false"}
                 aria-describedby={errors.phone ? "phone-error" : undefined}
                 {...register("phone")}
-                className={`w-full h-11 pl-10 pr-3 text-xs rounded-xl border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
-                  errors.phone ? "border-rose-500" : "border-border"
+                className={`w-full h-11 pl-10 pr-3 text-xs rounded-md border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+                  errors.phone ? "border-[var(--error)]" : "border-border"
                 }`}
               />
             </div>
             {errors.phone && (
-              <p id="phone-error" className="text-[11px] text-rose-500 font-medium">
+              <p id="phone-error" className="text-xs text-[var(--error)] font-medium">
                 {errors.phone.message}
               </p>
             )}
@@ -389,7 +389,7 @@ export default function StoreForm({
               htmlFor="tax-rate"
               className="block text-xs font-semibold text-foreground"
             >
-              Tax Rate (%) <span className="text-rose-500">*</span>
+              Tax Rate (%) <span className="text-[var(--error)]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -403,13 +403,13 @@ export default function StoreForm({
                 aria-invalid={errors.tax_rate ? "true" : "false"}
                 aria-describedby={errors.tax_rate ? "tax-error" : undefined}
                 {...register("tax_rate", { valueAsNumber: true })}
-                className={`w-full h-11 pl-10 pr-3 text-xs rounded-xl border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
-                  errors.tax_rate ? "border-rose-500" : "border-border"
+                className={`w-full h-11 pl-10 pr-3 text-xs rounded-md border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+                  errors.tax_rate ? "border-[var(--error)]" : "border-border"
                 }`}
               />
             </div>
             {errors.tax_rate && (
-              <p id="tax-error" className="text-[11px] text-rose-500 font-medium">
+              <p id="tax-error" className="text-xs text-[var(--error)] font-medium">
                 {errors.tax_rate.message}
               </p>
             )}
@@ -421,7 +421,7 @@ export default function StoreForm({
               htmlFor="store-address"
               className="block text-xs font-semibold text-foreground"
             >
-              Physical Address <span className="text-rose-500">*</span>
+              Physical Address <span className="text-[var(--error)]">*</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -434,13 +434,13 @@ export default function StoreForm({
                 aria-invalid={errors.address ? "true" : "false"}
                 aria-describedby={errors.address ? "address-error" : undefined}
                 {...register("address")}
-                className={`w-full h-11 pl-10 pr-3 text-xs rounded-xl border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
-                  errors.address ? "border-rose-500" : "border-border"
+                className={`w-full h-11 pl-10 pr-3 text-xs rounded-md border bg-card text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+                  errors.address ? "border-[var(--error)]" : "border-border"
                 }`}
               />
             </div>
             {errors.address && (
-              <p id="address-error" className="text-[11px] text-rose-500 font-medium">
+              <p id="address-error" className="text-xs text-[var(--error)] font-medium">
                 {errors.address.message}
               </p>
             )}
@@ -452,14 +452,14 @@ export default function StoreForm({
           <button
             type="button"
             onClick={() => router.back()}
-            className="h-11 px-5 rounded-xl border border-border text-xs font-semibold text-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary min-h-[44px]"
+            className="h-11 px-5 rounded-md border border-border text-xs font-semibold text-muted hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary min-h-[44px]"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={isSubmitting || !isValid}
-            className="h-11 px-6 rounded-xl bg-brand-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary min-h-[44px]"
+            className="h-11 px-6 rounded-md bg-brand-primary hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary min-h-[44px]"
           >
             {isSubmitting ? (
               <>

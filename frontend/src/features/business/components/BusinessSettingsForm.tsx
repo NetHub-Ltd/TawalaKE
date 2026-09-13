@@ -136,7 +136,7 @@ export function BusinessSettingsForm() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 p-8 text-sm text-slate-500">
+      <div className="flex items-center gap-2 p-8 text-sm text-foreground0">
         <Loader2 className="h-4 w-4 animate-spin" />
         Loading branch settings…
       </div>
@@ -146,47 +146,47 @@ export function BusinessSettingsForm() {
   return (
     <div className="mx-auto w-full max-w-xl space-y-4 p-2 sm:p-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
           Branch settings
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-foreground0">
           Tax rate feeds the terminal. Receipt footer prints on documents.
         </p>
       </div>
 
       {!canEdit && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
           You can view these settings but need manager access to edit them.
         </div>
       )}
 
-      <form onSubmit={onSave} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+      <form onSubmit={onSave} className="space-y-4 rounded-md border border-border bg-card p-5 dark:border-border dark:bg-card">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">
+          <label className="mb-1 block text-xs font-medium text-muted">
             Branch name
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             disabled={!canEdit}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm disabled:opacity-60 dark:border-border dark:bg-background"
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-xs font-medium text-muted">
               Phone
             </label>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               disabled={!canEdit}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+              className="w-full rounded-md border border-border px-3 py-2 text-sm disabled:opacity-60 dark:border-border dark:bg-background"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-600">
+            <label className="mb-1 block text-xs font-medium text-muted">
               Tax rate (%)
             </label>
             <input
@@ -197,23 +197,23 @@ export function BusinessSettingsForm() {
               value={taxRate}
               onChange={(e) => setTaxRate(e.target.value)}
               disabled={!canEdit}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+              className="w-full rounded-md border border-border px-3 py-2 text-sm disabled:opacity-60 dark:border-border dark:bg-background"
             />
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">
+          <label className="mb-1 block text-xs font-medium text-muted">
             Address
           </label>
           <input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             disabled={!canEdit}
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm disabled:opacity-60 dark:border-border dark:bg-background"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-600">
+          <label className="mb-1 block text-xs font-medium text-muted">
             Receipt footer
           </label>
           <textarea
@@ -222,37 +222,37 @@ export function BusinessSettingsForm() {
             disabled={!canEdit}
             rows={3}
             placeholder="Thank you for shopping with us"
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm disabled:opacity-60 dark:border-border dark:bg-background"
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={showTax}
             onChange={(e) => setShowTax(e.target.checked)}
             disabled={!canEdit}
-            className="rounded border-slate-300"
+            className="rounded border-border"
           />
           Show tax line on receipts
         </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={active}
             onChange={(e) => setActive(e.target.checked)}
             disabled={!canEdit}
-            className="rounded border-slate-300"
+            className="rounded border-border"
           />
           Branch active
         </label>
 
         {error && (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-3 py-2 text-sm text-[var(--on-error-container)]">
             {error}
           </p>
         )}
         {msg && (
-          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          <p className="rounded-md border border-[var(--success-border)] bg-[var(--success-soft)] px-3 py-2 text-sm text-[var(--success)]">
             {msg}
           </p>
         )}
@@ -261,7 +261,7 @@ export function BusinessSettingsForm() {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-brand-accent px-4 py-2 text-sm font-semibold text-white hover:bg-brand-accent disabled:opacity-50"
           >
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -273,11 +273,11 @@ export function BusinessSettingsForm() {
         )}
       </form>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-foreground0">
         Organization billing and team live under{" "}
         <Link
           href={`/org/${organizationId}`}
-          className="font-semibold text-emerald-700 hover:underline"
+          className="font-semibold text-[var(--success)] hover:underline"
         >
           Org home
         </Link>

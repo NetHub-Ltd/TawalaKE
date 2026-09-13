@@ -1,10 +1,11 @@
 # Task: Theme & UX remediation
 
 ## Current
-**Phase D complete (D.1–D.5)** on chore/theme-retail-os
+**Phase E complete (E.1–E.3)** + receipt redesign on chore/theme-retail-os
 
 ## Next
-Phase E — Staff directory + member workspace + store/settings forms
+Phase F — public marketing isolation decision
+Or residual debt cleanup via check:theme report
 
 ## Hard rules
 AGENTS.md §5

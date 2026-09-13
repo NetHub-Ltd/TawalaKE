@@ -96,9 +96,9 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| E.1 | Team directory table + filters → tokens/kit; primary not emerald | [ ] | `TeamDirectory.tsx` |
-| E.2 | Staff member workspace | [ ] | `StaffMemberWorkspace.tsx` |
-| E.3 | Store form / business settings forms | [ ] | `store-form.tsx`, `BusinessSettingsForm.tsx` |
+| E.1 | Team directory table + filters → tokens/kit; primary not emerald | [x] | 2026-09-14 — semantic tokens |
+| E.2 | Staff member workspace | [x] | 2026-09-14 — role chips + chrome tokens |
+| E.3 | Store form / business settings forms | [x] | 2026-09-14 — forms tokenized |
 
 **Phase E exit criteria:** Admin surfaces match canonical chrome.
 
@@ -112,6 +112,14 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 | F.2 | Ensure marketing cannot redefine app shell CSS variables | [ ] | layout boundaries |
 
 **Phase F exit criteria:** Written decision + no token leakage into app shell.
+
+---
+
+## Receipt (bonus in Phase E push)
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| R.1 | Redesign receipt/invoice client view to canonical tokens + clear money hierarchy | [x] | 2026-09-14 — `ReceiptClientView.tsx` |
 
 ---
 

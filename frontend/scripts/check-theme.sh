@@ -33,6 +33,12 @@ STRICT_PATHS=(
   "$ROOT/src/features/stock/AuditForm.tsx"
   "$ROOT/src/features/stock/RestockForm.tsx"
   "$ROOT/src/features/stock/StockTakingTableRow.tsx"
+  "$ROOT/src/features/staff/components/TeamDirectory.tsx"
+  "$ROOT/src/features/staff/components/StaffMemberWorkspace.tsx"
+  "$ROOT/src/features/staff/components/AcceptInviteForm.tsx"
+  "$ROOT/src/features/store/components/store-form.tsx"
+  "$ROOT/src/features/business/components/BusinessSettingsForm.tsx"
+  "$ROOT/src/features/sales/components/ReceiptClientView.tsx"
 )
 
 fail=0
