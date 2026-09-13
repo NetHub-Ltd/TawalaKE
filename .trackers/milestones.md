@@ -36,8 +36,8 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | A.1 | AGENTS.md non-negotiable design rules | [x] | §5 |
-| A.2 | Document forbidden classes + required imports in `frontend/theme.md` | [ ] | mirror AGENTS briefly for frontend-only readers |
-| A.3 | Optional: ESLint restriction or CI grep for `bg-slate-` / `bg-emerald-` under `src/features` | [ ] | warn/fail on new debt; propose before enabling fail |
+| A.2 | Document forbidden classes + required imports in `frontend/theme.md` | [x] | 2026-09-14 |
+| A.3 | Optional: ESLint restriction or CI grep for `bg-slate-` / `bg-emerald-` under `src/features` | [x] | `npm run check:theme` — strict on migrated paths, report-only elsewhere |
 | A.4 | Trackers (`task.md` / `repo-state.md`) always name current phase ID | [ ] | ongoing hygiene |
 
 **Phase A exit criteria:** Contributors cannot claim ignorance; optional automated check agreed.
@@ -50,7 +50,7 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 
 | ID | Task | Status | Primary files (indicative) |
 |----|------|--------|------------------------------|
-| B.1 | `OrgShell` + `Sidebar` → semantic tokens, kit Button/Badge where applicable; remove slate chrome | [ ] | `features/org/components/OrgShell.tsx`, `Sidebar.tsx` |
+| B.1 | `OrgShell` + `Sidebar` → semantic tokens, kit Button/Badge where applicable; remove slate chrome | [x] | 2026-09-14 — OrgShell + Sidebar canonical; kit Skeleton |
 | B.2 | Org home / command center hierarchy: single primary CTA when stores=0 or staff=0 or trial pressure | [ ] | `OrgHomeClient.tsx`, `OrgCommandCenterClient.tsx` |
 | B.3 | Org settings + billing surfaces: kit forms, paywall message adjacent to blocked action | [ ] | `OrgSettingsClient.tsx`, billing pages |
 | B.4 | Business layout chrome consistency with org shell (active nav, spacing tokens) | [ ] | `[businessId]/layout.tsx` and related nav |

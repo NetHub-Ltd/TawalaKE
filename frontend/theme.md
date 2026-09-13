@@ -1,15 +1,33 @@
 # Tawala Design System — Modern Retail OS (Canonical)
 
 ## Source of truth
-- Tokens: `src/app/globals.css` (`:root` + `@theme`)
-- Fonts: Plus Jakarta Sans (display) + Inter (body) — root layout
-- Surface: warm alabaster radial gradient with petrol tint (`--surface`)
-- Components: `src/lib/components/ui` → `import { Button, … } from "@/lib/components/ui"`
+| Concern | Location |
+|---------|----------|
+| Tokens, surface, type, radii, shadows | `src/app/globals.css` |
+| Fonts | `src/app/layout.tsx` — Plus Jakarta Sans + Inter + mono |
+| Components | `src/lib/components/ui` → `import { … } from "@/lib/components/ui"` |
+| Lab | `/themetest` |
+| Agent rules | Root `AGENTS.md` §5 |
+
+## Rules (non-negotiable in product UI)
+
+### Forbidden
+- **Hardcoded colors:** hex, or Tailwind palette chrome (`bg-slate-*`, `text-slate-*`, `bg-emerald-*`, `bg-blue-*`, `bg-indigo-*`, `bg-white` / `bg-black` as surfaces, etc.)
+- **Hardcoded fonts / font sizes:** no `text-[11px]`, arbitrary `text-3xl` as display system, or extra `fontFamily` loads in features
+- **One-off controls** when the kit has an equivalent (`Button`, `Input`, `Select`, `Switch`, `Modal`, `Badge`, `Spinner`, `Skeleton`, …)
+
+### Required
+- Semantic tokens: `bg-background`, `bg-card`, `bg-register`, `text-foreground`, `text-muted`, `border-border`, `bg-brand-primary` / `secondary` / `accent`
+- Type roles: `text-h1`…`text-h4`, `amount-lg` / `amount-md`, `tabular` for money
+- Button roles: primary = command · secondary = void/destructive · success = pay/settle
+- Import kit: `import { Button, Input, Card } from "@/lib/components/ui"`
+
+### Check before PR
+```bash
+npm run check:theme
+npm run lint
+npm run build
+```
 
 ## Lab
-`/themetest` — exercises the shared kit (forms, calendar, bar/line charts, table, modal, toasts).
-
-## Rules
-- Primary `#003F4E` · Secondary terracotta · Success mint
-- Border-first cards · 48px primary hit targets · tabular money
-- Light product default; `html.dark` optional
+`/themetest` exercises the shared kit (forms, calendar, bar/line charts, table, modal, badges).
