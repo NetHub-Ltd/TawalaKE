@@ -58,7 +58,7 @@ export function TerminalSidebar({ businessId }: { businessId: string }) {
               key={item.href}
               href={item.href}
               className={cn(
-                "w-[80%] aspect-square rounded-2xl transition-all duration-200 group relative flex flex-col items-center justify-center gap-1.5 text-center px-1",
+                "w-[80%] aspect-square rounded-md transition-all duration-200 group relative flex flex-col items-center justify-center gap-1.5 text-center px-1",
                 isActive
                   ? "bg-primary text-white shadow-lg shadow-primary/30"
                   : "text-secondary hover:bg-muted hover:text-foreground",
@@ -69,14 +69,14 @@ export function TerminalSidebar({ businessId }: { businessId: string }) {
               
               {/* CLEAR VISIBLE TEXT LABEL */}
               <span className={cn(
-                "text-[10px] font-bold tracking-tight transition-colors line-clamp-1",
+                "text-xs font-bold tracking-tight transition-colors line-clamp-1",
                 isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground"
               )}>
                 {item.label}
               </span>
 
               {/* PERSISTENT HOVER TOOLTIP (Kept for premium styling context) */}
-              <span className="absolute left-full ml-4 bg-foreground text-background text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all translate-x-[-10px] group-hover:translate-x-0 whitespace-nowrap z-[70] shadow-2xl border border-border">
+              <span className="absolute left-full ml-4 bg-foreground text-background text-xs font-semibold uppercase tracking-widest px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all translate-x-[-10px] group-hover:translate-x-0 whitespace-nowrap z-[70] shadow-2xl border border-border">
                 {item.label}
               </span>
             </Link>

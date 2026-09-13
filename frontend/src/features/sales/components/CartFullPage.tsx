@@ -85,7 +85,7 @@ export function CartFullPage({
 
   if (!mounted) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted">
         Loading cart…
       </div>
     );
@@ -155,7 +155,7 @@ export function CartFullPage({
             <ShoppingCart className="h-5 w-5 text-brand-primary" />
             Cart
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted">
             {isEmpty
               ? "No items yet"
               : `${cart.length} line${cart.length === 1 ? "" : "s"} · review before checkout`}
@@ -168,7 +168,7 @@ export function CartFullPage({
               clearCart();
               toast.info("Cart cleared");
             }}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 px-3 text-xs font-semibold text-muted-foreground hover:bg-surface"
+            className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border/60 px-3 text-xs font-semibold text-muted hover:bg-surface"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Clear
@@ -177,21 +177,21 @@ export function CartFullPage({
       </div>
 
       {isEmpty ? (
-        <div className="rounded-2xl border border-dashed border-border/60 bg-card px-6 py-16 text-center">
+        <div className="rounded-md border border-dashed border-border/60 bg-card px-6 py-16 text-center">
           <p className="text-sm font-semibold text-foreground">Cart is empty</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-muted">
             Add products from the terminal, then return here to review.
           </p>
           <Link
             href={terminalHref}
-            className="mt-5 inline-flex h-11 items-center rounded-xl bg-brand-primary px-5 text-sm font-semibold text-white"
+            className="mt-5 inline-flex h-11 items-center rounded-md bg-brand-accent px-5 text-sm font-semibold text-white"
           >
             Open terminal
           </Link>
         </div>
       ) : (
         <>
-          <ul className="divide-y divide-border/40 overflow-hidden rounded-2xl border border-border/50 bg-card shadow-card">
+          <ul className="divide-y divide-border/40 overflow-hidden rounded-md border border-border/50 bg-card shadow-card">
             {cart.map((item) => (
               <li
                 key={item.id}
@@ -201,19 +201,19 @@ export function CartFullPage({
                   <p className="truncate font-semibold text-foreground">
                     {item.name}
                   </p>
-                  <p className="text-xs text-muted-foreground tabular-nums">
+                  <p className="text-xs text-muted tabular-nums">
                     KES {item.price.toLocaleString()} each
                     {item.sku ? ` · ${item.sku}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="inline-flex items-center rounded-xl border border-border/60 bg-background">
+                  <div className="inline-flex items-center rounded-md border border-border/60 bg-background">
                     <button
                       type="button"
                       disabled={isSubmitting}
                       aria-label={`Decrease ${item.name}`}
                       onClick={() => updateQty(item.id, -1)}
-                      className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                      className="inline-flex h-11 w-11 items-center justify-center text-muted hover:text-foreground"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -225,7 +225,7 @@ export function CartFullPage({
                       disabled={isSubmitting}
                       aria-label={`Increase ${item.name}`}
                       onClick={() => updateQty(item.id, 1)}
-                      className="inline-flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                      className="inline-flex h-11 w-11 items-center justify-center text-muted hover:text-foreground"
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -237,7 +237,7 @@ export function CartFullPage({
                     type="button"
                     disabled={isSubmitting}
                     onClick={() => removeFromCart(item.id)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-rose-50 hover:text-rose-600"
                     aria-label={`Remove ${item.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -247,11 +247,11 @@ export function CartFullPage({
             ))}
           </ul>
 
-          <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-card">
+          <div className="rounded-md border border-border/50 bg-card p-5 shadow-card">
             <div className="mb-3 flex items-center justify-between gap-2">
               <label
                 htmlFor={discountId}
-                className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+                className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted uppercase"
               >
                 <Tag className="h-3.5 w-3.5" />
                 Discount (KES)
@@ -272,24 +272,24 @@ export function CartFullPage({
                 step="any"
                 value={discount || ""}
                 onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                className="mb-4 h-11 w-full rounded-xl border border-border/60 bg-background px-3 font-mono text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                className="mb-4 h-11 w-full rounded-md border border-border/60 bg-background px-3 font-mono text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
               />
             )}
             <dl className="space-y-2 text-sm">
-              <div className="flex justify-between text-muted-foreground">
+              <div className="flex justify-between text-muted">
                 <dt>Subtotal</dt>
                 <dd className="tabular-nums">
                   KES {subtotal.toLocaleString()}
                 </dd>
               </div>
-              <div className="flex justify-between text-muted-foreground">
+              <div className="flex justify-between text-muted">
                 <dt>Tax</dt>
                 <dd className="tabular-nums">
                   KES {taxAmount.toLocaleString()}
                 </dd>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-emerald-600">
+                <div className="flex justify-between text-[var(--success)]">
                   <dt>Discount</dt>
                   <dd className="tabular-nums">
                     −KES {discount.toLocaleString()}
@@ -308,7 +308,7 @@ export function CartFullPage({
               type="button"
               disabled={isSubmitting || isEmpty}
               onClick={() => void stageAndCheckout()}
-              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white disabled:opacity-50"
+              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-accent text-sm font-semibold text-white disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

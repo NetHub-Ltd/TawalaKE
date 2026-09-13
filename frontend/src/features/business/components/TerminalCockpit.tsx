@@ -183,7 +183,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
     return (
       <div className="flex-1 flex items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-300">
         <div className="card-layered max-w-xl w-full p-8 md:p-12 flex flex-col items-center text-center gap-6">
-          <div className="h-16 w-16 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center shadow-inner">
+          <div className="h-16 w-16 bg-brand-primary/10 text-brand-primary rounded-md flex items-center justify-center shadow-inner">
             <AlertCircle size={32} aria-hidden="true" />
           </div>
           <div className="space-y-2">
@@ -195,7 +195,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
           <Link href="/terminal" className="w-full">
             <button
               type="button"
-              className="w-full min-h-[44px] bg-foreground text-background rounded-xl font-bold uppercase tracking-wider text-xs hover:scale-[1.01] active:scale-[0.99] transition-all shadow-md cursor-pointer"
+              className="w-full min-h-[44px] bg-foreground text-background rounded-md font-bold uppercase tracking-wider text-xs hover:scale-[1.01] active:scale-[0.99] transition-all shadow-md cursor-pointer"
             >
               Return to Switchboard
             </button>
@@ -252,7 +252,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
                   placeholder="Instant product search..."
                   value={rawSearch}
                   onChange={(e) => setRawSearch(e.target.value)}
-                  className="w-full min-h-[44px] pl-9 pr-8 rounded-lg text-xs font-medium border border-border/60 focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/10 text-foreground placeholder-muted/50 transition-all"
+                  className="w-full min-h-[44px] pl-9 pr-8 rounded-md text-xs font-medium border border-border/60 focus:border-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary/10 text-foreground placeholder-muted/50 transition-all"
                 />
                 {(isPending || isFetching) && (
                   <Loader2
@@ -278,7 +278,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
                   value={selectedCategory}
                   onChange={handleCategoryChange}
                   aria-label="Filter products by category or stock status"
-                  className="w-full min-h-[44px] pl-9 pr-6 rounded-lg text-xs font-semibold border border-border/60 text-foreground focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/10 transition-all cursor-pointer outline-none capitalize truncate"
+                  className="w-full min-h-[44px] pl-9 pr-6 rounded-md text-xs font-semibold border border-border/60 text-foreground focus:border-brand-primary focus:ring-1 focus:ring-brand-primary/10 transition-all cursor-pointer outline-none capitalize truncate"
                 >
                   <option value="ALL">All Available Stock</option>
                   <option value="OUT_OF_STOCK">⚠️ Out of Stock Items</option>
@@ -297,7 +297,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
 
             {/* Micro Shortcut Guide & View Toggles */}
             <div className="flex items-center gap-2 shrink-0">
-              <div className="flex items-center bg-surface border border-border/40 rounded-lg p-0.5 shrink-0">
+              <div className="flex items-center bg-surface border border-border/40 rounded-md p-0.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => handleViewChange("card")}
@@ -344,7 +344,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
                     <div
                       key={i}
                       className={`card-layered bg-card animate-pulse border border-border/20 ${
-                        viewMode === "card" ? "h-48 rounded-xl" : "h-[4.25rem] rounded-xl"
+                        viewMode === "card" ? "h-48 rounded-md" : "h-[4.25rem] rounded-md"
                       }`}
                     />
                   ))}
@@ -393,7 +393,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
           {/* --- PERSISTENT PAGINATION FOOTER BAR --- */}
           <footer className="px-4 lg:px-6 shrink-0 border-t border-border/40 bg-card/60 flex items-center justify-between gap-4 text-xs min-h-[52px] h-[52px]">
             <div className="flex items-center gap-3">
-              <span className="text-[11px] font-medium text-muted hidden sm:inline">
+              <span className="text-xs font-medium text-muted hidden sm:inline">
                 Showing{" "}
                 <strong className="font-bold text-foreground">
                   {isLoading ? 0 : startIndex}
@@ -411,7 +411,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
               <div className="flex items-center gap-1.5">
                 <label
                   htmlFor={pageSizeSelectId}
-                  className="text-[10px] font-bold uppercase tracking-wider text-muted hidden md:inline"
+                  className="text-xs font-bold uppercase tracking-wider text-muted hidden md:inline"
                 >
                   Per page:
                 </label>
@@ -421,7 +421,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
                   onChange={handlePageSizeChange}
                   disabled={isLoading}
                   aria-label="Select items per page"
-                  className="min-h-[44px] px-2 rounded-lg border border-border/60 text-[11px] font-semibold text-foreground outline-none focus:border-brand-primary cursor-pointer disabled:opacity-50"
+                  className="min-h-[44px] px-2 rounded-md border border-border/60 text-xs font-semibold text-foreground outline-none focus:border-brand-primary cursor-pointer disabled:opacity-50"
                 >
                   <option value={8}>8</option>
                   <option value={12}>12</option>
@@ -440,13 +440,13 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
                 }
                 disabled={currentPage === 1 || isFetching || isLoading}
                 aria-label="Previous page"
-                className="min-h-[44px] px-3 rounded-lg border border-border/60 text-foreground flex items-center justify-center font-semibold transition-all hover:bg-surface disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                className="min-h-[44px] px-3 rounded-md border border-border/60 text-foreground flex items-center justify-center font-semibold transition-all hover:bg-surface disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
               >
                 <ChevronLeft size={16} className="sm:mr-1" />
                 <span className="hidden sm:inline text-xs">Prev</span>
               </button>
 
-              <span className="px-2 text-[11px] font-bold text-muted">
+              <span className="px-2 text-xs font-bold text-muted">
                 Page {currentPage} of {totalPages}
               </span>
 
@@ -457,7 +457,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
                 }
                 disabled={currentPage === totalPages || isFetching || isLoading}
                 aria-label="Next page"
-                className="min-h-[44px] px-3 rounded-lg border border-border/60 text-foreground flex items-center justify-center font-semibold transition-all hover:bg-surface disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                className="min-h-[44px] px-3 rounded-md border border-border/60 text-foreground flex items-center justify-center font-semibold transition-all hover:bg-surface disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
               >
                 <span className="hidden sm:inline text-xs">Next</span>
                 <ChevronRight size={16} className="sm:ml-1" />
@@ -518,7 +518,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
 
       {/* Staged sale banner */}
       {stagedSaleId && businessId && organizationId && (
-        <div className="fixed bottom-20 left-4 right-4 z-30 mx-auto max-w-lg rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg lg:bottom-6 lg:right-auto lg:left-6">
+        <div className="fixed bottom-20 left-4 right-4 z-30 mx-auto max-w-lg rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-lg lg:bottom-6 lg:right-auto lg:left-6">
           <p className="font-semibold">Unfinished checkout</p>
           <p className="mt-0.5 text-xs text-amber-900/80">
             A sale was staged but not completed. Resume or discard it (no stock
@@ -527,13 +527,13 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
           <div className="mt-2 flex flex-wrap gap-2">
             <Link
               href={`/org/${organizationId}/${businessId}/checkout?sale_id=${stagedSaleId}`}
-              className="inline-flex h-9 items-center rounded-lg bg-brand-primary px-3 text-xs font-semibold text-white"
+              className="inline-flex h-9 items-center rounded-md bg-brand-primary px-3 text-xs font-semibold text-white"
             >
               Resume
             </Link>
             <button
               type="button"
-              className="inline-flex h-9 items-center rounded-lg border border-amber-300 bg-white px-3 text-xs font-semibold"
+              className="inline-flex h-9 items-center rounded-md border border-amber-300 bg-card px-3 text-xs font-semibold"
               onClick={async () => {
                 try {
                   const res = await fetch(

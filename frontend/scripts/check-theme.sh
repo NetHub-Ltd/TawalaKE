@@ -15,6 +15,12 @@ STRICT_PATHS=(
   "$ROOT/src/features/org/components/OrgCommandCenterClient.tsx"
   "$ROOT/src/app/(organization)/org/[organizationId]/[businessId]/layout.tsx"
   "$ROOT/src/app/(organization)/org/[organizationId]/billing/page.tsx"
+  "$ROOT/src/features/business/components/TerminalCockpit.tsx"
+  "$ROOT/src/features/business/components/product-card.tsx"
+  "$ROOT/src/features/sales/components/CartSideBar.tsx"
+  "$ROOT/src/features/sales/components/CartFullPage.tsx"
+  "$ROOT/src/features/sales/components/CheckoutForm.tsx"
+  "$ROOT/src/features/sales/components/CheckoutWorkspace.tsx"
 )
 
 fail=0
