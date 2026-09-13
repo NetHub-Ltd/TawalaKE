@@ -52,11 +52,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     // Fitts's Law Target Map: Enforcing unified border configurations and touch bounds
     const sizeStyles = {
       /** Minimum 40px layout size optimized for compact components or micro header actions */
-      sm: 'h-10 px-4 text-[11px] rounded-xl gap-2',
+      sm: 'h-10 px-4 text-[11px] rounded-md gap-2',
       /** Strict 48px target — The desktop and web application sweet spot for form density controls */
-      md: 'h-12 px-6 text-xs rounded-xl gap-2.5',
+      md: 'h-12 px-6 text-xs rounded-md gap-2.5',
       /** Heavy 56px landing page / core visual marketing checkout conversions */
-      lg: 'h-14 px-8 text-sm rounded-2xl gap-3',
+      lg: 'h-14 px-8 text-sm rounded-lg gap-3',
     };
 
     return (

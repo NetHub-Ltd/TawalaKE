@@ -1,4 +1,6 @@
 # Repository State
-- Branch: feat/terminal-p1-mobile-staged
-- PR target: dev
-- Focus: Terminal P1 (mobile cart, staged hygiene) + P2 (BFF, phone, stock messages)
+- Branch: chore/theme-retail-os
+- Base: main @ 04e17e1
+- PR target: dev (create from main if missing)
+- Focus: Modern Retail OS design tokens + /themetest laboratory
+- Deploy preference: k3s

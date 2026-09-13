@@ -1,22 +1,19 @@
-# SaaS Design System & Theming Architecture
+# Tawala Design System — Modern Retail Operating System
 
-This application leverages **Tailwind CSS v4**'s native `@theme` engine. By migrating configuration from JavaScript object declarations (`tailwind.config.js`) directly into CSS custom properties, our build pipeline eliminates runtime configuration overhead and natively hooks token references into standard CSS variables.
+Tokens live in `src/app/globals.css` (Tailwind v4 `@theme` + CSS variables).
 
----
+## Brand
+- **Primary:** Deep petrol teal `#003F4E` / `#002832` — command, nav, primary actions
+- **Secondary:** Terracotta `#C1705B` / `#924A37` — void, urgency, attention counters
+- **Success:** Forest mint `#0F766E` — settle, matched M-Pesa, zero discrepancy
+- **Surfaces:** Warm alabaster `#FAF9F9`, register `#F4F3F0`, cards pure white
+- **Fonts:** Plus Jakarta Sans (headlines) + Inter (body) + tabular figures for money
 
-## 1. Architectural Philosophy: The "Layered Lifting" Paradigm
+## Lab
+`/themetest` — full component laboratory (theme toggle, forms, table, toasts, loaders, POS sticky bar).
 
-Unlike traditional flat designs where pages and components share identical background values, this platform utilizes a high-contrast stacking model to establish immediate visual hierarchy:
-
-* **The Deep Base Layer (`--surface`):** Assigned directly to the document `<body>`. This acts as the canvas environment. In Light Mode, it presents a muted gray background; in Dark Mode, it becomes a rich, deep midnight void.
-* **The Elevated Interactive Layer (`--background`):** Used strictly for high-priority sections, components, cards, or focus panels (e.g., using `.card-layered`). It physically "lifts" content away from the backdrop canvas to create distinct visual focus boundaries without heavy layout structural changes.
-
-### Stacking Execution Guidelines
-When structuring application pages, follow this layout hierarchy:
-```tsx
-// Correct Implementation
-<main className="bg-surface text-foreground"> {/* The canvas */}
-  <section className="card-layered bg-background"> {/* The content pod */}
-    <p className="text-muted">Meta Detail</p>
-  </section>
-</main>
+## Rules
+- Border-first cards; restrained teal-tinted shadows only on hover/modals
+- Primary hit targets ≥ 48px
+- Money columns use `.amount` / `.tabular` (`tnum`)
+- Light is product default; `html.dark` for lab/optional dark
