@@ -64,10 +64,13 @@ Agents **must not**:
 
 1. **Hardcode colors** — no raw hex (`#6366f1`, `#fff`, …) and no Tailwind palette utilities for chrome:
    - Forbidden examples: `bg-slate-*`, `text-slate-*`, `border-slate-*`, `bg-gray-*`, `bg-zinc-*`, `bg-indigo-*`, `bg-blue-*`, `bg-violet-*`, `bg-purple-*`, `bg-emerald-*`, `bg-green-600`, `bg-red-50` (use semantic error tokens), `bg-white` / `bg-black` as surfaces.
-2. **Bypass the UI kit** for standard controls — do not invent one-off `<button>` / `<input>` / `<select>` / toggle / modal / badge / spinner styling when an equivalent exists in `@/lib/components/ui`.
-3. **Introduce new design tokens** without updating **all** of: DESIGN.md (or project design source), `globals.css`, and `/themetest`.
-4. **Override global surface/font/radius systems** with page-local CSS that conflicts with canonical tokens.
-5. **Use marketing type voice on operational UI** — avoid `font-black` + `uppercase` + `tracking-widest` on POS, checkout, inventory, and admin task chrome.
+2. **Hardcode fonts or font sizes** — no arbitrary `text-[13px]`, `text-[11px]`, `text-3xl`, custom `fontFamily`, or third-party display fonts in product UI.
+   - Use only theme type roles from `globals.css`: `text-h1` / `text-h2` / `text-h3` / `text-h4`, body via default/`text-sm`/`text-xs` mapped to tokens, `amount-lg` / `amount-md` / `tabular` for money.
+   - Font families come only from layout CSS variables (`--font-jakarta`, `--font-inter`, `--font-mono`) via `@theme` — never load alternate families in feature code.
+3. **Bypass the UI kit** for standard controls — do not invent one-off `<button>` / `<input>` / `<select>` / toggle / modal / badge / spinner styling when an equivalent exists in `@/lib/components/ui`.
+4. **Introduce new design tokens** without updating **all** of: DESIGN.md (or project design source), `globals.css`, and `/themetest`.
+5. **Override global surface/font/radius systems** with page-local CSS that conflicts with canonical tokens.
+6. **Use marketing type voice on operational UI** — avoid `font-black` + `uppercase` + `tracking-widest` on POS, checkout, inventory, and admin task chrome.
 
 ### 5.2 Required patterns
 
@@ -75,7 +78,7 @@ Agents **must not**:
    ```ts
    import { Button, Input, Card, Badge, Spinner, Modal } from "@/lib/components/ui";
    ```
-2. **Semantic tokens only** for surfaces and text: `bg-background`, `bg-card`, `bg-register`, `text-foreground`, `text-muted`, `border-border`, `bg-brand-primary`, `bg-brand-secondary`, `bg-brand-accent`, error/success CSS variables.
+2. **Semantic tokens only** for surfaces, text, and type scale: `bg-background`, `bg-card`, `bg-register`, `text-foreground`, `text-muted`, `border-border`, `bg-brand-primary`, `bg-brand-secondary`, `bg-brand-accent`, error/success CSS variables, and type roles (`text-h1`…`text-h4`, `amount-*`, `tabular`). No one-off pixel font sizes.
 3. **Button roles:**
    - Command / primary CTA → `Button` `variant="primary"`
    - Void / destructive / urgent → `variant="secondary"` (terracotta)

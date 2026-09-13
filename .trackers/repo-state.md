@@ -1,5 +1,6 @@
 # Repository State
 - Branch: chore/theme-retail-os
 - PR: #216 → dev
-- HEAD: UI kit + canonical lab
-- Theme: canonical locked; surface gradient global
+- Theme: canonical locked
+- Program tracker: .trackers/milestones.md
+- Next: await approval for Phase B or Phase C proposal
