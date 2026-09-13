@@ -31,7 +31,7 @@ export function OrgDecisionLoading() {
 
   if (timedOut) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
             <svg
@@ -62,7 +62,7 @@ export function OrgDecisionLoading() {
           <div className="space-y-3 pt-2">
             <button
               onClick={() => window.location.reload()}
-              className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition"
+              className="block w-full bg-brand-primary hover:opacity-90 text-white font-medium py-2.5 px-4 rounded-lg transition"
             >
               Try again
             </button>
@@ -80,7 +80,7 @@ export function OrgDecisionLoading() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-8">
         <div className="flex justify-center">
           <div className="relative">

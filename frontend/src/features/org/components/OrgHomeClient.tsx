@@ -50,19 +50,19 @@ function Meter({
     max != null && max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
   const hot = max != null && current >= max;
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+    <div className="rounded-md border border-border bg-card p-4 dark:border-border dark:bg-card">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+        <p className="text-2xl font-semibold tracking-tight text-foreground">
           {max != null ? `${current} / ${max}` : current}
         </p>
-        <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <span className="text-xs font-medium uppercase tracking-wide text-foreground">
           {label}
         </span>
       </div>
       {max != null && max > 0 && (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-register">
           <div
-            className={`h-full rounded-full ${hot ? "bg-amber-500" : "bg-emerald-500"}`}
+            className={`h-full rounded-full ${hot ? "bg-brand-secondary" : "bg-brand-accent"}`}
             style={{ width: `${pct}%` }}
           />
         </div>
@@ -236,10 +236,10 @@ export function OrgHomeClient({
     <div className="mx-auto w-full max-w-5xl space-y-6 p-2 sm:p-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">
             Organization home
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-foreground">
             {ent?.plan_name || ent?.plan_code || "Plan"}
             {ent?.trial ? " · Trial" : ""}
             {ent?.active === false ? " · Inactive" : ""}
@@ -249,7 +249,7 @@ export function OrgHomeClient({
           <button
             type="button"
             onClick={() => void load()}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted hover:bg-register dark:border-border dark:text-foreground"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
@@ -257,7 +257,7 @@ export function OrgHomeClient({
           {canManageBranches && (
             <Link
               href={`/org/${organizationId}/stores/new`}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+              className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-2 text-sm font-semibold text-white hover:bg-[var(--success)]"
             >
               <Plus className="h-4 w-4" />
               New branch
@@ -266,8 +266,23 @@ export function OrgHomeClient({
         </div>
       </header>
 
+      {branches.length === 0 && canManageBranches && !loading && (
+        <div className="rounded-md border border-border bg-card p-5 shadow-sm">
+          <p className="text-sm font-semibold text-foreground">Recommended next step</p>
+          <p className="mt-1 text-sm text-muted">
+            Add your first branch so you can open the sales terminal and start tracking stock.
+          </p>
+          <Link
+            href={`/org/${organizationId}/stores/new`}
+            className="mt-4 inline-flex h-12 items-center justify-center rounded-md bg-brand-primary px-6 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Add your first branch
+          </Link>
+        </div>
+      )}
+
       {error && (
-        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        <p className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-3 py-2 text-sm text-[var(--on-error-container)]">
           {error}
         </p>
       )}
@@ -279,11 +294,11 @@ export function OrgHomeClient({
       </section>
 
       {canBilling && (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-foreground">
           Manage plan on{" "}
           <Link
             href={`/org/${organizationId}/billing`}
-            className="font-semibold text-emerald-700 hover:underline"
+            className="font-semibold text-[var(--success)] hover:underline"
           >
             Billing
           </Link>
@@ -293,26 +308,26 @@ export function OrgHomeClient({
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+          <h2 className="text-sm font-semibold text-foreground">
             Branches
           </h2>
           <Link
             href={`/org/${organizationId}/stores`}
-            className="text-xs font-medium text-slate-500 hover:text-slate-800"
+            className="text-xs font-medium text-foreground hover:text-foreground"
           >
             View all
           </Link>
         </div>
         {loading && branches.length === 0 ? (
-          <p className="text-sm text-slate-500">Loading branches…</p>
+          <p className="text-sm text-foreground">Loading branches…</p>
         ) : branches.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center dark:border-slate-700">
-            <Building2 className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-2 text-sm font-medium text-slate-700">No branches yet</p>
+          <div className="rounded-md border border-dashed border-border p-8 text-center dark:border-border">
+            <Building2 className="mx-auto h-8 w-8 text-muted" />
+            <p className="mt-2 text-sm font-medium text-muted">No branches yet</p>
             {canManageBranches && (
               <Link
                 href={`/org/${organizationId}/stores/new`}
-                className="mt-3 inline-flex text-sm font-semibold text-emerald-700 hover:underline"
+                className="mt-4 inline-flex h-12 items-center justify-center rounded-md bg-brand-primary px-6 text-sm font-semibold text-white hover:opacity-90"
               >
                 Create your first branch
               </Link>
@@ -325,19 +340,19 @@ export function OrgHomeClient({
               return (
                 <li
                   key={b.id}
-                  className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+                  className="flex flex-col rounded-md border border-border bg-card p-4 shadow-sm dark:border-border dark:bg-card"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-slate-900 dark:text-slate-50">
+                      <p className="truncate text-base font-semibold text-foreground">
                         {b.name}
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-500">
+                      <p className="mt-0.5 text-xs text-foreground">
                         <span
                           className={
                             b.active === false
-                              ? "text-slate-400"
-                              : "text-emerald-600"
+                              ? "text-muted"
+                              : "text-[var(--success)]"
                           }
                         >
                           {b.active === false ? "Inactive" : "Active"}
@@ -349,46 +364,46 @@ export function OrgHomeClient({
                     </div>
                     <Link
                       href={`/org/${organizationId}/${b.id}/overview`}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-md bg-brand-primary px-3 py-2 text-xs font-semibold text-white hover:bg-register dark:bg-register dark:text-foreground"
                     >
                       Open
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-100 pt-3 dark:border-slate-800 sm:grid-cols-4">
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3 dark:border-border sm:grid-cols-4">
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
                         Sales (7d)
                       </p>
-                      <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900 dark:text-slate-50">
-                        <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
+                      <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-foreground">
+                        <TrendingUp className="h-3.5 w-3.5 text-[var(--success)]" />
                         {statsLoading && !st
                           ? "…"
                           : formatKes(st?.grossSales ?? 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
                         Orders
                       </p>
-                      <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                      <p className="mt-0.5 text-sm font-semibold text-foreground">
                         {statsLoading && !st ? "…" : (st?.orders ?? 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
                         Products
                       </p>
-                      <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                      <p className="mt-0.5 text-sm font-semibold text-foreground">
                         {statsLoading && !st ? "…" : (st?.products ?? 0)}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
                         Staff
                       </p>
-                      <p className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-50">
+                      <p className="mt-0.5 text-sm font-semibold text-foreground">
                         {statsLoading && !st ? "…" : (st?.staff ?? 0)}
                       </p>
                     </div>
@@ -403,22 +418,22 @@ export function OrgHomeClient({
       <section className="grid gap-2 sm:grid-cols-2">
         <Link
           href={`/org/${organizationId}/staff`}
-          className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
+          className="flex items-center gap-3 rounded-md border border-border bg-card p-4 hover:bg-register dark:border-border dark:bg-card dark:hover:bg-register/80"
         >
-          <Users className="h-5 w-5 text-slate-500" />
+          <Users className="h-5 w-5 text-foreground" />
           <div>
             <p className="text-sm font-semibold">Team</p>
-            <p className="text-xs text-slate-500">Invite and assign branches</p>
+            <p className="text-xs text-foreground">Invite and assign branches</p>
           </div>
         </Link>
         <Link
           href={`/org/${organizationId}/stores`}
-          className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
+          className="flex items-center gap-3 rounded-md border border-border bg-card p-4 hover:bg-register dark:border-border dark:bg-card dark:hover:bg-register/80"
         >
-          <Package className="h-5 w-5 text-slate-500" />
+          <Package className="h-5 w-5 text-foreground" />
           <div>
             <p className="text-sm font-semibold">Branch directory</p>
-            <p className="text-xs text-slate-500">All locations and create</p>
+            <p className="text-xs text-foreground">All locations and create</p>
           </div>
         </Link>
       </section>

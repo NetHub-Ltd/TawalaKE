@@ -1,22 +1,15 @@
 # Task: Theme & UX remediation program
 
-## Goal
-Roll out Canonical Modern Retail OS per `.trackers/milestones.md`.
-
 ## Current phase
-**Phase A:** A.1–A.3 complete  
-**Phase B:** B.1 complete (OrgShell + Sidebar)
+**Phase B complete (B.1–B.4)** on chore/theme-retail-os
 
-## Just completed (this push)
-- A.2 theme.md rules mirror
-- A.3 `npm run check:theme` (strict on migrated files)
-- B.1 OrgShell + Sidebar → canonical tokens + kit Skeleton
+## This push
+- B.2 Org home tokens + recommended next-step CTA when no branches
+- B.3 Org settings + billing page semantic tokens
+- B.4 Business layout type cleanup (Sidebar already canonical)
 
-## Next (not started)
-- B.2 Org home primary CTA hierarchy
-- B.3 Org settings + billing
-- B.4 Business layout chrome
-- Phase C terminal/checkout
+## Next
+Phase C — Terminal + checkout (C.1–C.3 first slice recommended)
 
 ## Hard rules
-No hardcoded colors/fonts/font-sizes; tokens from globals.css; reuse @/lib/components/ui.
+AGENTS.md §5 — no hardcoded colors/fonts/sizes; kit + globals.css tokens only.

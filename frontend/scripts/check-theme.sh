@@ -10,6 +10,11 @@ PATTERN='bg-slate-|text-slate-|border-slate-|bg-gray-|bg-zinc-|bg-indigo-|bg-blu
 STRICT_PATHS=(
   "$ROOT/src/features/org/components/OrgShell.tsx"
   "$ROOT/src/features/org/components/Sidebar.tsx"
+  "$ROOT/src/features/org/components/OrgHomeClient.tsx"
+  "$ROOT/src/features/org/components/OrgSettingsClient.tsx"
+  "$ROOT/src/features/org/components/OrgCommandCenterClient.tsx"
+  "$ROOT/src/app/(organization)/org/[organizationId]/[businessId]/layout.tsx"
+  "$ROOT/src/app/(organization)/org/[organizationId]/billing/page.tsx"
 )
 
 fail=0

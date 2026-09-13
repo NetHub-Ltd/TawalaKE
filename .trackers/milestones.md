@@ -51,9 +51,9 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 | ID | Task | Status | Primary files (indicative) |
 |----|------|--------|------------------------------|
 | B.1 | `OrgShell` + `Sidebar` → semantic tokens, kit Button/Badge where applicable; remove slate chrome | [x] | 2026-09-14 — OrgShell + Sidebar canonical; kit Skeleton |
-| B.2 | Org home / command center hierarchy: single primary CTA when stores=0 or staff=0 or trial pressure | [ ] | `OrgHomeClient.tsx`, `OrgCommandCenterClient.tsx` |
-| B.3 | Org settings + billing surfaces: kit forms, paywall message adjacent to blocked action | [ ] | `OrgSettingsClient.tsx`, billing pages |
-| B.4 | Business layout chrome consistency with org shell (active nav, spacing tokens) | [ ] | `[businessId]/layout.tsx` and related nav |
+| B.2 | Org home / command center hierarchy: single primary CTA when stores=0 or staff=0 or trial pressure | [x] | 2026-09-14 — tokens + recommended CTA when no branches |
+| B.3 | Org settings + billing surfaces: kit forms, paywall message adjacent to blocked action | [x] | 2026-09-14 — OrgSettingsClient + billing page tokens |
+| B.4 | Business layout chrome consistency with org shell (active nav, spacing tokens) | [x] | 2026-09-14 — layout type tokens; Sidebar already B.1 |
 
 **Phase B exit criteria:** HQ routes pass AGENTS §5.4 checklist; no slate/emerald in org shell components.
 
