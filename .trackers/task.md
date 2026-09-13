@@ -1,10 +1,11 @@
 # Task: Theme & UX remediation
 
 ## Current
-**Phase C complete (C.1–C.6)** on chore/theme-retail-os
+Phase D.1–D.3 done on chore/theme-retail-os
 
 ## Next
-Phase D — Customers, credit, inventory/stock (D.1–D.3 first)
+D.4 Stock audit copy rewrite · D.5 stock form kit controls
+Then Phase E staff
 
 ## Hard rules
 AGENTS.md §5

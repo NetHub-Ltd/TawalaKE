@@ -23,6 +23,13 @@ STRICT_PATHS=(
   "$ROOT/src/features/sales/components/CheckoutWorkspace.tsx"
   "$ROOT/src/features/sales/components/CompleteSaleClient.tsx"
   "$ROOT/src/features/sales/components/ReceiptClientView.tsx"
+  "$ROOT/src/features/customers/components/CustomersList.tsx"
+  "$ROOT/src/features/customers/components/CollectCreditForm.tsx"
+  "$ROOT/src/features/customers/components/CustomerWorkspace.tsx"
+  "$ROOT/src/features/inventory/ProductWorkspace.tsx"
+  "$ROOT/src/features/inventory/ProductSmartRow.tsx"
+  "$ROOT/src/features/inventory/AssetComposer.tsx"
+  "$ROOT/src/features/inventory/AuditTableRow.tsx"
 )
 
 fail=0

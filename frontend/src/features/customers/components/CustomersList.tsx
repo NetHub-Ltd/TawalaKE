@@ -193,7 +193,7 @@ export function CustomersList({
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white"
+          className="mt-3 inline-flex h-10 items-center gap-1.5 rounded-md bg-brand-primary px-4 text-sm font-semibold text-white"
         >
           <Plus className="h-4 w-4" />
           Add customer
@@ -207,7 +207,7 @@ export function CustomersList({
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-primary/10 text-brand-primary">
             <Users className="h-4.5 w-4.5" aria-hidden="true" />
           </div>
           <div>
@@ -299,7 +299,7 @@ export function CustomersList({
       {error && (
         <div
           role="alert"
-          className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+          className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-4 py-3 text-sm text-[var(--on-error-container)]"
         >
           {error}
           <button
@@ -315,7 +315,7 @@ export function CustomersList({
       {showCreate && (
         <form
           onSubmit={onCreate}
-          className="rounded-xl border border-border/50 bg-card p-4 shadow-card"
+          className="rounded-md border border-border/50 bg-card p-4 shadow-card"
         >
           <p className="mb-3 text-sm font-semibold text-foreground">New customer</p>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -324,35 +324,35 @@ export function CustomersList({
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="Name *"
-              className="h-10 rounded-lg border border-border/60 px-3 text-sm outline-none focus:border-brand-primary"
+              className="h-10 rounded-md border border-border/60 px-3 text-sm outline-none focus:border-brand-primary"
               autoFocus
             />
             <input
               value={form.phone}
               onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
               placeholder="Phone"
-              className="h-10 rounded-lg border border-border/60 px-3 text-sm outline-none focus:border-brand-primary"
+              className="h-10 rounded-md border border-border/60 px-3 text-sm outline-none focus:border-brand-primary"
             />
             <input
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               placeholder="Email"
               type="email"
-              className="h-10 rounded-lg border border-border/60 px-3 text-sm outline-none focus:border-brand-primary"
+              className="h-10 rounded-md border border-border/60 px-3 text-sm outline-none focus:border-brand-primary"
             />
           </div>
           <div className="mt-3 flex gap-2">
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex h-10 items-center rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
+              className="inline-flex h-10 items-center rounded-md bg-brand-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
               {saving ? "Saving…" : "Save"}
             </button>
             <button
               type="button"
               onClick={() => setShowCreate(false)}
-              className="inline-flex h-10 items-center rounded-xl border border-border/60 px-4 text-sm font-medium"
+              className="inline-flex h-10 items-center rounded-md border border-border/60 px-4 text-sm font-medium"
             >
               Cancel
             </button>
@@ -361,11 +361,11 @@ export function CustomersList({
       )}
 
       {/* Table card */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border/50 bg-card shadow-card">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-border/50 bg-card shadow-card">
         <div className="min-h-0 flex-1 overflow-auto">
           {/* Desktop table */}
           <table className="hidden w-full min-w-[720px] text-left text-sm md:table">
-            <thead className="sticky top-0 z-10 bg-background/95 text-[10px] font-semibold tracking-wider text-muted uppercase backdrop-blur">
+            <thead className="sticky top-0 z-10 bg-background/95 text-xs font-semibold tracking-wider text-muted uppercase backdrop-blur">
               <tr className="border-b border-border/50">
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3 text-right">Open credit</th>
@@ -417,7 +417,7 @@ export function CustomersList({
                           className={clsx(
                             "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
                             hasCredit
-                              ? "bg-rose-100 text-rose-800"
+                              ? "bg-[var(--error-container)] text-[var(--on-error-container)]"
                               : "bg-brand-primary/10 text-brand-primary"
                           )}
                           aria-hidden="true"
@@ -438,11 +438,11 @@ export function CustomersList({
                     <td className="px-4 py-3 text-right">
                       {hasCredit ? (
                         <div>
-                          <p className="font-mono text-sm font-bold text-rose-600 tabular-nums">
+                          <p className="font-mono text-sm font-semibold tabular text-[var(--error)] tabular-nums">
                             {formatKES(c.open_credit_total)}
                           </p>
                           {openSales > 0 && (
-                            <p className="text-[10px] font-medium text-rose-500/90">
+                            <p className="text-xs font-medium text-[var(--error)]/90">
                               {openSales} open sale{openSales === 1 ? "" : "s"}
                             </p>
                           )}
@@ -463,7 +463,7 @@ export function CustomersList({
                           <Link
                             href={`${base}/${c.id}/collect`}
                             onClick={(e) => e.stopPropagation()}
-                            className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                            className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-2.5 py-1 text-xs font-semibold text-[var(--on-error-container)] opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                           >
                             Collect
                           </Link>
@@ -513,7 +513,7 @@ export function CustomersList({
                         className={clsx(
                           "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xs font-bold",
                           hasCredit
-                            ? "bg-rose-100 text-rose-800"
+                            ? "bg-[var(--error-container)] text-[var(--on-error-container)]"
                             : "bg-brand-primary/10 text-brand-primary"
                         )}
                       >
@@ -523,7 +523,7 @@ export function CustomersList({
                         <div className="flex items-start justify-between gap-2">
                           <p className="truncate font-semibold text-foreground">{c.name}</p>
                           {hasCredit ? (
-                            <p className="shrink-0 font-mono text-sm font-bold text-rose-600 tabular-nums">
+                            <p className="shrink-0 font-mono text-sm font-semibold tabular text-[var(--error)] tabular-nums">
                               {formatKES(c.open_credit_total)}
                             </p>
                           ) : null}
@@ -537,7 +537,7 @@ export function CustomersList({
                           {formatKES(c.lifetime_revenue)}
                         </p>
                         {hasCredit && openSales > 0 && (
-                          <p className="mt-0.5 text-[10px] font-medium text-rose-500">
+                          <p className="mt-0.5 text-xs font-medium text-[var(--error)]">
                             {openSales} open sale{openSales === 1 ? "" : "s"}
                           </p>
                         )}
@@ -548,7 +548,7 @@ export function CustomersList({
                   {hasCredit && (
                     <Link
                       href={`${base}/${c.id}/collect`}
-                      className="mt-2 ml-13 inline-flex h-9 items-center rounded-lg border border-rose-200 bg-rose-50 px-3 text-xs font-semibold text-rose-700"
+                      className="mt-2 ml-13 inline-flex h-9 items-center rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-3 text-xs font-semibold text-[var(--on-error-container)]"
                     >
                       Collect credit
                     </Link>
@@ -584,7 +584,7 @@ export function CustomersList({
                 type="button"
                 disabled={page <= 1 || loading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 bg-card text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border/60 bg-card text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Previous page"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -593,7 +593,7 @@ export function CustomersList({
                 type="button"
                 disabled={page >= totalPages || loading || total === 0}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 bg-card text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border/60 bg-card text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Next page"
               >
                 <ChevronRight className="h-4 w-4" />

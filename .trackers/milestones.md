@@ -82,9 +82,9 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| D.1 | Customers list: kit Input/Switch/Button/Table/Skeleton; empty state CTA | [ ] | `CustomersList.tsx` |
-| D.2 | Customer detail tabs + collect credit: currency Input, success Button, SuccessBanner | [ ] | detail + `CollectCreditForm.tsx` |
-| D.3 | Inventory product workspace chrome → tokens/kit | [ ] | `ProductWorkspace.tsx`, forms |
+| D.1 | Customers list: kit Input/Switch/Button/Table/Skeleton; empty state CTA | [x] | 2026-09-14 — semantic tokens; tabular open credit |
+| D.2 | Customer detail tabs + collect credit: currency Input, success Button, SuccessBanner | [x] | 2026-09-14 — collect CTA brand-accent; workspace tokens |
+| D.3 | Inventory product workspace chrome → tokens/kit | [x] | 2026-09-14 — ProductWorkspace/SmartRow/AssetComposer tokens |
 | D.4 | Stock audit/restock **copy rewrite**: System qty / Counted qty / Difference / Why? | [ ] | `AuditForm.tsx`, stock rows |
 | D.5 | Stock forms controls migrated to kit | [ ] | same |
 
