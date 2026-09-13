@@ -1,19 +1,15 @@
-# Tawala Design System — Modern Retail Operating System
+# Tawala Design System — Modern Retail OS (Canonical)
 
-Tokens live in `src/app/globals.css` (Tailwind v4 `@theme` + CSS variables).
-
-## Brand
-- **Primary:** Deep petrol teal `#003F4E` / `#002832` — command, nav, primary actions
-- **Secondary:** Terracotta `#C1705B` / `#924A37` — void, urgency, attention counters
-- **Success:** Forest mint `#0F766E` — settle, matched M-Pesa, zero discrepancy
-- **Surfaces:** Warm alabaster `#FAF9F9`, register `#F4F3F0`, cards pure white
-- **Fonts:** Plus Jakarta Sans (headlines) + Inter (body) + tabular figures for money
+## Source of truth
+- Tokens: `src/app/globals.css` (`:root` + `@theme`)
+- Fonts: Plus Jakarta Sans (display) + Inter (body) — root layout
+- Surface: warm alabaster radial gradient with petrol tint (`--surface`)
+- Components: `src/lib/components/ui` → `import { Button, … } from "@/lib/components/ui"`
 
 ## Lab
-`/themetest` — full component laboratory (theme toggle, forms, table, toasts, loaders, POS sticky bar).
+`/themetest` — exercises the shared kit (forms, calendar, bar/line charts, table, modal, toasts).
 
 ## Rules
-- Border-first cards; restrained teal-tinted shadows only on hover/modals
-- Primary hit targets ≥ 48px
-- Money columns use `.amount` / `.tabular` (`tnum`)
-- Light is product default; `html.dark` for lab/optional dark
+- Primary `#003F4E` · Secondary terracotta · Success mint
+- Border-first cards · 48px primary hit targets · tabular money
+- Light product default; `html.dark` optional

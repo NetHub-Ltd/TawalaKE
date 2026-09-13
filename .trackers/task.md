@@ -1,34 +1,25 @@
 # Task: Modern Retail OS theme foundation
 
 ## Goal
-Replace Silk & Slate tokens with DESIGN.md Modern Retail OS and ship a comparison lab so the user can pick one interpretation before product restyle.
-
-## Approved scope
-- Rewrite globals.css tokens + @theme from DESIGN.md
-- Fonts: Plus Jakarta Sans + Inter
-- /themetest laboratory
-- **5 DESIGN.md-only variants as tabs** (canonical, register-dense, command-chrome, settlement-focus, ledger-contrast)
-- Button radius align
-- theme.md + trackers
+Lock DESIGN.md canonical theme + shared UI kit; lab validates components.
 
 ## Completed
-- [x] Token rewrite
-- [x] Fonts
-- [x] Full lab components
-- [x] Five variant tabs (CSS data-theme-variant + tab UI)
-- [x] PR #216 opened to dev
+- [x] Canonical tokens + fonts (Plus Jakarta + Inter)
+- [x] Global surface gradient (warm alabaster + petrol tint)
+- [x] User selected **canonical**
+- [x] Shared UI kit under `frontend/src/lib/components/ui/`
+  - Button, Input, Textarea, Select, Label, Switch, Checkbox
+  - Badge, Card, Modal, Spinner, Skeleton
+  - Calendar, BarChart, LineChart, Table, SuccessBanner
+  - barrel `index.ts`
+- [x] `/themetest` rebuilt from shared components + calendar + charts
+- [x] PR #216
 
 ## Remaining
-- [ ] User selects variant
-- [ ] Lock chosen variant as product default (follow-up)
 - [ ] CI lint/build green
+- [ ] Product surface restyles (follow-up PRs)
 
-## Out of scope
-- Product screen restyle
-- Colors outside DESIGN.md
-- Dark as product default
-
-## Design decisions (UX Engineering)
-- Variations change **emphasis and rhythm only**, not the palette family
-- Fair comparison: same component set on every tab
-- Decision helper copy on page for stakeholder choice
+## Design decisions
+- Canonical only for product default
+- Responsiveness via globals tokens (section-padding, type scale, 48px controls)
+- Charts are zero-dep SVG for supply-chain safety
