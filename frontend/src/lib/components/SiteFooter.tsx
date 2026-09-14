@@ -63,6 +63,22 @@ export default function SiteFooter() {
                 tawala.nethub.co.ke
               </a>
             </p>
+            <p className="mt-2 text-xs text-muted">
+              Questions?{" "}
+              <Link
+                href="/support"
+                className="font-medium text-brand-primary hover:underline"
+              >
+                Support centre
+              </Link>
+              {" · "}
+              <a
+                href="mailto:support@nethub.co.ke"
+                className="font-medium text-brand-primary hover:underline"
+              >
+                support@nethub.co.ke
+              </a>
+            </p>
           </div>
 
           {/* Product */}

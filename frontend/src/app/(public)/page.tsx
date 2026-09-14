@@ -84,6 +84,42 @@ const WHY = [
   },
 ] as const;
 
+const COMPARE = [
+  {
+    title: "Exercise book or Excel",
+    pain: "Sales in one place, stock in another, credit in your head — night-end math and missing stock.",
+    better: "Tawala keeps till, shelf, and deni in one system so close of day is a report, not a fight.",
+  },
+  {
+    title: "Imported POS kits",
+    pain: "Hardware lock-in, foreign support hours, and features aimed at big chains — not a single minimart.",
+    better: "Browser-based on the phone you already own. Cash, M-Pesa, and store credit without a project team.",
+  },
+  {
+    title: "“We’ll fix it later”",
+    pain: "Leakages and open credit only show up at month-end — when the money is already gone.",
+    better: "Live stock and open-credit totals so you act the same week, not next month.",
+  },
+] as const;
+
+const VERTICALS = [
+  {
+    title: "Retail & minimarts",
+    desc: "Fast checkout, low-stock alerts, and multi-branch when you grow.",
+    href: "/solutions/retail",
+  },
+  {
+    title: "Pharmacies",
+    desc: "Batch-aware stock habits and accountable till sessions for chemists.",
+    href: "/solutions/pharmacy",
+  },
+  {
+    title: "Wholesale counters",
+    desc: "Larger tickets, customer credit, and stock that matches the store.",
+    href: "/solutions/wholesale",
+  },
+] as const;
+
 const STEPS = [
   {
     n: "1",
@@ -221,6 +257,19 @@ export default function HomePage() {
             <p className="text-xs font-medium text-muted">
               14 days free · No card required · Cancel anytime
             </p>
+            <p className="text-sm text-muted">
+              Plans from{" "}
+              <span className="font-semibold tabular text-foreground">
+                KSh 1,490
+              </span>
+              /month after trial.{" "}
+              <Link
+                href={PLANS_HREF}
+                className="font-semibold text-brand-primary hover:underline"
+              >
+                Compare plans
+              </Link>
+            </p>
           </div>
           <div className="relative mx-auto w-full max-w-md lg:max-w-none">
             <ProductPreviewCard />
@@ -248,6 +297,29 @@ export default function HomePage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* Audience / soft proof — honest, no fabricated logos */}
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+          <p className="text-center text-xs font-semibold uppercase tracking-wide text-muted">
+            Built for owners who run the floor
+          </p>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-3">
+            <li className="rounded-md border border-border bg-card px-4 py-3 text-center text-sm text-muted">
+              <span className="block font-semibold text-foreground">Minimarts &amp; dukas</span>
+              Fast till, stock that matches the shelf
+            </li>
+            <li className="rounded-md border border-border bg-card px-4 py-3 text-center text-sm text-muted">
+              <span className="block font-semibold text-foreground">Pharmacies</span>
+              Accountable sessions and tighter inventory
+            </li>
+            <li className="rounded-md border border-border bg-card px-4 py-3 text-center text-sm text-muted">
+              <span className="block font-semibold text-foreground">Growing multi-branch</span>
+              One organisation, many counters
+            </li>
+          </ul>
+        </div>
       </section>
 
       {/* Why Tawala */}
@@ -294,6 +366,67 @@ export default function HomePage() {
                   {title}
                 </h3>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted">{desc}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* vs alternatives */}
+      <section className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-h2 text-foreground">Why not stay on paper?</h2>
+          <p className="mt-2 text-sm text-muted sm:text-base">
+            Most shops already “have a system.” Tawala replaces the fragile ones.
+          </p>
+        </div>
+        <ul className="mt-10 grid gap-4 md:grid-cols-3">
+          {COMPARE.map((c) => (
+            <li
+              key={c.title}
+              className="flex flex-col rounded-md border border-border bg-card p-5"
+            >
+              <h3 className="text-sm font-semibold text-foreground">{c.title}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-muted">
+                <span className="font-medium text-brand-secondary">Today: </span>
+                {c.pain}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted">
+                <span className="font-medium text-brand-primary">With Tawala: </span>
+                {c.better}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Verticals */}
+      <section className="border-y border-border bg-card/40">
+        <div className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-h2 text-foreground">Built for how you sell</h2>
+            <p className="mt-2 text-sm text-muted sm:text-base">
+              Same core — checkout, stock, credit — tuned to your counter.
+            </p>
+          </div>
+          <ul className="mt-10 grid gap-4 sm:grid-cols-3">
+            {VERTICALS.map((v) => (
+              <li key={v.href}>
+                <Link
+                  href={v.href}
+                  className="flex h-full flex-col rounded-md border border-border bg-card p-5 transition-colors hover:border-brand-primary/30 hover:bg-register focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                >
+                  <h3 className="text-sm font-semibold text-foreground">
+                    {v.title}
+                  </h3>
+                  <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">
+                    {v.desc}
+                  </p>
+                  <span className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-brand-primary">
+                    Learn more
+                    <ArrowRight size={14} aria-hidden />
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
