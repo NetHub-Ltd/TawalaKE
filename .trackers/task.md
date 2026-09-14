@@ -1,11 +1,12 @@
 # Task
 
-## Done this session
-- Theme Phases 0–F
-- Public NavBar fixed + homepage conversion
-- Email master shell + 4 customer templates rewritten (petrol, logo.svg)
+## Done
+- Email master shell + templates
+- Sale-backed receipt/invoice redesign (API data, credit fields, print/PDF)
 
-## Next (from communications audit)
-- Receipt/invoice from finalized sale API
-- Invoice credit fields
-- Optional: sale receipt email, credit collected, trial ending
+## Path
+`/org/.../sale/[saleId]/preview` → ReceiptClientView uses useReceipt(saleId)
+
+## Next optional
+- Email of receipt / credit collected templates
+- Cart-only ReceiptClientView deprecation if unused
