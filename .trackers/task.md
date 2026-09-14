@@ -1,12 +1,11 @@
 # Task
 
-## Done
-- Email master shell + templates
-- Sale-backed receipt/invoice redesign (API data, credit fields, print/PDF)
+## Communications program
+- Email shell + core templates
+- Sale-backed receipt UI
+- send_sale_receipt + send_credit_collected
+- Wired on checkout + collect when customer has email
 
-## Path
-`/org/.../sale/[saleId]/preview` → ReceiptClientView uses useReceipt(saleId)
-
-## Next optional
-- Email of receipt / credit collected templates
-- Cart-only ReceiptClientView deprecation if unused
+## Optional remaining
+- Trial ending reminder
+- Invite reminder / password changed

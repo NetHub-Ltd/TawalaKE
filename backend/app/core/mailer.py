@@ -587,4 +587,150 @@ class EmailService:
         )
 
 
+    @classmethod
+    def send_sale_receipt(
+        cls,
+        to_email: str,
+        *,
+        business_name: str,
+        document_number: str,
+        issued_at: str,
+        currency: str,
+        total_amount: float,
+        payment_method: str,
+        is_invoice: bool = False,
+        balance_due: float = 0.0,
+        customer_name: Optional[str] = None,
+        preview_url: Optional[str] = None,
+        line_summary: Optional[str] = None,
+    ) -> None:
+        """Email customer a sale receipt or open-credit invoice summary."""
+        name = (customer_name or "").strip() or "there"
+        shop = (business_name or "").strip() or "your shop"
+        cur = currency or "KES"
+        total = f"{float(total_amount):,.2f}"
+        due = f"{float(balance_due):,.2f}"
+        if is_invoice and balance_due > 0.001:
+            title = "Invoice — amount due"
+            preheader = f"{shop} · {cur} {due} due · {document_number}"
+            eyebrow = "Credit sale"
+            lead = (
+                cls._p(f"Hello {name},")
+                + cls._p(
+                    f"<strong>{shop}</strong> recorded a credit sale. "
+                    f"Amount due: <strong>{cur} {due}</strong>."
+                )
+            )
+            total_row_label = "Amount due"
+            total_row_value = f"{cur} {due}"
+            total_color = EMAIL_CREDIT
+        else:
+            title = "Payment received"
+            preheader = f"{shop} · {cur} {total} · {document_number}"
+            eyebrow = "Receipt"
+            lead = (
+                cls._p(f"Hello {name},")
+                + cls._p(
+                    f"Payment received at <strong>{shop}</strong>. "
+                    f"Total: <strong>{cur} {total}</strong>."
+                )
+            )
+            total_row_label = "Total paid"
+            total_row_value = f"{cur} {total}"
+            total_color = EMAIL_SUCCESS
+
+        facts = (
+            f'<table width="100%" style="margin:16px 0 12px;border-collapse:collapse;font-size:13px;">'
+            f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Document</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{document_number}</td></tr>'
+            f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Date</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{issued_at}</td></tr>'
+            f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Payment</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{payment_method}</td></tr>'
+            f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">{total_row_label}</td>'
+            f'<td style="padding:8px 0;text-align:right;color:{total_color};font-weight:700;">{total_row_value}</td></tr>'
+            f"</table>"
+        )
+        lines = ""
+        if line_summary:
+            lines = cls._muted(line_summary)
+        cta = ""
+        if preview_url:
+            cta = cls._cta(preview_url, "View document") + cls._raw_link(preview_url)
+        body = lead + facts + lines + cta + cls._muted(
+            "Keep this email for your records. Contact the shop if anything looks wrong."
+        )
+        html = cls.render_shell(
+            title=title,
+            preheader=preheader,
+            eyebrow=eyebrow,
+            body_html=body,
+        )
+        subject = (
+            f"Invoice {document_number} · {cur} {due} due"
+            if is_invoice and balance_due > 0.001
+            else f"Receipt {document_number} · {cur} {total}"
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_tawala,
+            to_addresses=[to_email],
+            subject=subject,
+            html_content=html,
+        )
+
+    @classmethod
+    def send_credit_collected(
+        cls,
+        to_email: str,
+        *,
+        business_name: str,
+        document_number: str,
+        collected_at: str,
+        currency: str,
+        amount: float,
+        payment_method: str,
+        customer_name: Optional[str] = None,
+        preview_url: Optional[str] = None,
+    ) -> None:
+        """Confirm credit collection — balance closed."""
+        name = (customer_name or "").strip() or "there"
+        shop = (business_name or "").strip() or "your shop"
+        cur = currency or "KES"
+        amt = f"{float(amount):,.2f}"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"We received your payment of <strong>{cur} {amt}</strong> at "
+                f"<strong>{shop}</strong>. Your open balance on this sale is now settled."
+            )
+            + (
+                f'<table width="100%" style="margin:16px 0 12px;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Reference</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{document_number}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Collected</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{collected_at}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Method</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{payment_method}</td></tr>'
+                f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">Amount</td>'
+                f'<td style="padding:8px 0;text-align:right;color:{EMAIL_SUCCESS};font-weight:700;">{cur} {amt}</td></tr>'
+                f"</table>"
+            )
+            + (cls._cta(preview_url, "View receipt") + cls._raw_link(preview_url) if preview_url else "")
+            + cls._muted("Thank you for settling your account.")
+        )
+        html = cls.render_shell(
+            title="Payment collected",
+            preheader=f"{shop} · {cur} {amt} collected · {document_number}",
+            eyebrow="Credit settled",
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_billing,
+            to_addresses=[to_email],
+            subject=f"Payment collected · {cur} {amt} · {document_number}",
+            html_content=html,
+        )
+
+
+
 mailer = EmailService()

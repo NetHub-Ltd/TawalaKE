@@ -14,6 +14,8 @@ from app.schemas.schemas import BusinessCreate, BusinessResponse, ApiResponse, \
     BusinessUpdate, BusinessBase
 from app.schemas.business import RestockRequest, ProductAuditRequest, StaffRequest, ProductRestockRequest
 from app.utils.logging import logger
+from app.core.mailer import mailer
+from datetime import timezone as tz
 from app.crud.store import store_crud
 from app.crud.stock import stock_crud, ProductAdjustRequest
 from app.crud.sale import InitializeCheckout, InitializeCheckoutRequest
@@ -35,6 +37,89 @@ from app.api.deps import (
 )
 
 router = APIRouter()
+
+def _queue_customer_sale_email(background_tasks: BackgroundTasks, sale) -> None:
+    """Send receipt/invoice email when customer has an address — never blocks checkout."""
+    try:
+        customer = getattr(sale, "customer", None)
+        email = (getattr(customer, "email", None) or "").strip() if customer else ""
+        if not email or "@" not in email:
+            return
+        business = getattr(sale, "business", None)
+        business_name = getattr(business, "name", None) or "Tawala shop"
+        org_id = getattr(sale, "organization_id", None)
+        biz_id = getattr(sale, "business_id", None)
+        sale_id = getattr(sale, "id", None)
+        preview_url = None
+        if org_id and biz_id and sale_id:
+            preview_url = (
+                f"https://tawala.nethub.co.ke/org/{org_id}/{biz_id}/sale/{sale_id}/preview"
+            )
+        method = "SALE"
+        payments = getattr(sale, "payments", None) or []
+        if payments:
+            method = str(getattr(payments[-1], "method", method))
+        status = str(getattr(sale, "status", "") or "")
+        is_invoice = "PENDING" in status.upper() or method.upper() == "INVOICE"
+        total = float(getattr(sale, "total_amount", 0) or 0)
+        balance = total if is_invoice else 0.0
+        issued = getattr(sale, "updated_at", None) or getattr(sale, "created_at", None)
+        if issued and hasattr(issued, "strftime"):
+            issued_s = issued.strftime("%Y-%m-%d %H:%M")
+        else:
+            issued_s = str(issued or "")
+        doc_no = str(sale_id)[:8].upper() if sale_id else "SALE"
+        background_tasks.add_task(
+            mailer.send_sale_receipt,
+            email,
+            business_name=business_name,
+            document_number=doc_no,
+            issued_at=issued_s,
+            currency=getattr(sale, "currency", None) or "KES",
+            total_amount=total,
+            payment_method=method,
+            is_invoice=is_invoice,
+            balance_due=balance,
+            customer_name=getattr(customer, "name", None),
+            preview_url=preview_url,
+        )
+    except Exception as exc:
+        logger.warning(f"Customer sale email skipped: {exc}")
+
+
+def _queue_credit_collected_email(background_tasks: BackgroundTasks, sale, payment_method: str) -> None:
+    try:
+        customer = getattr(sale, "customer", None)
+        email = (getattr(customer, "email", None) or "").strip() if customer else ""
+        if not email or "@" not in email:
+            return
+        business = getattr(sale, "business", None)
+        business_name = getattr(business, "name", None) or "Tawala shop"
+        org_id = getattr(sale, "organization_id", None)
+        biz_id = getattr(sale, "business_id", None)
+        sale_id = getattr(sale, "id", None)
+        preview_url = None
+        if org_id and biz_id and sale_id:
+            preview_url = (
+                f"https://tawala.nethub.co.ke/org/{org_id}/{biz_id}/sale/{sale_id}/preview"
+            )
+        from datetime import datetime, timezone
+        collected_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        background_tasks.add_task(
+            mailer.send_credit_collected,
+            email,
+            business_name=business_name,
+            document_number=str(sale_id)[:8].upper() if sale_id else "SALE",
+            collected_at=collected_at,
+            currency=getattr(sale, "currency", None) or "KES",
+            amount=float(getattr(sale, "total_amount", 0) or 0),
+            payment_method=str(payment_method),
+            customer_name=getattr(customer, "name", None),
+            preview_url=preview_url,
+        )
+    except Exception as exc:
+        logger.warning(f"Credit collected email skipped: {exc}")
+
 
 
 T = TypeVar("T")
@@ -346,6 +431,7 @@ async def checkout_sale(
             "status": str(getattr(sale, "status", None)),
         },
     )
+    _queue_customer_sale_email(background_tasks, sale)
     return sale
 
 
@@ -389,6 +475,7 @@ async def collect_credit_sale(
         resource_id=sale_id,
         meta={"payment_method": str(body.payment_method)},
     )
+    _queue_credit_collected_email(background_tasks, sale, body.payment_method)
     return sale
 
 
