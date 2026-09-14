@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useReceipt } from "@/features/sales/hooks/useReceipts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
-import { Spinner, Button } from "@/lib/components/ui";
+import { Spinner } from "@/lib/components/ui";
 import { cn } from "@/lib/utils";
 
 interface ReceiptClientViewProps {

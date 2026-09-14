@@ -12,7 +12,6 @@ import {
   CreditCard,
   Settings,
   ChevronLeft,
-  ChevronRight,
   LogOut,
   type LucideIcon,
 } from "lucide-react";

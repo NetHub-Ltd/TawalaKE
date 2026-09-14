@@ -73,6 +73,88 @@ function Meter({
   );
 }
 
+
+function Skel({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`animate-pulse rounded-md bg-register ${className}`}
+      aria-hidden
+    />
+  );
+}
+
+function HomeLoadingSkeleton() {
+  return (
+    <div className="space-y-6" aria-busy="true" aria-label="Loading organization home">
+      <section className="grid gap-3 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="rounded-md border border-border bg-card p-4 space-y-3"
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <Skel className="h-8 w-20" />
+              <Skel className="h-3 w-16" />
+            </div>
+            <Skel className="h-1.5 w-full rounded-full" />
+          </div>
+        ))}
+      </section>
+      <section className="grid gap-2 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="rounded-md border border-border bg-card p-4 space-y-2">
+            <Skel className="h-3 w-28" />
+            <Skel className="h-7 w-24" />
+            <Skel className="h-3 w-16" />
+          </div>
+        ))}
+      </section>
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Skel className="h-4 w-20" />
+          <Skel className="h-3 w-14" />
+        </div>
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            className="w-full rounded-md border border-border bg-card p-4 space-y-4"
+          >
+            <div className="flex justify-between gap-3">
+              <div className="space-y-2 flex-1">
+                <Skel className="h-5 w-48 max-w-full" />
+                <Skel className="h-3 w-32" />
+              </div>
+              <Skel className="h-8 w-16 shrink-0" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-3 sm:grid-cols-5">
+              {[0, 1, 2, 3, 4].map((j) => (
+                <div key={j} className="space-y-2">
+                  <Skel className="h-3 w-14" />
+                  <Skel className="h-4 w-16" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+      <section className="grid gap-2 sm:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            className="flex items-center gap-3 rounded-md border border-border bg-card p-4"
+          >
+            <Skel className="h-10 w-10 shrink-0 rounded-md" />
+            <div className="flex-1 space-y-2">
+              <Skel className="h-4 w-24" />
+              <Skel className="h-3 w-40 max-w-full" />
+            </div>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+}
+
 function formatKes(n: number) {
   try {
     return new Intl.NumberFormat("en-KE", {
@@ -280,7 +362,11 @@ export function OrgHomeClient({
         </div>
       </header>
 
-      {branches.length === 0 && canManageBranches && !loading && (
+      {loading ? (
+        <HomeLoadingSkeleton />
+      ) : (
+      <>
+      {branches.length === 0 && canManageBranches && (
         <div className="rounded-md border border-border bg-card p-5 shadow-sm">
           <p className="text-sm font-semibold text-foreground">Recommended next step</p>
           <p className="mt-1 text-sm text-muted">
@@ -512,6 +598,8 @@ export function OrgHomeClient({
           </div>
         </Link>
       </section>
+      </>
+      )}
     </div>
   );
 }

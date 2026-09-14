@@ -13,7 +13,6 @@ import {
   LogOut,
   LayoutDashboard,
   ChevronLeft,
-  ChevronRight,
   Users,
   Settings,
   type LucideIcon,
