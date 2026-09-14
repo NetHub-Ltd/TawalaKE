@@ -733,4 +733,82 @@ class EmailService:
 
 
 
+    @classmethod
+    def send_trial_ending(
+        cls,
+        to_email: str,
+        *,
+        org_name: str,
+        plan_name: str,
+        days_left: int,
+        end_date: str,
+        billing_url: Optional[str] = None,
+        owner_name: Optional[str] = None,
+    ) -> None:
+        """Remind owner that the free trial ends soon — upgrade or continue risk."""
+        name = (owner_name or "").strip() or "there"
+        org = (org_name or "").strip() or "your business"
+        plan = (plan_name or "").strip() or "your plan"
+        days = max(0, int(days_left))
+        if days <= 0:
+            urgency = "Your trial ends today"
+            preheader = f"{org} · trial ends today · {plan}"
+        elif days == 1:
+            urgency = "Your trial ends tomorrow"
+            preheader = f"{org} · 1 day left on trial · {plan}"
+        else:
+            urgency = f"Your trial ends in {days} days"
+            preheader = f"{org} · {days} days left on trial · {plan}"
+
+        open_url = (billing_url or "").strip() or f"{EMAIL_SITE}/org"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"<strong>{urgency}.</strong> "
+                f"<strong>{org}</strong> is still on the free trial of <strong>{plan}</strong> "
+                f"(ends <strong>{end_date}</strong>)."
+            )
+            + cls._p(
+                "Upgrade before the trial ends to keep selling, stock, and staff access without interruption. "
+                "No card was charged for the trial."
+            )
+            + (
+                f'<table width="100%" style="margin:16px 0 12px;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Organisation</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{org}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Plan</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{plan}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Days left</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_CREDIT};font-weight:700;">{days}</td></tr>'
+                f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">Trial ends</td>'
+                f'<td style="padding:8px 0;text-align:right;color:{EMAIL_BODY};font-weight:600;">{end_date}</td></tr>'
+                f"</table>"
+            )
+            + cls._cta(open_url, "View plans &amp; upgrade")
+            + cls._raw_link(open_url)
+            + cls._muted(
+                "If you already upgraded, you can ignore this email. "
+                "Questions? Reply or visit Support."
+            )
+        )
+        html = cls.render_shell(
+            title=urgency,
+            preheader=preheader,
+            eyebrow="Trial reminder",
+            body_html=body,
+        )
+        subject = (
+            f"Trial ends today · {org}"
+            if days <= 0
+            else f"Trial ends in {days} day{'s' if days != 1 else ''} · {org}"
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_billing,
+            to_addresses=[to_email],
+            subject=subject,
+            html_content=html,
+        )
+
+
+
 mailer = EmailService()
