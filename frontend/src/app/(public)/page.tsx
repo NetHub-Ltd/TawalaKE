@@ -11,15 +11,34 @@ import {
 import { ProductPreviewCard } from "@/lib/components/marketing/ProductPreviewCard";
 
 export const metadata: Metadata = {
-  title: "Stop Shop Leakages & Track Daily Profits",
+  title: "Tawala biashara yako bila stress | Shop POS for Kenya",
   description:
-    "Eliminate stock leakages, hold staff accountable with PIN login, and see real daily net profits. Built for Kenyan retail shops, minimarts, and pharmacies.",
+    "Tawala is a modern retail OS for Kenyan shops, minimarts, and pharmacies. Sell with cash and M-Pesa, keep stock honest, track store credit, and see real daily profit — on any phone or PC. 14-day free trial.",
+  keywords: [
+    "shop POS Kenya",
+    "retail software Kenya",
+    "minimart POS",
+    "pharmacy inventory Kenya",
+    "M-Pesa POS",
+    "stock management Kenya",
+    "store credit tracking",
+    "Tawala POS",
+  ],
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Tawala | Stop Shop Leakages & Track Daily Profits",
+    title: "Tawala biashara yako bila stress",
     description:
-      "Eliminate stock leakages, hold staff accountable with PIN login, and see real daily net profits. Built for Kenyan retail shops, minimarts, and pharmacies.",
+      "Modern retail OS for Kenyan shops: sales, stock, staff, store credit, and daily profit — without the stress.",
     url: "https://tawala.nethub.co.ke",
+    type: "website",
+    locale: "en_KE",
+    siteName: "Tawala",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tawala biashara yako bila stress",
+    description:
+      "Shop POS built for Kenya — cash, M-Pesa, stock, credit, and real profit.",
   },
 };
 
@@ -30,23 +49,38 @@ const PLANS_HREF = "/onboarding/plans";
 const BENEFITS = [
   {
     icon: Zap,
-    title: "Sell in seconds",
-    desc: "Cash, M-Pesa, and store credit on any phone or PC — no special hardware.",
+    title: "Checkout that matches the counter",
+    desc: "Cash, M-Pesa, and store credit in one flow — on the phone you already use. No bulky till required.",
   },
   {
     icon: Package,
-    title: "Stop stock leaks",
-    desc: "Every sale updates inventory. Low-stock and mismatch alerts keep shelves honest.",
+    title: "Stock that matches the shelf",
+    desc: "Every sale reduces inventory automatically. Low-stock alerts and simple counts catch shrink before month-end surprises.",
   },
   {
     icon: Users,
-    title: "Staff on PIN",
-    desc: "Shared devices, personal accountability. Every sale and discount ties to a person.",
+    title: "Know who did what",
+    desc: "Shared devices with personal PIN sessions so discounts, voids, and sales are attributable — useful for coaching, not just blame.",
   },
   {
     icon: ShieldCheck,
-    title: "See real profit",
-    desc: "Daily net that accounts for stock and credit — not just till cash.",
+    title: "Profit you can trust at close of day",
+    desc: "See net that accounts for stock movement and open credit — not only what is left in the drawer.",
+  },
+] as const;
+
+const WHY = [
+  {
+    title: "Built for Kenyan retail reality",
+    desc: "M-Pesa-ready checkout, store credit (deni), multi-branch when you grow, and language that matches how shops actually run.",
+  },
+  {
+    title: "Less paper, fewer arguments",
+    desc: "One system for sales, stock, and staff activity so owners stop reconciling three notebooks at night.",
+  },
+  {
+    title: "Start in minutes, not a project",
+    desc: "14-day trial, no card up front. Add products, set PINs, and take the first sale the same day.",
   },
 ] as const;
 
@@ -58,7 +92,7 @@ const STEPS = [
   },
   {
     n: "2",
-    title: "Start the trial",
+    title: "Start the free trial",
     desc: "14 days on Ndovu. No credit card.",
   },
   {
@@ -70,64 +104,121 @@ const STEPS = [
 
 const FAQS = [
   {
+    q: "What is Tawala?",
+    a: "Tawala is retail software for Kenyan shops — a POS and back office for sales (cash, M-Pesa, store credit), inventory, staff activity, and daily profit. It runs in the browser on phones, tablets, and PCs.",
+  },
+  {
     q: "How much does Tawala cost?",
-    a: "Plans start at KSh 1,490 per month. Self-serve trial is 14 days on Ndovu with no credit card required.",
+    a: "Plans start at KSh 1,490 per month. Self-serve trial is 14 days on Ndovu with no credit card required. You can upgrade or cancel before the trial ends.",
   },
   {
-    q: "Can I use it on my phone?",
-    a: "Yes. Android, iPhone, tablet, or PC. No special hardware required.",
+    q: "Can I use Tawala on my phone?",
+    a: "Yes. Android, iPhone, tablet, or PC. No special barcode hardware is required to start — optional scanners work when you are ready.",
   },
   {
-    q: "How does it reduce stock theft?",
-    a: "Sales and adjustments are tied to staff PIN login. Real-time stock alerts flag mismatches quickly.",
+    q: "How does Tawala help with stock losses?",
+    a: "Stock updates when you sell, so the system quantity should match the shelf. You can run simple counts, see differences, and investigate shortages early — instead of discovering missing stock only at month-end. PIN sessions show who was on the till when issues happened; they support investigation, they are not a magic anti-theft device by themselves.",
   },
   {
-    q: "Multiple shops?",
-    a: "Yes. Ndovu and above support multiple branches under one organisation.",
+    q: "Does Tawala support M-Pesa and store credit?",
+    a: "Yes. Record cash, M-Pesa, and customer credit (deni) at checkout. Open credit stays visible so you can collect later and still see real exposure.",
+  },
+  {
+    q: "Can I manage more than one shop?",
+    a: "Yes. Ndovu and above support multiple branches under one organisation, with a shared team and per-branch stock and sales.",
   },
 ] as const;
 
 const TRUST = [
   "Built for Kenyan retail",
-  "M-Pesa-ready checkout",
-  "PIN staff accountability",
+  "Cash · M-Pesa · store credit",
+  "Phone or PC — no till required",
   "14-day free trial",
 ] as const;
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: f.a,
+    },
+  })),
+};
+
+const orgJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Tawala",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  offers: {
+    "@type": "Offer",
+    price: "1490",
+    priceCurrency: "KES",
+    description: "Plans from KSh 1,490/month; 14-day free trial",
+  },
+  description:
+    "Modern retail OS for Kenyan shops: POS, inventory, staff PINs, store credit, and daily profit.",
+  url: "https://tawala.nethub.co.ke",
+  inLanguage: "en-KE",
+};
 
 export default function HomePage() {
   return (
     <div className="bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+
       {/* Hero */}
       <section className="relative overflow-hidden border-b border-border">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-8 lg:py-20">
-          <div className="space-y-6">
-            <p className="inline-flex items-center rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
-              Modern retail OS for Kenyan shops
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          aria-hidden
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 20% 0%, color-mix(in srgb, var(--brand-primary) 12%, transparent), transparent 55%)",
+          }}
+        />
+        <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-2 lg:items-center lg:gap-14 lg:px-8 lg:py-24">
+          <div className="space-y-7">
+            <p className="inline-flex items-center rounded-full border border-brand-primary/25 bg-brand-primary/10 px-3 py-1 text-xs font-semibold tracking-wide text-brand-primary">
+              Retail OS for Kenyan shops
             </p>
-            <h1 className="text-h1 text-foreground">
-              Stop leakages.{" "}
-              <span className="text-brand-primary">See real daily profit.</span>
+            <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem]">
+              Tawala biashara yako{" "}
+              <span className="text-brand-primary">bila stress</span>
             </h1>
-            <p className="max-w-xl text-base text-muted sm:text-lg">
-              Tawala ties every sale to stock and staff PIN — so cash, M-Pesa, and
-              credit stay honest from counter to close of day.
+            <p className="max-w-xl text-base leading-relaxed text-muted sm:text-lg">
+              One place for sales, stock, staff, and store credit — so you close
+              the day knowing what left the shelf, what was paid, and what is
+              still owed. Built for minimarts, chemists, and growing retail.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link
                 href={TRIAL_HREF}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-brand-primary px-6 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-brand-primary px-7 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2"
               >
                 Start free trial
                 <ArrowRight size={16} aria-hidden />
               </Link>
               <Link
                 href={PLANS_HREF}
-                className="inline-flex h-12 items-center justify-center rounded-md border border-border bg-card px-6 text-sm font-semibold text-foreground transition hover:bg-register focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                className="inline-flex h-12 items-center justify-center rounded-md border border-border bg-card px-7 text-sm font-semibold text-foreground transition hover:bg-register focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
               >
                 See pricing
               </Link>
             </div>
-            <p className="text-xs text-muted">
+            <p className="text-xs font-medium text-muted">
               14 days free · No card required · Cancel anytime
             </p>
           </div>
@@ -140,12 +231,12 @@ export default function HomePage() {
       {/* Trust strip */}
       <section
         aria-label="Highlights"
-        className="border-b border-border bg-card/60"
+        className="border-b border-border bg-card/70"
       >
         <ul className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-4 py-4 sm:px-6 lg:px-8">
-          {TRUST.map((t) => (
+          {TRUST.map((item) => (
             <li
-              key={t}
+              key={item}
               className="inline-flex items-center gap-2 text-xs font-semibold text-muted sm:text-sm"
             >
               <CheckCircle2
@@ -153,100 +244,127 @@ export default function HomePage() {
                 className="text-brand-accent"
                 aria-hidden
               />
-              {t}
+              {item}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Why Tawala */}
+      <section className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-h2 text-foreground">Why shop owners choose Tawala</h2>
+          <p className="mt-2 text-sm text-muted sm:text-base">
+            Not another generic spreadsheet — a counter-first system for how
+            Kenyan retail actually works.
+          </p>
+        </div>
+        <ul className="mt-10 grid gap-4 sm:grid-cols-3">
+          {WHY.map((w) => (
+            <li
+              key={w.title}
+              className="rounded-md border border-border bg-card p-5"
+            >
+              <h3 className="text-sm font-semibold text-foreground">{w.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{w.desc}</p>
             </li>
           ))}
         </ul>
       </section>
 
       {/* Benefits */}
-      <section className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-h2 text-foreground">Built for the counter</h2>
-          <p className="mt-2 text-sm text-muted sm:text-base">
-            Less paperwork. Fewer surprises at month-end. More control on the
-            floor.
-          </p>
-        </div>
-        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {BENEFITS.map(({ icon: Icon, title, desc }) => (
-            <li
-              key={title}
-              className="rounded-md border border-border bg-card p-5"
-            >
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-register text-brand-primary">
-                <Icon size={20} aria-hidden />
-              </span>
-              <h3 className="mt-4 text-sm font-semibold text-foreground">
-                {title}
-              </h3>
-              <p className="mt-1.5 text-sm text-muted">{desc}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* How it works */}
       <section className="border-y border-border bg-card/40">
         <div className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-h2 text-foreground">Live in three steps</h2>
-            <p className="mt-2 text-sm text-muted">
-              From sign-up to first sale without a long setup project.
+            <h2 className="text-h2 text-foreground">What you get on the floor</h2>
+            <p className="mt-2 text-sm text-muted sm:text-base">
+              Clear jobs for the till, the stockroom, and close of day.
             </p>
           </div>
-          <ol className="mt-10 grid gap-6 sm:grid-cols-3">
-            {STEPS.map((s) => (
+          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {BENEFITS.map(({ icon: Icon, title, desc }) => (
               <li
-                key={s.n}
-                className="relative rounded-md border border-border bg-card p-5"
+                key={title}
+                className="rounded-md border border-border bg-card p-5"
               >
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white">
-                  {s.n}
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-register text-brand-primary">
+                  <Icon size={20} aria-hidden />
                 </span>
-                <h3 className="mt-3 text-sm font-semibold text-foreground">
-                  {s.title}
+                <h3 className="mt-4 text-sm font-semibold text-foreground">
+                  {title}
                 </h3>
-                <p className="mt-1 text-sm text-muted">{s.desc}</p>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted">{desc}</p>
               </li>
             ))}
-          </ol>
-          <div className="mt-10 flex justify-center">
-            <Link
-              href={TRIAL_HREF}
-              className="inline-flex h-12 items-center gap-2 rounded-md bg-brand-primary px-6 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+          </ul>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-h2 text-foreground">Live in three steps</h2>
+          <p className="mt-2 text-sm text-muted">
+            From sign-up to first sale without a long setup project.
+          </p>
+        </div>
+        <ol className="mt-10 grid gap-6 sm:grid-cols-3">
+          {STEPS.map((s) => (
+            <li
+              key={s.n}
+              className="relative rounded-md border border-border bg-card p-5"
             >
-              Start free trial
-              <ArrowRight size={16} aria-hidden />
-            </Link>
-          </div>
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white">
+                {s.n}
+              </span>
+              <h3 className="mt-3 text-sm font-semibold text-foreground">
+                {s.title}
+              </h3>
+              <p className="mt-1 text-sm text-muted">{s.desc}</p>
+            </li>
+          ))}
+        </ol>
+        <div className="mt-10 flex justify-center">
+          <Link
+            href={TRIAL_HREF}
+            className="inline-flex h-12 items-center gap-2 rounded-md bg-brand-primary px-6 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+          >
+            Start free trial
+            <ArrowRight size={16} aria-hidden />
+          </Link>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="section-padding mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <h2 className="text-center text-h2 text-foreground">Questions</h2>
-        <dl className="mt-8 space-y-4">
-          {FAQS.map((f) => (
-            <div
-              key={f.q}
-              className="rounded-md border border-border bg-card px-5 py-4"
-            >
-              <dt className="text-sm font-semibold text-foreground">{f.q}</dt>
-              <dd className="mt-1.5 text-sm text-muted">{f.a}</dd>
-            </div>
-          ))}
-        </dl>
+      <section className="border-t border-border bg-card/40">
+        <div className="section-padding mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          <h2 className="text-center text-h2 text-foreground">
+            Questions owners ask
+          </h2>
+          <dl className="mt-8 space-y-3">
+            {FAQS.map((f) => (
+              <div
+                key={f.q}
+                className="rounded-md border border-border bg-card px-5 py-4"
+              >
+                <dt className="text-sm font-semibold text-foreground">{f.q}</dt>
+                <dd className="mt-1.5 text-sm leading-relaxed text-muted">
+                  {f.a}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </section>
 
       {/* Final CTA */}
       <section className="border-t border-border bg-brand-primary">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-12 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-14 sm:flex-row sm:items-center sm:px-6 lg:px-8">
           <div>
-            <h2 className="text-xl font-semibold text-white sm:text-2xl">
-              Ready to take control of the till?
+            <h2 className="text-xl font-bold text-white sm:text-2xl">
+              Tawala biashara yako bila stress
             </h2>
-            <p className="mt-1 text-sm text-white/80">
+            <p className="mt-1 text-sm text-white/85">
               14-day trial · No credit card · Built for Kenyan retail
             </p>
           </div>
@@ -266,8 +384,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
-
     </div>
   );
 }
