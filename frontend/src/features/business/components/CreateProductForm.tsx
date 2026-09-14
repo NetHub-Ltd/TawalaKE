@@ -256,14 +256,14 @@ export function CreateProductForm() {
                       ))}
                     </select>
                   </td>
-                  <td className="px-8 py-6 bg-emerald-500/5 align-top">
+                  <td className="px-8 py-6 bg-[var(--success-soft)] align-top">
                     <input
                       type="number"
                       step="0.01"
                       {...register("attributes.unit_price", {
                         valueAsNumber: true,
                       })}
-                      className="w-full bg-transparent text-lg font-semibold text-emerald-600 outline-none"
+                      className="w-full bg-transparent text-lg font-semibold text-[var(--success)] outline-none"
                     />
                   </td>
                 </tr>

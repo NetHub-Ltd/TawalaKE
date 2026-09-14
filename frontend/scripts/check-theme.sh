@@ -38,6 +38,7 @@ STRICT_PATHS=(
   "$ROOT/src/features/staff/components/AcceptInviteForm.tsx"
   "$ROOT/src/features/store/components/store-form.tsx"
   "$ROOT/src/features/business/components/BusinessSettingsForm.tsx"
+  "$ROOT/src/features/business/components/BusinessSwitcher.tsx"
   "$ROOT/src/features/sales/components/ReceiptClientView.tsx"
 )
 
