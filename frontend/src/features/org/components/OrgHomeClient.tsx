@@ -35,6 +35,8 @@ type BranchStats = {
   orders: number;
   products: number;
   staff: number;
+  openCredit: number;
+  openCreditSales: number;
 };
 
 function Meter({
@@ -92,6 +94,8 @@ async function loadBranchStats(
     orders: 0,
     products: 0,
     staff: 0,
+    openCredit: 0,
+    openCreditSales: 0,
   };
 
   stats.staff = staffRoster.filter((s) =>
@@ -117,6 +121,12 @@ async function loadBranchStats(
       stats.orders = Number(
         summary?.total_completed_orders_count ?? summary?.orders ?? 0,
       );
+      stats.openCredit = Number(
+        summary?.credit_outstanding ?? summary?.open_credit_total ?? 0,
+      );
+      stats.openCreditSales = Number(
+        summary?.open_credit_sales ?? summary?.open_credit_sales_count ?? 0,
+      );
     }
   } catch {
     /* ignore per-branch dashboard failures */
@@ -124,16 +134,20 @@ async function loadBranchStats(
 
   try {
     const prod = await fetch(
-      `/api/v1/products?business_id=${encodeURIComponent(branchId)}&limit=1&page=1`,
+      `/api/v1/products?business_id=${encodeURIComponent(branchId)}&page=1&size=1`,
       { credentials: "include" },
     );
     if (prod.ok) {
       const body = await prod.json();
       const total =
+        body?.pagination?.total ??
+        body?.meta?.total ??
         body?.total ??
         body?.count ??
-        body?.meta?.total ??
         body?.data?.total ??
+        body?.data?.pagination?.total ??
+        (Array.isArray(body?.data?.items) ? body.data.items.length : null) ??
+        (Array.isArray(body?.items) ? body.items.length : null) ??
         (Array.isArray(body?.data) ? body.data.length : null) ??
         (Array.isArray(body) ? body.length : 0);
       stats.products = Number(total || 0);
@@ -306,22 +320,73 @@ export function OrgHomeClient({
         </p>
       )}
 
+      {/* Quick glance across branches */}
+      {!loading && branches.length > 0 && (
+        <section className="grid gap-2 sm:grid-cols-3">
+          <div className="rounded-md border border-border bg-card p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Sales (7d · all branches)
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular text-foreground">
+              {formatKes(
+                Object.values(statsById).reduce(
+                  (a, s) => a + (s?.grossSales || 0),
+                  0,
+                ),
+              )}
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Open credit
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular text-brand-secondary">
+              {formatKes(
+                Object.values(statsById).reduce(
+                  (a, s) => a + (s?.openCredit || 0),
+                  0,
+                ),
+              )}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              {Object.values(statsById).reduce(
+                (a, s) => a + (s?.openCreditSales || 0),
+                0,
+              )}{" "}
+              open sale
+              {Object.values(statsById).reduce(
+                (a, s) => a + (s?.openCreditSales || 0),
+                0,
+              ) === 1
+                ? ""
+                : "s"}
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
+              Orders (7d)
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular text-foreground">
+              {Object.values(statsById).reduce((a, s) => a + (s?.orders || 0), 0)}
+            </p>
+          </div>
+        </section>
+      )}
+
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">
-            Branches
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Branches</h2>
           <Link
             href={`/org/${organizationId}/stores`}
-            className="text-xs font-medium text-foreground hover:text-foreground"
+            className="text-xs font-semibold text-brand-primary hover:underline"
           >
             View all
           </Link>
         </div>
         {loading && branches.length === 0 ? (
-          <p className="text-sm text-foreground">Loading branches…</p>
+          <p className="text-sm text-muted">Loading branches…</p>
         ) : branches.length === 0 ? (
-          <div className="rounded-md border border-dashed border-border p-8 text-center dark:border-border">
+          <div className="rounded-md border border-dashed border-border p-8 text-center">
             <Building2 className="mx-auto h-8 w-8 text-muted" />
             <p className="mt-2 text-sm font-medium text-muted">No branches yet</p>
             {canManageBranches && (
@@ -334,80 +399,90 @@ export function OrgHomeClient({
             )}
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="flex w-full flex-col gap-3">
             {branches.map((b) => {
               const st = statsById[b.id];
+              const href = `/org/${organizationId}/${b.id}/overview`;
               return (
-                <li
-                  key={b.id}
-                  className="flex flex-col rounded-md border border-border bg-card p-4 shadow-sm dark:border-border dark:bg-card"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-foreground">
-                        {b.name}
-                      </p>
-                      <p className="mt-0.5 text-xs text-foreground">
-                        <span
-                          className={
-                            b.active === false
-                              ? "text-muted"
-                              : "text-[var(--success)]"
-                          }
-                        >
-                          {b.active === false ? "Inactive" : "Active"}
-                        </span>
-                        {" · "}
-                        Tax {b.tax_rate != null ? `${b.tax_rate}%` : "—"}
-                        {b.address ? ` · ${b.address}` : ""}
-                      </p>
+                <li key={b.id} className="w-full">
+                  <Link
+                    href={href}
+                    className="block w-full rounded-md border border-border bg-card p-4 transition-colors hover:border-brand-primary/25 hover:bg-register/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold text-foreground">
+                          {b.name}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          <span
+                            className={
+                              b.active === false
+                                ? "text-muted"
+                                : "text-[var(--success)]"
+                            }
+                          >
+                            {b.active === false ? "Inactive" : "Active"}
+                          </span>
+                          {" · "}
+                          Tax {b.tax_rate != null ? `${b.tax_rate}%` : "—"}
+                          {b.address ? ` · ${b.address}` : ""}
+                        </p>
+                      </div>
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-brand-primary/10 px-3 py-1.5 text-xs font-semibold text-brand-primary">
+                        Open
+                        <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                      </span>
                     </div>
-                    <Link
-                      href={`/org/${organizationId}/${b.id}/overview`}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-md bg-brand-primary px-3 py-2 text-xs font-semibold text-white hover:bg-register dark:bg-register dark:text-foreground"
-                    >
-                      Open
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3 dark:border-border sm:grid-cols-4">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Sales (7d)
-                      </p>
-                      <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-foreground">
-                        <TrendingUp className="h-3.5 w-3.5 text-[var(--success)]" />
-                        {statsLoading && !st
-                          ? "…"
-                          : formatKes(st?.grossSales ?? 0)}
-                      </p>
+                    <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 sm:grid-cols-5">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                          Sales (7d)
+                        </p>
+                        <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold tabular text-foreground">
+                          <TrendingUp className="h-3.5 w-3.5 text-[var(--success)]" />
+                          {statsLoading && !st
+                            ? "…"
+                            : formatKes(st?.grossSales ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                          Orders
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold tabular text-foreground">
+                          {statsLoading && !st ? "…" : (st?.orders ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                          Products
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold tabular text-foreground">
+                          {statsLoading && !st ? "…" : (st?.products ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                          Staff
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold tabular text-foreground">
+                          {statsLoading && !st ? "…" : (st?.staff ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                          Open credit
+                        </p>
+                        <p className="mt-0.5 text-sm font-semibold tabular text-brand-secondary">
+                          {statsLoading && !st
+                            ? "…"
+                            : formatKes(st?.openCredit ?? 0)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Orders
-                      </p>
-                      <p className="mt-0.5 text-sm font-semibold text-foreground">
-                        {statsLoading && !st ? "…" : (st?.orders ?? 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Products
-                      </p>
-                      <p className="mt-0.5 text-sm font-semibold text-foreground">
-                        {statsLoading && !st ? "…" : (st?.products ?? 0)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                        Staff
-                      </p>
-                      <p className="mt-0.5 text-sm font-semibold text-foreground">
-                        {statsLoading && !st ? "…" : (st?.staff ?? 0)}
-                      </p>
-                    </div>
-                  </div>
+                  </Link>
                 </li>
               );
             })}

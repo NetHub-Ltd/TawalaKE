@@ -170,18 +170,10 @@ export function Sidebar({
       className="relative z-20 flex min-h-screen shrink-0 flex-col border-r border-border bg-card"
       aria-label="Business navigation"
     >
-      <div className="flex items-center justify-between gap-2 border-b border-border p-2.5">
+      <div className="flex items-center gap-2 border-b border-border p-2.5">
         <div className={cn("min-w-0 flex-1", isCollapsed && "flex justify-center")}>
           <BusinessSwitcher isCollapsed={isCollapsed} />
         </div>
-        <button
-          type="button"
-          onClick={() => setIsCollapsed((c) => !c)}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-register text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </button>
       </div>
 
       <div className="flex flex-1 flex-col overflow-hidden p-2.5">
@@ -203,7 +195,7 @@ export function Sidebar({
                 className={cn(
                   "group flex min-h-12 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary",
                   isActive
-                    ? "bg-brand-primary text-white"
+                    ? "bg-brand-primary/10 text-brand-primary ring-1 ring-inset ring-brand-primary/20"
                     : "text-muted hover:bg-register hover:text-foreground",
                   isCollapsed && "justify-center px-2"
                 )}
@@ -270,6 +262,29 @@ export function Sidebar({
           </button>
         )}
       </div>
+    
+      <button
+        type="button"
+        onClick={() => setIsCollapsed((c) => !c)}
+        className={cn(
+          "absolute top-1/2 z-50 flex h-8 w-8 -translate-y-1/2 items-center justify-center",
+          "rounded-full border border-border bg-card text-muted shadow-sm",
+          "transition-all duration-300 hover:border-brand-primary/30 hover:bg-register hover:text-brand-primary",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary",
+          "right-0 translate-x-1/2"
+        )}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!isCollapsed}
+      >
+        <span
+          className={cn(
+            "inline-flex transition-transform duration-300 ease-out",
+            isCollapsed ? "rotate-180" : "rotate-0"
+          )}
+        >
+          <ChevronLeft size={16} aria-hidden />
+        </span>
+      </button>
     </motion.aside>
   );
 }
