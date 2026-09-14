@@ -35,7 +35,7 @@ export function ProductsPanel({
   }, [items]);
 
   if (loading && !products) {
-    return <div className="h-64 animate-pulse rounded-xl bg-border/40" />;
+    return <div className="h-64 animate-pulse rounded-md bg-border/40" />;
   }
 
   return (
@@ -114,7 +114,7 @@ export function ProductsPanel({
 
 function ListCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm">
+    <div className="rounded-md border border-border/50 bg-card p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">{title}</p>
       <div className="mt-2">{children}</div>
     </div>

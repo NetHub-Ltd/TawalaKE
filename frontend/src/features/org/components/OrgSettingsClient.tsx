@@ -135,7 +135,7 @@ export function OrgSettingsClient({
 
   if (loading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-sm text-slate-500">
+      <div className="flex min-h-[40vh] items-center justify-center gap-2 text-sm text-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
         Loading organization settings…
       </div>
@@ -147,14 +147,14 @@ export function OrgSettingsClient({
       {/* Page header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-brand-primary/10 text-brand-primary">
             <Building2 className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
               Organization settings
             </h1>
-            <p className="mt-1 max-w-md text-sm text-slate-500">
+            <p className="mt-1 max-w-md text-sm text-foreground">
               Legal identity, contact details, and KRA PIN for this account.
               Plan and seats live under Billing.
             </p>
@@ -163,7 +163,7 @@ export function OrgSettingsClient({
         <button
           type="button"
           onClick={() => void load()}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200"
+          className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm text-muted hover:bg-register dark:border-border dark:text-foreground"
         >
           <RefreshCw className="h-4 w-4" />
           Refresh
@@ -173,7 +173,7 @@ export function OrgSettingsClient({
       {loadError && (
         <div
           role="alert"
-          className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
         >
           <p className="font-medium">Could not load organization</p>
           <p className="mt-1 text-red-700/90 dark:text-red-300/90">{loadError}</p>
@@ -189,43 +189,43 @@ export function OrgSettingsClient({
 
       {/* Status strip */}
       <section className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+        <div className="rounded-md border border-border bg-card p-4 dark:border-border dark:bg-card">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
             Status
           </p>
-          <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-50">
+          <p className="mt-1 text-sm font-semibold text-foreground">
             {profile?.active === false ? (
               <span className="text-amber-700">Inactive</span>
             ) : (
-              <span className="text-emerald-700">Active</span>
+              <span className="text-[var(--success)]">Active</span>
             )}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+        <div className="rounded-md border border-border bg-card p-4 dark:border-border dark:bg-card">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
             Organization ID
           </p>
-          <p className="mt-1 truncate font-mono text-xs text-slate-700 dark:text-slate-300">
+          <p className="mt-1 truncate font-mono text-xs text-muted">
             {organizationId}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+        <div className="rounded-md border border-border bg-card p-4 dark:border-border dark:bg-card">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
             Onboarding
           </p>
-          <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-50">
+          <p className="mt-1 text-sm font-semibold text-foreground">
             {profile?.onboarding === false ? "Complete" : "In progress"}
           </p>
         </div>
       </section>
 
       {/* Profile form */}
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-800">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+      <section className="rounded-md border border-border bg-card shadow-sm dark:border-border dark:bg-card">
+        <div className="border-b border-border px-5 py-4 dark:border-border">
+          <h2 className="text-sm font-semibold text-foreground">
             Profile
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-foreground">
             Shown on documents and used for account contact.
           </p>
         </div>
@@ -236,14 +236,14 @@ export function OrgSettingsClient({
         >
           <div>
             <label
-              className="mb-1 block text-xs font-medium text-slate-600"
+              className="mb-1 block text-xs font-medium text-muted"
               htmlFor="org-name"
             >
               Organization name <span className="text-rose-500">*</span>
             </label>
             <input
               id="org-name"
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:bg-slate-950"
+              className="w-full rounded-md border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-primary/30 dark:border-border dark:bg-background"
               {...register("name")}
             />
             {errors.name && (
@@ -253,7 +253,7 @@ export function OrgSettingsClient({
 
           <div>
             <label
-              className="mb-1 block text-xs font-medium text-slate-600"
+              className="mb-1 block text-xs font-medium text-muted"
               htmlFor="org-email"
             >
               Email
@@ -262,10 +262,10 @@ export function OrgSettingsClient({
               id="org-email"
               type="email"
               readOnly
-              className="w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950"
+              className="w-full cursor-not-allowed rounded-md border border-border bg-register px-3 py-2.5 text-sm text-foreground dark:border-border dark:bg-background"
               {...register("email")}
             />
-            <p className="mt-1 text-[11px] text-slate-400">
+            <p className="mt-1 text-xs text-muted">
               Account login email — not editable here.
             </p>
           </div>
@@ -273,28 +273,28 @@ export function OrgSettingsClient({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label
-                className="mb-1 block text-xs font-medium text-slate-600"
+                className="mb-1 block text-xs font-medium text-muted"
                 htmlFor="org-phone"
               >
                 Phone
               </label>
               <input
                 id="org-phone"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:bg-slate-950"
+                className="w-full rounded-md border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-primary/30 dark:border-border dark:bg-background"
                 placeholder="+254…"
                 {...register("phone")}
               />
             </div>
             <div>
               <label
-                className="mb-1 block text-xs font-medium text-slate-600"
+                className="mb-1 block text-xs font-medium text-muted"
                 htmlFor="org-pin"
               >
                 KRA PIN
               </label>
               <input
                 id="org-pin"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:bg-slate-950"
+                className="w-full rounded-md border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-primary/30 dark:border-border dark:bg-background"
                 placeholder="Optional"
                 {...register("tax_number")}
               />
@@ -303,7 +303,7 @@ export function OrgSettingsClient({
 
           <div>
             <label
-              className="mb-1 block text-xs font-medium text-slate-600"
+              className="mb-1 block text-xs font-medium text-muted"
               htmlFor="org-address"
             >
               Address
@@ -311,17 +311,17 @@ export function OrgSettingsClient({
             <textarea
               id="org-address"
               rows={2}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500/30 dark:border-slate-700 dark:bg-slate-950"
+              className="w-full rounded-md border border-border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-primary/30 dark:border-border dark:bg-background"
               placeholder="Physical or registered address"
               {...register("address")}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4 dark:border-border">
             <button
               type="submit"
               disabled={isSubmitting || !isDirty}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-md bg-brand-accent px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--success)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -337,7 +337,7 @@ export function OrgSettingsClient({
                   : "Save changes"}
             </button>
             {!isDirty && !savedFlash && (
-              <span className="text-xs text-slate-400">No unsaved changes</span>
+              <span className="text-xs text-muted">No unsaved changes</span>
             )}
           </div>
         </form>
@@ -345,48 +345,48 @@ export function OrgSettingsClient({
 
       {/* Related management */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+        <h2 className="mb-3 text-sm font-semibold text-foreground">
           Related
         </h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <Link
             href={`/org/${organizationId}/billing`}
-            className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
+            className="flex items-start gap-3 rounded-md border border-border bg-card p-4 transition hover:border-border hover:bg-register dark:border-border dark:bg-card dark:hover:bg-register/80"
           >
-            <CreditCard className="mt-0.5 h-5 w-5 text-slate-500" />
+            <CreditCard className="mt-0.5 h-5 w-5 text-foreground" />
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+              <p className="text-sm font-semibold text-foreground">
                 Billing
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-foreground">
                 Plan, usage limits, trial
               </p>
             </div>
           </Link>
           <Link
             href={`/org/${organizationId}/stores`}
-            className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
+            className="flex items-start gap-3 rounded-md border border-border bg-card p-4 transition hover:border-border hover:bg-register dark:border-border dark:bg-card dark:hover:bg-register/80"
           >
-            <Store className="mt-0.5 h-5 w-5 text-slate-500" />
+            <Store className="mt-0.5 h-5 w-5 text-foreground" />
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+              <p className="text-sm font-semibold text-foreground">
                 Branches
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-foreground">
                 Locations and tax rates
               </p>
             </div>
           </Link>
           <Link
             href={`/org/${organizationId}/staff`}
-            className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
+            className="flex items-start gap-3 rounded-md border border-border bg-card p-4 transition hover:border-border hover:bg-register dark:border-border dark:bg-card dark:hover:bg-register/80"
           >
-            <Users className="mt-0.5 h-5 w-5 text-slate-500" />
+            <Users className="mt-0.5 h-5 w-5 text-foreground" />
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
+              <p className="text-sm font-semibold text-foreground">
                 Team
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-foreground">
                 Invite and branch access
               </p>
             </div>
@@ -394,7 +394,7 @@ export function OrgSettingsClient({
         </div>
       </section>
 
-      <p className="flex items-start gap-2 text-xs text-slate-400">
+      <p className="flex items-start gap-2 text-xs text-muted">
         <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         Only owners and admins can edit organization profile. Owner role is set
         at signup and cannot be reassigned.

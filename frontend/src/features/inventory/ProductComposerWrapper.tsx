@@ -61,7 +61,7 @@ export function ProductComposerWrapper({ businessId, productId }: ProductCompose
   if (isError || (!isLoading && !product)) {
     return (
       <div 
-        className="p-4 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-xl flex items-center gap-3 text-xs font-bold uppercase tracking-wide shadow-xs" 
+        className="p-4 bg-brand-primary/10 border border-brand-primary/20 text-brand-primary rounded-md flex items-center gap-3 text-xs font-bold uppercase tracking-wide shadow-xs" 
         role="alert"
       >
         <AlertCircle className="w-4 h-4 shrink-0" />
@@ -83,7 +83,7 @@ export function ProductComposerWrapper({ businessId, productId }: ProductCompose
   };
 
   return (
-    <div className="w-full mx-auto p-6 md:p-8 rounded-2xl space-y-8">
+    <div className="w-full mx-auto p-6 md:p-8 rounded-md space-y-8">
       <AssetComposer
         initialData={formInitialValues}
         onSubmit={handleUpdate}

@@ -30,14 +30,14 @@ export function TerminalHeader({ businessName }: TerminalHeaderProps) {
         {/* Workspace Switcher Button */}
         <button
           onClick={() => router.push("/terminal")}
-          className="flex items-center gap-3 px-4 py-2.5 bg-muted/40 hover:bg-muted rounded-2xl transition-all group border border-border/20 shadow-sm"
+          className="flex items-center gap-3 px-4 py-2.5 bg-muted/40 hover:bg-muted rounded-md transition-all group border border-border/20 shadow-sm"
           aria-label="Switch business context"
         >
           <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
             <LayoutGrid size={16} />
           </div>
           <div className="text-left">
-            <p className="text-[10px] font-black uppercase tracking-widest text-secondary leading-none mb-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-secondary leading-none mb-1">
               Workspace
             </p>
             <div className="flex items-center gap-2">
@@ -50,7 +50,7 @@ export function TerminalHeader({ businessName }: TerminalHeaderProps) {
 
       <div className="flex items-center gap-4">
         {/* Soft Search Bar */}
-        <div className="hidden lg:flex items-center bg-muted/30 rounded-2xl px-5 py-2.5 gap-3 border border-border/10 focus-within:border-primary/20 focus-within:bg-muted/50 transition-all w-72 shadow-inner">
+        <div className="hidden lg:flex items-center bg-muted/30 rounded-md px-5 py-2.5 gap-3 border border-border/10 focus-within:border-primary/20 focus-within:bg-muted/50 transition-all w-72 shadow-inner">
           <Search size={14} className="text-secondary/60" />
           <input
             type="text"
@@ -60,7 +60,7 @@ export function TerminalHeader({ businessName }: TerminalHeaderProps) {
         </div>
 
         {/* Notification Bell */}
-        <button className="h-11 w-11 flex items-center justify-center rounded-2xl bg-muted/40 hover:bg-muted text-secondary relative transition-all border border-transparent hover:border-border/40">
+        <button className="h-11 w-11 flex items-center justify-center rounded-md bg-muted/40 hover:bg-muted text-secondary relative transition-all border border-transparent hover:border-border/40">
           <Bell size={20} strokeWidth={2} />
           <span className="absolute top-3 right-3 h-2.5 w-2.5 bg-primary rounded-full border-2 border-card" />
         </button>
@@ -68,12 +68,12 @@ export function TerminalHeader({ businessName }: TerminalHeaderProps) {
         <div className="h-8 w-px bg-border/40 mx-1" />
 
         {/* Operator Profile */}
-        <button className="flex items-center gap-4 p-1.5 pr-4 rounded-2xl bg-muted/20 hover:bg-muted/40 border border-border/10 transition-all group">
-          <div className="h-10 w-10 rounded-xl bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-sm group-hover:scale-105 transition-transform">
+        <button className="flex items-center gap-4 p-1.5 pr-4 rounded-md bg-muted/20 hover:bg-muted/40 border border-border/10 transition-all group">
+          <div className="h-10 w-10 rounded-md bg-linear-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-primary shadow-sm group-hover:scale-105 transition-transform">
             <User size={20} />
           </div>
           <div className="text-left hidden sm:block">
-            <p className="text-[10px] font-black uppercase tracking-widest text-secondary leading-none mb-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-secondary leading-none mb-1">
               Operator
             </p>
             <p className="text-xs font-bold text-foreground">User</p>

@@ -3,11 +3,11 @@ import Link from "next/link";
 
 export function OrgNoSession() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-100">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-register">
           <svg
-            className="h-7 w-7 text-blue-600"
+            className="h-7 w-7 text-brand-primary"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -32,7 +32,7 @@ export function OrgNoSession() {
 
         <Link
           href="/login"
-          className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition"
+          className="block w-full bg-brand-primary hover:opacity-90 text-white font-medium py-2.5 px-4 rounded-lg transition"
         >
           Go to Login
         </Link>

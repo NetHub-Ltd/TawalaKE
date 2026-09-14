@@ -78,7 +78,7 @@ const EditableQuantity = ({ itemId, currentQty, updateQty, disabled }: EditableQ
               setIsEditing(false);
             }
           }}
-          className="w-12 h-7 text-center text-xs font-semibold font-mono bg-background border border-brand-primary/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
+          className="w-12 h-7 text-center text-xs font-semibold font-mono bg-background border border-brand-primary/50 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-primary/20 text-foreground [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-all"
         />
       </div>
     );
@@ -290,14 +290,14 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       {/* CART HEADER */}
       <header className="px-4 py-3.5 flex items-center justify-between shrink-0 border-b border-border/30 bg-surface/10">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="h-8 w-8 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/15 shrink-0">
+          <div className="h-8 w-8 rounded-md bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/15 shrink-0">
             <ReceiptText size={16} strokeWidth={2} aria-hidden="true" />
           </div>
           <div className="truncate">
             <h2 className="text-xs font-bold uppercase tracking-wider text-foreground/90 leading-tight">
               Current Sale
             </h2>
-            <p className="text-[10px] text-muted-foreground/60 font-medium uppercase tracking-wide mt-0.5 block">
+            <p className="text-xs text-muted/60 font-medium uppercase tracking-wide mt-0.5 block">
               {cart.length === 1 ? "1 item" : `${cart.length} items`}
             </p>
           </div>
@@ -310,7 +310,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
             onClick={handleExpand}
             title="Expand Tray View"
             aria-label="Expand Cart View"
-            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-muted-foreground/70 hover:text-foreground hover:bg-surface/50 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md text-muted/70 hover:text-foreground hover:bg-surface/50 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
           >
             <Maximize2 size={15} aria-hidden="true" />
           </button>
@@ -321,7 +321,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
               onClick={handleClearCartWithFeedback}
               title="Clear Tray items"
               aria-label="Clear All Cart Items"
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-lg text-muted-foreground/70 hover:text-brand-accent hover:bg-brand-accent/10 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md text-muted/70 hover:text-brand-accent hover:bg-brand-accent/10 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
             >
               <Trash2 size={15} aria-hidden="true" />
             </button>
@@ -337,14 +337,14 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       >
         {isCartEmpty ? (
           <div className="h-full flex flex-col items-center justify-center py-12 text-center space-y-2">
-            <div className="h-11 w-11 bg-surface/30 border border-border/20 rounded-xl flex items-center justify-center text-muted-foreground/40">
+            <div className="h-11 w-11 bg-surface/30 border border-border/20 rounded-md flex items-center justify-center text-muted/40">
               <ShoppingCart size={18} aria-hidden="true" />
             </div>
             <div className="space-y-0.5">
-              <p className="font-semibold text-xs text-muted-foreground/60 tracking-wide">
+              <p className="font-semibold text-xs text-muted/60 tracking-wide">
                 Tray is empty
               </p>
-              <p className="text-[11px] text-muted-foreground/40 max-w-[170px] leading-relaxed">
+              <p className="text-xs text-muted/40 max-w-[170px] leading-relaxed">
                 Select products from catalog to start standard checkout.
               </p>
             </div>
@@ -353,7 +353,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
           cart.map((item) => (
             <div
               key={item.id}
-              className="group flex items-center justify-between p-2.5 bg-background border border-border/30 rounded-xl shadow-2xs hover:border-border/60 transition-all duration-150"
+              className="group flex items-center justify-between p-2.5 bg-background border border-border/30 rounded-md shadow-2xs hover:border-border/60 transition-all duration-150"
             >
               {/* Product Info (Truncates smoothly with tooltip, zero layout shift) */}
               <div className="flex-1 min-w-0 pr-2.5">
@@ -363,19 +363,19 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                 >
                   {item.name}
                 </p>
-                <p className="text-[10px] font-medium text-muted-foreground/60 mt-0.5 font-mono tabular-nums">
+                <p className="text-xs font-medium text-muted/60 mt-0.5 font-mono tabular-nums">
                   KES {item.price.toLocaleString()}
                 </p>
               </div>
 
               {/* Quantity Stepper Control */}
-              <div className="flex items-center bg-surface/50 border border-border/20 rounded-lg p-0.5 mx-1 shrink-0">
+              <div className="flex items-center bg-surface/50 border border-border/20 rounded-md p-0.5 mx-1 shrink-0">
                 <button
                   type="button"
                   disabled={isSubmitting}
                   onClick={() => updateQty(item.id, -1)}
                   aria-label={`Decrease quantity for ${item.name}`}
-                  className="h-6 w-6 flex items-center justify-center bg-background/80 border border-border/10 text-muted-foreground/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
+                  className="h-6 w-6 flex items-center justify-center bg-background/80 border border-border/10 text-muted/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
                 >
                   <Minus size={11} strokeWidth={2} aria-hidden="true" />
                 </button>
@@ -392,7 +392,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   disabled={isSubmitting}
                   onClick={() => updateQty(item.id, 1)}
                   aria-label={`Increase quantity for ${item.name}`}
-                  className="h-6 w-6 flex items-center justify-center bg-background/80 border border-border/10 text-muted-foreground/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
+                  className="h-6 w-6 flex items-center justify-center bg-background/80 border border-border/10 text-muted/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
                 >
                   <Plus size={11} strokeWidth={2} aria-hidden="true" />
                 </button>
@@ -412,7 +412,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   onClick={() => removeFromCart(item.id)}
                   title="Remove Item"
                   aria-label={`Remove ${item.name} from cart`}
-                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 text-muted-foreground/50 hover:text-brand-accent transition-opacity cursor-pointer disabled:opacity-0"
+                  className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-1 text-muted/50 hover:text-brand-accent transition-opacity cursor-pointer disabled:opacity-0"
                 >
                   <X size={12} aria-hidden="true" />
                 </button>
@@ -428,7 +428,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         <div className="grid grid-cols-2 gap-2">
           {/* DISCOUNT CONTROL */}
           <div
-            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-xl px-2.5 py-1 flex items-center justify-between transition-opacity ${
+            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between transition-opacity ${
               isCartEmpty ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
             }`}
           >
@@ -464,7 +464,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                       setIsAddingDiscount(false);
                       toast.info("Discount Removed");
                     }}
-                    className="absolute right-0 text-muted-foreground/60 hover:text-brand-accent p-1 cursor-pointer"
+                    className="absolute right-0 text-muted/60 hover:text-brand-accent p-1 cursor-pointer"
                     title="Remove Discount"
                     aria-label="Remove Discount"
                   >
@@ -478,7 +478,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   type="button"
                   disabled={isSubmitting || isCartEmpty}
                   onClick={() => setIsAddingDiscount(true)}
-                  className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-brand-primary flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed focus:outline-none truncate"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted/80 hover:text-brand-primary flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed focus:outline-none truncate"
                 >
                   <Tag size={11} strokeWidth={2} aria-hidden="true" className="shrink-0" />
                   <span className="truncate">
@@ -492,7 +492,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                       setDiscount(0);
                       toast.info("Discount Reset");
                     }}
-                    className="text-muted-foreground/50 hover:text-brand-accent cursor-pointer px-0.5 shrink-0"
+                    className="text-muted/50 hover:text-brand-accent cursor-pointer px-0.5 shrink-0"
                     title="Reset Discount"
                     aria-label="Reset Discount"
                   >
@@ -505,7 +505,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
           {/* ADD SERVICE FEE CONTROL */}
           <div
-            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-xl px-2.5 py-1 flex items-center justify-between transition-opacity ${
+            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between transition-opacity ${
               isCartEmpty ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
             }`}
           >
@@ -523,7 +523,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   }
                   setIsServiceModalOpen(true);
                 }}
-                className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80 hover:text-brand-primary flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed focus:outline-none truncate"
+                className="text-xs font-semibold uppercase tracking-wider text-muted/80 hover:text-brand-primary flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed focus:outline-none truncate"
               >
                 <Wrench size={11} strokeWidth={2} aria-hidden="true" className="shrink-0" />
                 <span className="truncate">
@@ -537,7 +537,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                     setService(null);
                     toast.info("Service Fee Removed");
                   }}
-                  className="text-muted-foreground/50 hover:text-brand-accent cursor-pointer px-0.5 shrink-0"
+                  className="text-muted/50 hover:text-brand-accent cursor-pointer px-0.5 shrink-0"
                   title="Remove Service Fee"
                   aria-label="Remove Service Fee"
                 >
@@ -550,22 +550,22 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
         {/* BREAKDOWN LEDGER */}
         <div className="space-y-1.5 pt-0.5">
-          <div className="flex justify-between text-[11px] font-medium text-muted-foreground/70">
+          <div className="flex justify-between text-xs font-medium text-muted/70">
             <span>Subtotal</span>
-            <span className="text-foreground/90 font-medium tabular-nums font-mono">
+            <span className="text-foreground font-semibold tabular amount-md font-mono">
               KES {subtotal.toLocaleString()}
             </span>
           </div>
 
-          <div className="flex justify-between text-[11px] font-medium text-muted-foreground/70">
+          <div className="flex justify-between text-xs font-medium text-muted/70">
             <span>Estimated Tax</span>
-            <span className="text-foreground/90 font-medium tabular-nums font-mono">
+            <span className="text-foreground font-semibold tabular amount-md font-mono">
               KES {taxAmount.toLocaleString()}
             </span>
           </div>
 
           {discount > 0 && (
-            <div className="flex justify-between text-[11px] font-semibold text-brand-accent bg-brand-accent/5 p-1.5 rounded-lg border border-brand-accent/15">
+            <div className="flex justify-between text-xs font-semibold text-brand-accent bg-brand-accent/5 p-1.5 rounded-md border border-brand-accent/15">
               <span>Discount</span>
               <span className="tabular-nums font-mono">
                 -KES {discount.toLocaleString()}
@@ -574,7 +574,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
           )}
 
           {service && (
-            <div className="flex justify-between items-center text-[11px] font-semibold text-brand-primary bg-brand-primary/5 p-1.5 rounded-lg border border-brand-primary/15">
+            <div className="flex justify-between items-center text-xs font-semibold text-brand-primary bg-brand-primary/5 p-1.5 rounded-md border border-brand-primary/15">
               <span className="truncate pr-2">Service: {service.description}</span>
               <span className="tabular-nums font-mono shrink-0">
                 +KES {service.amount.toLocaleString()}
@@ -593,7 +593,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         </div>
 
         {submitError && (
-          <div className="p-2.5 text-[11px] bg-brand-accent/10 border border-brand-accent/20 rounded-lg text-brand-accent font-semibold text-center flex items-center justify-center gap-1.5">
+          <div className="p-2.5 text-xs bg-brand-accent/10 border border-brand-accent/20 rounded-md text-brand-accent font-semibold text-center flex items-center justify-center gap-1.5">
             <AlertCircle size={13} className="shrink-0" aria-hidden="true" />
             <span>{submitError}</span>
           </div>
@@ -603,7 +603,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
           type="button"
           disabled={isCartEmpty || isSubmitting}
           onClick={handleCheckoutRedirect}
-          className="group w-full min-h-[44px] rounded-xl bg-brand-primary text-background font-semibold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:bg-brand-primary/90 active:scale-[0.99] transition-all shadow-2xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+          className="group w-full min-h-[44px] rounded-md bg-brand-accent text-background font-semibold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all shadow-2xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
         >
           {isSubmitting ? (
             <>
@@ -630,10 +630,10 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
             if (e.key === "Escape") setIsServiceModalOpen(false);
           }}
         >
-          <div className="bg-card border border-border/40 rounded-2xl w-full max-w-sm p-4 shadow-xl space-y-3.5 animate-in zoom-in-95 duration-150">
+          <div className="bg-card border border-border/40 rounded-md w-full max-w-sm p-4 shadow-xl space-y-3.5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-border/30 pb-2.5">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/15">
+                <div className="h-7 w-7 rounded-md bg-brand-primary/10 flex items-center justify-center text-brand-primary border border-brand-primary/15">
                   <Wrench size={14} aria-hidden="true" />
                 </div>
                 <h3 id="service-modal-title" className="text-xs font-bold uppercase tracking-wider text-foreground">
@@ -643,7 +643,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
               <button
                 type="button"
                 onClick={() => setIsServiceModalOpen(false)}
-                className="p-1 text-muted-foreground/60 hover:text-foreground rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
+                className="p-1 text-muted/60 hover:text-foreground rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
                 aria-label="Close Service Modal"
               >
                 <X size={15} aria-hidden="true" />
@@ -654,7 +654,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
               <div className="space-y-1">
                 <label
                   htmlFor={descInputId}
-                  className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted/70"
                 >
                   Description <span className="text-brand-accent">*</span>
                 </label>
@@ -666,14 +666,14 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   placeholder="e.g., Express Delivery, Custom Labor"
                   value={serviceDescInput}
                   onChange={(e) => setServiceDescInput(e.target.value)}
-                  className="w-full h-9 px-3 bg-surface/50 border border-border/30 rounded-lg text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary/20 placeholder-muted-foreground/40"
+                  className="w-full h-9 px-3 bg-surface/50 border border-border/30 rounded-md text-xs font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary/20 placeholder-muted-foreground/40"
                 />
               </div>
 
               <div className="space-y-1">
                 <label
                   htmlFor={amountInputId}
-                  className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted/70"
                 >
                   Amount (KES) <span className="text-brand-accent">*</span>
                 </label>
@@ -686,7 +686,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   placeholder="0.00"
                   value={serviceAmountInput}
                   onChange={(e) => setServiceAmountInput(e.target.value)}
-                  className="w-full h-9 px-3 bg-surface/50 border border-border/30 rounded-lg text-xs font-semibold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary/20 placeholder-muted-foreground/40"
+                  className="w-full h-9 px-3 bg-surface/50 border border-border/30 rounded-md text-xs font-semibold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary/20 placeholder-muted-foreground/40"
                 />
               </div>
 
@@ -694,13 +694,13 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                 <button
                   type="button"
                   onClick={() => setIsServiceModalOpen(false)}
-                  className="flex-1 h-9 rounded-lg bg-surface/60 border border-border/30 text-muted-foreground/80 font-medium text-xs uppercase hover:bg-surface transition-colors cursor-pointer focus:outline-none"
+                  className="flex-1 h-9 rounded-md bg-surface/60 border border-border/30 text-muted/80 font-medium text-xs uppercase hover:bg-surface transition-colors cursor-pointer focus:outline-none"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 h-9 rounded-lg bg-brand-primary text-background font-semibold text-xs uppercase flex items-center justify-center gap-1 hover:bg-brand-primary/90 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+                  className="flex-1 h-9 rounded-md bg-brand-primary text-background font-semibold text-xs uppercase flex items-center justify-center gap-1 hover:opacity-90 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
                 >
                   <Check size={13} strokeWidth={2.5} aria-hidden="true" />
                   <span>Save Fee</span>

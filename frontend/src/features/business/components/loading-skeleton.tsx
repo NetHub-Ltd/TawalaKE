@@ -6,7 +6,7 @@ export function BusinessSkeleton() {
       {[...Array(4)].map((_, i) => (
         <div
           key={i}
-          className="h-[280px] w-full bg-gray-100 animate-pulse rounded-[2rem] border border-gray-200"
+          className="h-[280px] w-full bg-register animate-pulse rounded-[2rem] border border-border"
         />
       ))}
     </div>

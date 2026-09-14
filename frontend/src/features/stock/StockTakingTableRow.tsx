@@ -182,7 +182,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
         return {
           label: "Audited This Month",
           color:
-            "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+            "text-[var(--success)] dark:text-[var(--success)] bg-brand-accent/10 border-[var(--success-border)]/20",
           icon: (
             <CalendarCheck
               className="w-3 h-3 stroke-[2.5]"
@@ -202,7 +202,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
         return {
           label: "Never Audited",
           color:
-            "text-slate-700 dark:text-slate-400 bg-slate-500/10 border-slate-500/20",
+            "text-muted dark:text-muted bg-register/10 border-border/20",
           icon: (
             <CalendarX className="w-3 h-3 stroke-[2.5]" aria-hidden="true" />
           ),
@@ -268,7 +268,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
 
   // Reusable, distinguished form input styling
   const inputBaseStyle =
-    "w-full rounded-lg border border-border/80 bg-background px-3.5 py-2.5 text-xs font-bold text-foreground shadow-xs transition-all duration-150 placeholder:text-muted-foreground/50 hover:border-border/100 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:bg-background disabled:cursor-not-allowed disabled:opacity-50";
+    "w-full rounded-md border border-border/80 bg-background px-3.5 py-2.5 text-xs font-bold text-foreground shadow-xs transition-all duration-150 placeholder:text-muted/50 hover:border-border/100 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:bg-background disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <>
@@ -294,7 +294,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
         <td colSpan={2} className={cn("px-6 py-4", leftBorderClass)}>
           <div className="flex items-center gap-3">
             <div
-              className="p-1 rounded-md bg-muted/10 text-muted-foreground shrink-0 transition-transform duration-200"
+              className="p-1 rounded-md bg-muted/10 text-muted shrink-0 transition-transform duration-200"
               aria-hidden="true"
             >
               {isExpanded ? (
@@ -310,7 +310,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                 </span>
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider shrink-0 shadow-2xs",
+                    "inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full border tracking-wide shrink-0 shadow-2xs",
                     auditBadge.color
                   )}
                   title={`Audit Status: ${auditBadge.label}`}
@@ -319,7 +319,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                   <span>{auditBadge.label}</span>
                 </span>
               </div>
-              <p className="text-[10px] text-muted font-mono font-semibold tracking-wider mt-0.5">
+              <p className="text-xs text-muted font-mono font-semibold tracking-wider mt-0.5">
                 SKU: {sku} &bull; {product.category || "General"}
               </p>
             </div>
@@ -343,7 +343,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
       {isExpanded && (
         <tr className="border-b border-border/80 bg-muted/10">
           <td colSpan={5} className={cn("p-4 md:p-6", leftBorderClass)}>
-            <div className="rounded-xl border border-border/80 bg-card p-5 md:p-6 shadow-xl shadow-black/5 dark:shadow-black/30 ring-1 ring-border/40 transition-all">
+            <div className="rounded-md border border-border/80 bg-card p-5 md:p-6 shadow-xl shadow-black/5 dark:shadow-black/30 ring-1 ring-border/40 transition-all">
               <form
                 onSubmit={handleSubmit(onSubmit)}
                 className="space-y-5"
@@ -354,16 +354,16 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                   className="grid grid-cols-1 md:grid-cols-3 gap-5 border-none p-0 m-0 disabled:opacity-75"
                 >
                   <legend className="sr-only">
-                    New Stock Entry Form for {product.label}
+                    Add stock for {product.label}
                   </legend>
 
-                  {/* Physical Count */}
+                  {/* Counted qty */}
                   <div className="space-y-1.5">
                     <label
                       htmlFor={quantityId}
-                      className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground/80"
+                      className="block text-xs font-semibold tracking-wide text-muted/80"
                     >
-                      Physical Count
+                      Counted qty
                     </label>
                     <input
                       id={quantityId}
@@ -385,7 +385,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                     {errors.quantity && (
                       <p
                         id={`${quantityId}-error`}
-                        className="text-[10px] text-destructive font-bold mt-1"
+                        className="text-xs text-destructive font-bold mt-1"
                       >
                         {errors.quantity.message}
                       </p>
@@ -396,13 +396,13 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                   <div className="space-y-1.5">
                     <label
                       htmlFor={buyingPriceId}
-                      className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground/80"
+                      className="block text-xs font-semibold tracking-wide text-muted/80"
                     >
                       Cost Price (KES)
                     </label>
                     <div className="relative">
                       <span
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black tracking-wider text-muted-foreground/70 pointer-events-none select-none bg-muted/60 px-1.5 py-0.5 rounded border border-border/40"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-wider text-muted/70 pointer-events-none select-none bg-muted/60 px-1.5 py-0.5 rounded border border-border/40"
                         aria-hidden="true"
                       >
                         KES
@@ -430,7 +430,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                     {errors.buying_price && (
                       <p
                         id={`${buyingPriceId}-error`}
-                        className="text-[10px] text-destructive font-bold mt-1"
+                        className="text-xs text-destructive font-bold mt-1"
                       >
                         {errors.buying_price.message}
                       </p>
@@ -441,13 +441,13 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                   <div className="space-y-1.5">
                     <label
                       htmlFor={sellingPriceId}
-                      className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground/80"
+                      className="block text-xs font-semibold tracking-wide text-muted/80"
                     >
                       Retail Price (KES)
                     </label>
                     <div className="relative">
                       <span
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black tracking-wider text-muted-foreground/70 pointer-events-none select-none bg-muted/60 px-1.5 py-0.5 rounded border border-border/40"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold tracking-wider text-muted/70 pointer-events-none select-none bg-muted/60 px-1.5 py-0.5 rounded border border-border/40"
                         aria-hidden="true"
                       >
                         KES
@@ -475,7 +475,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                     {errors.selling_price && (
                       <p
                         id={`${sellingPriceId}-error`}
-                        className="text-[10px] text-destructive font-bold mt-1"
+                        className="text-xs text-destructive font-bold mt-1"
                       >
                         {errors.selling_price.message}
                       </p>
@@ -486,7 +486,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                   <div className="space-y-1.5">
                     <label
                       htmlFor={referenceTypeId}
-                      className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground/80"
+                      className="block text-xs font-semibold tracking-wide text-muted/80"
                     >
                       Reference Type
                     </label>
@@ -515,20 +515,20 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                   <div className="md:col-span-2 space-y-1.5">
                     <label
                       htmlFor={notesId}
-                      className="block text-[10px] font-black uppercase tracking-wider text-muted-foreground/80"
+                      className="block text-xs font-semibold tracking-wide text-muted/80"
                     >
                       New Stock Notes
                     </label>
                     <input
                       id={notesId}
                       type="text"
-                      placeholder="e.g. Verified physical inventory count"
+                      placeholder="e.g. Verified on-shelf count"
                       aria-invalid={!!errors.notes}
                       {...register("notes")}
                       className={cn(inputBaseStyle, "font-sans font-medium")}
                     />
                     {errors.notes && (
-                      <p className="text-[10px] text-destructive font-bold mt-1">
+                      <p className="text-xs text-destructive font-bold mt-1">
                         {errors.notes.message}
                       </p>
                     )}
@@ -539,7 +539,7 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                 {status === "error" && errorMessage && (
                   <div
                     role="alert"
-                    className="p-3.5 bg-destructive/10 border border-destructive/20 text-destructive rounded-lg text-xs font-bold flex items-center gap-2.5 shadow-xs"
+                    className="p-3.5 bg-destructive/10 border border-destructive/20 text-destructive rounded-md text-xs font-bold flex items-center gap-2.5 shadow-xs"
                   >
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     <span>{errorMessage}</span>
@@ -552,16 +552,16 @@ export const StockTakingTableRow: React.FC<StockTakingTableRowProps> = ({
                     type="button"
                     onClick={() => setIsExpanded(false)}
                     disabled={status === "saving"}
-                    className="inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-xs font-extrabold uppercase tracking-wider border border-border bg-card text-foreground rounded-lg hover:bg-muted/20 hover:border-border focus:outline-none focus:ring-2 focus:ring-brand-primary/30 transition-all cursor-pointer active:scale-98 disabled:opacity-50"
+                    className="inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-xs font-semibold tracking-wide border border-border bg-card text-foreground rounded-md hover:bg-muted/20 hover:border-border focus:outline-none focus:ring-2 focus:ring-brand-primary/30 transition-all cursor-pointer active:scale-98 disabled:opacity-50"
                   >
-                    <X className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />
+                    <X className="w-3.5 h-3.5 mr-1.5 text-muted" />
                     Cancel
                   </button>
 
                   <button
                     type="submit"
                     disabled={!isDirty || status === "saving"}
-                    className="inline-flex items-center justify-center px-5 py-2.5 min-h-[44px] text-xs font-extrabold uppercase tracking-wider bg-brand-primary text-white rounded-lg shadow-xs hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-brand-primary/40 transition-all active:scale-98 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 min-w-[130px]"
+                    className="inline-flex items-center justify-center px-5 py-2.5 min-h-[44px] text-xs font-semibold tracking-wide bg-brand-primary text-white rounded-md shadow-xs hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-brand-primary/40 transition-all active:scale-98 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 min-w-[130px]"
                   >
                     {status === "saving" ? (
                       <>

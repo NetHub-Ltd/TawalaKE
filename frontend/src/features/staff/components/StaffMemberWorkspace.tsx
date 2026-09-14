@@ -28,10 +28,10 @@ import {
 
 function roleBadge(role: string) {
   const styles: Record<string, string> = {
-    OWNER: "bg-violet-500/10 text-violet-700 border-violet-500/25",
+    OWNER: "bg-brand-primary/10 text-brand-primary border-brand-primary/25",
     ADMIN: "bg-sky-500/10 text-sky-700 border-sky-500/25",
     MANAGER: "bg-amber-500/10 text-amber-700 border-amber-500/25",
-    CASHIER: "bg-slate-500/10 text-slate-700 border-slate-500/25",
+    CASHIER: "bg-register text-muted border-border",
   };
   return styles[role] || styles.CASHIER;
 }
@@ -104,10 +104,10 @@ export default function StaffMemberWorkspace({
 
   if (!canManage) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 p-12 text-slate-600">
+      <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
         <AlertCircle className="h-8 w-8 text-amber-500" />
         <p className="text-sm">You do not have permission to view this workspace.</p>
-        <Link href={`/org/${organizationId}/staff`} className="text-sm text-emerald-600">
+        <Link href={`/org/${organizationId}/staff`} className="text-sm text-[var(--success)]">
           Back to Team
         </Link>
       </div>
@@ -116,7 +116,7 @@ export default function StaffMemberWorkspace({
 
   if (isLoading) {
     return (
-      <div className="flex flex-1 items-center justify-center gap-2 p-12 text-slate-500">
+      <div className="flex flex-1 items-center justify-center gap-2 p-12 text-foreground0">
         <Loader2 className="h-5 w-5 animate-spin" />
         Loading member…
       </div>
@@ -128,7 +128,7 @@ export default function StaffMemberWorkspace({
       <div className="p-6">
         <Link
           href={`/org/${organizationId}/staff`}
-          className="inline-flex items-center gap-1 text-sm text-slate-600"
+          className="inline-flex items-center gap-1 text-sm text-muted"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Team
         </Link>
@@ -211,32 +211,32 @@ export default function StaffMemberWorkspace({
       <div>
         <Link
           href={`/org/${organizationId}/staff`}
-          className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
+          className="inline-flex items-center gap-1 text-sm text-foreground0 hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" /> Back to Team
         </Link>
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-50">
+            <h1 className="text-xl font-semibold text-foreground">
               {member.full_name}
             </h1>
-            <p className="text-sm text-slate-500">{member.email}</p>
+            <p className="text-sm text-foreground0">{member.email}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-xs">
               <span
                 className={`inline-flex rounded-full border px-2 py-0.5 font-medium ${roleBadge(role)}`}
               >
                 {role}
               </span>
-              <span className={member.active ? "text-emerald-600" : "text-slate-400"}>
+              <span className={member.active ? "text-[var(--success)]" : "text-muted"}>
                 {member.active ? "Active" : "Inactive"}
               </span>
-              <span className="text-slate-500">{storeNames}</span>
+              <span className="text-foreground0">{storeNames}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <nav className="flex gap-4 border-b border-slate-200 text-sm dark:border-slate-800">
+      <nav className="flex gap-4 border-b border-border text-sm dark:border-border">
         {(
           [
             ["overview", "Overview"],
@@ -251,8 +251,8 @@ export default function StaffMemberWorkspace({
             onClick={() => setTab(id)}
             className={`border-b-2 pb-2 font-medium ${
               tabParam === id
-                ? "border-emerald-600 text-emerald-700"
-                : "border-transparent text-slate-500 hover:text-slate-800"
+                ? "border-[var(--success-border)] text-[var(--success)]"
+                : "border-transparent text-foreground0 hover:text-foreground"
             }`}
           >
             {label}
@@ -262,8 +262,8 @@ export default function StaffMemberWorkspace({
 
       {(msg || err) && (
         <div
-          className={`rounded-xl px-3 py-2 text-sm ${
-            err ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"
+          className={`rounded-md px-3 py-2 text-sm ${
+            err ? "bg-[var(--error-container)] text-[var(--on-error-container)]" : "bg-[var(--success-soft)] text-[var(--success)]"
           }`}
         >
           {err || msg}
@@ -273,29 +273,29 @@ export default function StaffMemberWorkspace({
       {tabParam === "overview" && !action && (
         <div className="grid gap-4 lg:grid-cols-[1fr_240px]">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <div className="text-xs text-slate-500">Role</div>
+            <div className="rounded-md border border-border p-4 dark:border-border">
+              <div className="text-xs text-foreground0">Role</div>
               <div className="mt-1 font-semibold">{role}</div>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <div className="text-xs text-slate-500">Stores</div>
+            <div className="rounded-md border border-border p-4 dark:border-border">
+              <div className="text-xs text-foreground0">Stores</div>
               <div className="mt-1 font-semibold">
                 {member.assigned_businesses?.length ?? 0} assigned
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <div className="text-xs text-slate-500">Status</div>
+            <div className="rounded-md border border-border p-4 dark:border-border">
+              <div className="text-xs text-foreground0">Status</div>
               <div className="mt-1 font-semibold">
                 {member.active ? "Active" : "Inactive"}
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-              <div className="text-xs text-slate-500">Email</div>
+            <div className="rounded-md border border-border p-4 dark:border-border">
+              <div className="text-xs text-foreground0">Email</div>
               <div className="mt-1 truncate text-sm font-medium">{member.email}</div>
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">
               Quick actions
             </p>
             <button
@@ -304,9 +304,9 @@ export default function StaffMemberWorkspace({
                 setTab("access");
                 setAction("role");
               }}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:border-slate-700"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-register dark:border-border"
             >
-              <Shield className="h-4 w-4 text-emerald-600" /> Change role
+              <Shield className="h-4 w-4 text-[var(--success)]" /> Change role
             </button>
             <button
               type="button"
@@ -314,9 +314,9 @@ export default function StaffMemberWorkspace({
                 setTab("access");
                 setAction("assign");
               }}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:border-slate-700"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-register dark:border-border"
             >
-              <Building2 className="h-4 w-4 text-emerald-600" /> Assign stores
+              <Building2 className="h-4 w-4 text-[var(--success)]" /> Assign stores
             </button>
             <button
               type="button"
@@ -324,25 +324,25 @@ export default function StaffMemberWorkspace({
                 setTab("security");
                 setAction("reset-password");
               }}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:border-slate-700"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-register dark:border-border"
             >
-              <KeyRound className="h-4 w-4 text-emerald-600" /> Reset password
+              <KeyRound className="h-4 w-4 text-[var(--success)]" /> Reset password
             </button>
             <button
               type="button"
               onClick={toggleActive}
               disabled={updateMut.isPending}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50 dark:border-slate-700"
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-register dark:border-border"
             >
               {member.active ? (
                 <UserX className="h-4 w-4 text-amber-600" />
               ) : (
-                <UserCheck className="h-4 w-4 text-emerald-600" />
+                <UserCheck className="h-4 w-4 text-[var(--success)]" />
               )}
               {member.active ? "Deactivate" : "Reactivate"}
             </button>
           </div>
-          <div className="rounded-2xl border border-dashed border-slate-200 p-4 text-sm text-slate-500 lg:col-span-2 dark:border-slate-800">
+          <div className="rounded-md border border-dashed border-border p-4 text-sm text-foreground0 lg:col-span-2 dark:border-border">
             Activity history (events on this member and actions they performed) arrives in a later phase.
           </div>
         </div>
@@ -351,20 +351,20 @@ export default function StaffMemberWorkspace({
       {(tabParam === "access" || action === "role" || action === "assign") && (
         <div className="max-w-lg space-y-6">
           {(action === "role" || tabParam === "access") && (
-            <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+            <section className="rounded-md border border-border p-4 dark:border-border">
               <h2 className="font-semibold">Change role</h2>
               {role === "OWNER" && (
                 <p className="mt-1 text-xs text-amber-700">
                   This account is the organization owner (set at signup). Role cannot be changed to or from Owner here.
                 </p>
               )}
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-foreground0">
                 Current: {role}. Owner cannot be reassigned — only Admin, Manager, or Cashier.
               </p>
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
-                className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+                className="mt-3 w-full rounded-md border border-border px-3 py-2 text-sm dark:border-border dark:bg-background"
               >
                 {assignableRoles(actorRole).map((r) => (
                   <option key={r} value={r}>
@@ -376,7 +376,7 @@ export default function StaffMemberWorkspace({
                 type="button"
                 onClick={saveRole}
                 disabled={updateMut.isPending || newRole === role}
-                className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="mt-3 rounded-md bg-brand-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 Save role change
               </button>
@@ -384,7 +384,7 @@ export default function StaffMemberWorkspace({
           )}
 
           {(action === "assign" || tabParam === "access") && (
-            <section className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+            <section className="rounded-md border border-border p-4 dark:border-border">
               <h2 className="font-semibold">Assign stores</h2>
               <div className="mt-3 max-h-48 space-y-2 overflow-auto text-sm">
                 {(businesses || []).map((b: { id: string; name: string }) => (
@@ -408,7 +408,7 @@ export default function StaffMemberWorkspace({
                 type="button"
                 onClick={saveStores}
                 disabled={assignMut.isPending}
-                className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="mt-3 rounded-md bg-brand-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 Save assignments
               </button>
@@ -418,11 +418,11 @@ export default function StaffMemberWorkspace({
       )}
 
       {(tabParam === "security" || action === "reset-password") && (
-        <section className="max-w-lg space-y-6 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+        <section className="max-w-lg space-y-6 rounded-md border border-border p-4 dark:border-border">
           {member && !member.active && (
             <div>
               <h2 className="font-semibold">Pending invite</h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-foreground0">
                 This member has not set a password yet. Resend a new invite link
                 (previous links stop working). Anyone with staff management
                 permission can resend.
@@ -431,7 +431,7 @@ export default function StaffMemberWorkspace({
                 type="button"
                 onClick={resendInvite}
                 disabled={resendMut.isPending || !canManage}
-                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="mt-3 inline-flex items-center gap-2 rounded-md bg-brand-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 <Mail className="h-4 w-4" />
                 {resendMut.isPending ? "Sending…" : "Resend invite"}
@@ -440,7 +440,7 @@ export default function StaffMemberWorkspace({
           )}
           <div>
           <h2 className="font-semibold">Emergency set password</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-foreground0">
             Sets a password directly without email. Prefer resend invite for pending members.
           </p>
           <input
@@ -448,13 +448,13 @@ export default function StaffMemberWorkspace({
             value={tempPassword}
             onChange={(e) => setTempPassword(e.target.value)}
             placeholder="New temporary password"
-            className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
+            className="mt-3 w-full rounded-md border border-border px-3 py-2 text-sm dark:border-border dark:bg-background"
           />
           <button
             type="button"
             onClick={resetPassword}
             disabled={resetMut.isPending || tempPassword.length < 8}
-            className="mt-3 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="mt-3 rounded-md bg-brand-accent px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
           >
             {resetMut.isPending ? "Saving…" : "Update password"}
           </button>
@@ -462,32 +462,32 @@ export default function StaffMemberWorkspace({
         </section>
       )}
       {tabParam === "activity" && (
-        <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+        <section className="rounded-md border border-border bg-card p-4 dark:border-border dark:bg-card">
+          <h2 className="text-sm font-semibold text-foreground dark:text-foreground">
             Activity
           </h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-foreground0">
             Actions taken on this member (create, role, stores, password, status).
           </p>
           {activityLoading ? (
-            <p className="mt-4 text-sm text-slate-500">Loading activity…</p>
+            <p className="mt-4 text-sm text-foreground0">Loading activity…</p>
           ) : activity.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No recorded actions yet.</p>
+            <p className="mt-4 text-sm text-foreground0">No recorded actions yet.</p>
           ) : (
             <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
               {activity.map((a) => (
                 <li key={a.id} className="flex flex-col gap-0.5 py-3 text-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="font-medium text-slate-800 dark:text-slate-100">
+                    <span className="font-medium text-foreground dark:text-foreground">
                       {a.action}
                     </span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted">
                       {a.created_at
                         ? new Date(a.created_at).toLocaleString()
                         : ""}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-foreground0">
                     {a.actor_email || "System"}
                     {a.actor_role ? ` · ${a.actor_role}` : ""}
                     {a.outcome ? ` · ${a.outcome}` : ""}

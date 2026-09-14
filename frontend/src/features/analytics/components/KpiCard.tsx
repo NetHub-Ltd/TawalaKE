@@ -32,13 +32,13 @@ export function KpiCard({
   return (
     <div
       className={clsx(
-        "flex min-h-[88px] flex-col justify-between rounded-xl border bg-card px-3 py-3 shadow-card sm:px-4",
+        "flex min-h-[88px] flex-col justify-between rounded-md border bg-card px-3 py-3 shadow-card sm:px-4",
         emphasis
           ? "border-brand-primary/30 sm:col-span-1"
           : "border-border/50"
       )}
     >
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+      <p className="text-xs font-semibold tracking-wide text-muted">
         {label}
       </p>
       <p
@@ -50,7 +50,7 @@ export function KpiCard({
         {value}
       </p>
       {delta || hint ? (
-        <p className={clsx("mt-0.5 text-[11px]", toneClass[tone])}>
+        <p className={clsx("mt-0.5 text-xs", toneClass[tone])}>
           {delta}
           {delta && hint ? " · " : ""}
           {hint}

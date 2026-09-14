@@ -210,8 +210,8 @@ export function SalesPanel({
         />
       </KpiRow>
 
-      <div className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-card">
-        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted">
+      <div className="rounded-md border border-border/50 bg-card px-4 py-3 shadow-card">
+        <p className="mb-2 text-xs font-semibold tracking-wide text-muted">
           Settled &amp; open
         </p>
         <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
@@ -228,16 +228,16 @@ export function SalesPanel({
                 {formatKES(row.value)}
               </span>
               {row.note && (
-                <span className="text-[11px] text-muted">{row.note}</span>
+                <span className="text-xs text-muted">{row.note}</span>
               )}
             </div>
           ))}
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card p-4 shadow-card">
+      <div className="rounded-md border border-border/50 bg-card p-4 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+          <p className="text-xs font-semibold tracking-wide text-muted">
             Trend
             <span className="ml-2 font-normal normal-case text-muted">
               {hourlyGrain ? "by hour" : "by day"}
@@ -256,7 +256,7 @@ export function SalesPanel({
                 aria-selected={metric === tab.id}
                 onClick={() => setMetric(tab.id)}
                 className={clsx(
-                  "rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
                   metric === tab.id
                     ? "bg-brand-primary text-white"
                     : "text-muted hover:text-foreground"
@@ -284,11 +284,11 @@ function PanelSkeleton() {
     <div className="space-y-4 animate-pulse">
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="min-h-[88px] rounded-xl bg-border/40" />
+          <div key={i} className="min-h-[88px] rounded-md bg-border/40" />
         ))}
       </div>
-      <div className="h-16 rounded-xl bg-border/40" />
-      <div className="min-h-[280px] rounded-xl bg-border/40" />
+      <div className="h-16 rounded-md bg-border/40" />
+      <div className="min-h-[280px] rounded-md bg-border/40" />
     </div>
   );
 }

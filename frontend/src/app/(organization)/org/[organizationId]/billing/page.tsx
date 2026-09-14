@@ -84,12 +84,12 @@ export default function BillingPage() {
     <div className="mx-auto max-w-3xl space-y-6 p-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Billing & plan</h1>
-        <p className="mt-1 text-sm text-neutral-600">
+        <p className="mt-1 text-sm text-muted">
           Usage is enforced on the server. Upgrade when you hit a limit.
         </p>
       </header>
 
-      {loading && <p className="text-sm text-neutral-500">Loading plan…</p>}
+      {loading && <p className="text-sm text-muted">Loading plan…</p>}
       {error && (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           {error}
@@ -98,27 +98,27 @@ export default function BillingPage() {
 
       {data && !loading && (
         <>
-          <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <section className="rounded-md border border-border bg-card p-5 shadow-none">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted">
                   Current plan
                 </p>
                 <p className="text-xl font-semibold">{data.plan_name}</p>
-                <p className="text-sm text-neutral-600">{data.plan_code}</p>
+                <p className="text-sm text-muted">{data.plan_code}</p>
               </div>
               <div className="text-right text-sm">
                 <span
                   className={
                     data.active
-                      ? "rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-800"
-                      : "rounded-full bg-neutral-100 px-2.5 py-0.5 text-neutral-600"
+                      ? "rounded-full bg-[var(--success-soft)] px-2.5 py-0.5 text-[var(--success)]"
+                      : "rounded-full bg-neutral-100 px-2.5 py-0.5 text-muted"
                   }
                 >
                   {data.active ? (data.trial ? "Trial" : "Active") : "Inactive"}
                 </span>
                 {data.end_date && (
-                  <p className="mt-1 text-neutral-500">
+                  <p className="mt-1 text-muted">
                     Ends {new Date(data.end_date).toLocaleDateString()}
                   </p>
                 )}
@@ -127,9 +127,9 @@ export default function BillingPage() {
           </section>
 
           {usageRows.length > 0 && (
-            <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-neutral-900">Usage vs limits</h2>
-              <ul className="mt-3 divide-y divide-neutral-100">
+            <section className="rounded-md border border-border bg-card p-5 shadow-none">
+              <h2 className="text-sm font-semibold text-foreground">Usage vs limits</h2>
+              <ul className="mt-3 divide-y divide-border">
                 {usageRows.map((row) => {
                   const atCap =
                     row.max != null && row.current >= row.max;
@@ -145,7 +145,7 @@ export default function BillingPage() {
                         className={
                           atCap
                             ? "font-semibold text-amber-700"
-                            : "text-neutral-600"
+                            : "text-muted"
                         }
                       >
                         {row.current}

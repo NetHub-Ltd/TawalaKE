@@ -138,7 +138,7 @@ export function CollectCreditForm({
   if (error && !detail) {
     return (
       <div className="mx-auto max-w-lg p-6">
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <p className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-4 py-3 text-sm text-[var(--on-error-container)]">
           {error}
         </p>
         <Link
@@ -175,12 +175,12 @@ export function CollectCreditForm({
       </div>
 
       {error && (
-        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div role="alert" className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-4 py-3 text-sm text-[var(--on-error-container)]">
           {error}
         </div>
       )}
       {success && (
-        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        <div role="status" className="rounded-md border border-[var(--success-border)] bg-[var(--success-soft)] px-4 py-3 text-sm text-[var(--success)]">
           {success}
         </div>
       )}
@@ -192,20 +192,20 @@ export function CollectCreditForm({
       </div>
 
       {openSales.length === 0 ? (
-        <div className="rounded-xl border border-border/50 bg-card px-5 py-10 text-center">
+        <div className="rounded-md border border-border/50 bg-card px-5 py-10 text-center">
           <p className="text-sm font-semibold text-foreground">No open credit sales</p>
           <p className="mt-1 text-sm text-muted">
             This customer has no PENDING_PAYMENT invoices to collect.
           </p>
           <Link
             href={workspacePath}
-            className="mt-4 inline-flex h-10 items-center rounded-xl border border-border/60 px-4 text-sm font-medium"
+            className="mt-4 inline-flex h-10 items-center rounded-md border border-border/60 px-4 text-sm font-medium"
           >
             Back to workspace
           </Link>
         </div>
       ) : (
-        <form onSubmit={onSubmit} className="space-y-5 rounded-xl border border-border/50 bg-card p-5 shadow-card">
+        <form onSubmit={onSubmit} className="space-y-5 rounded-md border border-border/50 bg-card p-5 shadow-card">
           <fieldset>
             <legend className="mb-2 text-xs font-semibold tracking-wider text-muted uppercase">
               Open sale to collect
@@ -217,7 +217,7 @@ export function CollectCreditForm({
                   <li key={s.id}>
                     <label
                       className={clsx(
-                        "flex cursor-pointer items-center justify-between gap-3 rounded-xl border px-4 py-3 transition-colors",
+                        "flex cursor-pointer items-center justify-between gap-3 rounded-md border px-4 py-3 transition-colors",
                         active
                           ? "border-brand-primary bg-brand-primary/5 ring-1 ring-brand-primary/30"
                           : "border-border/60 hover:border-border"
@@ -241,7 +241,7 @@ export function CollectCreditForm({
                           <span className="text-xs text-muted">{s.status}</span>
                         </span>
                       </span>
-                      <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+                      <span className="font-mono text-sm font-semibold tabular tabular-nums text-foreground">
                         {formatKES(s.total_amount)}
                       </span>
                     </label>
@@ -265,7 +265,7 @@ export function CollectCreditForm({
                   type="button"
                   onClick={() => setMethod(m)}
                   className={clsx(
-                    "h-10 min-w-[96px] rounded-xl border px-4 text-sm font-semibold transition-colors",
+                    "h-10 min-w-[96px] rounded-md border px-4 text-sm font-semibold transition-colors",
                     method === m
                       ? "border-brand-primary bg-brand-primary text-white"
                       : "border-border/60 bg-background text-foreground hover:border-border"
@@ -286,14 +286,14 @@ export function CollectCreditForm({
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder={method === "MPESA" ? "e.g. QHB72KL9" : "Optional note"}
-              className="h-11 w-full rounded-xl border border-border/60 px-3 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+              className="h-11 w-full rounded-md border border-border/60 px-3 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting || !selected}
-            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white disabled:opacity-60 sm:w-auto sm:px-8"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-accent text-sm font-semibold text-white disabled:opacity-60 sm:w-auto sm:px-8"
           >
             {submitting ? (
               <>
@@ -320,15 +320,15 @@ function SummaryCard({
   tone?: "warn" | "ok";
 }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card px-4 py-3 shadow-card">
-      <p className="text-[10px] font-semibold tracking-wider text-muted uppercase">
+    <div className="rounded-md border border-border/50 bg-card px-4 py-3 shadow-card">
+      <p className="text-xs font-semibold tracking-wider text-muted uppercase">
         {label}
       </p>
       <p
         className={clsx(
           "mt-1 font-mono text-lg font-bold tabular-nums",
-          tone === "warn" && "text-rose-600",
-          tone === "ok" && "text-emerald-700",
+          tone === "warn" && "text-[var(--error)]",
+          tone === "ok" && "text-[var(--success)]",
           !tone && "text-foreground"
         )}
       >

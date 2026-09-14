@@ -1,4 +1,4 @@
 # Repository State
-- Branch: feat/terminal-p1-mobile-staged
-- PR target: dev
-- Focus: Terminal P1 (mobile cart, staged hygiene) + P2 (BFF, phone, stock messages)
+- Branch: chore/theme-retail-os
+- EmailService: master shell + canonical templates
+- Logo: https://tawala.nethub.co.ke/logo.svg

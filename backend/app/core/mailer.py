@@ -170,23 +170,39 @@ import resend
 from app.core.config import settings
 from app.utils.logging import logger
 
-# Initialize Resend SDK globally
+# ---------------------------------------------------------------------------
+# Canonical email tokens (DESIGN.md → client-safe hex — no CSS variables)
+# Logo: https://tawala.nethub.co.ke/logo.svg
+# ---------------------------------------------------------------------------
+EMAIL_PRIMARY = "#003F4E"
+EMAIL_ON_PRIMARY = "#FFFFFF"
+EMAIL_BODY = "#121B1E"
+EMAIL_MUTED = "#5A6468"
+EMAIL_SURFACE = "#F4F3F0"
+EMAIL_CARD = "#FFFFFF"
+EMAIL_BORDER = "#E5E3DC"
+EMAIL_SUCCESS = "#0F766E"
+EMAIL_CREDIT = "#C1705B"
+EMAIL_ERROR = "#BA1A1A"
+EMAIL_LOGO = "https://tawala.nethub.co.ke/logo.svg"
+EMAIL_SITE = "https://tawala.nethub.co.ke"
+EMAIL_SUPPORT = "https://tawala.nethub.co.ke/support"
+
 resend.api_key = settings.resend_api_key
 
 
 class EmailService:
+    """Transactional email via Resend. All customer mail uses the master shell."""
+
     @staticmethod
     def send_transactional_email(
         sender: str,
         to_addresses: List[str],
         subject: str,
         html_content: str,
-        reply_to: Optional[str] = None
+        reply_to: Optional[str] = None,
     ) -> None:
-        """
-        Synchronous wrapper execution for Resend API.
-        Designed to run safely inside FastAPI's BackgroundTasks worker thread.
-        """
+        """Synchronous Resend send — safe inside FastAPI BackgroundTasks."""
         start_time = datetime.now(timezone.utc)
         try:
             payload: Dict[str, Any] = {
@@ -197,24 +213,136 @@ class EmailService:
             }
             if reply_to:
                 payload["reply_to"] = reply_to
-
             response = resend.Emails.send(payload)
-
             duration = (datetime.now(timezone.utc) - start_time).total_seconds()
             logger.info(
                 f"[EmailService] Sent successfully | Subject: '{subject}' | "
                 f"To: {to_addresses} | ID: {response.get('id')} | Duration: {duration:.2f}s"
             )
-
         except Exception as e:
             logger.error(
                 f"[EmailService] Critical Failure | Subject: '{subject}' | "
                 f"To: {to_addresses} | Error: {str(e)}",
-                exc_info=True
+                exc_info=True,
             )
 
     # =========================================================================
-    # TRANSACTIONAL MAIL TEMPLATES
+    # MASTER SHELL
+    # =========================================================================
+
+    @staticmethod
+    def _preheader(text: str) -> str:
+        """Hidden inbox preview (first ~90 chars)."""
+        safe = (text or "").replace("<", "").replace(">", "")[:120]
+        return (
+            f'<div style="display:none;font-size:1px;line-height:1px;max-height:0;'
+            f'max-width:0;opacity:0;overflow:hidden;mso-hide:all;">{safe}'
+            f'{"&nbsp;" * 30}</div>'
+        )
+
+    @classmethod
+    def render_shell(
+        cls,
+        *,
+        title: str,
+        body_html: str,
+        preheader: str = "",
+        eyebrow: Optional[str] = None,
+    ) -> str:
+        """
+        Canonical Tawala email layout.
+        body_html: inner content (paragraphs, CTA, tables) — no outer document.
+        """
+        eyebrow_html = ""
+        if eyebrow:
+            eyebrow_html = (
+                f'<p style="margin:0 0 8px;font-size:11px;font-weight:700;'
+                f'letter-spacing:0.1em;text-transform:uppercase;color:{EMAIL_PRIMARY};">'
+                f"{eyebrow}</p>"
+            )
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>{title}</title>
+</head>
+<body style="margin:0;padding:0;background-color:{EMAIL_SURFACE};font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;">
+  {cls._preheader(preheader or title)}
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:{EMAIL_SURFACE};padding:32px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" style="max-width:560px;background-color:{EMAIL_CARD};border:1px solid {EMAIL_BORDER};border-radius:8px;overflow:hidden;">
+        <!-- Header -->
+        <tr>
+          <td style="background-color:{EMAIL_PRIMARY};padding:20px 24px;text-align:center;">
+            <img src="{EMAIL_LOGO}" width="40" height="40" alt="Tawala"
+                 style="display:inline-block;border:0;vertical-align:middle;margin:0 8px 0 0;" />
+            <span style="display:inline-block;vertical-align:middle;color:{EMAIL_ON_PRIMARY};font-size:16px;font-weight:700;letter-spacing:0.02em;">Tawala</span>
+          </td>
+        </tr>
+        <!-- Body -->
+        <tr>
+          <td style="padding:28px 28px 8px;">
+            {eyebrow_html}
+            <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3;font-weight:700;color:{EMAIL_BODY};">{title}</h1>
+            {body_html}
+          </td>
+        </tr>
+        <!-- Footer -->
+        <tr>
+          <td style="padding:16px 28px 24px;border-top:1px solid {EMAIL_BORDER};">
+            <p style="margin:0 0 6px;font-size:11px;line-height:1.5;color:{EMAIL_MUTED};text-align:center;">
+              Tawala · Control your biashara ·
+              <a href="{EMAIL_SITE}" style="color:{EMAIL_MUTED};text-decoration:underline;">{EMAIL_SITE.replace("https://", "")}</a>
+            </p>
+            <p style="margin:0;font-size:11px;line-height:1.5;color:{EMAIL_MUTED};text-align:center;">
+              <a href="{EMAIL_SUPPORT}" style="color:{EMAIL_MUTED};text-decoration:underline;">Support</a>
+              &nbsp;·&nbsp;
+              <a href="{EMAIL_SITE}/legal/privacy" style="color:{EMAIL_MUTED};text-decoration:underline;">Privacy</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+
+    @staticmethod
+    def _cta(url: str, label: str) -> str:
+        return (
+            f'<div style="text-align:center;margin:28px 0 16px;">'
+            f'<a href="{url}" target="_blank" rel="noopener" '
+            f'style="background-color:{EMAIL_PRIMARY};color:{EMAIL_ON_PRIMARY};'
+            f'padding:14px 28px;text-decoration:none;border-radius:6px;'
+            f'font-weight:700;font-size:15px;display:inline-block;">{label}</a></div>'
+        )
+
+    @staticmethod
+    def _p(text: str) -> str:
+        return (
+            f'<p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:{EMAIL_BODY};">'
+            f"{text}</p>"
+        )
+
+    @staticmethod
+    def _muted(text: str) -> str:
+        return (
+            f'<p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:{EMAIL_MUTED};">'
+            f"{text}</p>"
+        )
+
+    @staticmethod
+    def _raw_link(url: str) -> str:
+        return (
+            f'<p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:{EMAIL_MUTED};word-break:break-all;">'
+            f'If the button does not work, open this link:<br/>'
+            f'<a href="{url}" style="color:{EMAIL_PRIMARY};">{url}</a></p>'
+        )
+
+    # =========================================================================
+    # CUSTOMER TEMPLATES
     # =========================================================================
 
     @classmethod
@@ -224,143 +352,37 @@ class EmailService:
         reset_url: str,
         user_name: Optional[str] = None,
         ip_address: Optional[str] = None,
-        expire_minutes: int = 15
+        expire_minutes: int = 15,
     ) -> None:
-        """
-        Dispatched during password recovery flows. Features responsive HTML layout,
-        clear primary CTAs, security alerts, and request metadata.
-        """
-        greeting_name = user_name if user_name else "Valued User"
-        request_ip = ip_address if ip_address else "Unknown"
+        """Password recovery — security-first hierarchy."""
+        name = (user_name or "").strip() or "there"
+        ip = ip_address or "Unknown"
         time_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Reset Your Password</title>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f8fafc; padding: 40px 10px;">
-                <tr>
-                    <td align="center">
-                        <table role="presentation" width="100%" style="max-width: 560px; background-color: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-                            
-                            <!-- Header -->
-                            <tr>
-                                <td style="background-color: #0f172a; padding: 24px; text-align: center;">
-                                    <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">
-                                        NetHub Security
-                                    </h1>
-                                </td>
-                            </tr>
-
-                            <!-- Body -->
-                            <tr>
-                                <td style="padding: 32px 24px;">
-                                    <h2 style="color: #0f172a; font-size: 18px; margin-top: 0; margin-bottom: 16px;">
-                                        Password Reset Request
-                                    </h2>
-                                    <p style="color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-                                        Hello {greeting_name},
-                                    </p>
-                                    <p style="color: #334155; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-                                        We received a request to reset the password for your account. Click the button below to set up a new password:
-                                    </p>
-
-                                    <!-- CTA Button -->
-                                    <div style="text-align: center; margin: 32px 0;">
-                                        <a href="{reset_url}" 
-                                           target="_blank"
-                                           style="background-color: #0284c7; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block;">
-                                           Reset Password
-                                        </a>
-                                    </div>
-
-                                    <!-- Warning Notice -->
-                                    <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin-bottom: 24px;">
-                                        ⏱️ This link is single-use and will automatically expire in <strong>{expire_minutes} minutes</strong>.
-                                    </p>
-
-                                    <!-- Security Context Table -->
-                                    <div style="background-color: #f1f5f9; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
-                                        <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase;">
-                                            Request Details
-                                        </p>
-                                        <p style="margin: 0 0 4px 0; font-size: 12px; color: #64748b;">
-                                            <strong>Time:</strong> {time_str}
-                                        </p>
-                                        <p style="margin: 0; font-size: 12px; color: #64748b;">
-                                            <strong>Origin IP:</strong> {request_ip}
-                                        </p>
-                                    </div>
-
-                                    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-
-                                    <p style="color: #94a3b8; font-size: 12px; line-height: 1.5; margin: 0;">
-                                        If you didn't initiate this request, you can safely ignore this email. Your password will remain unchanged.
-                                    </p>
-                                </td>
-                            </tr>
-
-                            <!-- Footer -->
-                            <tr>
-                                <td style="background-color: #f8fafc; padding: 16px 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-                                    <p style="color: #94a3b8; font-size: 11px; margin: 0;">
-                                        &copy; {datetime.now().year} NetHub Security Infrastructure. All rights reserved.
-                                    </p>
-                                </td>
-                            </tr>
-
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </body>
-        </html>
-        """
-
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"We received a request to reset the password for <strong>{to_email}</strong>. "
+                f"This link expires in <strong>{expire_minutes} minutes</strong>."
+            )
+            + cls._cta(reset_url, "Reset password")
+            + cls._muted(
+                "If you did not request this, you can ignore this email — your password will stay the same."
+            )
+            + cls._muted(f"Request time: {time_str} · IP: {ip}")
+            + cls._raw_link(reset_url)
+        )
+        html = cls.render_shell(
+            title="Reset your Tawala password",
+            preheader=f"Password reset link expires in {expire_minutes} minutes",
+            eyebrow="Security",
+            body_html=body,
+        )
         cls.send_transactional_email(
             sender=settings.email_from_security,
             to_addresses=[to_email],
-            subject="🔐 Reset Your NetHub Password",
-            html_content=html_content
+            subject="Reset your Tawala password",
+            html_content=html,
         )
-
-    @classmethod
-    def send_testing(cls, to_email: str, metadata: Optional[dict] = None) -> None:
-        """Basic pipeline sanity testing method."""
-        html = f"""
-        <h3>NetHub Mail System Diagnostic Test</h3>
-        <p>Timestamp (UTC): {datetime.now(timezone.utc).isoformat()}</p>
-        <p>Payload Metadata: {metadata or 'None provided'}</p>
-        <hr/>
-        <p style='font-size: 12px; color: #64748b;'>Engine: Resend Edge Infrastructure</p>
-        """
-        cls.send_transactional_email(
-            sender=settings.email_from_security,
-            to_addresses=[to_email],
-            subject="[Diagnostic] NetHub Sandbox Test Mail",
-            html_content=html
-        )
-
-    @classmethod
-    def send_welcome(cls, to_email: str, username: str) -> None:
-        """Dispatched upon user registration."""
-        html = f"""
-        <h2>Welcome to NetHub, {username}!</h2>
-        <p>Your cloud engineering ecosystem account has been successfully provisioned.</p>
-        """
-        cls.send_transactional_email(
-            sender=settings.email_from_security,
-            to_addresses=[to_email],
-            subject=f"Welcome to NetHub, {username}",
-            html_content=html
-        )
-
-
 
     @classmethod
     def send_onboarding_setup(
@@ -371,57 +393,44 @@ class EmailService:
         ip_address: Optional[str] = None,
         expire_minutes: int = 60,
     ) -> None:
-        """Email new registrants a one-time link to set password and start the Ndovu trial."""
-        greeting_name = (user_name or "").strip() or "there"
-        request_ip = ip_address if ip_address else "Unknown"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-        <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
-            <tr><td align="center">
-              <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
-                <tr><td style="background:#0f172a;padding:28px 24px;text-align:center;">
-                  <p style="color:#94a3b8;margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Tawala</p>
-                  <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Start your 14-day trial</h1>
-                </td></tr>
-                <tr><td style="padding:32px 28px;">
-                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">Hello {greeting_name},</p>
-                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">
-                    You are one step away from <strong>Ndovu</strong> — our recommended plan for Kenyan shops.
-                    Set your password to verify your email and activate <strong>14 days free</strong>. No credit card required.
-                  </p>
-                  <div style="text-align:center;margin:28px 0;">
-                    <a href="{setup_url}" target="_blank" rel="noopener"
-                       style="background-color:#4f46e5;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;display:inline-block;">
-                      Set password &amp; start trial
-                    </a>
-                  </div>
-                  <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0 0 8px;">
-                    This link expires in <strong>{expire_minutes} minutes</strong>.
-                  </p>
-                  <p style="color:#94a3b8;font-size:12px;line-height:1.5;margin:0;">
-                    If you did not create a Tawala account, you can ignore this email.<br/>
-                    Request IP: {request_ip}
-                  </p>
-                </td></tr>
-                <tr><td style="padding:16px 28px 24px;border-top:1px solid #f1f5f9;">
-                  <p style="color:#94a3b8;font-size:11px;margin:0;text-align:center;">
-                    Tawala · Control your biashara · <a href="https://tawala.nethub.co.ke" style="color:#64748b;">tawala.nethub.co.ke</a>
-                  </p>
-                </td></tr>
-              </table>
-            </td></tr>
-          </table>
-        </body>
-        </html>
-        """
+        """Verify email + set password + start 14-day Ndovu trial."""
+        name = (user_name or "").strip() or "there"
+        ip = ip_address or "Unknown"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                "You are one step away from <strong>Ndovu</strong> — our recommended plan for Kenyan shops. "
+                "Set your password to verify your email and activate <strong>14 days free</strong>. "
+                "No credit card required."
+            )
+            + cls._cta(setup_url, "Set password &amp; start trial")
+            + (
+                f'<p style="margin:0 0 8px;font-weight:600;font-size:14px;color:{EMAIL_BODY};">'
+                f"Get value in the next 10 minutes:</p>"
+                f'<ol style="margin:0 0 16px;padding-left:20px;color:{EMAIL_MUTED};font-size:14px;line-height:1.6;">'
+                f"<li style=\"margin-bottom:4px;\">Confirm your business name and phone</li>"
+                f"<li style=\"margin-bottom:4px;\">Add your first products</li>"
+                f"<li style=\"margin-bottom:4px;\">Create a staff PIN for the counter</li>"
+                f"</ol>"
+            )
+            + cls._muted(f"This link expires in <strong>{expire_minutes} minutes</strong>.")
+            + cls._muted(
+                "If you did not create a Tawala account, you can ignore this email."
+            )
+            + cls._muted(f"Request IP: {ip}")
+            + cls._raw_link(setup_url)
+        )
+        html = cls.render_shell(
+            title="Confirm your email to start selling",
+            preheader="14 days free on Ndovu — set your password, no card required",
+            eyebrow="14-day free trial",
+            body_html=body,
+        )
         cls.send_transactional_email(
             sender=settings.email_from_tawala,
             to_addresses=[to_email],
             subject="Set your password and start your 14-day Ndovu trial",
-            html_content=html_content,
+            html_content=html,
         )
 
     @classmethod
@@ -435,79 +444,46 @@ class EmailService:
         invited_by_name: Optional[str] = None,
         expire_hours: int = 48,
     ) -> None:
-        """Invite pending staff to set password and join the organization."""
-        greeting = (user_name or "").strip() or "there"
+        """Invite pending staff to set password and join the organisation."""
+        name = (user_name or "").strip() or "there"
         org = (org_name or "").strip() or "your team"
         role = (role_label or "").strip() or "team member"
         inviter = (invited_by_name or "").strip()
-        if inviter:
-            inviter_line = (
-                f'<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">'
-                f"<strong>{inviter}</strong> invited you to join as <strong>{role}</strong>.</p>"
+        who = (
+            f"<strong>{inviter}</strong> invited you to join as <strong>{role}</strong>."
+            if inviter
+            else f"You have been invited to join as <strong>{role}</strong>."
+        )
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(who)
+            + (
+                f'<table width="100%" style="margin:16px 0 8px;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Organisation</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{org}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Role</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{role}</td></tr>'
+                f"</table>"
             )
-        else:
-            inviter_line = (
-                f'<p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">'
-                f"You have been invited to join as <strong>{role}</strong>.</p>"
+            + cls._cta(invite_url, f"Accept invite")
+            + cls._muted(
+                "After joining, use your PIN on shared shop devices so every sale is tied to you."
             )
-        logo = "https://tawala.nethub.co.ke/logo.svg"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-        <title>You are invited to Tawala</title></head>
-        <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
-            <tr><td align="center">
-              <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
-                <tr><td style="padding:28px 24px 12px;text-align:center;">
-                  <img src="{logo}" width="72" alt="Tawala"
-                       style="display:inline-block;border:0;max-width:72px;height:auto;" />
-                </td></tr>
-                <tr><td style="padding:8px 28px 8px;text-align:center;">
-                  <p style="color:#003F4E;margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">Tawala</p>
-                  <h1 style="color:#0f172a;margin:0;font-size:22px;font-weight:700;line-height:1.3;">
-                    You&rsquo;re invited to join {org}
-                  </h1>
-                </td></tr>
-                <tr><td style="padding:20px 28px 32px;">
-                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">Hello {greeting},</p>
-                  {inviter_line}
-                  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 12px;">
-                    Set your password to activate your account and start working on Tawala.
-                  </p>
-                  <div style="text-align:center;margin:28px 0;">
-                    <a href="{invite_url}" target="_blank" rel="noopener"
-                       style="background-color:#003F4E;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;display:inline-block;">
-                      Set password &amp; join
-                    </a>
-                  </div>
-                  <p style="color:#64748b;font-size:13px;line-height:1.5;margin:0 0 8px;">
-                    This link is single-use and expires in <strong>{expire_hours} hours</strong>.
-                    If it expires, ask a team manager to resend your invite.
-                  </p>
-                  <p style="color:#94a3b8;font-size:12px;line-height:1.5;margin:0;">
-                    If you were not expecting this invitation, you can ignore this email.
-                  </p>
-                </td></tr>
-                <tr><td style="padding:16px 28px 24px;border-top:1px solid #f1f5f9;">
-                  <p style="color:#94a3b8;font-size:11px;margin:0;text-align:center;">
-                    Tawala · Control your biashara ·
-                    <a href="https://tawala.nethub.co.ke" style="color:#64748b;text-decoration:none;">tawala.nethub.co.ke</a>
-                  </p>
-                </td></tr>
-              </table>
-            </td></tr>
-          </table>
-        </body>
-        </html>
-        """
-        subject_org = org if org != "your team" else "Tawala"
+            + cls._muted(f"This invite expires in <strong>{expire_hours} hours</strong>.")
+            + cls._muted("If you were not expecting this, you can ignore this email.")
+            + cls._raw_link(invite_url)
+        )
+        html = cls.render_shell(
+            title=f"You&rsquo;re invited to join {org}",
+            preheader=f"Join {org} on Tawala as {role}",
+            eyebrow="Staff invite",
+            body_html=body,
+        )
         cls.send_transactional_email(
             sender=settings.email_from_tawala,
             to_addresses=[to_email],
-            subject=f"Join {subject_org} on Tawala — set your password",
-            html_content=html_content,
+            subject=f"You're invited to join {org} on Tawala",
+            html_content=html,
         )
 
     @classmethod
@@ -522,75 +498,317 @@ class EmailService:
         currency: str = "KES",
         dashboard_url: Optional[str] = None,
     ) -> None:
-        """Confirm trial activation with next steps and zero-amount clarity."""
-        open_url = (dashboard_url or "").strip() or "https://tawala.nethub.co.ke/org"
-        html_content = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-        <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
-            <tr><td align="center">
-              <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden;">
-                <tr><td style="background:#0f172a;padding:28px 24px;text-align:center;">
-                  <p style="color:#94a3b8;margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;">Tawala</p>
-                  <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;">Your trial is active</h1>
-                </td></tr>
-                <tr><td style="padding:32px 28px;color:#334155;font-size:15px;line-height:1.6;">
-                  <p style="margin:0 0 12px;">Hello,</p>
-                  <p style="margin:0 0 12px;">
-                    <strong>{org_name}</strong> is on a <strong>{trial_days}-day free trial</strong> of
-                    <strong>{plan_name}</strong>. Amount due today: <strong>0 {currency}</strong> — no card required.
-                  </p>
-                  <p style="margin:0 0 8px;font-weight:600;color:#0f172a;">Get value in the next 10 minutes:</p>
-                  <ol style="margin:0 0 20px;padding-left:20px;color:#475569;font-size:14px;">
-                    <li style="margin-bottom:6px;">Confirm your business name and phone</li>
-                    <li style="margin-bottom:6px;">Add your first products or import stock</li>
-                    <li style="margin-bottom:6px;">Create a staff PIN for the counter</li>
-                  </ol>
-                  <div style="text-align:center;margin:24px 0 8px;">
-                    <a href="{open_url}" target="_blank" rel="noopener"
-                       style="background-color:#4f46e5;color:#ffffff;padding:14px 32px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;display:inline-block;">
-                      Open Tawala
-                    </a>
-                  </div>
-                  <table width="100%" style="margin:28px 0 12px;border-collapse:collapse;font-size:13px;color:#64748b;">
-                    <tr>
-                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;">Plan</td>
-                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;color:#0f172a;">{plan_name}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;">Trial window</td>
-                      <td style="padding:8px 0;border-bottom:1px solid #e2e8f0;text-align:right;color:#0f172a;">{start_date} → {end_date}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding:8px 0;">Amount due today</td>
-                      <td style="padding:8px 0;text-align:right;color:#0f172a;"><strong>0 {currency}</strong></td>
-                    </tr>
-                  </table>
-                  <p style="color:#94a3b8;font-size:12px;margin:0;">
-                    You can upgrade or cancel before the trial ends. Local support is available when you need it.
-                  </p>
-                </td></tr>
-                <tr><td style="padding:16px 28px 24px;border-top:1px solid #f1f5f9;">
-                  <p style="color:#94a3b8;font-size:11px;margin:0;text-align:center;">
-                    Tawala · Control your biashara · <a href="https://tawala.nethub.co.ke" style="color:#64748b;">tawala.nethub.co.ke</a>
-                  </p>
-                </td></tr>
-              </table>
-            </td></tr>
-          </table>
-        </body>
-        </html>
-        """
+        """Confirm trial activation — amount due today is zero."""
+        open_url = (dashboard_url or "").strip() or f"{EMAIL_SITE}/org"
+        org = (org_name or "").strip() or "your business"
+        body = (
+            cls._p(f"Hello,")
+            + cls._p(
+                f"<strong>{org}</strong> is on a <strong>{trial_days}-day free trial</strong> of "
+                f"<strong>{plan_name}</strong>. Amount due today: <strong>0 {currency}</strong> — no card required."
+            )
+            + (
+                f'<table width="100%" style="margin:20px 0 12px;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Plan</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{plan_name}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Trial window</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{start_date} → {end_date}</td></tr>'
+                f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">Amount due today</td>'
+                f'<td style="padding:8px 0;text-align:right;color:{EMAIL_SUCCESS};font-weight:700;">0 {currency}</td></tr>'
+                f"</table>"
+            )
+            + cls._p(
+                "Get value in the next 10 minutes: confirm business details, add products, create a staff PIN."
+            )
+            + cls._cta(open_url, "Open Tawala")
+            + cls._muted(
+                f"You can upgrade or cancel before {end_date}. Local support is available when you need it."
+            )
+            + cls._raw_link(open_url)
+        )
+        html = cls.render_shell(
+            title="Your trial is active",
+            preheader=f"{trial_days}-day {plan_name} trial · 0 {currency} due today",
+            eyebrow="Trial · no charge today",
+            body_html=body,
+        )
         cls.send_transactional_email(
             sender=settings.email_from_billing,
             to_addresses=[to_email],
-            subject=f"Your {trial_days}-day {plan_name} trial is active — KES 0 today",
-            html_content=html_content,
+            subject=f"Your {trial_days}-day {plan_name} trial is active — {currency} 0 today",
+            html_content=html,
+        )
+
+    @classmethod
+    def send_testing(cls, to_email: str, metadata: Optional[dict] = None) -> None:
+        """Internal pipeline sanity check — not for customers."""
+        meta = metadata or {}
+        body = (
+            cls._p("NetHub mail system diagnostic.")
+            + cls._muted(
+                f"Timestamp (UTC): {datetime.now(timezone.utc).isoformat()}"
+            )
+            + cls._muted(f"Metadata: {meta or 'None'}")
+        )
+        html = cls.render_shell(
+            title="Diagnostic test mail",
+            preheader="Tawala mail pipeline test",
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_security,
+            to_addresses=[to_email],
+            subject="[Diagnostic] Tawala test mail",
+            html_content=html,
+        )
+
+    @classmethod
+    def send_welcome(cls, to_email: str, username: str) -> None:
+        """Lightweight welcome — prefer send_onboarding_setup for new signups."""
+        name = (username or "").strip() or "there"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                "Welcome to Tawala. Your account is ready — open the app to manage stock, staff PINs, and daily profit."
+            )
+            + cls._cta(f"{EMAIL_SITE}/login", "Log in to Tawala")
+            + cls._raw_link(f"{EMAIL_SITE}/login")
+        )
+        html = cls.render_shell(
+            title="Welcome to Tawala",
+            preheader="Your shop OS is ready",
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_tawala,
+            to_addresses=[to_email],
+            subject="Welcome to Tawala",
+            html_content=html,
+        )
+
+
+    @classmethod
+    def send_sale_receipt(
+        cls,
+        to_email: str,
+        *,
+        business_name: str,
+        document_number: str,
+        issued_at: str,
+        currency: str,
+        total_amount: float,
+        payment_method: str,
+        is_invoice: bool = False,
+        balance_due: float = 0.0,
+        customer_name: Optional[str] = None,
+        preview_url: Optional[str] = None,
+        line_summary: Optional[str] = None,
+    ) -> None:
+        """Email customer a sale receipt or open-credit invoice summary."""
+        name = (customer_name or "").strip() or "there"
+        shop = (business_name or "").strip() or "your shop"
+        cur = currency or "KES"
+        total = f"{float(total_amount):,.2f}"
+        due = f"{float(balance_due):,.2f}"
+        if is_invoice and balance_due > 0.001:
+            title = "Invoice — amount due"
+            preheader = f"{shop} · {cur} {due} due · {document_number}"
+            eyebrow = "Credit sale"
+            lead = (
+                cls._p(f"Hello {name},")
+                + cls._p(
+                    f"<strong>{shop}</strong> recorded a credit sale. "
+                    f"Amount due: <strong>{cur} {due}</strong>."
+                )
+            )
+            total_row_label = "Amount due"
+            total_row_value = f"{cur} {due}"
+            total_color = EMAIL_CREDIT
+        else:
+            title = "Payment received"
+            preheader = f"{shop} · {cur} {total} · {document_number}"
+            eyebrow = "Receipt"
+            lead = (
+                cls._p(f"Hello {name},")
+                + cls._p(
+                    f"Payment received at <strong>{shop}</strong>. "
+                    f"Total: <strong>{cur} {total}</strong>."
+                )
+            )
+            total_row_label = "Total paid"
+            total_row_value = f"{cur} {total}"
+            total_color = EMAIL_SUCCESS
+
+        facts = (
+            f'<table width="100%" style="margin:16px 0 12px;border-collapse:collapse;font-size:13px;">'
+            f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Document</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{document_number}</td></tr>'
+            f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Date</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{issued_at}</td></tr>'
+            f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Payment</td>'
+            f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{payment_method}</td></tr>'
+            f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">{total_row_label}</td>'
+            f'<td style="padding:8px 0;text-align:right;color:{total_color};font-weight:700;">{total_row_value}</td></tr>'
+            f"</table>"
+        )
+        lines = ""
+        if line_summary:
+            lines = cls._muted(line_summary)
+        cta = ""
+        if preview_url:
+            cta = cls._cta(preview_url, "View document") + cls._raw_link(preview_url)
+        body = lead + facts + lines + cta + cls._muted(
+            "Keep this email for your records. Contact the shop if anything looks wrong."
+        )
+        html = cls.render_shell(
+            title=title,
+            preheader=preheader,
+            eyebrow=eyebrow,
+            body_html=body,
+        )
+        subject = (
+            f"Invoice {document_number} · {cur} {due} due"
+            if is_invoice and balance_due > 0.001
+            else f"Receipt {document_number} · {cur} {total}"
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_tawala,
+            to_addresses=[to_email],
+            subject=subject,
+            html_content=html,
+        )
+
+    @classmethod
+    def send_credit_collected(
+        cls,
+        to_email: str,
+        *,
+        business_name: str,
+        document_number: str,
+        collected_at: str,
+        currency: str,
+        amount: float,
+        payment_method: str,
+        customer_name: Optional[str] = None,
+        preview_url: Optional[str] = None,
+    ) -> None:
+        """Confirm credit collection — balance closed."""
+        name = (customer_name or "").strip() or "there"
+        shop = (business_name or "").strip() or "your shop"
+        cur = currency or "KES"
+        amt = f"{float(amount):,.2f}"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"We received your payment of <strong>{cur} {amt}</strong> at "
+                f"<strong>{shop}</strong>. Your open balance on this sale is now settled."
+            )
+            + (
+                f'<table width="100%" style="margin:16px 0 12px;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Reference</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{document_number}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Collected</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{collected_at}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Method</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{payment_method}</td></tr>'
+                f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">Amount</td>'
+                f'<td style="padding:8px 0;text-align:right;color:{EMAIL_SUCCESS};font-weight:700;">{cur} {amt}</td></tr>'
+                f"</table>"
+            )
+            + (cls._cta(preview_url, "View receipt") + cls._raw_link(preview_url) if preview_url else "")
+            + cls._muted("Thank you for settling your account.")
+        )
+        html = cls.render_shell(
+            title="Payment collected",
+            preheader=f"{shop} · {cur} {amt} collected · {document_number}",
+            eyebrow="Credit settled",
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_billing,
+            to_addresses=[to_email],
+            subject=f"Payment collected · {cur} {amt} · {document_number}",
+            html_content=html,
         )
 
 
 
-# Global Service Instance
+    @classmethod
+    def send_trial_ending(
+        cls,
+        to_email: str,
+        *,
+        org_name: str,
+        plan_name: str,
+        days_left: int,
+        end_date: str,
+        billing_url: Optional[str] = None,
+        owner_name: Optional[str] = None,
+    ) -> None:
+        """Remind owner that the free trial ends soon — upgrade or continue risk."""
+        name = (owner_name or "").strip() or "there"
+        org = (org_name or "").strip() or "your business"
+        plan = (plan_name or "").strip() or "your plan"
+        days = max(0, int(days_left))
+        if days <= 0:
+            urgency = "Your trial ends today"
+            preheader = f"{org} · trial ends today · {plan}"
+        elif days == 1:
+            urgency = "Your trial ends tomorrow"
+            preheader = f"{org} · 1 day left on trial · {plan}"
+        else:
+            urgency = f"Your trial ends in {days} days"
+            preheader = f"{org} · {days} days left on trial · {plan}"
+
+        open_url = (billing_url or "").strip() or f"{EMAIL_SITE}/org"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"<strong>{urgency}.</strong> "
+                f"<strong>{org}</strong> is still on the free trial of <strong>{plan}</strong> "
+                f"(ends <strong>{end_date}</strong>)."
+            )
+            + cls._p(
+                "Upgrade before the trial ends to keep selling, stock, and staff access without interruption. "
+                "No card was charged for the trial."
+            )
+            + (
+                f'<table width="100%" style="margin:16px 0 12px;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Organisation</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{org}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Plan</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{plan}</td></tr>'
+                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Days left</td>'
+                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_CREDIT};font-weight:700;">{days}</td></tr>'
+                f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">Trial ends</td>'
+                f'<td style="padding:8px 0;text-align:right;color:{EMAIL_BODY};font-weight:600;">{end_date}</td></tr>'
+                f"</table>"
+            )
+            + cls._cta(open_url, "View plans &amp; upgrade")
+            + cls._raw_link(open_url)
+            + cls._muted(
+                "If you already upgraded, you can ignore this email. "
+                "Questions? Reply or visit Support."
+            )
+        )
+        html = cls.render_shell(
+            title=urgency,
+            preheader=preheader,
+            eyebrow="Trial reminder",
+            body_html=body,
+        )
+        subject = (
+            f"Trial ends today · {org}"
+            if days <= 0
+            else f"Trial ends in {days} day{'s' if days != 1 else ''} · {org}"
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_billing,
+            to_addresses=[to_email],
+            subject=subject,
+            html_content=html,
+        )
+
+
+
 mailer = EmailService()

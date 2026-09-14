@@ -42,7 +42,7 @@ export function StaffPanel({
   }, [items]);
 
   if (loading && !staff) {
-    return <div className="h-64 animate-pulse rounded-xl bg-border/40" />;
+    return <div className="h-64 animate-pulse rounded-md bg-border/40" />;
   }
 
   return (
@@ -70,7 +70,7 @@ export function StaffPanel({
       </KpiRow>
 
       <div className="grid gap-4 lg:grid-cols-5">
-        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm lg:col-span-3">
+        <div className="rounded-md border border-border/50 bg-card p-4 shadow-sm lg:col-span-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             Staff leaderboard
           </p>
@@ -97,7 +97,7 @@ export function StaffPanel({
             ))}
           </div>
         </div>
-        <div className="rounded-xl border border-border/50 bg-card p-4 shadow-sm lg:col-span-2">
+        <div className="rounded-md border border-border/50 bg-card p-4 shadow-sm lg:col-span-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted">
             Revenue by cashier
           </p>

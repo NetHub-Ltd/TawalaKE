@@ -1,9 +1,14 @@
-// app/components/inventory/AuditForm.tsx
-'use client';
+"use client";
 
-import React, { useState, useTransition } from 'react';
-import { AlertCircle } from 'lucide-react';
-import Link from 'next/link';
+/**
+ * Stock count (audit) — shop language only.
+ * System qty → Counted qty → Difference → Why?
+ */
+import React, { useState, useTransition } from "react";
+import { AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+import { Button, Input, Label, Select, Textarea } from "@/lib/components/ui";
 
 interface ProductContext {
   id: string;
@@ -13,147 +18,176 @@ interface ProductContext {
 
 export default function AuditForm({ product }: { product: ProductContext }) {
   const [isPending, startTransition] = useTransition();
-  const [physicalCount, setPhysicalCount] = useState<number | ''>('');
-  const [reasonCode, setReasonCode] = useState<string>('DATA_ENTRY_ERROR');
-  const [notes, setNotes] = useState<string>('');
+  const [countedQty, setCountedQty] = useState<number | "">("");
+  const [reasonCode, setReasonCode] = useState<string>("DATA_ENTRY_ERROR");
+  const [notes, setNotes] = useState<string>("");
 
-  // Critical Calculation: Variance Delta logic used to communicate to your backend system
-  const variance = physicalCount !== '' ? physicalCount - product.currentStock : 0;
+  const difference =
+    countedQty !== "" ? Number(countedQty) - product.currentStock : 0;
+  const hasDifference = countedQty !== "" && difference !== 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (physicalCount === '') {
-      alert('Please enter a valid physical count number.');
+    if (countedQty === "") {
+      alert("Enter the counted quantity.");
       return;
     }
 
     const payload = {
       business_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-      performed_by: "ca7b3a11-8231-4a1e-8133-72bb9443216c", 
+      performed_by: "ca7b3a11-8231-4a1e-8133-72bb9443216c",
       items: [
         {
           product_id: product.id,
           movement_type: "RECONCILIATION",
-          quantity: Number(variance), // The calculated safe delta (+ or -)
+          quantity: Number(difference),
           buying_price: null,
           selling_price: null,
           reference_type: "MANUAL_AUDIT",
           reference_id: null,
           reason_code: reasonCode,
-          notes: notes || null
-        }
-      ]
+          notes: notes || null,
+        },
+      ],
     };
 
     startTransition(async () => {
       await new Promise((resolve) => setTimeout(resolve, 600));
-      console.log('📋 [Backend Payload Sent] -> POST /api/v1/inventory/transactions', JSON.stringify(payload, null, 2));
-      alert(`Reconciliation complete! System variance adjusted by ${variance} units. Check code execution console.`);
+      console.log(
+        "[stock count] POST /api/v1/inventory/transactions",
+        JSON.stringify(payload, null, 2)
+      );
+      alert(
+        difference === 0
+          ? "Count saved. System qty matches what you counted."
+          : `Count saved. System qty adjusted by ${difference > 0 ? "+" : ""}${difference} units.`
+      );
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* System State vs Physical Realization Entry Card */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 dark:bg-slate-800 dark:border-slate-700">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="space-y-4 rounded-md border border-border bg-card p-6">
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Theoretical Expected System Stock</span>
-            <span className="text-2xl font-mono font-bold text-slate-700 dark:text-slate-300">{product.currentStock} Units</span>
+            <p className="text-xs font-semibold tracking-wide text-muted">
+              System qty
+            </p>
+            <p className="mt-1 font-mono text-2xl font-semibold tabular text-foreground">
+              {product.currentStock}{" "}
+              <span className="text-sm font-medium text-muted">units</span>
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              What Tawala currently shows for {product.label}
+            </p>
           </div>
 
           <div>
-            <label htmlFor="physical_count" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-              Actual Count Found On Shelf *
-            </label>
-            <input
-              id="physical_count"
+            <Label htmlFor="counted_qty">Counted qty</Label>
+            <Input
+              id="counted_qty"
               type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              value={countedQty}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCountedQty(v === "" ? "" : Number(v));
+              }}
+              placeholder="What you counted on the shelf"
               required
-              value={physicalCount}
-              onChange={(e) => setPhysicalCount(e.target.value !== '' ? parseFloat(e.target.value) : '')}
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:bg-white outline-none dark:bg-slate-900 dark:border-slate-700 dark:focus:bg-slate-900"
-              placeholder="Enter observed number"
             />
           </div>
         </div>
 
-        {/* Live Computational Audit Variance Indicator */}
-        <div className={`p-6 rounded-xl border flex flex-col justify-between transition-colors ${
-          variance === 0 
-            ? 'bg-slate-50 border-slate-200 text-slate-600 dark:bg-slate-900/50 dark:border-slate-800 dark:text-slate-400' 
-            : variance > 0
-              ? 'bg-emerald-50/50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400'
-              : 'bg-rose-50/50 border-rose-200 text-rose-800 dark:bg-rose-950/20 dark:border-rose-900 dark:text-rose-400'
-        }`}>
+        <div
+          className={cn(
+            "flex flex-col justify-between rounded-md border p-6",
+            countedQty === ""
+              ? "border-border bg-register"
+              : difference === 0
+                ? "border-[var(--success-border)] bg-[var(--success-soft)]"
+                : "border-brand-secondary/30 bg-[#fdf2f0]"
+          )}
+        >
           <div>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Calculated System Discrepancy Variance</span>
-            <span className="text-4xl font-black font-mono block mt-1">
-              {variance > 0 ? `+${variance}` : variance}
-            </span>
+            <p className="text-xs font-semibold tracking-wide text-muted">
+              Difference
+            </p>
+            <p
+              className={cn(
+                "mt-1 font-mono text-2xl font-semibold tabular",
+                countedQty === ""
+                  ? "text-muted"
+                  : difference === 0
+                    ? "text-[var(--success)]"
+                    : "text-brand-secondary"
+              )}
+            >
+              {countedQty === ""
+                ? "—"
+                : `${difference > 0 ? "+" : ""}${difference}`}
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              Counted qty minus system qty
+            </p>
           </div>
-
-          {variance !== 0 && (
-            <div className="flex items-start gap-2 text-xs mt-4">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>
-                {variance < 0 
-                  ? 'Warning: Submission logs negative shrinkage context. This acts as a standard inventory inventory correction deduction adjustment.' 
-                  : 'Notice: This creates an incoming positive adjustment entry on your centralized ledger.'}
-              </span>
-            </div>
+          {hasDifference && (
+            <p className="mt-4 flex items-start gap-2 text-sm text-brand-secondary">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              A reason is required when the numbers do not match.
+            </p>
           )}
         </div>
       </div>
 
-      {/* Audit Meta Context Form Rows */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 dark:bg-slate-800 dark:border-slate-700">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Reconciliation Reason Mapping</h3>
-        
+      <div className="space-y-4 rounded-md border border-border bg-card p-6">
+        <h3 className="text-sm font-semibold text-foreground">Why?</h3>
+        <p className="text-xs text-muted">
+          Optional if counts match. Required when there is a difference.
+        </p>
+
         <div>
-          <label htmlFor="reason" className="block text-xs font-semibold mb-1">Primary Reason Discrepancy Code *</label>
-          <select
+          <Label htmlFor="reason">Reason</Label>
+          <Select
             id="reason"
             value={reasonCode}
             onChange={(e) => setReasonCode(e.target.value)}
-            className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-700"
+            required={hasDifference}
           >
-            <option value="DATA_ENTRY_ERROR">Human Data Entry Error (Correction)</option>
-            <option value="STOCK_DAMAGE">Physical Damage / Spoilage</option>
-            <option value="THEFT_SHRINKAGE">Unexplained Shrinkage / Theft</option>
-            <option value="FOUND_ITEM">Misplaced Stock Recovered</option>
-          </select>
+            <option value="DATA_ENTRY_ERROR">Data entry error</option>
+            <option value="THEFT_LOSS">Theft or loss</option>
+            <option value="DAMAGE">Damaged goods</option>
+            <option value="UNRECORDED_SALE">Sale not recorded</option>
+            <option value="FOUND_STOCK">Found extra stock</option>
+            <option value="OTHER">Other</option>
+          </Select>
         </div>
 
         <div>
-          <label htmlFor="notes" className="block text-xs font-semibold mb-1">Human Sign-off Explanatory Notes</label>
-          <textarea
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Textarea
             id="notes"
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Describe findings during count (e.g. Broken packaging discovered behind pallet row 4)..."
-            className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-700"
+            placeholder="Anything useful for the next person checking stock"
           />
         </div>
       </div>
 
-      {/* Button Tray */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Link 
-          href={`/products/${product.id}`}
-          className="px-4 py-2 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors min-h-[44px] inline-flex items-center dark:border-slate-700 dark:hover:bg-slate-800"
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="submit" variant="primary" disabled={isPending || countedQty === ""}>
+          {isPending ? "Saving…" : "Save count"}
+        </Button>
+        <Link
+          href=".."
+          className="inline-flex h-12 items-center rounded-md border border-border px-4 text-sm font-semibold text-muted hover:bg-register hover:text-foreground"
         >
           Cancel
         </Link>
-        <button
-          type="submit"
-          disabled={isPending || physicalCount === ''}
-          className="px-5 py-2 text-sm font-semibold bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all shadow-sm min-h-[44px] inline-flex items-center justify-center disabled:opacity-50 dark:bg-amber-500 dark:text-slate-950 dark:hover:bg-amber-400"
-        >
-          {isPending ? 'Processing Adjustment...' : 'Authorize Balance Correction'}
-        </button>
       </div>
     </form>
   );

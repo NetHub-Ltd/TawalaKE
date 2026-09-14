@@ -9,7 +9,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSales, SaleResponse } from "@/features/sales/hooks/useSales";
 import {
-  Loader2,
   AlertCircle,
   CheckCircle2,
   Receipt,
@@ -21,6 +20,7 @@ import {
   Copy,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Spinner } from "@/lib/components/ui";
 
 function formatDate(value?: string | null) {
   if (!value) return "—";
@@ -125,7 +125,7 @@ export default function CompleteSaleClient({
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] w-full items-center justify-center bg-background">
-        <Loader2 className="h-5 w-5 animate-spin text-brand-primary" />
+        <Spinner size="md" label="Loading sale" />
       </div>
     );
   }
@@ -138,14 +138,14 @@ export default function CompleteSaleClient({
         </div>
         <div>
           <h2 className="text-sm font-bold text-foreground">Sale not found</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 text-xs text-muted">
             We could not load this sale summary.
           </p>
         </div>
         <button
           type="button"
           onClick={() => router.push(terminalHref)}
-          className="inline-flex h-11 items-center rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white"
+          className="inline-flex h-11 items-center rounded-md bg-brand-primary px-4 text-sm font-semibold text-white"
         >
           Back to terminal
         </button>
@@ -177,53 +177,53 @@ export default function CompleteSaleClient({
 
   return (
     <div className="flex min-h-[70vh] w-full items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-border/50 bg-card p-6 shadow-card sm:p-8">
+      <div className="w-full max-w-md rounded-md border border-border/50 bg-card p-6 shadow-none sm:p-8">
         {/* Hero */}
         <div className="text-center">
           <div
             className={
               credit
-                ? "mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700"
-                : "mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700"
+                ? "mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-brand-secondary/30 bg-[#fdf2f0] text-brand-secondary"
+                : "mx-auto flex h-12 w-12 items-center justify-center rounded-md border border-[var(--success-border)] bg-[var(--success-soft)] text-[var(--success)]"
             }
           >
             <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
           </div>
-          <p className="mt-3 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+          <p className="mt-3 text-xs font-semibold tracking-wide text-muted uppercase">
             {credit ? "Credit recorded" : "Sale recorded"}
           </p>
           <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
             {credit ? "Credit sale recorded" : "Payment complete"}
           </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
+          <p className="mt-1.5 text-sm text-muted">
             {method} · {cust} · {formatMoney(total, currency)}
             {credit ? " · collect later" : ""}
           </p>
         </div>
 
         {/* Detail card */}
-        <div className="mt-6 rounded-xl border border-border/50 bg-surface/30 px-4 py-4">
+        <div className="mt-6 rounded-md border border-border/50 bg-register px-4 py-4">
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-muted-foreground">Total</dt>
+              <dt className="text-muted">Total</dt>
               <dd
                 className={
                   credit
-                    ? "font-mono text-lg font-bold tabular-nums text-amber-700"
-                    : "font-mono text-lg font-bold tabular-nums text-emerald-700"
+                    ? "amount-lg font-mono font-semibold tabular text-brand-secondary"
+                    : "amount-lg font-mono font-semibold tabular text-[var(--success)]"
                 }
               >
                 {formatMoney(total, currency)}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="text-muted-foreground">Status</dt>
+              <dt className="text-muted">Status</dt>
               <dd>
                 <span
                   className={
                     credit
-                      ? "inline-flex rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800"
-                      : "inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800"
+                      ? "inline-flex rounded-full bg-[#fdf2f0] px-2.5 py-0.5 text-xs font-semibold text-brand-secondary"
+                      : "inline-flex rounded-full bg-[var(--success-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--success)]"
                   }
                 >
                   {credit ? "PENDING PAYMENT" : "COMPLETED"}
@@ -231,13 +231,13 @@ export default function CompleteSaleClient({
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="flex items-center gap-1.5 text-muted-foreground">
+              <dt className="flex items-center gap-1.5 text-muted">
                 <User size={14} /> Customer
               </dt>
               <dd className="truncate font-medium text-foreground">{cust}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="flex items-center gap-1.5 text-muted-foreground">
+              <dt className="flex items-center gap-1.5 text-muted">
                 <Calendar size={14} /> When
               </dt>
               <dd className="text-foreground">
@@ -247,7 +247,7 @@ export default function CompleteSaleClient({
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="flex items-center gap-1.5 text-muted-foreground">
+              <dt className="flex items-center gap-1.5 text-muted">
                 <Hash size={14} /> Reference
               </dt>
               <dd className="flex items-center gap-1.5">
@@ -257,7 +257,7 @@ export default function CompleteSaleClient({
                 <button
                   type="button"
                   onClick={copyRef}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-surface hover:text-foreground"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-register hover:text-foreground"
                   aria-label="Copy full reference"
                 >
                   <Copy size={13} />
@@ -265,7 +265,7 @@ export default function CompleteSaleClient({
               </dd>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <dt className="flex items-center gap-1.5 text-muted-foreground">
+              <dt className="flex items-center gap-1.5 text-muted">
                 <Package size={14} /> Items
               </dt>
               <dd className="text-foreground">
@@ -280,14 +280,14 @@ export default function CompleteSaleClient({
           <button
             type="button"
             onClick={() => router.push(terminalHref)}
-            className="inline-flex h-12 flex-[1.2] items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white transition hover:opacity-90"
+            className="inline-flex h-12 flex-[1.2] items-center justify-center gap-2 rounded-md bg-brand-primary text-sm font-semibold text-white transition hover:opacity-90"
           >
             <Zap size={16} />
             Quick sale
           </button>
           <Link
             href={previewHref}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-border/70 bg-background text-sm font-semibold text-foreground transition hover:bg-surface"
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-md border border-border/70 bg-background text-sm font-semibold text-foreground transition hover:bg-register"
           >
             <Receipt size={16} />
             {credit ? "View invoice" : "View receipt"}

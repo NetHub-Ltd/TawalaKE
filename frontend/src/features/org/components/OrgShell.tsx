@@ -12,7 +12,6 @@ import {
   CreditCard,
   Settings,
   ChevronLeft,
-  ChevronRight,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +21,7 @@ import {
   canAny,
   permissionsForRole,
 } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
 
 type OrgNavItem = {
   id: string;
@@ -59,7 +59,6 @@ const ORG_NAV: OrgNavItem[] = [
     label: "Billing",
     href: (orgId) => `/org/${orgId}/billing`,
     icon: CreditCard,
-    // OWNER only — matches backend org:billing
     anyOf: [Permission.ORG_BILLING],
   },
   {
@@ -71,6 +70,9 @@ const ORG_NAV: OrgNavItem[] = [
   },
 ];
 
+/**
+ * Organization HQ shell — canonical tokens only (no slate/blue palette utilities).
+ */
 export function OrgShell({
   organizationId,
   userRole,
@@ -98,41 +100,35 @@ export function OrgShell({
     "User";
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
       <aside
-        className={`relative z-40 flex shrink-0 flex-col border-r border-slate-200 bg-white transition-all duration-300 dark:border-slate-800 dark:bg-slate-900 ${
+        className={cn(
+          "relative z-40 flex shrink-0 flex-col border-r border-border bg-card transition-all duration-300",
           collapsed ? "w-20" : "w-64"
-        }`}
+        )}
         aria-label="Organization navigation"
       >
-        <div className="flex h-16 items-center justify-between gap-2 border-b border-slate-200 px-4 dark:border-slate-800">
+        <div className="flex h-16 items-center gap-2 border-b border-border px-4">
           <div className="flex min-w-0 items-center gap-3 overflow-hidden">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 font-bold text-white shadow-sm shadow-blue-500/20">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-primary font-semibold text-white">
               <Building2 size={18} aria-hidden />
             </div>
             {!collapsed && (
               <div className="min-w-0 truncate">
-                <p className="text-sm font-black tracking-tight">Organization</p>
-                <p className="truncate font-mono text-[10px] text-slate-400">
+                <p className="text-sm font-semibold tracking-tight text-foreground">
+                  Organization
+                </p>
+                <p className="truncate font-mono text-xs text-muted">
                   {organizationId.slice(0, 8)}…
                 </p>
               </div>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-            aria-label={collapsed ? "Expand organization nav" : "Collapse organization nav"}
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2.5" aria-label="Organization">
           {items.map((item) => {
             const href = item.href(organizationId);
-            // Home is exact match only — otherwise every /org/{id}/… path marks Home active.
             const active =
               item.id === "dashboard"
                 ? pathname === href || pathname === `${href}/`
@@ -144,11 +140,13 @@ export function OrgShell({
               <Link
                 key={item.id}
                 href={href}
-                className={`flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={cn(
+                  "flex min-h-12 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary",
                   active
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                } ${collapsed ? "justify-center px-2" : ""}`}
+                    ? "bg-brand-primary/10 text-brand-primary ring-1 ring-inset ring-brand-primary/20"
+                    : "text-muted hover:bg-register hover:text-foreground",
+                  collapsed && "justify-center px-2"
+                )}
                 aria-current={active ? "page" : undefined}
                 title={item.label}
               >
@@ -159,25 +157,26 @@ export function OrgShell({
           })}
         </nav>
 
-        <div className="border-t border-slate-200 p-2.5 dark:border-slate-800">
+        <div className="border-t border-border p-2.5">
           <div
-            className={`flex items-center gap-2.5 rounded-xl border border-slate-200 p-2 dark:border-slate-800 ${
-              collapsed ? "justify-center" : ""
-            }`}
+            className={cn(
+              "flex items-center gap-2.5 rounded-md border border-border p-2",
+              collapsed && "justify-center"
+            )}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-register text-xs font-semibold text-foreground">
               {String(displayName).slice(0, 1).toUpperCase()}
             </div>
             {!collapsed && (
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{displayName}</p>
-                <p className="truncate text-[11px] text-slate-500">{role || "Member"}</p>
+                <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+                <p className="truncate text-xs text-muted">{role || "Member"}</p>
               </div>
             )}
             <button
               type="button"
               onClick={() => signOut({ callbackUrl: "/login" })}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-800"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-register hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
               aria-label="Sign out"
               title="Sign out"
             >
@@ -185,6 +184,30 @@ export function OrgShell({
             </button>
           </div>
         </div>
+
+        {/* Collapse control — centered on right edge */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className={cn(
+            "absolute top-1/2 z-50 flex h-8 w-8 -translate-y-1/2 items-center justify-center",
+            "rounded-full border border-border bg-card text-muted shadow-sm",
+            "transition-all duration-300 hover:border-brand-primary/30 hover:bg-register hover:text-brand-primary",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary",
+            "right-0 translate-x-1/2"
+          )}
+          aria-label={collapsed ? "Expand organization nav" : "Collapse organization nav"}
+          aria-expanded={!collapsed}
+        >
+          <span
+            className={cn(
+              "inline-flex transition-transform duration-300 ease-out",
+              collapsed ? "rotate-180" : "rotate-0"
+            )}
+          >
+            <ChevronLeft size={16} aria-hidden />
+          </span>
+        </button>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">

@@ -1,7 +1,7 @@
 import React from "react";
 
 function Bone({ className = "" }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl bg-border/40 ${className}`} aria-hidden />;
+  return <div className={`animate-pulse rounded-md bg-border/40 ${className}`} aria-hidden />;
 }
 
 /** Layout-stable skeleton — matches overview chrome, no center shrink. */

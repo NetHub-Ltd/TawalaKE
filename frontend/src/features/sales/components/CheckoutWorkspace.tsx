@@ -44,7 +44,7 @@ export function CheckoutWorkspace({
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] w-full items-center justify-center bg-background">
-        <p className="animate-pulse text-sm text-muted-foreground">
+        <p className="animate-pulse text-sm text-muted">
           Loading sale…
         </p>
       </div>
@@ -61,14 +61,14 @@ export function CheckoutWorkspace({
           <h2 className="text-sm font-bold tracking-wide text-foreground uppercase">
             Sale not found
           </h2>
-          <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-1 max-w-xs text-xs leading-relaxed text-muted">
             This staged sale could not be loaded. Return to the terminal and try
             again.
           </p>
         </div>
         <Link
           href={terminalHref}
-          className="inline-flex h-11 items-center rounded-xl border border-border/60 bg-card px-4 text-xs font-bold tracking-wide uppercase hover:bg-surface"
+          className="inline-flex h-11 items-center rounded-md border border-border/60 bg-card px-4 text-xs font-bold tracking-wide uppercase hover:bg-surface"
         >
           Return to terminal
         </Link>
@@ -103,20 +103,20 @@ export function CheckoutWorkspace({
             aria-expanded={itemsOpen}
           >
             <div>
-              <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <p className="text-xs font-semibold tracking-wider text-muted uppercase">
                 Amount to collect
               </p>
               <p className="font-mono text-2xl font-bold tabular-nums text-foreground">
                 {formatMoney(currency, grandTotal)}
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-muted">
                 {itemCount} {itemCount === 1 ? "item" : "items"}
               </p>
             </div>
             {itemsOpen ? (
-              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+              <ChevronUp className="h-5 w-5 text-muted" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              <ChevronDown className="h-5 w-5 text-muted" />
             )}
           </button>
 
@@ -124,8 +124,8 @@ export function CheckoutWorkspace({
             className={`${itemsOpen ? "block" : "hidden"} border-t border-border/40 px-4 pb-5 lg:block lg:border-t-0 lg:px-8 lg:py-8`}
           >
             {/* Desktop hero total */}
-            <div className="mb-6 hidden rounded-2xl border border-brand-primary/15 bg-brand-primary/5 px-5 py-4 lg:block">
-              <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+            <div className="mb-6 hidden rounded-md border border-brand-primary/15 bg-brand-primary/5 px-5 py-4 lg:block">
+              <p className="text-xs font-semibold tracking-wider text-muted uppercase">
                 Amount to collect
               </p>
               <p className="mt-1 font-mono text-3xl font-bold tracking-tight text-foreground tabular-nums">
@@ -133,11 +133,11 @@ export function CheckoutWorkspace({
               </p>
             </div>
 
-            <p className="mb-3 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+            <p className="mb-3 text-xs font-semibold tracking-wider text-muted uppercase">
               Items ({itemCount})
             </p>
             {items.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-border/60 bg-surface/30 px-3 py-4 text-xs text-muted-foreground">
+              <p className="rounded-md border border-dashed border-border/60 bg-surface/30 px-3 py-4 text-xs text-muted">
                 Line items could not be loaded for this staged sale. Totals below
                 are still from the server — you can complete the sale safely.
               </p>
@@ -152,7 +152,7 @@ export function CheckoutWorkspace({
                       <p className="truncate font-medium text-foreground">
                         {item.name}
                       </p>
-                      <p className="text-xs text-muted-foreground tabular-nums">
+                      <p className="text-xs text-muted tabular-nums">
                         {item.quantity} × {formatMoney(currency, item.unit_price)}
                       </p>
                     </div>
@@ -165,21 +165,21 @@ export function CheckoutWorkspace({
             )}
 
             <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm">
-              <div className="flex justify-between text-muted-foreground">
+              <div className="flex justify-between text-muted">
                 <span>Subtotal</span>
                 <span className="tabular-nums">
                   {formatMoney(currency, subtotal)}
                 </span>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-emerald-600">
+                <div className="flex justify-between text-[var(--success)]">
                   <span>Discount</span>
                   <span className="tabular-nums">
                     −{formatMoney(currency, discount)}
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-muted-foreground">
+              <div className="flex justify-between text-muted">
                 <span>Tax</span>
                 <span className="tabular-nums">
                   {formatMoney(currency, taxAmount)}
@@ -196,7 +196,7 @@ export function CheckoutWorkspace({
         </section>
 
         {/* FORM */}
-        <section className="flex flex-1 flex-col justify-center px-4 py-6 sm:px-8 lg:py-10">
+        <section className="flex flex-1 flex-col justify-center px-4 py-4 sm:px-8 ">
           <div className="mx-auto w-full max-w-md">
             <CheckoutForm
               saleId={activeSale.id}
@@ -204,7 +204,7 @@ export function CheckoutWorkspace({
               organizationId={organizationId}
               businessId={businessId}
             />
-            <p className="mt-4 text-center text-[11px] text-muted-foreground">
+            <p className="mt-4 text-center text-xs text-muted">
               Totals from staged sale · cart kept until this sale completes
             </p>
           </div>

@@ -26,11 +26,11 @@ export function BusinessCard({
 }: BusinessCardProps) {
   return (
     <div
-      className="group relative bg-white border border-gray-200 p-10 rounded-[2.5rem] flex flex-col justify-between items-start hover:border-black hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all cursor-pointer min-h-[260px] w-full"
+      className="group relative bg-white border border-border p-10 rounded-[2.5rem] flex flex-col justify-between items-start hover:border-black hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] transition-all cursor-pointer min-h-[260px] w-full"
       onClick={() => onSelect(biz)}
     >
       <div className="w-full flex justify-between items-start">
-        <div className="p-5 bg-gray-50 rounded-2xl group-hover:bg-black group-hover:text-white transition-colors border border-gray-100">
+        <div className="p-5 bg-register rounded-md group-hover:bg-brand-primary group-hover:text-white transition-colors border border-border">
           <Building2 size={32} />
         </div>
 
@@ -40,7 +40,7 @@ export function BusinessCard({
               e.stopPropagation();
               onEdit(biz.id);
             }}
-            className="p-3 hover:bg-gray-100 rounded-xl transition-colors text-gray-500 hover:text-black"
+            className="p-3 hover:bg-register rounded-md transition-colors text-muted hover:text-foreground"
             title="Edit Business"
           >
             <Edit3 size={20} />
@@ -50,7 +50,7 @@ export function BusinessCard({
               e.stopPropagation();
               onDelete(biz.id);
             }}
-            className="p-3 hover:bg-red-50 rounded-xl transition-colors text-gray-500 hover:text-red-600"
+            className="p-3 hover:bg-red-50 rounded-md transition-colors text-muted hover:text-red-600"
             title="Delete Business"
           >
             <Trash2 size={20} />
@@ -60,15 +60,15 @@ export function BusinessCard({
 
       <div className="w-full flex justify-between items-end mt-12">
         <div className="space-y-1">
-          <h3 className="text-3xl font-black uppercase tracking-tighter leading-none">
+          <h3 className="text-3xl font-semibold uppercase tracking-tighter leading-none">
             {biz.name}
           </h3>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+          <p className="text-xs font-bold text-muted uppercase tracking-wide">
             ID: {biz.id.slice(0, 8)}...
           </p>
         </div>
         <ArrowRight
-          className="text-gray-300 group-hover:text-black transform group-hover:translate-x-2 transition-all"
+          className="text-muted group-hover:text-foreground transform group-hover:translate-x-2 transition-all"
           size={28}
         />
       </div>
