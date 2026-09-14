@@ -176,11 +176,11 @@ export function BusinessSwitcher({ isCollapsed }: BusinessSwitcherProps) {
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label="Switch business context"
-        className={`w-full rounded-md border border-border bg-register/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200 flex items-center min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 ${
+        className={`w-full rounded-md border border-border bg-register/60 hover:bg-register transition-all duration-200 flex items-center min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 ${
           isCollapsed ? "h-12 w-12 mx-auto justify-center p-2" : "p-2 gap-2.5 h-14"
         }`}
       >
-        <div className="h-9 w-9 rounded-md bg-blue-600/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shrink-0">
+        <div className="h-9 w-9 rounded-md bg-brand-primary/10 text-brand-primary border border-brand-primary/20 flex items-center justify-center shrink-0">
           <Store size={18} strokeWidth={2} />
         </div>
 
@@ -240,7 +240,7 @@ export function BusinessSwitcher({ isCollapsed }: BusinessSwitcherProps) {
                     {isSelected && (
                       <Check
                         size={15}
-                        className="shrink-0 text-blue-600 dark:text-blue-400"
+                        className="shrink-0 text-brand-primary dark:text-brand-primary"
                       />
                     )}
                   </button>
