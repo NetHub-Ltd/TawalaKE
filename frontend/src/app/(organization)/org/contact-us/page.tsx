@@ -66,7 +66,7 @@ export default function OrgContactUsPage() {
               </div>
             </a>
             <a
-              href="https://wa.me/254700000000"
+              href="https://wa.me/254783202527?text=Hi%20Tawala%20support%20%E2%80%94%20message%20from%20the%20Tawala%20website%20%28tawala.nethub.co.ke%29."
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-brand-primary/40"
