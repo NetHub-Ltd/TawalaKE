@@ -196,7 +196,7 @@ export function CheckoutWorkspace({
         </section>
 
         {/* FORM */}
-        <section className="flex flex-1 flex-col justify-center px-4 py-6 sm:px-8 lg:py-10">
+        <section className="flex flex-1 flex-col justify-center px-4 py-4 sm:px-8 ">
           <div className="mx-auto w-full max-w-md">
             <CheckoutForm
               saleId={activeSale.id}

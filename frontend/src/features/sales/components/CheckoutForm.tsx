@@ -228,10 +228,6 @@ export function CheckoutForm({
         <p className="mt-1 text-sm text-muted">
           Customer required — we record who paid or who took credit.
         </p>
-        <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-muted">Total due</p>
-        <p className="amount-lg text-foreground tabular">
-          KES {grandTotal.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-        </p>
       </div>
 
       {/* Lookup — visually separate from the form fields below */}
