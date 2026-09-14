@@ -102,7 +102,7 @@ export function MetricLineChart({
           </circle>
         ))}
       </svg>
-      <div className="mt-1 flex justify-between gap-1 text-[10px] text-muted">
+      <div className="mt-1 flex justify-between gap-1 text-xs text-muted">
         {points.map((p, i) =>
           i % labelEvery === 0 || i === points.length - 1 ? (
             <span key={p.label + i} className="truncate">
@@ -258,7 +258,7 @@ export function DualTrendChart({
 
   return (
     <div className="flex w-full flex-col" style={{ height }}>
-      <div className="mb-1 flex items-center gap-4 text-[10px] text-muted">
+      <div className="mb-1 flex items-center gap-4 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-sm bg-brand-accent" /> Sales (count)
         </span>
@@ -332,7 +332,7 @@ export function DualTrendChart({
           );
         })}
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-muted">
+      <div className="mt-1 flex justify-between text-xs text-muted">
         {points.map((p) => (
           <span key={p.label} className="truncate">
             {p.label}

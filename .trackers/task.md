@@ -1,11 +1,14 @@
 # Task: Theme & UX remediation
 
-## Current
-**Phase E complete (E.1–E.3)** + receipt redesign on chore/theme-retail-os
+## Status
+**Phases 0–F COMPLETE** on `chore/theme-retail-os`
 
-## Next
-Phase F — public marketing isolation decision
-Or residual debt cleanup via check:theme report
+Canonical Modern Retail OS is locked: tokens, UI kit, org/POS/customers/stock/staff chrome,
+receipt redesign, public isolation rules.
 
-## Hard rules
-AGENTS.md §5
+## Optional residual
+`npm run check:theme` may still report non-strict paths (comments, edge marketing).
+Strict paths must stay clean.
+
+## User next step
+Open PR from `chore/theme-retail-os` → `dev` manually when ready.

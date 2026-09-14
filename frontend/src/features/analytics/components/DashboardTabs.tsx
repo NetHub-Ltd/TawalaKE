@@ -32,7 +32,7 @@ export function DashboardTabs({
             onClick={() => onChange(tab.id)}
             className={clsx(
               "relative -mb-px pb-3 text-sm font-medium transition-colors",
-              active ? "text-foreground" : "text-muted hover:text-slate-800"
+              active ? "text-foreground" : "text-muted hover:text-foreground"
             )}
           >
             {tab.label}

@@ -92,7 +92,10 @@ Agents **must not**:
 
 ### 5.3 Exceptions
 
-- **Public marketing / legal pages** may retain distinct prose styling only if isolated under `(public)` marketing routes and **must not** redefine app shell tokens.
+- **Public marketing / legal / blog** (`src/app/(public)/**`) may use different page structure and longer prose, but:
+  - **Must inherit** root `globals.css` tokens (no second `:root` palette, no alternate display fonts).
+  - **Must not** set `--brand-*`, `--background`, `--surface`, or font CSS variables on public wrappers.
+  - Mark public shell with `data-shell="public"` (see public layout).
 - A one-off control is allowed only when the PR description states **why** the kit is insufficient and adds a follow-up to extend the kit.
 - Chart libraries: prefer kit `BarChart` / `LineChart` unless a documented dependency is approved.
 

@@ -1,4 +1,4 @@
 # Repository State
 - Branch: chore/theme-retail-os
-- Phase E + receipt redesign complete
-- Next: Phase F or residual cleanup
+- Theme program Phases 0–F complete
+- User will open PR to dev manually

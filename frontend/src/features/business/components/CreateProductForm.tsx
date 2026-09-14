@@ -97,14 +97,14 @@ export function CreateProductForm() {
           <div>
             <div className="flex items-center gap-2 mb-2 text-primary">
               <Package size={20} className="stroke-[2.5]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">
+              <span className="text-xs font-semibold uppercase tracking-wide">
                 Node_Inbound / v1.0.4
               </span>
             </div>
-            <h1 className="text-5xl font-black uppercase tracking-tighter italic">
+            <h1 className="text-5xl font-semibold uppercase tracking-tighter italic">
               New <span className="text-primary">Asset</span>
             </h1>
-            <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold mt-2 opacity-70">
+            <p className="text-muted text-xs uppercase tracking-wide font-bold mt-2 opacity-70">
               Auth: {businessName || "System_Root"}{" // "}
               {businessId?.toString().slice(0, 8)}
             </p>
@@ -114,14 +114,14 @@ export function CreateProductForm() {
             <button
               type="button"
               onClick={() => reset()}
-              className="flex items-center gap-2 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-muted transition-all active:scale-95"
+              className="flex items-center gap-2 px-6 py-4 rounded-md text-xs font-semibold uppercase tracking-wide border border-border hover:bg-muted transition-all active:scale-95"
             >
               <RotateCcw size={14} /> Reset Buffer
             </button>
             <button
               type="submit"
               disabled={createProduct.isPending}
-              className="flex items-center gap-3 px-10 py-4 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-50"
+              className="flex items-center gap-3 px-10 py-4 bg-foreground text-background dark:bg-primary dark:text-primary-foreground rounded-md font-semibold text-xs uppercase tracking-[0.2em] shadow-xl hover:-translate-y-1 active:translate-y-0 transition-all disabled:opacity-50"
             >
               {createProduct.isPending ? (
                 <Loader2 size={18} className="animate-spin" />
@@ -137,20 +137,20 @@ export function CreateProductForm() {
         <section className="bg-card border border-border rounded-[2.5rem] p-8 shadow-soft relative overflow-hidden group">
           <div className="flex items-center gap-3 mb-8">
             <Tag size={18} className="text-primary" />
-            <h2 className="text-sm font-black uppercase tracking-widest">
+            <h2 className="text-sm font-semibold uppercase tracking-wide">
               Primary Identity
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-1 space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest">
+              <label className="text-xs font-semibold uppercase tracking-wide">
                 Official Name
               </label>
               <input
                 {...register("name", { required: true })}
                 className={cn(
-                  "w-full bg-background border-2 border-border rounded-2xl py-4 px-5 text-lg font-bold focus:border-primary outline-none transition-all",
+                  "w-full bg-background border-2 border-border rounded-md py-4 px-5 text-lg font-bold focus:border-primary outline-none transition-all",
                   errors.name &&
                     "border-destructive ring-4 ring-destructive/10",
                 )}
@@ -159,36 +159,36 @@ export function CreateProductForm() {
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest">
+              <label className="text-xs font-semibold uppercase tracking-wide">
                 Market Price (Retail)
               </label>
               <div className="relative">
                 <DollarSign
                   size={16}
-                  className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="absolute left-5 top-1/2 -translate-y-1/2 text-muted"
                 />
                 <input
                   type="number"
                   step="0.01"
                   {...register("price", { valueAsNumber: true })}
-                  className="w-full bg-background border-2 border-border rounded-2xl py-4 pl-12 pr-5 text-xl font-black focus:border-emerald-500 outline-none transition-all"
+                  className="w-full bg-background border-2 border-border rounded-md py-4 pl-12 pr-5 text-xl font-semibold focus:border-emerald-500 outline-none transition-all"
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-black uppercase tracking-widest">
+              <label className="text-xs font-semibold uppercase tracking-wide">
                 Opening Stock
               </label>
               <div className="relative">
                 <Layers
                   size={16}
-                  className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  className="absolute left-5 top-1/2 -translate-y-1/2 text-muted"
                 />
                 <input
                   type="number"
                   {...register("stock", { valueAsNumber: true })}
-                  className="w-full bg-background border-2 border-border rounded-2xl py-4 pl-12 pr-5 text-xl font-black focus:border-primary outline-none transition-all"
+                  className="w-full bg-background border-2 border-border rounded-md py-4 pl-12 pr-5 text-xl font-semibold focus:border-primary outline-none transition-all"
                 />
               </div>
             </div>
@@ -199,7 +199,7 @@ export function CreateProductForm() {
         <section className="bg-card border border-border rounded-[2.5rem] overflow-hidden">
           <div className="p-6 border-b border-border bg-muted/30 flex items-center gap-3">
             <LayoutGrid size={18} />
-            <h2 className="text-sm font-black uppercase tracking-widest">
+            <h2 className="text-sm font-semibold uppercase tracking-wide">
               System Parameters
             </h2>
           </div>
@@ -216,7 +216,7 @@ export function CreateProductForm() {
                   ].map((h) => (
                     <th
                       key={h}
-                      className="text-left px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] border-r border-border/50"
+                      className="text-left px-8 py-5 text-xs font-semibold uppercase tracking-[0.2em] border-r border-border/50"
                     >
                       {h}
                     </th>
@@ -263,7 +263,7 @@ export function CreateProductForm() {
                       {...register("attributes.unit_price", {
                         valueAsNumber: true,
                       })}
-                      className="w-full bg-transparent text-lg font-black text-emerald-600 outline-none"
+                      className="w-full bg-transparent text-lg font-semibold text-emerald-600 outline-none"
                     />
                   </td>
                 </tr>
@@ -275,8 +275,8 @@ export function CreateProductForm() {
         {/* FINANCIAL ALERT */}
         <div className="p-6 bg-primary/5 border border-primary/10 rounded-3xl flex items-start gap-4">
           <AlertCircle size={14} className="text-primary mt-0.5" />
-          <p className="text-[10px] leading-relaxed text-muted-foreground font-medium max-w-2xl">
-            <strong className="text-foreground uppercase tracking-wider block mb-1">
+          <p className="text-xs leading-relaxed text-muted font-medium max-w-2xl">
+            <strong className="text-foreground tracking-wide block mb-1">
               Financial Integrity Check
             </strong>
             Ensure unit prices align with retail markup. Discrepancies will

@@ -145,7 +145,7 @@ export default function NavBar() {
               {solutionsOpen && (
                 <div
                   role="menu"
-                  className="absolute left-0 top-full z-50 mt-1.5 w-[22rem] rounded-2xl border border-border/60 bg-card p-2 shadow-lift"
+                  className="absolute left-0 top-full z-50 mt-1.5 w-[22rem] rounded-md border border-border/60 bg-card p-2 shadow-lift"
                 >
                   <div className="space-y-0.5">
                     {SOLUTIONS.map((item) => {
@@ -156,7 +156,7 @@ export default function NavBar() {
                           href={item.href}
                           role="menuitem"
                           onClick={closeSolutions}
-                          className="flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-brand-primary/5"
+                          className="flex items-start gap-3 rounded-md p-2.5 transition-colors hover:bg-brand-primary/5"
                         >
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary">
                             <Icon size={16} aria-hidden="true" />
@@ -178,7 +178,7 @@ export default function NavBar() {
                       href="/solutions"
                       role="menuitem"
                       onClick={closeSolutions}
-                      className="flex items-center gap-2 rounded-xl px-2.5 py-2.5 text-sm font-semibold text-brand-primary transition-colors hover:bg-brand-primary/5"
+                      className="flex items-center gap-2 rounded-md px-2.5 py-2.5 text-sm font-semibold text-brand-primary transition-colors hover:bg-brand-primary/5"
                     >
                       <Layers size={16} aria-hidden="true" />
                       All solutions
@@ -212,7 +212,7 @@ export default function NavBar() {
           {/* Mobile toggle */}
           <button
             type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/60 text-muted transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary md:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border/60 text-muted transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary md:hidden"
             onClick={() => setMobileOpen((o) => !o)}
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav"
@@ -244,7 +244,7 @@ export default function NavBar() {
                   key={item.href}
                   href={item.href}
                   onClick={closeMobile}
-                  className="flex min-h-11 items-center gap-3 rounded-xl px-2 py-2 text-sm font-medium text-foreground hover:bg-brand-primary/5"
+                  className="flex min-h-11 items-center gap-3 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-brand-primary/5"
                 >
                   <Icon
                     size={16}
@@ -258,7 +258,7 @@ export default function NavBar() {
             <Link
               href="/solutions"
               onClick={closeMobile}
-              className="flex min-h-11 items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-primary/5"
+              className="flex min-h-11 items-center gap-2 rounded-md px-2 py-2 text-sm font-semibold text-brand-primary hover:bg-brand-primary/5"
             >
               <Layers size={16} aria-hidden="true" />
               All solutions
@@ -271,7 +271,7 @@ export default function NavBar() {
                 key={link.href}
                 href={link.href}
                 onClick={closeMobile}
-                className="flex min-h-11 items-center rounded-xl px-2 py-2 text-sm font-medium text-foreground hover:bg-brand-primary/5"
+                className="flex min-h-11 items-center rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-brand-primary/5"
               >
                 {link.name}
               </Link>
@@ -282,7 +282,7 @@ export default function NavBar() {
             <Link
               href="/login"
               onClick={closeMobile}
-              className="flex min-h-11 items-center justify-center rounded-xl border border-border/60 px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-background"
+              className="flex min-h-11 items-center justify-center rounded-md border border-border/60 px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-background"
             >
               Sign in
             </Link>

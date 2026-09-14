@@ -108,8 +108,8 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| F.1 | Decide: leave marketing/legal visual system isolated under `(public)` **or** restyle to canonical | [ ] | explicit product decision |
-| F.2 | Ensure marketing cannot redefine app shell CSS variables | [ ] | layout boundaries |
+| F.1 | Decide: leave marketing/legal visual system isolated under `(public)` **or** restyle to canonical | [x] | 2026-09-14 — inherit canonical tokens; structure may differ |
+| F.2 | Ensure marketing cannot redefine app shell CSS variables | [x] | 2026-09-14 — public layout docs + AGENTS §5.3 + theme.md |
 
 **Phase F exit criteria:** Written decision + no token leakage into app shell.
 

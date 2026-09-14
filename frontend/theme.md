@@ -31,3 +31,12 @@ npm run build
 
 ## Lab
 `/themetest` exercises the shared kit (forms, calendar, bar/line charts, table, modal, badges).
+
+
+## Phase F — Public vs app shell
+
+**Decision (2026-09-14):** Public marketing/legal/blog stay under `(public)` and **inherit** the same canonical tokens. They do **not** get a second palette or font stack.
+
+- Allowed: different page structure, longer prose, marketing sections.
+- Forbidden: redefining `--brand-*`, `--background`, `--surface`, or loading alternate display fonts in public routes.
+- App product UI under `(organization)` and `src/features` remains the strict kit surface (`check:theme` strict paths).
