@@ -1,14 +1,10 @@
-# Task: Theme & UX remediation
+# Task
 
-## Status
-**Phases 0–F COMPLETE** on `chore/theme-retail-os`
+## Done
+Theme Phases 0–F complete.
 
-Canonical Modern Retail OS is locked: tokens, UI kit, org/POS/customers/stock/staff chrome,
-receipt redesign, public isolation rules.
+## This push
+Public NavBar + homepage conversion redesign (canonical tokens).
 
-## Optional residual
-`npm run check:theme` may still report non-strict paths (comments, edge marketing).
-Strict paths must stay clean.
-
-## User next step
-Open PR from `chore/theme-retail-os` → `dev` manually when ready.
+## Next
+User-directed (next product work).

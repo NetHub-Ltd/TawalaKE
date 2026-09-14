@@ -1,7 +1,5 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { Button } from "@/lib/components/ui/Button";
-import { ProductPreviewCard } from "@/lib/components/marketing/ProductPreviewCard";
 import {
   ArrowRight,
   CheckCircle2,
@@ -9,8 +7,8 @@ import {
   ShieldCheck,
   Users,
   Zap,
-  ChevronRight,
 } from "lucide-react";
+import { ProductPreviewCard } from "@/lib/components/marketing/ProductPreviewCard";
 
 export const metadata: Metadata = {
   title: "Stop Shop Leakages & Track Daily Profits",
@@ -27,25 +25,28 @@ export const metadata: Metadata = {
 
 const TRIAL_HREF = "/onboarding/personal-details";
 const LOGIN_HREF = "/login";
+const PLANS_HREF = "/onboarding/plans";
 
 const BENEFITS = [
   {
     icon: Zap,
-    title: "Fast counter sales",
-    desc: "Record cash, M-Pesa, and store credit in seconds on any phone or PC.",
-    metric: "Any phone or PC",
+    title: "Sell in seconds",
+    desc: "Cash, M-Pesa, and store credit on any phone or PC — no special hardware.",
   },
   {
     icon: Package,
-    title: "Stock leak control",
+    title: "Stop stock leaks",
     desc: "Every sale updates inventory. Low-stock and mismatch alerts keep shelves honest.",
-    metric: "Real-time alerts",
   },
   {
     icon: Users,
-    title: "Staff PIN accountability",
-    desc: "4-digit PIN on shared devices. Every sale and discount is tied to a person.",
-    metric: "PIN-tied sales",
+    title: "Staff on PIN",
+    desc: "Shared devices, personal accountability. Every sale and discount ties to a person.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "See real profit",
+    desc: "Daily net that accounts for stock and credit — not just till cash.",
   },
 ] as const;
 
@@ -57,13 +58,13 @@ const STEPS = [
   },
   {
     n: "2",
-    title: "Set password and start trial",
-    desc: "14 days of Ndovu. No credit card.",
+    title: "Start the trial",
+    desc: "14 days on Ndovu. No credit card.",
   },
   {
     n: "3",
-    title: "Run your shop",
-    desc: "Add stock, staff PINs, and start selling.",
+    title: "Run the shop",
+    desc: "Add stock, staff PINs, and sell.",
   },
 ] as const;
 
@@ -73,351 +74,241 @@ const FAQS = [
     a: "Plans start at KSh 1,490 per month. Self-serve trial is 14 days on Ndovu with no credit card required.",
   },
   {
-    q: "Can I use Tawala on my phone?",
-    a: "Yes. It works on Android phones, iPhones, tablets, and PCs. No special hardware required.",
+    q: "Can I use it on my phone?",
+    a: "Yes. Android, iPhone, tablet, or PC. No special hardware required.",
   },
   {
-    q: "How does Tawala stop stock theft?",
+    q: "How does it reduce stock theft?",
     a: "Sales and adjustments are tied to staff PIN login. Real-time stock alerts flag mismatches quickly.",
   },
   {
-    q: "Can I manage multiple shops?",
-    a: "Yes. Ndovu and above support multi-branch inventory, staff, and sales from one dashboard.",
+    q: "Multiple shops?",
+    a: "Yes. Ndovu and above support multiple branches under one organisation.",
   },
 ] as const;
 
-const PROOF = [
-  {
-    q: "Daily profit view alone paid for the subscription.",
-    who: "Minimart owner · Nairobi",
-  },
-  {
-    q: "Every sale and discount is tied to a person now.",
-    who: "Pharmacy manager · Kisumu",
-  },
-  {
-    q: "Two branches, one login — reports in minutes.",
-    who: "Hardware owner · Mombasa",
-  },
+const TRUST = [
+  "Built for Kenyan retail",
+  "M-Pesa-ready checkout",
+  "PIN staff accountability",
+  "14-day free trial",
 ] as const;
 
-export default function LandingPage() {
-  const softwareLd = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Tawala",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web, Android, iOS, Windows",
-    description:
-      "Business management system for Kenyan SMEs. Stop stock leakages, manage staff with PIN login, track inventory, and see real daily net profit.",
-    url: "https://tawala.nethub.co.ke",
-    offers: {
-      "@type": "Offer",
-      price: "1490",
-      priceCurrency: "KES",
-      description: "Plans from KSh 1,490/month · 14-day free trial",
-      availability: "https://schema.org/InStock",
-    },
-  };
-
-  const organizationLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": "https://tawala.nethub.co.ke/#organization",
-    name: "Tawala",
-    url: "https://tawala.nethub.co.ke",
-    logo: "https://tawala.nethub.co.ke/web-app-manifest-512x512.png",
-    areaServed: { "@type": "Country", name: "Kenya" },
-  };
-
-  const faqLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: FAQS.map((item) => ({
-      "@type": "Question",
-      name: item.q,
-      acceptedAnswer: { "@type": "Answer", text: item.a },
-    })),
-  };
-
+export default function HomePage() {
   return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }}
-      />
-
-      <div className="relative w-full text-foreground">
-        {/* Hero + decorative product preview */}
-        <section className="section-padding mx-auto max-w-6xl pt-12 md:pt-16">
-          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-12">
-            <div className="text-center lg:text-left">
-              <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1 text-xs font-bold text-brand-primary">
-                <ShieldCheck size={14} aria-hidden="true" />
-                14-day free trial · No credit card · M-Pesa ready
-              </p>
-              <h1 className="text-h1">
-                Tawala biashara yako{" "}
-                <span className="text-gradient">bila stress na leakage.</span>
-              </h1>
-              <p className="mx-auto mt-5 max-w-xl text-base text-muted sm:text-lg lg:mx-0">
-                Stop relying on exercise books. Track sales, block stock theft,
-                and see true daily net profit — built for Kenyan shops.
-              </p>
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start">
-                <Link href={TRIAL_HREF} className="w-full sm:w-auto">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="min-h-[48px] w-full gap-2 shadow-glow sm:min-w-[220px]"
-                  >
-                    Start 14-day free trial
-                    <ArrowRight size={16} aria-hidden="true" />
-                  </Button>
-                </Link>
-                <Link href="#how-it-works" className="w-full sm:w-auto">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="min-h-[48px] w-full sm:min-w-[180px]"
-                  >
-                    How it works
-                  </Button>
-                </Link>
-              </div>
-              <p className="mt-4 text-sm text-muted">
-                From{" "}
-                <span className="font-semibold text-foreground">
-                  KSh 1,490/mo
-                </span>
-                {" · "}
-                <Link
-                  href={LOGIN_HREF}
-                  className="font-semibold text-brand-primary underline-offset-2 hover:underline"
-                >
-                  Log in
-                </Link>
-              </p>
+    <div className="bg-background text-foreground">
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-border">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-2 lg:items-center lg:gap-12 lg:px-8 lg:py-20">
+          <div className="space-y-6">
+            <p className="inline-flex items-center rounded-full border border-brand-primary/20 bg-brand-primary/10 px-3 py-1 text-xs font-semibold text-brand-primary">
+              Modern retail OS for Kenyan shops
+            </p>
+            <h1 className="text-h1 text-foreground">
+              Stop leakages.{" "}
+              <span className="text-brand-primary">See real daily profit.</span>
+            </h1>
+            <p className="max-w-xl text-base text-muted sm:text-lg">
+              Tawala ties every sale to stock and staff PIN — so cash, M-Pesa, and
+              credit stay honest from counter to close of day.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link
+                href={TRIAL_HREF}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-brand-primary px-6 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+              >
+                Start free trial
+                <ArrowRight size={16} aria-hidden />
+              </Link>
+              <Link
+                href={PLANS_HREF}
+                className="inline-flex h-12 items-center justify-center rounded-md border border-border bg-card px-6 text-sm font-semibold text-foreground transition hover:bg-register focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+              >
+                See pricing
+              </Link>
             </div>
-
-            {/* Presentational only — no live data, no product links */}
-            <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-              <ProductPreviewCard />
-            </div>
-          </div>
-        </section>
-
-        {/* Benefits */}
-        <section className="section-padding mx-auto max-w-6xl border-t border-border/50">
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <h2 className="text-h2">Built for how Kenyan shops actually run</h2>
-            <p className="mt-3 text-muted">
-              Three things owners care about at the counter — speed, stock, and
-              staff.
+            <p className="text-xs text-muted">
+              14 days free · No card required · Cancel anytime
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-            {BENEFITS.map((b) => (
-              <div
-                key={b.title}
-                className="card-layered flex flex-col space-y-3 p-6"
-              >
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary">
-                  <b.icon size={22} aria-hidden="true" />
-                </div>
-                <h3 className="text-h3">{b.title}</h3>
-                <p className="flex-1 text-sm leading-relaxed text-muted">
-                  {b.desc}
-                </p>
-                <p className="border-t border-border/50 pt-3 text-xs font-semibold text-brand-primary">
-                  {b.metric}
-                </p>
-              </div>
-            ))}
+          <div className="relative mx-auto w-full max-w-md lg:max-w-none">
+            <ProductPreviewCard />
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Steps */}
-        <section
-          id="how-it-works"
-          className="section-padding mx-auto max-w-6xl border-t border-border/50"
-        >
-          <div className="mx-auto mb-10 max-w-2xl text-center">
-            <h2 className="text-h2">Up and running in three steps</h2>
+      {/* Trust strip */}
+      <section
+        aria-label="Highlights"
+        className="border-b border-border bg-card/60"
+      >
+        <ul className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-3 px-4 py-4 sm:px-6 lg:px-8">
+          {TRUST.map((t) => (
+            <li
+              key={t}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-muted sm:text-sm"
+            >
+              <CheckCircle2
+                size={16}
+                className="text-brand-accent"
+                aria-hidden
+              />
+              {t}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Benefits */}
+      <section className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-h2 text-foreground">Built for the counter</h2>
+          <p className="mt-2 text-sm text-muted sm:text-base">
+            Less paperwork. Fewer surprises at month-end. More control on the
+            floor.
+          </p>
+        </div>
+        <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {BENEFITS.map(({ icon: Icon, title, desc }) => (
+            <li
+              key={title}
+              className="rounded-md border border-border bg-card p-5"
+            >
+              <span className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-register text-brand-primary">
+                <Icon size={20} aria-hidden />
+              </span>
+              <h3 className="mt-4 text-sm font-semibold text-foreground">
+                {title}
+              </h3>
+              <p className="mt-1.5 text-sm text-muted">{desc}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* How it works */}
+      <section className="border-y border-border bg-card/40">
+        <div className="section-padding mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="text-h2 text-foreground">Live in three steps</h2>
+            <p className="mt-2 text-sm text-muted">
+              From sign-up to first sale without a long setup project.
+            </p>
           </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          <ol className="mt-10 grid gap-6 sm:grid-cols-3">
             {STEPS.map((s) => (
-              <div
+              <li
                 key={s.n}
-                className="flex gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-card"
+                className="relative rounded-md border border-border bg-card p-5"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-primary text-sm font-bold text-white">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-brand-primary text-sm font-semibold text-white">
                   {s.n}
                 </span>
-                <div>
-                  <h3 className="font-semibold text-foreground">{s.title}</h3>
-                  <p className="mt-1 text-sm text-muted">{s.desc}</p>
-                </div>
-              </div>
+                <h3 className="mt-3 text-sm font-semibold text-foreground">
+                  {s.title}
+                </h3>
+                <p className="mt-1 text-sm text-muted">{s.desc}</p>
+              </li>
             ))}
-          </div>
-        </section>
-
-        {/* Social proof — horizontal scroll on small screens */}
-        <section className="section-padding mx-auto max-w-6xl border-t border-border/50">
-          <div className="-mx-4 flex gap-4 overflow-x-auto px-4 pb-2 snap-x snap-mandatory sm:mx-0 sm:grid sm:grid-cols-3 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0">
-            {PROOF.map((t) => (
-              <figure
-                key={t.who}
-                className="min-w-[85%] shrink-0 snap-center rounded-2xl border border-border/60 bg-card p-5 shadow-card sm:min-w-0"
-              >
-                <blockquote className="text-sm leading-relaxed text-foreground">
-                  &ldquo;{t.q}&rdquo;
-                </blockquote>
-                <figcaption className="mt-3 text-xs text-muted">
-                  {t.who}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-          <p className="mt-4 text-center text-xs text-muted">
-            Early owner feedback — verified quotes replace these as they are
-            collected.
-          </p>
-        </section>
-
-        {/* FAQ — native details accordion (accessible, no behavior change) */}
-        <section
-          id="faq"
-          className="section-padding mx-auto max-w-2xl border-t border-border/50"
-        >
-          <h2 className="text-h2 mb-8 text-center">Questions shop owners ask</h2>
-          <div className="space-y-3">
-            {FAQS.map((item) => (
-              <details
-                key={item.q}
-                className="group rounded-2xl border border-border/60 bg-card p-4 shadow-card open:shadow-lift"
-              >
-                <summary className="cursor-pointer list-none text-sm font-semibold text-foreground marker:content-none [&::-webkit-details-marker]:hidden">
-                  <span className="flex items-center justify-between gap-3">
-                    {item.q}
-                    <ChevronRight
-                      size={16}
-                      className="shrink-0 text-muted transition-transform group-open:rotate-90"
-                      aria-hidden="true"
-                    />
-                  </span>
-                </summary>
-                <p className="mt-3 text-sm leading-relaxed text-muted">
-                  {item.a}
-                </p>
-              </details>
-            ))}
-          </div>
-        </section>
-
-        {/* Closing CTA — same targets */}
-        <section className="section-padding mx-auto max-w-3xl text-center">
-          <div className="card-layered border-brand-primary/20 bg-linear-to-br from-card to-brand-primary/5 px-6 py-10 sm:px-12">
-            <h2 className="text-h2">Ready to stop the leakage?</h2>
-            <p className="mx-auto mt-3 max-w-md text-muted">
-              Start free for 14 days on Ndovu. From KSh 1,490/month after trial.
-            </p>
-            <Link href={TRIAL_HREF} className="mt-6 inline-block">
-              <Button
-                variant="primary"
-                size="lg"
-                className="min-h-[48px] gap-2 shadow-glow"
-              >
-                Start 14-day free trial
-                <ArrowRight size={16} aria-hidden="true" />
-              </Button>
+          </ol>
+          <div className="mt-10 flex justify-center">
+            <Link
+              href={TRIAL_HREF}
+              className="inline-flex h-12 items-center gap-2 rounded-md bg-brand-primary px-6 text-sm font-semibold text-white hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            >
+              Start free trial
+              <ArrowRight size={16} aria-hidden />
             </Link>
-            <ul className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-muted">
-              {["No credit card", "5-min setup", "M-Pesa ready"].map((x) => (
-                <li key={x} className="flex items-center gap-1.5">
-                  <CheckCircle2
-                    size={14}
-                    className="text-brand-accent"
-                    aria-hidden="true"
-                  />
-                  {x}
-                </li>
-              ))}
-            </ul>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <footer className="border-t border-border/60 bg-card/40 py-12">
-          <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
-              <div className="space-y-2 text-center sm:text-left">
-                <p className="text-sm font-bold text-foreground">Tawala</p>
-                <p className="max-w-sm text-sm text-muted">
-                  Tawala biashara yako. Take control of your business profits.
-                </p>
-              </div>
-              <nav
-                aria-label="Footer"
-                className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm"
-              >
-                <Link
-                  href="/onboarding/plans"
-                  className="text-muted hover:text-foreground"
-                >
-                  Pricing
-                </Link>
-                <Link
-                  href="/solutions"
-                  className="text-muted hover:text-foreground"
-                >
-                  Solutions
-                </Link>
-                <Link
-                  href="/support"
-                  className="text-muted hover:text-foreground"
-                >
-                  Support
-                </Link>
-                <Link href="/blog" className="text-muted hover:text-foreground">
-                  Blog
-                </Link>
-                <Link
-                  href={LOGIN_HREF}
-                  className="text-muted hover:text-foreground"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href="/legal/terms"
-                  className="text-muted hover:text-foreground"
-                >
-                  Terms
-                </Link>
-                <Link
-                  href="/legal/privacy"
-                  className="text-muted hover:text-foreground"
-                >
-                  Privacy
-                </Link>
-              </nav>
+      {/* FAQ */}
+      <section className="section-padding mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <h2 className="text-center text-h2 text-foreground">Questions</h2>
+        <dl className="mt-8 space-y-4">
+          {FAQS.map((f) => (
+            <div
+              key={f.q}
+              className="rounded-md border border-border bg-card px-5 py-4"
+            >
+              <dt className="text-sm font-semibold text-foreground">{f.q}</dt>
+              <dd className="mt-1.5 text-sm text-muted">{f.a}</dd>
             </div>
-            <p className="text-center text-xs text-muted sm:text-left">
-              {"© "}
-              {new Date().getFullYear()}
-              {" Tawala · Nethub. All rights reserved."}
+          ))}
+        </dl>
+      </section>
+
+      {/* Final CTA */}
+      <section className="border-t border-border bg-brand-primary">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-12 sm:flex-row sm:items-center sm:px-6 lg:px-8">
+          <div>
+            <h2 className="text-xl font-semibold text-white sm:text-2xl">
+              Ready to take control of the till?
+            </h2>
+            <p className="mt-1 text-sm text-white/80">
+              14-day trial · No credit card · Built for Kenyan retail
             </p>
           </div>
-        </footer>
-      </div>
-    </>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Link
+              href={TRIAL_HREF}
+              className="inline-flex h-12 items-center justify-center rounded-md bg-card px-6 text-sm font-semibold text-brand-primary hover:opacity-95"
+            >
+              Start free trial
+            </Link>
+            <Link
+              href={LOGIN_HREF}
+              className="inline-flex h-12 items-center justify-center rounded-md border border-white/30 px-6 text-sm font-semibold text-white hover:bg-white/10"
+            >
+              Log in
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card py-12">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
+            <div className="space-y-2 text-center sm:text-left">
+              <p className="text-sm font-semibold text-foreground">Tawala</p>
+              <p className="max-w-sm text-sm text-muted">
+                Tawala biashara yako. Take control of your business profits.
+              </p>
+            </div>
+            <nav
+              aria-label="Footer"
+              className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm"
+            >
+              <Link href={PLANS_HREF} className="text-muted hover:text-foreground">
+                Pricing
+              </Link>
+              <Link href="/solutions" className="text-muted hover:text-foreground">
+                Solutions
+              </Link>
+              <Link href="/support" className="text-muted hover:text-foreground">
+                Support
+              </Link>
+              <Link href="/blog" className="text-muted hover:text-foreground">
+                Blog
+              </Link>
+              <Link href={LOGIN_HREF} className="text-muted hover:text-foreground">
+                Log in
+              </Link>
+              <Link href="/legal/terms" className="text-muted hover:text-foreground">
+                Terms
+              </Link>
+              <Link href="/legal/privacy" className="text-muted hover:text-foreground">
+                Privacy
+              </Link>
+            </nav>
+          </div>
+          <p className="text-center text-xs text-muted sm:text-left">
+            © {new Date().getFullYear()} Tawala · Nethub. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }
