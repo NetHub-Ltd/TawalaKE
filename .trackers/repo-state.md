@@ -1,3 +1,4 @@
 # Repository State
 - Branch: chore/theme-retail-os
-- Latest: public NavBar + homepage conversion redesign
+- EmailService: master shell + canonical templates
+- Logo: https://tawala.nethub.co.ke/logo.svg
