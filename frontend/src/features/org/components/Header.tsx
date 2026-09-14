@@ -31,8 +31,8 @@ export function Header() {
       
       {/* LEFT SECTION: Brand Identity / Microcopy Context */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 bg-brand-primary rounded-xl flex items-center justify-center shadow-xs">
-          <span className="text-white font-black text-sm tracking-tighter">TW</span>
+        <div className="w-9 h-9 bg-brand-primary rounded-md flex items-center justify-center shadow-xs">
+          <span className="text-white font-semibold text-sm tracking-tighter">TW</span>
         </div>
         <div>
           <h1 className="font-bold text-sm tracking-tight text-foreground leading-none">
@@ -94,7 +94,7 @@ export function Header() {
 
           {/* Accessible Menu Dropdown Layer */}
           {dropdownOpen && (
-            <div className="absolute right-0 top-11 w-64 bg-card border border-border/60 rounded-xl shadow-md p-2 space-y-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="absolute right-0 top-11 w-64 bg-card border border-border/60 rounded-md shadow-md p-2 space-y-1 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
               
               {/* Operator Identity Block */}
               <div className="px-3 py-2.5 bg-surface/40 rounded-lg border border-border/20 flex flex-col gap-1">
@@ -104,7 +104,7 @@ export function Header() {
                 <p className="text-xs text-muted truncate">
                   ops@tawala.internal
                 </p>
-                <div className="mt-1.5 flex items-center gap-1 text-[10px] uppercase font-black text-brand-accent tracking-wider">
+                <div className="mt-1.5 flex items-center gap-1 text-xs uppercase font-semibold text-brand-accent tracking-wider">
                   <ShieldCheck size={12} />
                   <span>Access Scope: Global</span>
                 </div>

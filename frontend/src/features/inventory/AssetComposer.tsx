@@ -142,9 +142,9 @@ export function AssetComposer({
           role="alert"
           aria-busy="true"
         >
-          <div className="flex flex-col items-center gap-3 p-6 bg-card rounded-2xl border border-border/60 shadow-lift">
+          <div className="flex flex-col items-center gap-3 p-6 bg-card rounded-md border border-border/60 shadow-lift">
             <Loader2 className="animate-spin text-brand-primary" size={28} />
-            <p className="text-xs font-black uppercase tracking-widest text-foreground">
+            <p className="text-xs font-semibold uppercase tracking-widest text-foreground">
               Processing Transaction...
             </p>
           </div>
@@ -160,11 +160,11 @@ export function AssetComposer({
         <div className="px-5 py-3.5 bg-surface/30 border-b border-border/40 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-brand-primary" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-foreground">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-foreground">
               {initialData ? "Edit Asset Specifications" : "New Asset Registration"}
             </h3>
           </div>
-          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted bg-surface/80 px-2.5 py-1 rounded-md border border-border/40">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-muted bg-surface/80 px-2.5 py-1 rounded-md border border-border/40">
             {businessIdString
               ? `BIZ-${businessIdString.slice(0, 6).toUpperCase()}`
               : "DRAFT MODE"}
@@ -176,7 +176,7 @@ export function AssetComposer({
           <section className="space-y-3.5" aria-labelledby="general-identity-heading">
             <div
               id="general-identity-heading"
-              className="text-[10px] font-black uppercase tracking-widest text-muted border-b border-border/30 pb-1"
+              className="text-xs font-semibold uppercase tracking-widest text-muted border-b border-border/30 pb-1"
             >
               General Identity
             </div>
@@ -186,7 +186,7 @@ export function AssetComposer({
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="asset-label"
-                  className="text-[10px] font-bold uppercase tracking-wider text-muted"
+                  className="text-xs font-bold uppercase tracking-wider text-muted"
                 >
                   Product Label <span className="text-brand-primary">*</span>
                 </label>
@@ -199,14 +199,14 @@ export function AssetComposer({
                   })}
                   type="text"
                   placeholder="e.g. Premium White Bread 800g"
-                  className={`h-11 px-3 border rounded-xl bg-background text-xs font-medium outline-none transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
+                  className={`h-11 px-3 border rounded-md bg-background text-xs font-medium outline-none transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
                     errors.label
                       ? "border-destructive focus:border-destructive"
                       : "border-border/60 focus:border-brand-primary"
                   }`}
                 />
                 {errors.label && (
-                  <span className="text-destructive text-[10px] font-bold mt-0.5">
+                  <span className="text-destructive text-xs font-bold mt-0.5">
                     {errors.label.message}
                   </span>
                 )}
@@ -216,14 +216,14 @@ export function AssetComposer({
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="asset-category"
-                  className="text-[10px] font-bold uppercase tracking-wider text-muted"
+                  className="text-xs font-bold uppercase tracking-wider text-muted"
                 >
                   Category
                 </label>
                 <select
                   id="asset-category"
                   {...register("category")}
-                  className="h-11 px-3 border border-border/60 bg-background rounded-xl text-xs font-semibold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all duration-150 cursor-pointer"
+                  className="h-11 px-3 border border-border/60 bg-background rounded-md text-xs font-semibold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all duration-150 cursor-pointer"
                 >
                   {CATEGORIES.map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -239,7 +239,7 @@ export function AssetComposer({
           <section className="space-y-3.5" aria-labelledby="valuation-heading">
             <div
               id="valuation-heading"
-              className="text-[10px] font-black uppercase tracking-widest text-muted border-b border-border/30 pb-1"
+              className="text-xs font-semibold uppercase tracking-widest text-muted border-b border-border/30 pb-1"
             >
               Valuation & Stock Metrics
             </div>
@@ -249,7 +249,7 @@ export function AssetComposer({
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="asset-stock"
-                  className="text-[10px] font-bold uppercase tracking-wider text-muted"
+                  className="text-xs font-bold uppercase tracking-wider text-muted"
                 >
                   Initial Stock
                 </label>
@@ -260,14 +260,14 @@ export function AssetComposer({
                     valueAsNumber: true,
                     min: { value: 0, message: "Cannot be negative" },
                   })}
-                  className={`h-11 px-3 border rounded-xl bg-background text-xs font-mono font-semibold transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
+                  className={`h-11 px-3 border rounded-md bg-background text-xs font-mono font-semibold transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
                     errors.stock
                       ? "border-destructive focus:border-destructive"
                       : "border-border/60 focus:border-brand-primary"
                   }`}
                 />
                 {errors.stock && (
-                  <span className="text-destructive text-[10px] font-bold mt-0.5">
+                  <span className="text-destructive text-xs font-bold mt-0.5">
                     {errors.stock.message}
                   </span>
                 )}
@@ -277,7 +277,7 @@ export function AssetComposer({
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="asset-buying-price"
-                  className="text-[10px] font-bold uppercase tracking-wider text-muted"
+                  className="text-xs font-bold uppercase tracking-wider text-muted"
                 >
                   Cost Price (KES)
                 </label>
@@ -290,14 +290,14 @@ export function AssetComposer({
                     valueAsNumber: true,
                     min: { value: 0, message: "Cannot be negative" },
                   })}
-                  className={`h-11 px-3 border rounded-xl bg-background text-xs font-mono font-semibold transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
+                  className={`h-11 px-3 border rounded-md bg-background text-xs font-mono font-semibold transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
                     errors.attributes?.buying_price
                       ? "border-destructive focus:border-destructive"
                       : "border-border/60 focus:border-brand-primary"
                   }`}
                 />
                 {errors.attributes?.buying_price && (
-                  <span className="text-destructive text-[10px] font-bold mt-0.5">
+                  <span className="text-destructive text-xs font-bold mt-0.5">
                     {errors.attributes.buying_price.message}
                   </span>
                 )}
@@ -307,7 +307,7 @@ export function AssetComposer({
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="asset-selling-price"
-                  className="text-[10px] font-bold uppercase tracking-wider text-muted"
+                  className="text-xs font-bold uppercase tracking-wider text-muted"
                 >
                   Retail Price <span className="text-brand-primary">*</span>
                 </label>
@@ -321,14 +321,14 @@ export function AssetComposer({
                     min: { value: 0.01, message: "Must be > 0" },
                     valueAsNumber: true,
                   })}
-                  className={`h-11 px-3 border rounded-xl bg-background text-xs font-mono font-semibold transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
+                  className={`h-11 px-3 border rounded-md bg-background text-xs font-mono font-semibold transition-all duration-150 focus:ring-2 focus:ring-brand-primary/10 ${
                     errors.selling_price
                       ? "border-destructive focus:border-destructive"
                       : "border-border/60 focus:border-brand-primary"
                   }`}
                 />
                 {errors.selling_price && (
-                  <span className="text-destructive text-[10px] font-bold mt-0.5">
+                  <span className="text-destructive text-xs font-bold mt-0.5">
                     {errors.selling_price.message}
                   </span>
                 )}
@@ -338,14 +338,14 @@ export function AssetComposer({
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="asset-uom"
-                  className="text-[10px] font-bold uppercase tracking-wider text-muted"
+                  className="text-xs font-bold uppercase tracking-wider text-muted"
                 >
                   Unit of Measure
                 </label>
                 <select
                   id="asset-uom"
                   {...register("attributes.unit_of_measure")}
-                  className="h-11 px-3 border border-border/60 bg-background rounded-xl text-xs font-semibold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all duration-150 cursor-pointer"
+                  className="h-11 px-3 border border-border/60 bg-background rounded-md text-xs font-semibold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all duration-150 cursor-pointer"
                 >
                   {UNITS.map((unit) => (
                     <option key={unit.value} value={unit.value}>
@@ -363,7 +363,7 @@ export function AssetComposer({
           <button
             type="button"
             onClick={onCancel}
-            className="min-h-[44px] text-[10px] font-black uppercase tracking-wider text-muted hover:text-foreground transition-colors duration-150 px-4 rounded-xl cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            className="min-h-[44px] text-xs font-semibold uppercase tracking-wider text-muted hover:text-foreground transition-colors duration-150 px-4 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
           >
             Cancel
           </button>
@@ -371,7 +371,7 @@ export function AssetComposer({
           <button
             type="submit"
             disabled={!isValid || isLoading}
-            className="min-h-[44px] flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-black uppercase text-[10px] tracking-wider px-5 rounded-xl transition-all duration-150 shadow-xs active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            className="min-h-[44px] flex items-center gap-2 bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold uppercase text-xs tracking-wider px-5 rounded-md transition-all duration-150 shadow-xs active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
           >
             {isLoading && <Loader2 className="animate-spin" size={14} />}
             <span>

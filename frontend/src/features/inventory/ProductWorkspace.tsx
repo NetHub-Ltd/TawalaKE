@@ -227,7 +227,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
         : null;
     return (
       <div
-        className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4 text-sm text-foreground"
+        className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-card p-4 text-sm text-foreground"
         role="alert"
       >
         <AlertCircle className="h-4 w-4 shrink-0 text-brand-primary" />
@@ -299,7 +299,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
 
       {successMessage && (
         <div
-          className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-800 dark:text-emerald-300"
+          className="rounded-md border border-[var(--success-border)] bg-brand-accent/10 px-4 py-3 text-sm font-medium text-[var(--success)] dark:text-[var(--success)]"
           role="status"
         >
           {successMessage}
@@ -346,7 +346,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1fr_220px]">
-            <section className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+            <section className="rounded-md border border-border/60 bg-card p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold text-foreground">Recent activity</h2>
               <MovementsTable
                 rows={recent}
@@ -356,7 +356,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
               />
             </section>
 
-            <aside className="space-y-2 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+            <aside className="space-y-2 rounded-md border border-border/60 bg-card p-4 shadow-sm">
               <h2 className="mb-2 text-sm font-semibold text-foreground">Quick actions</h2>
               <ActionButton
                 icon={Plus}
@@ -420,7 +420,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       )}
 
       {tab === "history" && (
-        <section className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+        <section className="overflow-hidden rounded-md border border-border/60 bg-card shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
               <thead>
@@ -464,7 +464,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                     <td
                       className={cn(
                         "px-4 py-2.5 text-right font-semibold tabular-nums",
-                        m.quantity < 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
+                        m.quantity < 0 ? "text-[var(--error)] dark:text-red-400" : "text-[var(--success)] dark:text-[var(--success)]"
                       )}
                     >
                       {m.quantity > 0 ? "+" : ""}
@@ -491,7 +491,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       )}
 
       {tab === "settings" && (
-        <div className="space-y-8 rounded-2xl border border-border/60 bg-card p-4 shadow-sm md:p-6">
+        <div className="space-y-8 rounded-md border border-border/60 bg-card p-4 shadow-sm md:p-6">
           <div>
             <h2 className="text-base font-semibold text-foreground">Catalogue settings</h2>
             <p className="mt-1 text-sm text-muted">
@@ -506,7 +506,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
             onCancel={() => selectTab("overview")}
           />
           <div className="border-t border-border pt-6">
-            <h2 className="text-base font-semibold text-red-600 dark:text-red-400">
+            <h2 className="text-base font-semibold text-[var(--error)] dark:text-red-400">
               Danger zone
             </h2>
             <p className="mt-1 text-sm text-muted">
@@ -526,7 +526,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                   },
                 });
               }}
-              className="mt-4 inline-flex min-h-[44px] items-center rounded-xl border border-red-500/40 bg-red-500/10 px-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-500/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:opacity-60 dark:text-red-400"
+              className="mt-4 inline-flex min-h-[44px] items-center rounded-md border border-red-500/40 bg-[var(--error-container)]0/10 px-4 text-sm font-semibold text-[var(--error)] transition-colors hover:bg-[var(--error-container)]0/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:opacity-60 dark:text-red-400"
             >
               {deleteProduct.isPending ? "Deleting…" : "Delete product"}
             </button>
@@ -600,7 +600,7 @@ function ProductSettingsForm({
   };
 
   const field =
-    "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand-primary/30";
+    "w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand-primary/30";
 
   return (
     <form onSubmit={submit} className="space-y-6">
@@ -663,7 +663,7 @@ function ProductSettingsForm({
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+        <p className="text-sm text-[var(--error)] dark:text-red-400" role="alert">
           {error}
         </p>
       )}
@@ -672,14 +672,14 @@ function ProductSettingsForm({
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex min-h-[44px] items-center rounded-xl border border-border px-4 text-sm font-medium text-foreground"
+          className="inline-flex min-h-[44px] items-center rounded-md border border-border px-4 text-sm font-medium text-foreground"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={saving || isPending}
-          className="inline-flex min-h-[44px] items-center rounded-xl bg-brand-primary px-5 text-sm font-semibold text-white disabled:opacity-60"
+          className="inline-flex min-h-[44px] items-center rounded-md bg-brand-primary px-5 text-sm font-semibold text-white disabled:opacity-60"
         >
           {saving || isPending ? "Saving…" : "Save settings"}
         </button>
@@ -700,10 +700,10 @@ function MovementsTable({
   emptyText: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border/60">
+    <div className="overflow-x-auto rounded-md border border-border/60">
       <table className="w-full border-collapse text-left text-sm">
         <thead>
-          <tr className="border-b border-border bg-background/60 text-[11px] font-semibold uppercase tracking-wider text-muted">
+          <tr className="border-b border-border bg-background/60 text-xs font-semibold uppercase tracking-wider text-muted">
             <th className="px-3 py-2.5">When</th>
             <th className="px-3 py-2.5">What</th>
             <th className="px-3 py-2.5 text-right">Before</th>
@@ -724,7 +724,7 @@ function MovementsTable({
           )}
           {!loading && error && (
             <tr>
-              <td colSpan={8} className="px-3 py-6 text-center text-red-600 dark:text-red-400">
+              <td colSpan={8} className="px-3 py-6 text-center text-[var(--error)] dark:text-red-400">
                 {error}
               </td>
             </tr>
@@ -751,8 +751,8 @@ function MovementsTable({
                   className={
                     "px-3 py-2 text-right font-semibold tabular-nums " +
                     (m.quantity < 0
-                      ? "text-red-600 dark:text-red-400"
-                      : "text-emerald-600 dark:text-emerald-400")
+                      ? "text-[var(--error)] dark:text-red-400"
+                      : "text-[var(--success)] dark:text-[var(--success)]")
                   }
                 >
                   {m.quantity > 0 ? "+" : ""}
@@ -789,12 +789,12 @@ function Metric({
   tone?: "ok" | "warn";
 }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-sm">
+    <div className="rounded-md border border-border/60 bg-card p-3 shadow-sm">
       <p className="text-xs font-medium text-muted">{label}</p>
       <p
         className={cn(
           "mt-1 text-lg font-bold tabular-nums tracking-tight",
-          tone === "warn" && "text-red-600 dark:text-red-400",
+          tone === "warn" && "text-[var(--error)] dark:text-red-400",
           tone === "ok" && "text-brand-accent",
           !tone && "text-foreground"
         )}
@@ -818,7 +818,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full min-h-[44px] items-center gap-2 rounded-xl border border-brand-accent/30 bg-transparent px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:border-brand-accent hover:bg-brand-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+      className="flex w-full min-h-[44px] items-center gap-2 rounded-md border border-brand-accent/30 bg-transparent px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:border-brand-accent hover:bg-brand-accent/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
     >
       <Icon className="h-4 w-4 text-brand-accent" aria-hidden />
       {label}
@@ -891,7 +891,7 @@ function StockActionForm({
   return (
     <form
       onSubmit={submit}
-      className="grid gap-6 rounded-2xl border border-border/60 bg-card p-4 shadow-sm md:grid-cols-[1fr_220px] md:p-6"
+      className="grid gap-6 rounded-md border border-border/60 bg-card p-4 shadow-sm md:grid-cols-[1fr_220px] md:p-6"
     >
       <div className="space-y-4">
         <button
@@ -1008,7 +1008,7 @@ function StockActionForm({
         </Field>
 
         {error && (
-          <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          <p className="text-sm text-[var(--error)] dark:text-red-400" role="alert">
             {error}
           </p>
         )}
@@ -1016,13 +1016,13 @@ function StockActionForm({
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-brand-accent px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+          className="inline-flex min-h-[44px] items-center justify-center rounded-md bg-brand-accent px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
         >
           {submitting ? "Saving…" : action === "receive" ? "Receive stock" : action === "count" ? "Save count" : "Save adjustment"}
         </button>
       </div>
 
-      <aside className="h-fit rounded-2xl border border-border bg-background/60 p-4">
+      <aside className="h-fit rounded-md border border-border bg-background/60 p-4">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Summary</h3>
         <dl className="mt-3 space-y-2 text-sm">
           <div className="flex justify-between">
@@ -1034,7 +1034,7 @@ function StockActionForm({
             <dd
               className={cn(
                 "font-semibold tabular-nums",
-                change < 0 ? "text-red-600 dark:text-red-400" : "text-brand-accent"
+                change < 0 ? "text-[var(--error)] dark:text-red-400" : "text-brand-accent"
               )}
             >
               {change > 0 ? "+" : ""}
@@ -1064,7 +1064,7 @@ function Field({
     <label className="block space-y-1.5">
       <span className="text-sm font-medium text-foreground">
         {label}
-        {required ? <span className="text-red-600"> *</span> : null}
+        {required ? <span className="text-[var(--error)]"> *</span> : null}
       </span>
       {children}
     </label>
@@ -1072,4 +1072,4 @@ function Field({
 }
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition-shadow focus:ring-2 focus:ring-brand-primary/30";
+  "w-full rounded-md border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition-shadow focus:ring-2 focus:ring-brand-primary/30";

@@ -110,7 +110,7 @@ export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
         "hover:bg-brand-primary/5",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 focus-visible:ring-inset",
         "data-[active=false]:bg-secondary/5 data-[active=false]:opacity-50",
-        "data-[alert=crisis]:bg-red-500/5 dark:data-[alert=crisis]:bg-red-500/10",
+        "data-[alert=crisis]:bg-[var(--error-container)]0/5 dark:data-[alert=crisis]:bg-[var(--error-container)]0/10",
         "data-[alert=low]:bg-amber-500/5 dark:data-[alert=low]:bg-amber-500/10"
       )}
     >
@@ -119,7 +119,7 @@ export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
           <span className="truncate text-sm font-bold text-foreground transition-colors group-hover:text-primary">
             {label}
             {!active && (
-              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <span className="ml-1.5 rounded bg-muted px-1.5 py-0.5 text-xs font-medium uppercase tracking-wide text-muted">
                 Inactive
               </span>
             )}
@@ -129,14 +129,14 @@ export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
           </span>
           {last_stock_take ? (
             <span
-              className="mt-1 text-[11px] text-muted"
+              className="mt-1 text-xs text-muted"
               title="Last physical count or stock adjustment recorded for this product"
             >
               Last count: {new Date(last_stock_take).toLocaleDateString()}
             </span>
           ) : track_stock ? (
             <span
-              className="mt-1 text-[11px] text-muted"
+              className="mt-1 text-xs text-muted"
               title="No stock count recorded yet"
             >
               Not counted yet
@@ -151,7 +151,7 @@ export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
             {formattedPrice}
           </span>
           <span
-            className="text-[11px] text-muted"
+            className="text-xs text-muted"
             title="Relative sales activity score for this product"
           >
             Sales activity:{" "}
@@ -172,9 +172,9 @@ export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
           )}
 
           {stockAlertState === "normal" && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+            <div className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--success-border)] bg-brand-accent/10 px-2.5 py-1 text-xs font-bold text-[var(--success)] dark:text-[var(--success)]">
               <span
-                className="h-1.5 w-1.5 rounded-full bg-emerald-500"
+                className="h-1.5 w-1.5 rounded-full bg-brand-accent"
                 aria-hidden="true"
               />
               <span>
@@ -196,11 +196,11 @@ export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
           )}
 
           {stockAlertState === "crisis" && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-2.5 py-1 text-xs font-black text-red-600 dark:text-red-400">
+            <div className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-[var(--error-container)]0/10 px-2.5 py-1 text-xs font-semibold text-[var(--error)] dark:text-red-400">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75 motion-reduce:hidden" />
                 <span
-                  className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500"
+                  className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--error-container)]0"
                   aria-hidden="true"
                 />
               </span>
@@ -220,7 +220,7 @@ export function ProductSmartRow({ product, onOpen }: ProductSmartRowProps) {
             onClick={() => onOpen(id)}
             title="Open stock workspace — receive, count, adjust, history"
             aria-label={`Open stock workspace for ${label}`}
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-brand-primary/30 bg-brand-primary/5 px-3 text-xs font-semibold text-brand-primary transition-colors hover:bg-brand-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-md border border-brand-primary/30 bg-brand-primary/5 px-3 text-xs font-semibold text-brand-primary transition-colors hover:bg-brand-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40"
           >
             Open
           </button>

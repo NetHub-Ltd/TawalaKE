@@ -1,22 +1,42 @@
-# SaaS Design System & Theming Architecture
+# Tawala Design System — Modern Retail OS (Canonical)
 
-This application leverages **Tailwind CSS v4**'s native `@theme` engine. By migrating configuration from JavaScript object declarations (`tailwind.config.js`) directly into CSS custom properties, our build pipeline eliminates runtime configuration overhead and natively hooks token references into standard CSS variables.
+## Source of truth
+| Concern | Location |
+|---------|----------|
+| Tokens, surface, type, radii, shadows | `src/app/globals.css` |
+| Fonts | `src/app/layout.tsx` — Plus Jakarta Sans + Inter + mono |
+| Components | `src/lib/components/ui` → `import { … } from "@/lib/components/ui"` |
+| Lab | `/themetest` |
+| Agent rules | Root `AGENTS.md` §5 |
 
----
+## Rules (non-negotiable in product UI)
 
-## 1. Architectural Philosophy: The "Layered Lifting" Paradigm
+### Forbidden
+- **Hardcoded colors:** hex, or Tailwind palette chrome (`bg-slate-*`, `text-slate-*`, `bg-emerald-*`, `bg-blue-*`, `bg-indigo-*`, `bg-white` / `bg-black` as surfaces, etc.)
+- **Hardcoded fonts / font sizes:** no `text-[11px]`, arbitrary `text-3xl` as display system, or extra `fontFamily` loads in features
+- **One-off controls** when the kit has an equivalent (`Button`, `Input`, `Select`, `Switch`, `Modal`, `Badge`, `Spinner`, `Skeleton`, …)
 
-Unlike traditional flat designs where pages and components share identical background values, this platform utilizes a high-contrast stacking model to establish immediate visual hierarchy:
+### Required
+- Semantic tokens: `bg-background`, `bg-card`, `bg-register`, `text-foreground`, `text-muted`, `border-border`, `bg-brand-primary` / `secondary` / `accent`
+- Type roles: `text-h1`…`text-h4`, `amount-lg` / `amount-md`, `tabular` for money
+- Button roles: primary = command · secondary = void/destructive · success = pay/settle
+- Import kit: `import { Button, Input, Card } from "@/lib/components/ui"`
 
-* **The Deep Base Layer (`--surface`):** Assigned directly to the document `<body>`. This acts as the canvas environment. In Light Mode, it presents a muted gray background; in Dark Mode, it becomes a rich, deep midnight void.
-* **The Elevated Interactive Layer (`--background`):** Used strictly for high-priority sections, components, cards, or focus panels (e.g., using `.card-layered`). It physically "lifts" content away from the backdrop canvas to create distinct visual focus boundaries without heavy layout structural changes.
+### Check before PR
+```bash
+npm run check:theme
+npm run lint
+npm run build
+```
 
-### Stacking Execution Guidelines
-When structuring application pages, follow this layout hierarchy:
-```tsx
-// Correct Implementation
-<main className="bg-surface text-foreground"> {/* The canvas */}
-  <section className="card-layered bg-background"> {/* The content pod */}
-    <p className="text-muted">Meta Detail</p>
-  </section>
-</main>
+## Lab
+`/themetest` exercises the shared kit (forms, calendar, bar/line charts, table, modal, badges).
+
+
+## Phase F — Public vs app shell
+
+**Decision (2026-09-14):** Public marketing/legal/blog stay under `(public)` and **inherit** the same canonical tokens. They do **not** get a second palette or font stack.
+
+- Allowed: different page structure, longer prose, marketing sections.
+- Forbidden: redefining `--brand-*`, `--background`, `--surface`, or loading alternate display fonts in public routes.
+- App product UI under `(organization)` and `src/features` remains the strict kit surface (`check:theme` strict paths).

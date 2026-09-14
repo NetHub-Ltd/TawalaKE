@@ -1,12 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, JetBrains_Mono } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { Providers } from "@/lib/providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+});
+
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["500", "600", "700"],
 });
 
 const jetBrainsMono = JetBrains_Mono({
@@ -16,7 +23,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#6366f1",
+  themeColor: "#003F4E",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
@@ -76,16 +83,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${jetBrainsMono.variable} light`}
+      className={`${inter.variable} ${plusJakarta.variable} ${jetBrainsMono.variable} light`}
       style={{ colorScheme: "light" }}
       suppressHydrationWarning
     >
-      <body className="min-h-dvh w-full overflow-x-hidden overflow-y-auto text-foreground antialiased selection:bg-brand-primary/20 m-0 p-0">
-        <Providers>
-          <main id="main-content" className="relative min-h-dvh w-full bg-background">
-            {children}
-          </main>
-        </Providers>
+      <body className="min-h-dvh antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

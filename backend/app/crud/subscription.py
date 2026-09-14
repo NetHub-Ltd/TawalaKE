@@ -254,3 +254,49 @@ async def mark_expired_subscriptions(db: AsyncSession, organization_id: UUID) ->
         await _invalidate_org(organization_id)
         logger.info(f"Marked {count} expired sub(s) inactive org={organization_id}")
     return count
+
+
+
+async def list_trials_ending_within(
+    db: AsyncSession,
+    *,
+    within_days: int = 3,
+) -> List[Tuple[Subscription, Plan, Organization]]:
+    """
+    Active subscriptions whose end_date falls within [now, now+within_days].
+    Used by the trial-ending reminder job.
+    """
+    now = datetime.now(timezone.utc)
+    horizon = now + timedelta(days=max(0, int(within_days)))
+    stmt = (
+        select(Subscription)
+        .where(
+            Subscription.active == True,  # noqa: E712
+            Subscription.end_date.is_not(None),
+            Subscription.end_date >= now,
+            Subscription.end_date <= horizon,
+        )
+    )
+    subs = list(await db.exec(stmt))
+    out: List[Tuple[Subscription, Plan, Organization]] = []
+    for sub in subs:
+        if not sub.organization_id:
+            continue
+        plan = None
+        if sub.plan_id:
+            plan = (
+                await db.exec(select(Plan).where(Plan.id == sub.plan_id))
+            ).first()
+        org = (
+            await db.exec(
+                select(Organization).where(Organization.id == sub.organization_id)
+            )
+        ).first()
+        if not org:
+            continue
+        # Prefer plan name; fall back
+        if plan is None:
+            from types import SimpleNamespace
+            plan = SimpleNamespace(code="TRIAL", name="Trial")
+        out.append((sub, plan, org))
+    return out

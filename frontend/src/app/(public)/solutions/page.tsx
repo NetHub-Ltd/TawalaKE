@@ -947,18 +947,6 @@ export default function SolutionsPage() {
             </div>
           </div>
         </section>
-
-        {/* Localized Footer Landmark */}
-        <footer className="w-full border-t border-border/60 bg-surface/30 py-10 relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs font-bold text-foreground">
-              Tawala • Multi-Tenant Business Platform
-            </p>
-            <p className="text-xs text-muted tabular-nums">
-              &copy; {new Date().getFullYear()} Tawala. All rights reserved.
-            </p>
-          </div>
-        </footer>
       </main>
     </>
   );

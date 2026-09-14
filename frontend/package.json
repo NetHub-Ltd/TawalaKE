@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "generate-api": "orval --config ./orval.config.ts",
-    "build:webpack": "next build --webpack"
+    "build:webpack": "next build --webpack",
+    "check:theme": "bash scripts/check-theme.sh"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

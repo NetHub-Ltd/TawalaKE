@@ -19,6 +19,7 @@ import {
 } from "@/features/sales/lib/posConfig";
 import { normalizeKenyanPhone, isValidKenyanPhone } from "@/features/sales/lib/phone";
 import { clearStagedSaleId } from "@/features/sales/lib/stagedSale";
+import { Spinner } from "@/lib/components/ui";
 
 interface CheckoutFormProps {
   saleId: string;
@@ -224,22 +225,22 @@ export function CheckoutForm({
         <h2 className="text-lg font-semibold tracking-tight text-foreground">
           Finish this sale
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm text-muted">
           Customer required — we record who paid or who took credit.
         </p>
       </div>
 
       {/* Lookup — visually separate from the form fields below */}
-      <div className="relative mb-5 rounded-2xl border border-dashed border-brand-primary/25 bg-brand-primary/[0.04] p-3.5">
+      <div className="relative mb-5 rounded-md border border-dashed border-brand-primary/25 bg-brand-primary/[0.04] p-3.5">
         <div className="mb-2 flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-brand-primary/10 text-brand-primary">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-primary/10 text-brand-primary">
             <Search size={13} aria-hidden="true" />
           </span>
           <div>
             <p className="text-xs font-semibold text-foreground">
               Look up customer
             </p>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted">
               Optional — pick someone to fill name and phone
             </p>
           </div>
@@ -250,17 +251,17 @@ export function CheckoutForm({
             value={customerQuery}
             onChange={(e) => setCustomerQuery(e.target.value)}
             placeholder="Type name or phone…"
-            className="h-10 w-full rounded-lg border border-border/50 bg-card pl-3 pr-9 text-sm shadow-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+            className="h-10 w-full rounded-md border border-border/50 bg-card pl-3 pr-9 text-sm shadow-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
             autoComplete="off"
           />
           {searchingCustomers && (
             <Loader2
               size={14}
-              className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted"
             />
           )}
           {customerHits.length > 0 && (
-            <ul className="absolute z-20 mt-1.5 max-h-48 w-full overflow-auto rounded-xl border border-border bg-card py-1 shadow-lg">
+            <ul className="absolute z-20 mt-1.5 max-h-48 w-full overflow-auto rounded-md border border-border bg-card py-1 shadow-lg">
               {customerHits.map((c) => (
                 <li key={c.id}>
                   <button
@@ -269,7 +270,7 @@ export function CheckoutForm({
                     className="flex w-full flex-col items-start px-3 py-2.5 text-left text-sm hover:bg-brand-primary/5"
                   >
                     <span className="font-medium text-foreground">{c.name}</span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted">
                       {c.phone || "No phone"}
                     </span>
                   </button>
@@ -292,14 +293,14 @@ export function CheckoutForm({
             id="customerName"
             {...register("customerName")}
             disabled={isSubmitting}
-            className="w-full h-11 px-3.5 rounded-xl border border-border bg-background text-sm
+            className="w-full h-11 px-3.5 rounded-md border border-border bg-background text-sm
                        focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
                        disabled:opacity-50"
             placeholder="Who is paying / taking credit?"
             autoComplete="name"
           />
           {errors.customerName && (
-            <p className="mt-1.5 text-sm text-destructive">
+            <p className="mt-1.5 text-sm text-[var(--error)]">
               {errors.customerName.message}
             </p>
           )}
@@ -316,7 +317,7 @@ export function CheckoutForm({
             id="customerPhone"
             {...register("customerPhone")}
             disabled={isSubmitting}
-            className="w-full h-11 px-3.5 rounded-xl border border-border bg-background text-sm
+            className="w-full h-11 px-3.5 rounded-md border border-border bg-background text-sm
                        focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
                        disabled:opacity-50"
             placeholder="07xxxxxxxx"
@@ -324,7 +325,7 @@ export function CheckoutForm({
             autoComplete="tel"
           />
           {errors.customerPhone && (
-            <p className="mt-1.5 text-sm text-destructive">
+            <p className="mt-1.5 text-sm text-[var(--error)]">
               {errors.customerPhone.message}
             </p>
           )}
@@ -342,7 +343,7 @@ export function CheckoutForm({
               id="paymentMethod"
               {...register("paymentMethod")}
               disabled={isSubmitting || configLoading}
-              className="h-11 w-full cursor-pointer appearance-none rounded-xl border border-border bg-background pl-3.5 pr-10 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30 disabled:opacity-50"
+              className="h-11 w-full cursor-pointer appearance-none rounded-md border border-border bg-card pl-3.5 pr-10 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30 disabled:opacity-50"
             >
               {methods.map((m) => (
                 <option key={m.code} value={m.code}>
@@ -352,16 +353,16 @@ export function CheckoutForm({
             </select>
             <ChevronDown
               size={16}
-              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
             />
           </div>
           {selectedMeta && !selectedMeta.collects_money && (
-            <p className="mt-1.5 text-xs text-muted-foreground">
+            <p className="mt-1.5 text-xs text-muted">
               Goods leave now · stock reduced · collect payment later
             </p>
           )}
           {errors.paymentMethod && (
-            <p className="mt-1.5 text-sm text-destructive">
+            <p className="mt-1.5 text-sm text-[var(--error)]">
               {errors.paymentMethod.message}
             </p>
           )}
@@ -370,11 +371,11 @@ export function CheckoutForm({
         <button
           type="submit"
           disabled={isSubmitting || configLoading}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand-primary text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary/90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-accent text-sm font-semibold text-white shadow-sm transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {isSubmitting ? (
             <>
-              <Loader2 size={16} className="animate-spin" />
+              <Spinner size="sm" />
               Completing...
             </>
           ) : (

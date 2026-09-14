@@ -147,10 +147,10 @@ export default async function TerminalLayout({
 
       {/* POS is optimized for widescreen terminals — soft guidance on small screens */}
       <div className="flex md:hidden fixed inset-0 z-[100] flex-col items-center justify-center bg-background p-6 text-center font-sans">
-        <p className="text-xs font-bold uppercase tracking-wider text-foreground">
+        <p className="text-xs font-semibold tracking-wide text-foreground">
           Wider screen recommended
         </p>
-        <p className="mt-2 max-w-xs text-[11px] font-medium leading-relaxed text-muted">
+        <p className="mt-2 max-w-xs text-xs font-medium leading-relaxed text-muted">
           The sales terminal works best on a tablet or desktop. You can still
           continue on this device, but some controls may feel cramped.
         </p>

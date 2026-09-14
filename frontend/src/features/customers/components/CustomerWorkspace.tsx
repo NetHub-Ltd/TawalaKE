@@ -147,7 +147,7 @@ export function CustomerWorkspace({
   if (error && !detail) {
     return (
       <div className="mx-auto max-w-lg p-6">
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <p className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-4 py-3 text-sm text-[var(--on-error-container)]">
           {error}
         </p>
         <Link
@@ -192,7 +192,7 @@ export function CustomerWorkspace({
         <div className="flex flex-wrap gap-2">
           <Link
             href={`/org/${organizationId}/${businessId}/terminal`}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white"
+            className="inline-flex h-10 items-center gap-1.5 rounded-md bg-brand-primary px-4 text-sm font-semibold text-white"
           >
             <ShoppingCart className="h-4 w-4" />
             New sale
@@ -227,12 +227,12 @@ export function CustomerWorkspace({
       </nav>
 
       {error && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-4 py-3 text-sm text-[var(--on-error-container)]">
           {error}
         </div>
       )}
       {saveMsg && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-800">
+        <div className="rounded-md border border-[var(--success-border)] bg-[var(--success-soft)] px-4 py-2 text-sm text-[var(--success)]">
           {saveMsg}
         </div>
       )}
@@ -262,7 +262,7 @@ export function CustomerWorkspace({
             {hasCredit ? (
               <Link
                 href={`${basePath}/collect`}
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white"
+                className="inline-flex h-10 items-center gap-1.5 rounded-md bg-brand-primary px-4 text-sm font-semibold text-white"
               >
                 <Banknote className="h-4 w-4" />
                 Collect Credit
@@ -272,7 +272,7 @@ export function CustomerWorkspace({
                 type="button"
                 disabled
                 title="No open credit"
-                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-4 text-sm font-medium text-muted opacity-60"
+                className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border/60 bg-card px-4 text-sm font-medium text-muted opacity-60"
               >
                 <Banknote className="h-4 w-4" />
                 Collect Credit
@@ -281,14 +281,14 @@ export function CustomerWorkspace({
             <button
               type="button"
               onClick={() => syncUrl("settings")}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-4 text-sm font-medium"
+              className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border/60 bg-card px-4 text-sm font-medium"
             >
               Edit profile
             </button>
             <button
               type="button"
               onClick={() => syncUrl("history")}
-              className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border/60 bg-card px-4 text-sm font-medium"
+              className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border/60 bg-card px-4 text-sm font-medium"
             >
               View history
             </button>
@@ -299,11 +299,11 @@ export function CustomerWorkspace({
               Recent activity
             </h2>
             {sales.length === 0 ? (
-              <p className="rounded-xl border border-border/50 bg-card px-4 py-6 text-center text-sm text-muted">
+              <p className="rounded-md border border-border/50 bg-card px-4 py-6 text-center text-sm text-muted">
                 No sales linked yet.
               </p>
             ) : (
-              <ul className="divide-y divide-border/40 overflow-hidden rounded-xl border border-border/50 bg-card">
+              <ul className="divide-y divide-border/40 overflow-hidden rounded-md border border-border/50 bg-card">
                 {sales.slice(0, 8).map((s) => (
                   <li
                     key={s.id}
@@ -332,12 +332,12 @@ export function CustomerWorkspace({
       {tab === "history" && (
         <div className="min-h-0 flex-1 overflow-auto">
           {sales.length === 0 ? (
-            <p className="rounded-xl border border-border/50 bg-card px-4 py-10 text-center text-sm text-muted">
+            <p className="rounded-md border border-border/50 bg-card px-4 py-10 text-center text-sm text-muted">
               No sales history for this customer yet.
             </p>
           ) : (
             <table className="w-full min-w-[520px] text-left text-sm">
-              <thead className="sticky top-0 bg-background/95 text-[10px] font-semibold tracking-wider text-muted uppercase backdrop-blur">
+              <thead className="sticky top-0 bg-background/95 text-xs font-semibold tracking-wider text-muted uppercase backdrop-blur">
                 <tr className="border-b border-border/50">
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Status</th>
@@ -345,7 +345,7 @@ export function CustomerWorkspace({
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card">
+              <tbody className="divide-y divide-border/40 rounded-md border border-border/50 bg-card">
                 {sales.map((s) => (
                   <tr key={s.id}>
                     <td className="px-4 py-3 text-muted">
@@ -381,7 +381,7 @@ export function CustomerWorkspace({
       {tab === "settings" && (
         <form
           onSubmit={onSaveSettings}
-          className="max-w-xl space-y-4 rounded-xl border border-border/50 bg-card p-5 shadow-card"
+          className="max-w-xl space-y-4 rounded-md border border-border/50 bg-card p-5 shadow-card"
         >
           <h2 className="text-sm font-semibold text-foreground">Profile</h2>
           <div>
@@ -425,7 +425,7 @@ export function CustomerWorkspace({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex h-10 items-center rounded-xl bg-brand-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
+              className="inline-flex h-10 items-center rounded-md bg-brand-primary px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
               {saving ? "Saving…" : "Save changes"}
             </button>
@@ -438,7 +438,7 @@ export function CustomerWorkspace({
                   email: detail.email || "",
                 })
               }
-              className="inline-flex h-10 items-center rounded-xl border border-border/60 px-4 text-sm font-medium"
+              className="inline-flex h-10 items-center rounded-md border border-border/60 px-4 text-sm font-medium"
             >
               Reset
             </button>
@@ -459,14 +459,14 @@ function Kpi({
   warn?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card px-3 py-3 shadow-card">
-      <p className="text-[10px] font-semibold tracking-wider text-muted uppercase">
+    <div className="rounded-md border border-border/50 bg-card px-3 py-3 shadow-card">
+      <p className="text-xs font-semibold tracking-wider text-muted uppercase">
         {label}
       </p>
       <p
         className={clsx(
           "mt-1 font-mono text-base font-semibold sm:text-lg",
-          warn ? "text-rose-600" : "text-foreground"
+          warn ? "text-[var(--error)]" : "text-foreground"
         )}
       >
         {value}

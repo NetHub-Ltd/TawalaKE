@@ -1,185 +1,134 @@
-// app/components/inventory/RestockForm.tsx
-'use client';
+"use client";
 
-import React, { useState, useTransition } from 'react';
-import { } from 'lucide-react';
-import Link from 'next/link';
+/**
+ * Restock — plain shop language; canonical tokens + UI kit.
+ */
+import React, { useState, useTransition } from "react";
+import Link from "next/link";
+import { Button, Input, Label, Select, Textarea } from "@/lib/components/ui";
 
 interface ProductContext {
   id: string;
   label: string;
   currentStock: number;
-  currentBuyingPrice: number;
-  currentSellingPrice: number;
 }
 
 export default function RestockForm({ product }: { product: ProductContext }) {
   const [isPending, startTransition] = useTransition();
-  const [quantity, setQuantity] = useState<number>(0);
-  const [buyingPrice, setBuyingPrice] = useState<number>(product.currentBuyingPrice);
-  const [sellingPrice, setSellingPrice] = useState<number>(product.currentSellingPrice);
-  const [reference, setReference] = useState<string>('');
-  const [reasonCode, setReasonCode] = useState<string>('SUPPLIER_DELIVERY');
-  const [notes, setNotes] = useState<string>('');
-
-  const totalCost = quantity * buyingPrice;
+  const [qty, setQty] = useState<number | "">("");
+  const [unitCost, setUnitCost] = useState<number | "">("");
+  const [reasonCode, setReasonCode] = useState<string>("SUPPLIER_DELIVERY");
+  const [notes, setNotes] = useState<string>("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (quantity <= 0) {
-      alert('Please enter a valid quantity greater than 0');
+    if (qty === "" || Number(qty) <= 0) {
+      alert("Enter how many units you received.");
       return;
     }
 
     const payload = {
-      business_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d", // Mocked globally
-      performed_by: "ca7b3a11-8231-4a1e-8133-72bb9443216c", // Mocked operator
-      items: [
-        {
-          product_id: product.id,
-          movement_type: "RESTOCK",
-          quantity: Number(quantity),
-          buying_price: Number(buyingPrice),
-          selling_price: Number(sellingPrice),
-          reference_type: "PURCHASE_ORDER",
-          reference_id: reference || null,
-          reason_code: reasonCode,
-          notes: notes || null
-        }
-      ]
+      product_id: product.id,
+      movement_type: "RESTOCK",
+      quantity: Number(qty),
+      buying_price: unitCost === "" ? null : Number(unitCost),
+      reason_code: reasonCode,
+      notes: notes || null,
     };
 
     startTransition(async () => {
-      // Emulating network delay 
       await new Promise((resolve) => setTimeout(resolve, 600));
-      console.log('🚀 [Backend Payload Sent] -> POST /api/v1/inventory/transactions', JSON.stringify(payload, null, 2));
-      alert(`Success! Restocked +${quantity} units of ${product.label}. Check console for exact payload.`);
+      console.log("[restock] payload", JSON.stringify(payload, null, 2));
+      alert(`Added ${qty} units to ${product.label}.`);
     });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Step 1: Quantities */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
-          <label htmlFor="quantity" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Incoming Batch Quantity *
-          </label>
-          <input
-            id="quantity"
-            type="number"
-            min="1"
-            step="any"
-            required
-            value={quantity || ''}
-            onChange={(e) => setQuantity(Math.max(0, parseFloat(e.target.value) || 0))}
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none dark:bg-slate-900 dark:border-slate-700 dark:focus:bg-slate-900"
-            placeholder="e.g. 50"
-          />
-          <p className="text-xs text-slate-400 mt-2">
-            Projected New Total: <span className="font-bold text-slate-700 dark:text-slate-200">{product.currentStock + quantity}</span> units
+    <form onSubmit={handleSubmit} className="mx-auto max-w-lg space-y-6">
+      <div className="rounded-md border border-border bg-card p-6 space-y-4">
+        <div>
+          <p className="text-xs font-semibold tracking-wide text-muted">
+            Current system qty
           </p>
-        </div>
-
-        {/* Step 2: Buying Price */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
-          <label htmlFor="buying_price" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Unit Cost / Buying Price ($) *
-          </label>
-          <input
-            id="buying_price"
-            type="number"
-            step="0.01"
-            required
-            value={buyingPrice}
-            onChange={(e) => setBuyingPrice(parseFloat(e.target.value) || 0)}
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none dark:bg-slate-900 dark:border-slate-700 dark:focus:bg-slate-900"
-          />
-          <p className="text-xs text-slate-400 mt-2">
-            Total Batch Valuation: <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">${totalCost.toFixed(2)}</span>
+          <p className="mt-1 font-mono text-2xl font-semibold tabular text-foreground">
+            {product.currentStock}{" "}
+            <span className="text-sm font-medium text-muted">units</span>
           </p>
-        </div>
-
-        {/* Step 3: Base Selling Price update */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm dark:bg-slate-800 dark:border-slate-700">
-          <label htmlFor="selling_price" className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Active Store Selling Price ($) *
-          </label>
-          <input
-            id="selling_price"
-            type="number"
-            step="0.01"
-            required
-            value={sellingPrice}
-            onChange={(e) => setSellingPrice(parseFloat(e.target.value) || 0)}
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none dark:bg-slate-900 dark:border-slate-700 dark:focus:bg-slate-900"
-          />
-          <p className="text-xs text-slate-400 mt-2">
-            Current Margin Ratio: <span className="font-semibold text-blue-500">{buyingPrice ? (((sellingPrice - buyingPrice) / buyingPrice) * 100).toFixed(0) : 0}%</span>
-          </p>
-        </div>
-      </div>
-
-      {/* Metadata / Verification Logging Context */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 dark:bg-slate-800 dark:border-slate-700">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Logistics & Verification</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="ref" className="block text-xs font-semibold mb-1">PO / Delivery Reference String</label>
-            <input
-              id="ref"
-              type="text"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-              placeholder="e.g. PO-2026-9921A"
-              className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-700"
-            />
-          </div>
-          <div>
-            <label htmlFor="reason" className="block text-xs font-semibold mb-1">Reason Code Mapping</label>
-            <select
-              id="reason"
-              value={reasonCode}
-              onChange={(e) => setReasonCode(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-700"
-            >
-              <option value="SUPPLIER_DELIVERY">Standard Supplier Delivery</option>
-              <option value="CONSIGNMENT">Consignment Check-In</option>
-              <option value="INTERNAL_TRANSFER">Inbound Branch Transfer</option>
-            </select>
-          </div>
+          <p className="mt-1 text-sm text-muted">{product.label}</p>
         </div>
 
         <div>
-          <label htmlFor="notes" className="block text-xs font-semibold mb-1">Transaction Notes</label>
-          <textarea
+          <Label htmlFor="restock_qty">Units received</Label>
+          <Input
+            id="restock_qty"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            value={qty}
+            onChange={(e) => {
+              const v = e.target.value;
+              setQty(v === "" ? "" : Number(v));
+            }}
+            placeholder="How many units came in"
+            required
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="unit_cost">Unit cost (optional)</Label>
+          <Input
+            id="unit_cost"
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="0.01"
+            currency
+            value={unitCost}
+            onChange={(e) => {
+              const v = e.target.value;
+              setUnitCost(v === "" ? "" : Number(v));
+            }}
+            placeholder="0.00"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="reason">Reason</Label>
+          <Select
+            id="reason"
+            value={reasonCode}
+            onChange={(e) => setReasonCode(e.target.value)}
+          >
+            <option value="SUPPLIER_DELIVERY">Supplier delivery</option>
+            <option value="RETURN_TO_SHELF">Customer return to shelf</option>
+            <option value="TRANSFER_IN">Transfer from another branch</option>
+            <option value="OTHER">Other</option>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="notes">Notes (optional)</Label>
+          <Textarea
             id="notes"
-            rows={2}
+            rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add structural observations (e.g. shelf location, batch expiration dates)..."
-            className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg dark:bg-slate-900 dark:border-slate-700"
+            placeholder="Supplier name, invoice number, etc."
           />
         </div>
       </div>
 
-      {/* Action Strip */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Link 
-          href={`/products/${product.id}`}
-          className="px-4 py-2 text-sm font-medium border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors min-h-[44px] inline-flex items-center dark:border-slate-700 dark:hover:bg-slate-800"
+      <div className="flex flex-wrap gap-3">
+        <Button type="submit" variant="success" disabled={isPending || qty === ""}>
+          {isPending ? "Saving…" : "Add stock"}
+        </Button>
+        <Link
+          href=".."
+          className="inline-flex h-12 items-center rounded-md border border-border px-4 text-sm font-semibold text-muted hover:bg-register hover:text-foreground"
         >
           Cancel
         </Link>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="px-5 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all shadow-sm min-h-[44px] inline-flex items-center justify-center disabled:opacity-50"
-        >
-          {isPending ? 'Processing Restock...' : 'Commit Stock to Ledger'}
-        </button>
       </div>
     </form>
   );
