@@ -267,48 +267,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card py-12">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col justify-between gap-8 sm:flex-row sm:items-start">
-            <div className="space-y-2 text-center sm:text-left">
-              <p className="text-sm font-semibold text-foreground">Tawala</p>
-              <p className="max-w-sm text-sm text-muted">
-                Tawala biashara yako. Take control of your business profits.
-              </p>
-            </div>
-            <nav
-              aria-label="Footer"
-              className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm"
-            >
-              <Link href={PLANS_HREF} className="text-muted hover:text-foreground">
-                Pricing
-              </Link>
-              <Link href="/solutions" className="text-muted hover:text-foreground">
-                Solutions
-              </Link>
-              <Link href="/support" className="text-muted hover:text-foreground">
-                Support
-              </Link>
-              <Link href="/blog" className="text-muted hover:text-foreground">
-                Blog
-              </Link>
-              <Link href={LOGIN_HREF} className="text-muted hover:text-foreground">
-                Log in
-              </Link>
-              <Link href="/legal/terms" className="text-muted hover:text-foreground">
-                Terms
-              </Link>
-              <Link href="/legal/privacy" className="text-muted hover:text-foreground">
-                Privacy
-              </Link>
-            </nav>
-          </div>
-          <p className="text-center text-xs text-muted sm:text-left">
-            © {new Date().getFullYear()} Tawala · Nethub. All rights reserved.
-          </p>
-        </div>
-      </footer>
+
     </div>
   );
 }

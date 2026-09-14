@@ -1,5 +1,6 @@
 import React from "react";
 import NavBar from "@/lib/components/NavBar";
+import SiteFooter from "@/lib/components/SiteFooter";
 
 /**
  * Public routes (marketing, auth, onboarding, legal, blog).
@@ -21,6 +22,7 @@ export default function PublicLayout({
       {/* Matches NavBar height: h-14 mobile, sm:h-16 desktop */}
       <div className="h-14 shrink-0 sm:h-16" aria-hidden="true" />
       <div className="w-full flex-1">{children}</div>
+      <SiteFooter />
     </div>
   );
 }

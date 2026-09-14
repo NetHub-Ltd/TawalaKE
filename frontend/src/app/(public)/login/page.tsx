@@ -48,9 +48,7 @@
 //         </section>
 
 //         {/* Minimal System Footer */}
-//         <footer className="w-full max-w-md text-center text-xs text-muted pb-2">
-//           <p>© {new Date().getFullYear()} Tawala. Encrypted & Secure.</p>
-//         </footer>
+//
 //       </main>
 //     </>
 //   );
