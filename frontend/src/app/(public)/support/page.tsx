@@ -12,7 +12,7 @@ const CHANNELS = [
     icon: MessageCircle,
     title: "WhatsApp",
     detail: "Best for counter issues and quick how-to questions during business hours.",
-    href: "https://wa.me/254700000000",
+    href: "https://wa.me/254783202527?text=Hi%20Tawala%20support%20%E2%80%94%20message%20from%20the%20Tawala%20website%20%28tawala.nethub.co.ke%29.",
     cta: "Message on WhatsApp",
     external: true,
   },
@@ -93,11 +93,6 @@ export default function SupportPage() {
             );
           })}
         </div>
-        <p className="mt-4 text-xs text-muted">
-          Replace the WhatsApp number with your live support line before launch.
-          Email uses the existing{" "}
-          <span className="font-medium">support@nethub.co.ke</span> address.
-        </p>
       </section>
 
       <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
