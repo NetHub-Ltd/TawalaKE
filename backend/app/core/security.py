@@ -92,10 +92,13 @@ class TokenData(BaseModel):
     Strongly-typed representation of the claims inside a verified JWT.
     All fields that can appear in the payload are declared here so that
     TokenData(**payload) is safe and IDE-friendly.
+
+    Tenant staff tokens carry organization_id.
+    Platform tokens set kind="platform" and omit organization_id.
     """
 
     sub: str
-    organization_id: str
+    organization_id: Optional[str] = None
     business_id: Optional[str] = None
     role: str
     jti: str
@@ -105,6 +108,7 @@ class TokenData(BaseModel):
     iat: int
     type: str = "access"
     scopes: List[str] = Field(default_factory=list)
+    kind: str = "staff"  # "staff" | "platform"
 
 
 # ========================= SECURITY SERVICE CLASS =========================
@@ -241,6 +245,32 @@ class SecurityService:
             refresh_token=refresh_token,
             id_token=id_token,
         )
+
+    def create_platform_access_token(
+        self,
+        *,
+        user_id: str,
+        role: str,
+        scopes: Optional[List[str]] = None,
+    ) -> str:
+        """
+        Issue a short-lived access token for a PlatformUser.
+
+        Claims: kind=platform, no organization_id. Tenant APIs that require
+        organization_id must reject these tokens.
+        """
+        base_claims: Dict[str, Any] = {
+            "sub": str(user_id),
+            "role": str(role).strip().upper(),
+            "kind": "platform",
+        }
+        return self._create_token(
+            base_claims,
+            timedelta(minutes=settings.access_token_expire_minutes),
+            "access",
+            scopes or [],
+        )
+
 
     # ------------------------------------------------------------------
     # 3. VERIFICATION & REPLAY PROTECTION (REDIS)

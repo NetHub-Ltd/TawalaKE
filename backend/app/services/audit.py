@@ -71,3 +71,68 @@ async def record_audit(
                 await db.rollback()
             except Exception:  # noqa: BLE001
                 pass
+
+
+async def record_platform_audit(
+    db: Optional[AsyncSession] = None,
+    *,
+    actor: Optional["PlatformUser"],
+    action: str,
+    outcome: str = "success",
+    resource_type: Optional[str] = None,
+    resource_id: Optional[UUID | str] = None,
+    organization_id: Optional[UUID] = None,
+    meta: Optional[dict[str, Any]] = None,
+    request_id: Optional[str] = None,
+    independent: bool = False,
+) -> None:
+    """
+    Persist a platform-actor audit event into audit_events.
+
+    actor_staff_id is left null; actor identity is recorded via email/role and
+    meta.actor_platform_user_id / meta.actor_kind=PLATFORM_USER.
+    """
+    if not getattr(settings, "audit_enabled", True):
+        return
+
+    from app.models.models import PlatformUser  # local import avoids cycles
+    from app.core.platform_rbac import effective_platform_role
+
+    role = effective_platform_role(actor) if actor else None
+    merged_meta = dict(meta or {})
+    merged_meta["actor_kind"] = "PLATFORM_USER"
+    if actor is not None:
+        merged_meta["actor_platform_user_id"] = str(actor.id)
+
+    payload = dict(
+        actor_staff_id=None,
+        actor_email=(actor.email if actor else None),
+        actor_role=(role.value if role else None),
+        action=action,
+        resource_type=resource_type,
+        resource_id=str(resource_id) if resource_id is not None else None,
+        organization_id=organization_id,
+        business_id=None,
+        outcome=outcome,
+        meta=merged_meta,
+        request_id=request_id,
+    )
+
+    try:
+        if independent or db is None:
+            async with AsyncSessionLocal() as session:
+                session.add(AuditEvent(**payload))
+                await session.commit()
+            return
+
+        db.add(AuditEvent(**payload))
+        await db.flush()
+    except Exception as exc:  # noqa: BLE001
+        logger.error(
+            f"platform audit write failed action={action} outcome={outcome}: {exc}"
+        )
+        if db is not None and not independent:
+            try:
+                await db.rollback()
+            except Exception:  # noqa: BLE001
+                pass

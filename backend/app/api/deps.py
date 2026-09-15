@@ -114,6 +114,13 @@ async def get_current_user(
             redis_client=redis
         )
 
+        # Platform JWTs must not access tenant Staff endpoints
+        if getattr(token_data, "kind", "staff") == "platform":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Platform credentials cannot access tenant APIs",
+            )
+
         # Query staff member with eager loading of business assignments
         stmt = (
             select(Staff)
