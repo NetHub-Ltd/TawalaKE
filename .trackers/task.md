@@ -1,17 +1,12 @@
 # Task
 
-## Active program
-Ecosystem auth — board https://github.com/orgs/NetHub-Ltd/projects/3 — umbrella #238
+## Auth program
+Board: https://github.com/orgs/NetHub-Ltd/projects/3 — umbrella #238
+M0 done. This branch: M1 #223 hard session verifier.
 
-## This branch
-M0 docs: sequences, token claims, PIN threat model (#220 #221 #222)
+## Also planned (separate PR)
+RBAC permissions matrix → DB phase 1 (additive tables + dual-read flag auth_rbac_from_db default off)
 
-## Completed
-- [x] AGENTS.md §6 mandatory progress check (PR #239)
-- [x] M0 docs under docs/auth/
-
-## Next
-- M1 #223 AUTH_HARD_SESSION_V2 dual-mode verifier
-
-## Out of scope
-- M9 #237 until M8 + explicit approval
+## Completed this branch
+- [x] hard_session verify + deps + config flags
+- [x] tests test_hard_session.py
