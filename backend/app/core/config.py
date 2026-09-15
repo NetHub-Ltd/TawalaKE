@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     rbac_cache_ttl_sec: int = 120
     audit_enabled: bool = True
 
+    # RBAC matrix from DB (phase 1). Default OFF = in-code ROLE_PERMISSIONS.
+    auth_rbac_from_db: bool = False
+
     # Soft-delete retention archive pipeline (purge/email off until ready)
     archive_enabled: bool = False
     archive_signed_url_ttl_days: int = 7

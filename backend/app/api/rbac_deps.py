@@ -70,8 +70,18 @@ def require_permissions(*required: Permission | str) -> Callable:
         db: SessionDep,
         redis: AsyncRedis = Depends(get_redis),
     ) -> Staff:
-        ok = has_all_permissions(user, required_perms)
-        # Prefer cache for observability / future soft checks; matrix is DB-backed via Staff.role
+        from app.core.config import settings
+        from app.core.rbac import permissions_for_staff
+
+        if getattr(settings, "auth_rbac_from_db", False):
+            held = await permissions_for_staff(db, user)
+            ok = all(
+                (p if isinstance(p, Permission) else Permission(str(p))) in held
+                for p in required_perms
+            )
+        else:
+            ok = has_all_permissions(user, required_perms)
+        # Prefer cache for observability / future soft checks
         try:
             await _cached_perm_values(redis, user)
         except Exception:  # noqa: BLE001

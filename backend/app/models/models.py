@@ -22,7 +22,7 @@ from enum import Enum
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
-from sqlalchemy import Column, Enum as SAEnum
+from sqlalchemy import Column, Enum as SAEnum, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel, DateTime
 import sqlalchemy as sa
@@ -370,6 +370,41 @@ class PlatformUser(BaseMixin, table=True):
 # =========================================================
 # 4. BUSINESS LOCATIONS
 # =========================================================
+
+
+
+class PermissionDefinition(BaseMixin, table=True):
+    """
+    Catalog of tenant permission codes (e.g. org:write).
+
+    Phase 1 of moving ROLE_PERMISSIONS from code into the database so
+    permissions can be listed and revoked without redeploying. Runtime
+    still uses in-code matrix until AUTH_RBAC_FROM_DB is enabled.
+    """
+    __tablename__ = "permission_definitions"
+
+    code: str = Field(max_length=64, unique=True, index=True)
+    description: Optional[str] = Field(default=None, max_length=255)
+    active: bool = Field(default=True, index=True)
+
+
+class RolePermission(BaseMixin, table=True):
+    """
+    Which StaffRole holds which permission code.
+
+    Unique (role, permission_code). Soft-delete via deleted_at on BaseMixin
+    when revoking without hard delete is desired.
+    """
+    __tablename__ = "role_permissions"
+    __table_args__ = (
+        UniqueConstraint("role", "permission_code", name="uq_role_permission"),
+    )
+
+    role: StaffRole = Field(
+        sa_column=Column(SAEnum(StaffRole, name="staff_role_enum", create_type=False)),
+    )
+    permission_code: str = Field(max_length=64, index=True)
+    active: bool = Field(default=True, index=True)
 
 class Business(BaseMixin, table=True):
     """Individual business location / branch under an organization."""

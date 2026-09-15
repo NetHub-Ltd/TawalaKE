@@ -118,3 +118,50 @@ def perms_cache_key(staff_id: UUID) -> str:
 
 def businesses_cache_key(staff_id: UUID) -> str:
     return RBAC_BIZ_KEY.format(staff_id=staff_id)
+
+
+async def load_permissions_for_role(db, role: StaffRole) -> frozenset[Permission]:
+    """
+    Load active permission codes for a role from role_permissions.
+
+    Falls back to in-code ROLE_PERMISSIONS if the table is empty or query fails
+    (safe default for environments that have not migrated yet).
+    """
+    from sqlmodel import select
+    from app.models.models import RolePermission
+    from app.core.config import settings
+    from app.utils.logging import logger
+
+    if not getattr(settings, "auth_rbac_from_db", False):
+        return ROLE_PERMISSIONS.get(role, frozenset())
+
+    try:
+        stmt = select(RolePermission).where(
+            RolePermission.role == role,
+            RolePermission.active == True,  # noqa: E712
+            RolePermission.deleted_at.is_(None),
+        )
+        rows = list(await db.exec(stmt))
+        if not rows:
+            logger.warning(
+                f"auth_rbac_from_db on but no rows for role={role}; falling back to code matrix"
+            )
+            return ROLE_PERMISSIONS.get(role, frozenset())
+        perms: set[Permission] = set()
+        for row in rows:
+            try:
+                perms.add(Permission(row.permission_code))
+            except ValueError:
+                logger.warning(f"Unknown permission_code in DB: {row.permission_code}")
+        return frozenset(perms)
+    except Exception as exc:  # noqa: BLE001
+        logger.error(f"load_permissions_for_role failed role={role}: {exc}")
+        return ROLE_PERMISSIONS.get(role, frozenset())
+
+
+async def permissions_for_staff(db, staff: Staff) -> frozenset[Permission]:
+    """Resolve permissions for staff (DB matrix when flag on, else code)."""
+    role = effective_role(staff)
+    if role is None:
+        return frozenset()
+    return await load_permissions_for_role(db, role)
