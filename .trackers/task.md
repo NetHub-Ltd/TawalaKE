@@ -1,19 +1,17 @@
 # Task
 
-## Active program (mandatory for all agents)
-**Ecosystem auth** — Keycloak → NetHubKe → Tawala hard + PIN soft  
-- Board: https://github.com/orgs/NetHub-Ltd/projects/3  
-- Umbrella: #238  
-- Issues: #220–#237  
-- Order: M0 → M9; do **not** start M9 (#237) until M8 complete + explicit cutover approval  
-- AGENTS.md §6: session-start progress check required until #238 closed  
+## Active program
+Ecosystem auth — board https://github.com/orgs/NetHub-Ltd/projects/3 — umbrella #238
 
-## Current authorization this branch
-- docs: AGENTS.md mandatory auth program progress rules
+## This branch
+M0 docs: sequences, token claims, PIN threat model (#220 #221 #222)
 
 ## Completed
-- [x] Proposal approved; project + milestones + issues created
-- [x] AGENTS.md §6 auth progress mandatory
+- [x] AGENTS.md §6 mandatory progress check (PR #239)
+- [x] M0 docs under docs/auth/
 
 ## Next
-- M0 docs issues #220 #221 #222
+- M1 #223 AUTH_HARD_SESSION_V2 dual-mode verifier
+
+## Out of scope
+- M9 #237 until M8 + explicit approval
