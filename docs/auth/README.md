@@ -14,3 +14,11 @@
 
 **Flags (all default off except legacy login on):**  
 `AUTH_HARD_SESSION_V2` · `AUTH_PIN_SOFT_SESSION` · `AUTH_DUAL_GATE_WRITES` · `AUTH_NETHUB_EXCHANGE` · `AUTH_LEGACY_STAFF_LOGIN` (on until M9)
+
+## M1 — Hard session verifier (code)
+
+- Module: `backend/app/core/hard_session.py`
+- Deps: `backend/app/api/hard_session_deps.py` → `HardSessionUser`
+- Flag: `AUTH_HARD_SESSION_V2` (env `auth_hard_session_v2`, default `false`)
+- Config: `auth_hard_issuer`, `auth_hard_audience` (default `tawala-api`), `auth_hard_jwks_url`, `auth_hard_jwks_cache_ttl_sec`, `auth_hard_leeway_sec`
+- Legacy staff login **unchanged** when flag is off
