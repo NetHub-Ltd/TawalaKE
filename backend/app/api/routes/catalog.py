@@ -1,0 +1,129 @@
+"""Catalog routes — products and services, no stock (SPEC F.6)."""
+
+from __future__ import annotations
+
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user
+from app.core_platform.catalog.service import CatalogService
+from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.db.session import get_session
+from app.models.identity import User
+from app.schemas.catalog import (
+    ProductCreate,
+    ProductRead,
+    ProductUpdate,
+    ServiceCreate,
+    ServiceRead,
+)
+
+router = APIRouter(prefix="/api/v1", tags=["catalog"])
+
+
+def _map(exc: DomainError) -> HTTPException:
+    status = {
+        DomainErrorCode.CONFLICT: 409,
+        DomainErrorCode.UNAUTHORIZED: 401,
+        DomainErrorCode.FORBIDDEN: 403,
+        DomainErrorCode.NOT_FOUND: 404,
+    }.get(exc.code, 400)
+    return HTTPException(status_code=status, detail=exc.message)
+
+
+@router.post("/products", response_model=ProductRead, status_code=201)
+async def create_product(
+    body: ProductCreate,
+    business_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ProductRead:
+    try:
+        p = await CatalogService(session).create_product(
+            body, user_id=user.id, business_id=business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return ProductRead.model_validate(p)
+
+
+@router.patch("/products/{product_id}", response_model=ProductRead)
+async def update_product(
+    product_id: UUID,
+    body: ProductUpdate,
+    business_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ProductRead:
+    try:
+        p = await CatalogService(session).update_product(
+            product_id, body, user_id=user.id, business_id=business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return ProductRead.model_validate(p)
+
+
+@router.get("/products/{product_id}", response_model=ProductRead)
+async def get_product(
+    product_id: UUID,
+    business_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ProductRead:
+    try:
+        p = await CatalogService(session).get_product(
+            product_id, user_id=user.id, business_id=business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return ProductRead.model_validate(p)
+
+
+@router.get("/products", response_model=list[ProductRead])
+async def list_products(
+    business_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[ProductRead]:
+    try:
+        rows = await CatalogService(session).list_products(
+            user_id=user.id, business_id=business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return [ProductRead.model_validate(r) for r in rows]
+
+
+@router.post("/services", response_model=ServiceRead, status_code=201)
+async def create_service(
+    body: ServiceCreate,
+    business_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ServiceRead:
+    try:
+        s = await CatalogService(session).create_service(
+            body, user_id=user.id, business_id=business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return ServiceRead.model_validate(s)
+
+
+@router.get("/services/{service_id}", response_model=ServiceRead)
+async def get_service(
+    service_id: UUID,
+    business_id: UUID = Query(...),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ServiceRead:
+    try:
+        s = await CatalogService(session).get_service(
+            service_id, user_id=user.id, business_id=business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return ServiceRead.model_validate(s)
