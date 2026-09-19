@@ -13,7 +13,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M4 Identity | #250 | Done |
 | M5 Organization | #251 | Done |
 | M6 Membership / RBAC | #252 | Done |
-| M7 Parties | #253 | Todo |
+| M7 Parties | #253 | Done |
 | M8 Catalog | #254 | Todo |
 | M9 Events / Audit / Config | #255 | Todo |
 | M10 Image `tawala-core` | #256 | Todo |
@@ -82,7 +82,7 @@ Note: M10 may proceed once M1 skeleton exists.
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| M7 | Parties + links | [ ] | SPEC D.4 + F.5 | IDOR + list by business |
+| M7 | Parties + links | [x] | Party + PartyBusinessLink, IDOR-safe get | IDOR + list by business |
 | M8 | Catalog products/services (no quantity) | [ ] | SPEC D.5 + F.6 | catalog rejects quantity |
 
 ---

@@ -4,14 +4,10 @@
 https://github.com/orgs/NetHub-Ltd/projects/5
 
 ## Done
-M1–M6
+M1–M7
 
 ## Next
-M7 #253 Parties + business links
-
-## Notes
-All entity models extend BaseMixin (id, created_at, updated_at, deleted_at, deleted_by).
-AsyncSession throughout services.
+M8 #254 Catalog (Product/Service, no quantity)
 
 ## Rules
 core/v2 only; never merge to main/dev

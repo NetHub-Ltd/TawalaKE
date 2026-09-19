@@ -3,6 +3,7 @@
 from app.models.base import BaseMixin
 from app.models.identity import Credential, Session, User
 from app.models.organization import Branch, Business, Location
+from app.models.parties import Party, PartyBusinessLink
 from app.models.security import (
     Membership,
     MembershipRole,
@@ -26,4 +27,6 @@ __all__ = [
     "RolePermission",
     "MembershipRole",
     "ScopeAssignment",
+    "Party",
+    "PartyBusinessLink",
 ]
