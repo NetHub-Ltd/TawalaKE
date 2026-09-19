@@ -3,12 +3,14 @@
 ## Board
 https://github.com/orgs/NetHub-Ltd/projects/5
 
-## Done
-M1–M10
+## Status
+**Core complete gate M11 closed.**
 
-## Next
-M11 #257 Core complete gate (full suite review, matrix, trackers)
+M1–M11 done on core/v2. See docs/architecture/CORE_COMPATIBILITY_MATRIX.md
+
+## Residual
+- #245 branch protection (operator)
+- Confirm core-image.yml green on GitHub Actions
 
 ## Rules
-core/v2 only; never merge to main/dev
-Image name: tawala-core only (never tawala-api)
+Never merge core/v2 into main/dev

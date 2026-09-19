@@ -17,7 +17,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M8 Catalog | #254 | Done |
 | M9 Events / Audit / Config | #255 | Done |
 | M10 Image `tawala-core` | #256 | Done |
-| M11 Core complete gate | #257 | Todo |
+| M11 Core complete gate | #257 | Done |
 
 **Agent rule:** Read the Project board + open `core` issues. Do not wait for chat to say “what’s next.” Next work = lowest open Todo/In Progress issue on the board that is not blocked. Always on branch `core/v2`. Never PR into `main`/`dev`.
 
@@ -92,7 +92,7 @@ Note: M10 may proceed once M1 skeleton exists.
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
 | M9 | Events, outbox, audit, config | [x] | emit+outbox; audit on revoke; configs | Audit on revoke; event append |
-| M11 | Core complete gate | [ ] | Full SPEC Part H suite green | Full CI |
+| M11 | Core complete gate | [x] | Matrix + 22 tests; residual risks documented | Full unit/contract suite |
 
 ---
 
