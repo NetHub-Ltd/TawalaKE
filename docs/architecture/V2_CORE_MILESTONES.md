@@ -10,7 +10,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M1 Backend skeleton | #247 | Done (closed) |
 | M2 Core CI | #248 | Done (closed) |
 | M3 DB + Alembic | #249 | Done |
-| M4 Identity | #250 | Todo |
+| M4 Identity | #250 | Done |
 | M5 Organization | #251 | Todo |
 | M6 Membership / RBAC | #252 | Todo |
 | M7 Parties | #253 | Todo |
@@ -65,7 +65,7 @@ Note: M10 may proceed once M1 skeleton exists.
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| M4 | Identity models + auth API | [ ] | SPEC D.1 + F.2 | `tests/identity/` |
+| M4 | Identity models + auth API | [x] | users/credentials/sessions, register/login/logout/me | `tests/identity/` |
 | M5 | Organization models + API | [ ] | SPEC D.2 + F.3 | `tests/isolation/` start |
 
 ---
