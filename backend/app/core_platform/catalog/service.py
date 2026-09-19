@@ -47,6 +47,20 @@ class CatalogService:
             status=CatalogStatus.ACTIVE,
         )
         self._session.add(product)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="catalog.product.create",
+            event_type="product.created",
+            resource_type="product",
+            resource_id=product.id,
+            business_id=business_id,
+            actor_user_id=user_id,
+            after={"name": product.name, "sku": product.sku},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(product)
         return product
@@ -76,6 +90,20 @@ class CatalogService:
             product.status = CatalogStatus(data.status)
         product.touch()
         self._session.add(product)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="catalog.product.update",
+            event_type="product.updated",
+            resource_type="product",
+            resource_id=product.id,
+            business_id=business_id,
+            actor_user_id=user_id,
+            after={"name": product.name, "sku": product.sku, "status": product.status.value},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(product)
         return product
@@ -117,6 +145,20 @@ class CatalogService:
             status=CatalogStatus.ACTIVE,
         )
         self._session.add(service)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="catalog.service.create",
+            event_type="service.created",
+            resource_type="service",
+            resource_id=service.id,
+            business_id=business_id,
+            actor_user_id=user_id,
+            after={"name": service.name, "code": service.code},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(service)
         return service

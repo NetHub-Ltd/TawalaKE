@@ -97,7 +97,7 @@ async def suspend_membership(
     session: AsyncSession = Depends(get_session),
 ) -> MembershipRead:
     try:
-        m = await MembershipService(session).suspend(membership_id)
+        m = await MembershipService(session).suspend(membership_id, actor_user_id=ctx.actor_user_id)
     except DomainError as exc:
         raise _map(exc) from exc
     if m.business_id != ctx.business_id:
@@ -159,7 +159,10 @@ async def assign_role(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     try:
-        await RoleService(session).assign_role(membership_id, body.role_id)
+        await RoleService(session).assign_role(
+            membership_id, body.role_id,
+            actor_user_id=ctx.actor_user_id, business_id=ctx.business_id,
+        )
     except DomainError as exc:
         raise _map(exc) from exc
 

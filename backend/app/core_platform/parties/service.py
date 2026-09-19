@@ -53,6 +53,20 @@ class PartyService:
             primary_phone=data.primary_phone,
         )
         self._session.add(party)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="parties.create",
+            event_type="party.created",
+            resource_type="party",
+            resource_id=party.id,
+            business_id=business_id,
+            actor_user_id=user_id,
+            after={"display_name": party.display_name, "kind": party.kind.value},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(party)
         return party
@@ -91,6 +105,23 @@ class PartyService:
             external_ref=data.external_ref,
         )
         self._session.add(link)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="parties.link",
+            event_type="party.linked",
+            resource_type="party_business_link",
+            resource_id=link.id,
+            business_id=business_id,
+            actor_user_id=user_id,
+            after={
+                "party_id": str(party_id),
+                "relationship": link.relationship.value,
+            },
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(link)
         return link

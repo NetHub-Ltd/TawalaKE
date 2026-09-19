@@ -73,6 +73,20 @@ class OrganizationService:
         self._session.add(membership)
         await self._session.flush()
         await RoleService(self._session).bootstrap_owner(business.id, membership.id)
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="organization.business.create",
+            event_type="business.created",
+            resource_type="business",
+            resource_id=business.id,
+            business_id=business.id,
+            actor_user_id=owner_user_id,
+            after={"name": business.name, "slug": business.slug},
+            commit=False,
+        )
+        await self._session.commit()
         await self._session.refresh(business)
         return business
 
@@ -109,6 +123,20 @@ class OrganizationService:
             status=BranchStatus.ACTIVE,
         )
         self._session.add(branch)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="organization.branch.create",
+            event_type="branch.created",
+            resource_type="branch",
+            resource_id=branch.id,
+            business_id=business_id,
+            actor_user_id=user_id,
+            after={"name": branch.name, "code": branch.code},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(branch)
         return branch
@@ -140,6 +168,20 @@ class OrganizationService:
             status=LocationStatus.ACTIVE,
         )
         self._session.add(location)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="organization.location.create",
+            event_type="location.created",
+            resource_type="location",
+            resource_id=location.id,
+            business_id=branch.business_id,
+            actor_user_id=user_id,
+            after={"name": location.name, "kind": location.kind.value},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(location)
         return location

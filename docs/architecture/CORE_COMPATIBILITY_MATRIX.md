@@ -141,3 +141,14 @@ Applied on core/v2 after drift report:
 - RBAC unit tests for missing permission → FORBIDDEN
 
 Still residual: live DB E2E, P1 audit/event coverage expansion, idempotency, category/config/scope APIs.
+
+
+### P1 activity coverage (#261)
+
+Mutations that emit audit + outbox event via `record_activity`:
+
+- business.created, branch.created, location.created
+- product.created, product.updated, service.created
+- party.created, party.linked
+- membership.invited, membership.suspended, membership.revoked
+- role.assigned

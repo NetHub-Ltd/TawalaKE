@@ -68,6 +68,20 @@ class MembershipService:
             invited_at=datetime.now(UTC),
         )
         self._session.add(m)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="security.membership.invite",
+            event_type="membership.invited",
+            resource_type="membership",
+            resource_id=m.id,
+            business_id=business_id,
+            actor_user_id=actor_id,
+            after={"user_id": str(user_id), "status": m.status.value},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(m)
         return m
@@ -86,13 +100,31 @@ class MembershipService:
         await self._session.refresh(m)
         return m
 
-    async def suspend(self, membership_id: UUID) -> Membership:
+    async def suspend(
+        self, membership_id: UUID, *, actor_user_id: UUID | None = None
+    ) -> Membership:
         m = await self._session.get(Membership, membership_id)
         if m is None:
             raise DomainError(DomainErrorCode.NOT_FOUND, "Membership not found")
+        before = {"status": m.status.value}
         m.status = MembershipStatus.SUSPENDED
         m.touch()
         self._session.add(m)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="security.membership.suspend",
+            event_type="membership.suspended",
+            resource_type="membership",
+            resource_id=m.id,
+            business_id=m.business_id,
+            actor_user_id=actor_user_id,
+            before=before,
+            after={"status": m.status.value},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(m)
         return m
@@ -183,11 +215,32 @@ class RoleService:
         self._session.add(RolePermission(role_id=role_id, permission_id=perm.id))
         await self._session.commit()
 
-    async def assign_role(self, membership_id: UUID, role_id: UUID) -> None:
+    async def assign_role(
+        self,
+        membership_id: UUID,
+        role_id: UUID,
+        *,
+        actor_user_id: UUID | None = None,
+        business_id: UUID | None = None,
+    ) -> None:
         existing = await self._session.get(MembershipRole, (membership_id, role_id))
         if existing:
             return
         self._session.add(MembershipRole(membership_id=membership_id, role_id=role_id))
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="security.role.assign",
+            event_type="role.assigned",
+            resource_type="membership",
+            resource_id=membership_id,
+            business_id=business_id,
+            actor_user_id=actor_user_id,
+            after={"role_id": str(role_id)},
+            commit=False,
+        )
         await self._session.commit()
 
     async def bootstrap_owner(
