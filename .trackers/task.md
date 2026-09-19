@@ -1,27 +1,20 @@
 # Task — Core V2
 
 ## Goal
-
-Produce a complete Core Development Specification so implementation can proceed without inventing architecture; agents can resume from docs if trackers are stale.
+Implement Core per accepted DEVELOPMENT_SPEC on core/v2 only.
 
 ## Approved scope
-
-- [x] Isolate core/v2 clean-slate
-- [x] MERGE_POLICY + CI merge guard
-- [x] TAWALA_CORE_DESIGN.md
-- [x] TAWALA_CORE_DEVELOPMENT_SPEC.md
-- [x] V2_CORE_MILESTONES.md aligned to SPEC
-- [ ] User acceptance of DEVELOPMENT_SPEC
-- [ ] Operator: GitHub branch protection on main
-- [ ] GitHub issues/project board from M1–M11
+- [x] Spec accepted (2026-09-19)
+- [x] M1 Backend skeleton (tree, FastAPI health, Dockerfile, pyproject, unit tests)
+- [~] M2 Core CI workflow (core-ci.yml present; local lint/test green)
+- [ ] M3 DB + Alembic online
+- [ ] M4+ domain modules
 
 ## Out of scope
-
-- Application code until SPEC accepted
-- Frontend
 - Merge to main/dev
+- Frontend
+- Product models
 
 ## Verification
-
-- DEVELOPMENT_SPEC under docs/architecture/
-- Milestones reference SPEC parts
+- pytest: 2 passed (health)
+- ruff: clean

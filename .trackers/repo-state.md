@@ -1,12 +1,11 @@
 # Repository State — Core V2
 
 - Branch: core/v2
-- Isolation: non-mergeable into main/dev; image tawala-core only
-- Docs: CORE_DESIGN, CORE_DEVELOPMENT_SPEC, V2_CORE_MILESTONES
-- Frontend: none
-- Product code: none on this branch
+- Spec: accepted 2026-09-19
+- M1: complete (backend skeleton + /health)
+- M2: in progress (core-ci.yml added)
+- Isolation: MERGE_POLICY + block-core-merge workflow
 - Last updated: 2026-09-19
 
 ## Agent resume
-
-Read MERGE_POLICY → DEVELOPMENT_SPEC Part A → MILESTONES. Do not use main product code.
+MERGE_POLICY → DEVELOPMENT_SPEC Part A → V2_CORE_MILESTONES → implement next open milestone only.

@@ -17,7 +17,7 @@ Agents: if `.trackers/` are stale, follow **SPEC Part A resume protocol** and th
 |----|-----------|--------|------------|
 | M0.1 | `core/v2` clean-slate + MERGE_POLICY + CI merge guard | [x] | Product tree gone; guard workflow present |
 | M0.2 | CORE_DESIGN + DEVELOPMENT_SPEC drafted | [x] | Docs on branch |
-| M0.3 | Spec accepted (models, endpoints, sequence) | [ ] | Written approval |
+| M0.3 | Spec accepted (models, endpoints, sequence) | [x] | User: spec approved 2026-09-19 |
 | M0.4 | GitHub branch protection on `main` (operator) | [ ] | core→main PR cannot merge |
 | M0.5 | GitHub Project board + issues M1–M11 created | [ ] | Issues link to SPEC sections |
 
@@ -27,8 +27,8 @@ Agents: if `.trackers/` are stale, follow **SPEC Part A resume protocol** and th
 
 | ID | Milestone | Status | Acceptance | Tests / checks |
 |----|-----------|--------|------------|----------------|
-| M1 | Backend skeleton | [ ] | Tree per SPEC Part C; FastAPI `/health` | Manual + curl health |
-| M2 | Core CI pipeline | [ ] | `core-ci.yml`: lint, typecheck, pytest, alembic | CI green |
+| M1 | Backend skeleton | [x] | Tree per SPEC Part C; FastAPI `/health` | pytest health 2 passed |
+| M2 | Core CI pipeline | [~] | `core-ci.yml`: lint + pytest (skeleton) | workflow present; local ruff+pytest green |
 | M3 | DB + Alembic bootstrap | [ ] | Engine + empty/first migration path | `alembic upgrade head` |
 | M10 | Image build pipeline | [ ] | `Dockerfile` + `core-image.yml`; tag `tawala-core:<sha>` only | Image builds; **not** product `tawala-api` |
 
