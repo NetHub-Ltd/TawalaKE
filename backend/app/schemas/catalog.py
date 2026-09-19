@@ -16,6 +16,7 @@ class ProductCreate(BaseModel):
     barcode: str | None = Field(default=None, max_length=128)
     category_id: UUID | None = None
     unit: str = Field(default="ea", max_length=32)
+    idempotency_key: str | None = Field(default=None, max_length=128)
 
     @model_validator(mode="before")
     @classmethod

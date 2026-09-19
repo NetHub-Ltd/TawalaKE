@@ -23,6 +23,15 @@ class IdentityService:
         self._session = session
 
     async def register(self, data: UserRegister) -> User:
+        from app.core_platform.shared import idempotency as idem
+
+        key = idem.require_key_format(getattr(data, "idempotency_key", None))
+        if key:
+            prior = await idem.lookup(self._session, scope="platform", key=key)
+            if prior and prior.resource_id:
+                user = await self._session.get(User, prior.resource_id)
+                if user is not None:
+                    return user
         if data.email:
             existing = await self._session.scalar(
                 select(User).where(User.email == str(data.email).lower())
@@ -50,6 +59,21 @@ class IdentityService:
             secret_hash=hash_password(data.password),
         )
         self._session.add(cred)
+        await self._session.flush()
+        from app.core_platform.shared import idempotency as idem
+
+        key = idem.require_key_format(getattr(data, "idempotency_key", None))
+        if key:
+            await idem.store(
+                self._session,
+                scope="platform",
+                key=key,
+                operation="auth.register",
+                response_body={"id": str(user.id)},
+                response_status=201,
+                resource_id=user.id,
+                commit=False,
+            )
         await self._session.commit()
         await self._session.refresh(user)
         return user

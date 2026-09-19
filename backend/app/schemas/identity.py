@@ -13,6 +13,7 @@ class UserRegister(BaseModel):
     phone: str | None = Field(default=None, max_length=32)
     password: str = Field(min_length=8, max_length=128)
     display_name: str | None = Field(default=None, max_length=255)
+    idempotency_key: str | None = Field(default=None, max_length=128)
 
     @model_validator(mode="after")
     def require_email_or_phone(self) -> UserRegister:

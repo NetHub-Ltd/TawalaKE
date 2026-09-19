@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 class MembershipInvite(BaseModel):
     user_id: UUID
+    idempotency_key: str | None = Field(default=None, max_length=128)
 
 
 class MembershipRead(BaseModel):

@@ -35,7 +35,18 @@ class CatalogService:
     async def create_product(
         self, data: ProductCreate, *, user_id: UUID, business_id: UUID
     ) -> Product:
+        from app.core_platform.shared import idempotency as idem
+
         await self._require_membership(user_id, business_id)
+        key = idem.require_key_format(getattr(data, "idempotency_key", None))
+        if key:
+            prior = await idem.lookup(
+                self._session, scope=str(business_id), key=key
+            )
+            if prior and prior.resource_id:
+                existing = await self._session.get(Product, prior.resource_id)
+                if existing is not None and existing.business_id == business_id:
+                    return existing
         product = Product(
             id=uuid4(),
             business_id=business_id,
@@ -61,6 +72,17 @@ class CatalogService:
             after={"name": product.name, "sku": product.sku},
             commit=False,
         )
+        if key:
+            await idem.store(
+                self._session,
+                scope=str(business_id),
+                key=key,
+                operation="catalog.product.create",
+                response_body={"id": str(product.id)},
+                response_status=201,
+                resource_id=product.id,
+                commit=False,
+            )
         await self._session.commit()
         await self._session.refresh(product)
         return product

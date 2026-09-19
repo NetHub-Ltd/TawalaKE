@@ -38,8 +38,24 @@ class MembershipService:
         )
 
     async def invite(
-        self, business_id: UUID, user_id: UUID, *, actor_id: UUID
+        self,
+        business_id: UUID,
+        user_id: UUID,
+        *,
+        actor_id: UUID,
+        idempotency_key: str | None = None,
     ) -> Membership:
+        from app.core_platform.shared import idempotency as idem
+
+        key = idem.require_key_format(idempotency_key)
+        if key:
+            prior = await idem.lookup(
+                self._session, scope=str(business_id), key=key
+            )
+            if prior and prior.resource_id:
+                m_prior = await self._session.get(Membership, prior.resource_id)
+                if m_prior is not None:
+                    return m_prior
         existing = await self._session.scalar(
             select(Membership).where(
                 Membership.business_id == business_id,
@@ -82,6 +98,17 @@ class MembershipService:
             after={"user_id": str(user_id), "status": m.status.value},
             commit=False,
         )
+        if key:
+            await idem.store(
+                self._session,
+                scope=str(business_id),
+                key=key,
+                operation="security.membership.invite",
+                response_body={"id": str(m.id)},
+                response_status=201,
+                resource_id=m.id,
+                commit=False,
+            )
         await self._session.commit()
         await self._session.refresh(m)
         return m

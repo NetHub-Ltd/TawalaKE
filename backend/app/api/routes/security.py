@@ -52,7 +52,10 @@ async def invite_membership(
         raise HTTPException(status_code=403, detail="Business context mismatch")
     try:
         m = await MembershipService(session).invite(
-            business_id, body.user_id, actor_id=ctx.actor_user_id
+            business_id,
+            body.user_id,
+            actor_id=ctx.actor_user_id,
+            idempotency_key=body.idempotency_key,
         )
     except DomainError as exc:
         raise _map(exc) from exc
