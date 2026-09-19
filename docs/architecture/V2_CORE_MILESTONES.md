@@ -9,7 +9,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M0.5 Project board linked | #246 | Done (closed) |
 | M1 Backend skeleton | #247 | Done (closed) |
 | M2 Core CI | #248 | Done (closed) |
-| M3 DB + Alembic | #249 | Todo |
+| M3 DB + Alembic | #249 | Done |
 | M4 Identity | #250 | Todo |
 | M5 Organization | #251 | Todo |
 | M6 Membership / RBAC | #252 | Todo |
@@ -54,7 +54,7 @@ Agents: if `.trackers/` are stale, follow **SPEC Part A resume protocol** and th
 |----|-----------|--------|------------|----------------|
 | M1 | Backend skeleton | [x] | Tree per SPEC Part C; FastAPI `/health` | pytest health 2 passed |
 | M2 | Core CI pipeline | [x] | `core-ci.yml` green (user confirmed) | CI green |
-| M3 | DB + Alembic bootstrap | [ ] | Engine + empty/first migration path | `alembic upgrade head` |
+| M3 | DB + Alembic bootstrap | [x] | Settings, async engine, session, baseline migration, /ready DB report | `alembic upgrade head` |
 | M10 | Image build pipeline | [ ] | `Dockerfile` + `core-image.yml`; tag `tawala-core:<sha>` only | Image builds; **not** product `tawala-api` |
 
 Note: M10 may proceed once M1 skeleton exists.
