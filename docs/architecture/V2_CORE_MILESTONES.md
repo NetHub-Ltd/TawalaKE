@@ -1,5 +1,30 @@
 # V2 Core Program — Milestones & Issues
 
+**GitHub Project board (source of truth for status):**  
+https://github.com/orgs/NetHub-Ltd/projects/5
+
+| Milestone | Issue | Board status |
+|-----------|-------|--------------|
+| M0.4 Branch protection (operator) | #245 | Todo |
+| M0.5 Project board linked | #246 | Done (closed) |
+| M1 Backend skeleton | #247 | Done (closed) |
+| M2 Core CI | #248 | In Progress |
+| M3 DB + Alembic | #249 | Todo |
+| M4 Identity | #250 | Todo |
+| M5 Organization | #251 | Todo |
+| M6 Membership / RBAC | #252 | Todo |
+| M7 Parties | #253 | Todo |
+| M8 Catalog | #254 | Todo |
+| M9 Events / Audit / Config | #255 | Todo |
+| M10 Image `tawala-core` | #256 | Todo |
+| M11 Core complete gate | #257 | Todo |
+
+**Agent rule:** Read the Project board + open `core` issues. Do not wait for chat to say “what’s next.” Next work = lowest open Todo/In Progress issue on the board that is not blocked. Always on branch `core/v2`. Never PR into `main`/`dev`.
+
+---
+
+# V2 Core Program — Milestones & Issues
+
 **Branch:** `core/v2`  
 **Spec:** `TAWALA_CORE_DEVELOPMENT_SPEC.md` (authoritative for models, endpoints, CI)  
 **Design:** `TAWALA_CORE_DESIGN.md`  

@@ -1,20 +1,20 @@
 # Task — Core V2
 
 ## Goal
-Implement Core per accepted DEVELOPMENT_SPEC on core/v2 only.
+Execute Core milestones from the GitHub Project board without requiring chat to name the next task.
 
-## Approved scope
-- [x] Spec accepted (2026-09-19)
-- [x] M1 Backend skeleton (tree, FastAPI health, Dockerfile, pyproject, unit tests)
-- [~] M2 Core CI workflow (core-ci.yml present; local lint/test green)
-- [ ] M3 DB + Alembic online
-- [ ] M4+ domain modules
+## Board
+https://github.com/orgs/NetHub-Ltd/projects/5
 
-## Out of scope
-- Merge to main/dev
-- Frontend
-- Product models
+## Issues
+#245–#257 (labels: core, core-v2)
 
-## Verification
-- pytest: 2 passed (health)
-- ruff: clean
+## Current
+- M1 #247 Done
+- M2 #248 In Progress (confirm CI green)
+- Next implementation: M3 #249 after M2 stable
+
+## Rules
+- core/v2 only
+- Never merge to main/dev
+- SPEC is authoritative for models/endpoints
