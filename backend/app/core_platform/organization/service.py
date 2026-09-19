@@ -37,6 +37,7 @@ class OrganizationService:
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
+                Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
         )
         if m is None:

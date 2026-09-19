@@ -1,10 +1,19 @@
 """Core SQLModel tables — import all models for Alembic metadata."""
 
+from app.models.base import BaseMixin
 from app.models.identity import Credential, Session, User
 from app.models.organization import Branch, Business, Location
-from app.models.security import Membership
+from app.models.security import (
+    Membership,
+    MembershipRole,
+    Permission,
+    Role,
+    RolePermission,
+    ScopeAssignment,
+)
 
 __all__ = [
+    "BaseMixin",
     "User",
     "Credential",
     "Session",
@@ -12,4 +21,9 @@ __all__ = [
     "Branch",
     "Location",
     "Membership",
+    "Permission",
+    "Role",
+    "RolePermission",
+    "MembershipRole",
+    "ScopeAssignment",
 ]

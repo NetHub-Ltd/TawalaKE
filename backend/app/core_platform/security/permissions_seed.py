@@ -1,0 +1,27 @@
+"""System permission codes seeded for Core (SPEC F.8)."""
+
+from __future__ import annotations
+
+SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
+    ("organization.business.read", "Read business profile"),
+    ("organization.business.update", "Update business profile"),
+    ("organization.branch.create", "Create branch"),
+    ("organization.branch.read", "List/read branches"),
+    ("organization.location.create", "Create location"),
+    ("organization.location.read", "List/read locations"),
+    ("security.membership.invite", "Invite members"),
+    ("security.membership.read", "List memberships"),
+    ("security.membership.suspend", "Suspend membership"),
+    ("security.membership.revoke", "Revoke membership"),
+    ("security.role.manage", "Manage roles and permissions"),
+    ("security.role.assign", "Assign roles to memberships"),
+    ("parties.create", "Create party"),
+    ("parties.link", "Link party to business"),
+    ("parties.read", "Read parties"),
+    ("catalog.product.create", "Create product"),
+    ("catalog.product.update", "Update product"),
+    ("catalog.product.read", "Read products"),
+    ("catalog.service.create", "Create service"),
+    ("catalog.service.read", "Read services"),
+    ("audit.read", "Read audit records"),
+]

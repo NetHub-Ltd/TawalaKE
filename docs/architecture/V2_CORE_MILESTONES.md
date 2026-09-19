@@ -12,7 +12,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M3 DB + Alembic | #249 | Done |
 | M4 Identity | #250 | Done |
 | M5 Organization | #251 | Done |
-| M6 Membership / RBAC | #252 | Todo |
+| M6 Membership / RBAC | #252 | Done |
 | M7 Parties | #253 | Todo |
 | M8 Catalog | #254 | Todo |
 | M9 Events / Audit / Config | #255 | Todo |
@@ -74,7 +74,7 @@ Note: M10 may proceed once M1 skeleton exists.
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| M6 | Membership, roles, permissions, authz | [ ] | SPEC D.3 + F.4 | membership, rbac, scope suites |
+| M6 | Membership, roles, permissions, authz | [x] | BaseMixin + RBAC tables/services/routes | membership, rbac, scope suites |
 
 ---
 
