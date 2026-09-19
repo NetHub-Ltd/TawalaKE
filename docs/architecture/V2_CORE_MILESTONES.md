@@ -1,89 +1,113 @@
-# V2 Core Program — Milestones
+# V2 Core Program — Milestones & Issues
 
 **Branch:** `core/v2`  
-**Status:** Living board  
-**Design reference:** `TAWALA_CORE_DESIGN.md`
+**Spec:** `TAWALA_CORE_DEVELOPMENT_SPEC.md` (authoritative for models, endpoints, CI)  
+**Design:** `TAWALA_CORE_DESIGN.md`  
+**Isolation:** `MERGE_POLICY.md`
 
 Legend: `[ ]` not started · `[~]` in progress · `[x]` done
 
+Agents: if `.trackers/` are stale, follow **SPEC Part A resume protocol** and this board.
+
 ---
 
-## Phase 0 — Isolation & blueprint
+## Phase 0 — Isolation & documentation
+
+| ID | Milestone | Status | Acceptance |
+|----|-----------|--------|------------|
+| M0.1 | `core/v2` clean-slate + MERGE_POLICY + CI merge guard | [x] | Product tree gone; guard workflow present |
+| M0.2 | CORE_DESIGN + DEVELOPMENT_SPEC drafted | [x] | Docs on branch |
+| M0.3 | Spec accepted (models, endpoints, sequence) | [ ] | Written approval |
+| M0.4 | GitHub branch protection on `main` (operator) | [ ] | core→main PR cannot merge |
+| M0.5 | GitHub Project board + issues M1–M11 created | [ ] | Issues link to SPEC sections |
+
+---
+
+## Phase 1 — Structure, CI, images foundation
+
+| ID | Milestone | Status | Acceptance | Tests / checks |
+|----|-----------|--------|------------|----------------|
+| M1 | Backend skeleton | [ ] | Tree per SPEC Part C; FastAPI `/health` | Manual + curl health |
+| M2 | Core CI pipeline | [ ] | `core-ci.yml`: lint, typecheck, pytest, alembic | CI green |
+| M3 | DB + Alembic bootstrap | [ ] | Engine + empty/first migration path | `alembic upgrade head` |
+| M10 | Image build pipeline | [ ] | `Dockerfile` + `core-image.yml`; tag `tawala-core:<sha>` only | Image builds; **not** product `tawala-api` |
+
+Note: M10 may proceed once M1 skeleton exists.
+
+---
+
+## Phase 2 — Identity & organization
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| P0.1 | `core/v2` created from main; product tree removed | [x] | No backend/frontend product code | Manual tree check |
-| P0.2 | MERGE_POLICY + AGENTS + CI merge guard | [x] | Docs present; workflow blocks core→main/dev | Workflow file present |
-| P0.3 | Trackers initialized for Core | [x] | repo-state / task / rollback current | Manual |
-| P0.4 | `TAWALA_CORE_DESIGN.md` drafted | [x] | Blueprint covers layout, entities, relations, invariants | Review |
-| P0.5 | Core Design accepted (incl. §12 answers) | [ ] | Written acceptance | N/A |
-| P0.6 | Milestone board aligned to accepted design | [ ] | This file updated | N/A |
+| M4 | Identity models + auth API | [ ] | SPEC D.1 + F.2 | `tests/identity/` |
+| M5 | Organization models + API | [ ] | SPEC D.2 + F.3 | `tests/isolation/` start |
 
 ---
 
-## Phase 1 — Identity & Membership (implementation later)
+## Phase 3 — Security
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| P1.1 | User / Credential / Session model + commands | [ ] | Per design §4.1 | Unit + isolation |
-| P1.2 | Membership lifecycle | [ ] | Invited→Active→Suspended→Revoked | State machine |
-| P1.3 | TenantContext required on protected ops | [ ] | Missing context denies | Contract tests |
+| M6 | Membership, roles, permissions, authz | [ ] | SPEC D.3 + F.4 | membership, rbac, scope suites |
 
 ---
 
-## Phase 2 — RBAC & Scope
+## Phase 4 — Parties & catalog
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| P2.1 | Role / Permission / assignments | [ ] | No owner bypass without audit | RBAC matrix |
-| P2.2 | Scope (Branch/Location) | [ ] | Cross-scope denied | Scope negatives |
-| P2.3 | IDOR suite for Core resources | [ ] | UUID guess fails | IDOR |
+| M7 | Parties + links | [ ] | SPEC D.4 + F.5 | IDOR + list by business |
+| M8 | Catalog products/services (no quantity) | [ ] | SPEC D.5 + F.6 | catalog rejects quantity |
 
 ---
 
-## Phase 3 — Organization, Parties, Catalog identity
+## Phase 5 — Events, audit, config, complete
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| P3.1 | Business / Branch / Location | [ ] | FK + business_id everywhere | Isolation |
-| P3.2 | Party + PartyBusinessLink | [ ] | Single identity model | Party tests |
-| P3.3 | Product / Service **without** quantity | [ ] | Schema has no stock qty | Boundary |
+| M9 | Events, outbox, audit, config | [ ] | SPEC D.6 | Audit on revoke; event append |
+| M11 | Core complete gate | [ ] | Full SPEC Part H suite green | Full CI |
 
 ---
 
-## Phase 4 — Events, Audit, Configuration
+## Issue template (copy into GitHub issues)
 
-| ID | Milestone | Status | Acceptance | Tests |
-|----|-----------|--------|------------|-------|
-| P4.1 | Event envelope + outbox interface | [ ] | Required fields; immutability | Envelope tests |
-| P4.2 | AuditRecord append path | [ ] | Security ops audited | Audit assertions |
-| P4.3 | BusinessConfig | [ ] | Business-scoped keys | Scope tests |
+```markdown
+## Spec reference
+TAWALA_CORE_DEVELOPMENT_SPEC.md — section(s): …
 
----
+## Deliverables
+- [ ] Models / migrations
+- [ ] Schemas
+- [ ] Service class(es)
+- [ ] Routes
+- [ ] Tests listed in milestone
 
-## Phase 5 — Core complete gate
+## Out of scope
+- Frontend
+- Product main/dev merge
+- Sales/Inventory/Payments
 
-| ID | Milestone | Status | Acceptance | Tests |
-|----|-----------|--------|------------|-------|
-| P5.1 | All invariants §8 encoded in tests | [ ] | CI green on core/v2 | Full suite |
-| P5.2 | Import boundary enforced | [ ] | No domain imports in core | Arch tests |
-| P5.3 | Design vs implementation compatibility matrix | [ ] | MATCH on Core sections | Review |
-
----
-
-## Out of program (separate tracks)
-
-- Product feature work on `main` / `dev`
-- Domain modules Sales / Inventory / Payments implementation
-- Data migration from product database
-- Frontend / Desktop / Mobile clients
-- Merge into `main` (forbidden)
+## Acceptance
+CI green on core/v2 for this milestone’s tests.
+```
 
 ---
 
-## Definition of done (Core implementation)
+## Non-merge reminder
 
-- Phases 1–5 acceptance criteria met  
-- Isolation and IDOR suites pass in CI on `core/v2`  
-- No PR opened to `main` or `dev` from `core/**`  
-- Trackers current on branch tip  
+```text
+Never: PR core/v2 → main or dev
+Never: tag Core image as production tawala-api
+Never: copy product models into Core
+```
+
+---
+
+## Definition of Core complete
+
+- M0–M11 acceptance criteria met
+- SPEC Part H suites pass
+- Isolation layers active (policy + CI + branch protection)
+- Trackers current on branch tip

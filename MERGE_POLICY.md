@@ -48,6 +48,30 @@ This branch exists to design and implement a clean-slate Tawala Core. It must ne
 - Opening a PR from `core/v2` → `dev`
 - Cherry-picking Core commits into product branches without an explicit, approved migration program
 - Copying product models/routes from `main` into Core “for speed”
+- Tagging or pushing Core images as product `tawala-api` (or overwriting production ImagePolicy tags)
+- Deploying Core images into the live POS k3s workload as a silent replacement for product API
+
+---
+
+## Image & deploy isolation
+
+| Rule | Detail |
+|------|--------|
+| Image name | `tawala-core` only (example tag: `tawala-core:<git-sha>`) |
+| Product image | `tawala-api` remains product-only on `main`/`dev` pipelines |
+| Registry | Use a Core-specific repository path when CI pushes; never the production product tag stream |
+| Clusters | Core CI must not auto-deploy to production POS |
+
+See `TAWALA_CORE_DEVELOPMENT_SPEC.md` Part B and Part I.
+
+---
+
+## Operator checklist (GitHub)
+
+1. Branch protection on `main`: require PR + status checks including **Block core merge into product**.
+2. Optionally same for `dev`.
+3. Verify: open (and close without merging) a test PR `core/v2` → `main`; CI must fail.
+4. Do not grant bypass for Core merges into product branches.
 
 ---
 
