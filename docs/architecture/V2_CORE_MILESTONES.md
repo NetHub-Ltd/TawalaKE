@@ -16,7 +16,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M7 Parties | #253 | Done |
 | M8 Catalog | #254 | Done |
 | M9 Events / Audit / Config | #255 | Done |
-| M10 Image `tawala-core` | #256 | Todo |
+| M10 Image `tawala-core` | #256 | Done |
 | M11 Core complete gate | #257 | Todo |
 
 **Agent rule:** Read the Project board + open `core` issues. Do not wait for chat to say “what’s next.” Next work = lowest open Todo/In Progress issue on the board that is not blocked. Always on branch `core/v2`. Never PR into `main`/`dev`.
@@ -55,7 +55,7 @@ Agents: if `.trackers/` are stale, follow **SPEC Part A resume protocol** and th
 | M1 | Backend skeleton | [x] | Tree per SPEC Part C; FastAPI `/health` | pytest health 2 passed |
 | M2 | Core CI pipeline | [x] | `core-ci.yml` green (user confirmed) | CI green |
 | M3 | DB + Alembic bootstrap | [x] | Settings, async engine, session, baseline migration, /ready DB report | `alembic upgrade head` |
-| M10 | Image build pipeline | [ ] | `Dockerfile` + `core-image.yml`; tag `tawala-core:<sha>` only | Image builds; **not** product `tawala-api` |
+| M10 | Image build pipeline | [x] | Dockerfile multi-stage + core-image.yml smoke /health | Image builds; **not** product `tawala-api` |
 
 Note: M10 may proceed once M1 skeleton exists.
 
