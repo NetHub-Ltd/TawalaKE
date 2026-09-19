@@ -12,6 +12,8 @@ from app.core_platform.catalog.service import CatalogService
 from app.core_platform.shared.types import DomainError, DomainErrorCode, TenantContext
 from app.db.session import get_session
 from app.schemas.catalog import (
+    CategoryCreate,
+    CategoryRead,
     ProductCreate,
     ProductRead,
     ProductUpdate,
@@ -119,3 +121,32 @@ async def get_service(
     except DomainError as exc:
         raise _map(exc) from exc
     return ServiceRead.model_validate(s)
+
+
+@router.post("/categories", response_model=CategoryRead, status_code=201)
+async def create_category(
+    body: CategoryCreate,
+    ctx: TenantContext = Depends(require_perms("catalog.category.create")),
+    session: AsyncSession = Depends(get_session),
+) -> CategoryRead:
+    try:
+        c = await CatalogService(session).create_category(
+            body, user_id=ctx.actor_user_id, business_id=ctx.business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return CategoryRead.model_validate(c)
+
+
+@router.get("/categories", response_model=list[CategoryRead])
+async def list_categories(
+    ctx: TenantContext = Depends(require_perms("catalog.category.read")),
+    session: AsyncSession = Depends(get_session),
+) -> list[CategoryRead]:
+    try:
+        rows = await CatalogService(session).list_categories(
+            user_id=ctx.actor_user_id, business_id=ctx.business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return [CategoryRead.model_validate(r) for r in rows]

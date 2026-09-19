@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_tenant_context, require_perms
 from app.core_platform.security.service import (
+    AuthorizationService,
     MembershipService,
     RoleService,
 )
@@ -22,6 +23,8 @@ from app.schemas.security import (
     RoleAssign,
     RoleCreate,
     RoleRead,
+    ScopeAssign,
+    ScopeRead,
 )
 
 router = APIRouter(prefix="/api/v1", tags=["security"])
@@ -179,3 +182,37 @@ async def my_permissions(
         "permissions": sorted(ctx.permissions),
         "membership_id": str(ctx.membership_id),
     }
+
+
+@router.post("/scopes", response_model=ScopeRead, status_code=201)
+async def create_scope(
+    body: ScopeAssign,
+    ctx: TenantContext = Depends(require_perms("security.scope.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> ScopeRead:
+    try:
+        row = await AuthorizationService(session).assign_scope(
+            membership_id=body.membership_id,
+            branch_id=body.branch_id,
+            location_id=body.location_id,
+            actor_user_id=ctx.actor_user_id,
+            business_id=ctx.business_id,
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return ScopeRead.model_validate(row)
+
+
+@router.get("/memberships/{membership_id}/scopes", response_model=list[ScopeRead])
+async def list_scopes(
+    membership_id: UUID,
+    ctx: TenantContext = Depends(require_perms("security.scope.manage")),
+    session: AsyncSession = Depends(get_session),
+) -> list[ScopeRead]:
+    try:
+        rows = await AuthorizationService(session).list_scopes(
+            membership_id=membership_id, business_id=ctx.business_id
+        )
+    except DomainError as exc:
+        raise _map(exc) from exc
+    return [ScopeRead.model_validate(r) for r in rows]

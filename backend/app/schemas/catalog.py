@@ -84,3 +84,20 @@ class ServiceRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CategoryCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=255)
+    parent_id: UUID | None = None
+
+
+class CategoryRead(BaseModel):
+    id: UUID
+    business_id: UUID
+    name: str
+    parent_id: UUID | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

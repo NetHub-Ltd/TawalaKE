@@ -24,4 +24,8 @@ SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
     ("catalog.service.create", "Create service"),
     ("catalog.service.read", "Read services"),
     ("audit.read", "Read audit records"),
+    ("catalog.category.create", "Create catalog category"),
+    ("catalog.category.read", "Read catalog categories"),
+    ("organization.config.manage", "Manage business configuration"),
+    ("security.scope.manage", "Manage membership scope assignments"),
 ]

@@ -386,3 +386,59 @@ class AuthorizationService:
             raise DomainError(
                 DomainErrorCode.FORBIDDEN, f"Missing permission: {code}"
             )
+
+
+    async def assign_scope(
+        self,
+        *,
+        membership_id: UUID,
+        branch_id: UUID | None,
+        location_id: UUID | None,
+        actor_user_id: UUID | None,
+        business_id: UUID,
+    ) -> ScopeAssignment:
+        m = await self._session.get(Membership, membership_id)
+        if m is None or m.business_id != business_id:
+            raise DomainError(DomainErrorCode.NOT_FOUND, "Membership not found")
+        row = ScopeAssignment(
+            id=uuid4(),
+            membership_id=membership_id,
+            branch_id=branch_id,
+            location_id=location_id,
+        )
+        self._session.add(row)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="security.scope.assign",
+            event_type="scope.assigned",
+            resource_type="scope_assignment",
+            resource_id=row.id,
+            business_id=business_id,
+            actor_user_id=actor_user_id,
+            after={
+                "membership_id": str(membership_id),
+                "branch_id": str(branch_id) if branch_id else None,
+                "location_id": str(location_id) if location_id else None,
+            },
+            commit=False,
+        )
+        await self._session.commit()
+        await self._session.refresh(row)
+        return row
+
+    async def list_scopes(
+        self, *, membership_id: UUID, business_id: UUID
+    ) -> list[ScopeAssignment]:
+        m = await self._session.get(Membership, membership_id)
+        if m is None or m.business_id != business_id:
+            raise DomainError(DomainErrorCode.NOT_FOUND, "Membership not found")
+        result = await self._session.scalars(
+            select(ScopeAssignment).where(
+                ScopeAssignment.membership_id == membership_id,
+                ScopeAssignment.deleted_at.is_(None),  # type: ignore[attr-defined]
+            )
+        )
+        return list(result.all())

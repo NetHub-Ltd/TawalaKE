@@ -47,3 +47,19 @@ class RoleAssign(BaseModel):
 class PermissionRead(BaseModel):
     code: str
     description: str | None = None
+
+
+class ScopeAssign(BaseModel):
+    membership_id: UUID
+    branch_id: UUID | None = None
+    location_id: UUID | None = None
+
+
+class ScopeRead(BaseModel):
+    id: UUID
+    membership_id: UUID
+    branch_id: UUID | None
+    location_id: UUID | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

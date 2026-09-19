@@ -8,9 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
-from app.models.catalog import CatalogStatus, Product, Service
+from app.models.catalog import CatalogStatus, Category, Product, Service
 from app.models.security import Membership, MembershipStatus
-from app.schemas.catalog import ProductCreate, ProductUpdate, ServiceCreate
+from app.schemas.catalog import CategoryCreate, ProductCreate, ProductUpdate, ServiceCreate
 
 
 class CatalogService:
@@ -197,3 +197,45 @@ class CatalogService:
         ):
             raise DomainError(DomainErrorCode.NOT_FOUND, "Service not found")
         return service
+
+
+    async def create_category(
+        self, data: CategoryCreate, *, user_id: UUID, business_id: UUID
+    ) -> Category:
+        await self._require_membership(user_id, business_id)
+        category = Category(
+            id=uuid4(),
+            business_id=business_id,
+            name=data.name,
+            parent_id=data.parent_id,
+        )
+        self._session.add(category)
+        await self._session.flush()
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="catalog.category.create",
+            event_type="category.created",
+            resource_type="category",
+            resource_id=category.id,
+            business_id=business_id,
+            actor_user_id=user_id,
+            after={"name": category.name},
+            commit=False,
+        )
+        await self._session.commit()
+        await self._session.refresh(category)
+        return category
+
+    async def list_categories(
+        self, *, user_id: UUID, business_id: UUID
+    ) -> list[Category]:
+        await self._require_membership(user_id, business_id)
+        result = await self._session.scalars(
+            select(Category).where(
+                Category.business_id == business_id,
+                Category.deleted_at.is_(None),  # type: ignore[attr-defined]
+            )
+        )
+        return list(result.all())

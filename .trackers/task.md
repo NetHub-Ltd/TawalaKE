@@ -1,10 +1,13 @@
 # Task — Core V2
 
-## Done
-P0 #258-260, P1 #261-262 (idempotency)
+## Hardening track complete (P0 + P1 board issues)
 
-## Next
-#263 Category / Config / Scope APIs
+- #258–#260 P0 security
+- #261 audit/events
+- #262 idempotency
+- #263 Category / Config / Scope APIs
 
 ## Board
 https://github.com/orgs/NetHub-Ltd/projects/5
+
+Still residual: Postgres E2E, outbox worker, #245 branch protection.

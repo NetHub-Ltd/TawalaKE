@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.routes import (
     audit,
     catalog,
+    configuration,
     health,
     identity,
     organization,
@@ -22,3 +23,4 @@ api_router.include_router(security.router)
 api_router.include_router(parties.router)
 api_router.include_router(catalog.router)
 api_router.include_router(audit.router)
+api_router.include_router(configuration.router)
