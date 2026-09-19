@@ -1,17 +1,16 @@
-"""Catalog routes — products and services, no stock (SPEC F.6)."""
+"""Catalog routes — permission-gated, no stock (P0)."""
 
 from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import require_perms
 from app.core_platform.catalog.service import CatalogService
-from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.core_platform.shared.types import DomainError, DomainErrorCode, TenantContext
 from app.db.session import get_session
-from app.models.identity import User
 from app.schemas.catalog import (
     ProductCreate,
     ProductRead,
@@ -26,7 +25,6 @@ router = APIRouter(prefix="/api/v1", tags=["catalog"])
 def _map(exc: DomainError) -> HTTPException:
     status = {
         DomainErrorCode.CONFLICT: 409,
-        DomainErrorCode.UNAUTHORIZED: 401,
         DomainErrorCode.FORBIDDEN: 403,
         DomainErrorCode.NOT_FOUND: 404,
     }.get(exc.code, 400)
@@ -36,13 +34,12 @@ def _map(exc: DomainError) -> HTTPException:
 @router.post("/products", response_model=ProductRead, status_code=201)
 async def create_product(
     body: ProductCreate,
-    business_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("catalog.product.create")),
     session: AsyncSession = Depends(get_session),
 ) -> ProductRead:
     try:
         p = await CatalogService(session).create_product(
-            body, user_id=user.id, business_id=business_id
+            body, user_id=ctx.actor_user_id, business_id=ctx.business_id
         )
     except DomainError as exc:
         raise _map(exc) from exc
@@ -53,13 +50,12 @@ async def create_product(
 async def update_product(
     product_id: UUID,
     body: ProductUpdate,
-    business_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("catalog.product.update")),
     session: AsyncSession = Depends(get_session),
 ) -> ProductRead:
     try:
         p = await CatalogService(session).update_product(
-            product_id, body, user_id=user.id, business_id=business_id
+            product_id, body, user_id=ctx.actor_user_id, business_id=ctx.business_id
         )
     except DomainError as exc:
         raise _map(exc) from exc
@@ -69,13 +65,12 @@ async def update_product(
 @router.get("/products/{product_id}", response_model=ProductRead)
 async def get_product(
     product_id: UUID,
-    business_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("catalog.product.read")),
     session: AsyncSession = Depends(get_session),
 ) -> ProductRead:
     try:
         p = await CatalogService(session).get_product(
-            product_id, user_id=user.id, business_id=business_id
+            product_id, user_id=ctx.actor_user_id, business_id=ctx.business_id
         )
     except DomainError as exc:
         raise _map(exc) from exc
@@ -84,13 +79,12 @@ async def get_product(
 
 @router.get("/products", response_model=list[ProductRead])
 async def list_products(
-    business_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("catalog.product.read")),
     session: AsyncSession = Depends(get_session),
 ) -> list[ProductRead]:
     try:
         rows = await CatalogService(session).list_products(
-            user_id=user.id, business_id=business_id
+            user_id=ctx.actor_user_id, business_id=ctx.business_id
         )
     except DomainError as exc:
         raise _map(exc) from exc
@@ -100,13 +94,12 @@ async def list_products(
 @router.post("/services", response_model=ServiceRead, status_code=201)
 async def create_service(
     body: ServiceCreate,
-    business_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("catalog.service.create")),
     session: AsyncSession = Depends(get_session),
 ) -> ServiceRead:
     try:
         s = await CatalogService(session).create_service(
-            body, user_id=user.id, business_id=business_id
+            body, user_id=ctx.actor_user_id, business_id=ctx.business_id
         )
     except DomainError as exc:
         raise _map(exc) from exc
@@ -116,13 +109,12 @@ async def create_service(
 @router.get("/services/{service_id}", response_model=ServiceRead)
 async def get_service(
     service_id: UUID,
-    business_id: UUID = Query(...),
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("catalog.service.read")),
     session: AsyncSession = Depends(get_session),
 ) -> ServiceRead:
     try:
         s = await CatalogService(session).get_service(
-            service_id, user_id=user.id, business_id=business_id
+            service_id, user_id=ctx.actor_user_id, business_id=ctx.business_id
         )
     except DomainError as exc:
         raise _map(exc) from exc

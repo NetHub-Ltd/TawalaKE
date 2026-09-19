@@ -127,3 +127,17 @@ Suites present: unit (health, base mixin), identity (password, schemas), isolati
 ---
 
 **Signed off as Core complete gate (M11) on branch `core/v2`.**
+
+
+---
+
+## 8. P0 hardening (post-M11)
+
+Applied on core/v2 after drift report:
+
+- `get_tenant_context` + `require_perms(...)` on org, catalog, parties, security, audit routes
+- Owner role bootstrap with all system permissions on business create
+- `ensure_system_permissions` available via RoleService (called during bootstrap)
+- RBAC unit tests for missing permission → FORBIDDEN
+
+Still residual: live DB E2E, P1 audit/event coverage expansion, idempotency, category/config/scope APIs.

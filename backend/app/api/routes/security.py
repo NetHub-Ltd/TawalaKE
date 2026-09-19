@@ -1,20 +1,18 @@
-"""Membership and role routes (SPEC F.4)."""
+"""Membership and role routes — permission-gated (P0)."""
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
-from app.core_platform.organization.service import OrganizationService
+from app.api.deps import get_current_user, get_tenant_context, require_perms
 from app.core_platform.security.service import (
-    AuthorizationService,
     MembershipService,
     RoleService,
 )
-from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.core_platform.shared.types import DomainError, DomainErrorCode, TenantContext
 from app.db.session import get_session
 from app.models.identity import User
 from app.schemas.security import (
@@ -47,14 +45,14 @@ def _map(exc: DomainError) -> HTTPException:
 async def invite_membership(
     business_id: UUID,
     body: MembershipInvite,
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("security.membership.invite")),
     session: AsyncSession = Depends(get_session),
 ) -> MembershipRead:
-    org = OrganizationService(session)
+    if ctx.business_id != business_id:
+        raise HTTPException(status_code=403, detail="Business context mismatch")
     try:
-        await org.require_active_membership(user.id, business_id)
         m = await MembershipService(session).invite(
-            business_id, body.user_id, actor_id=user.id
+            business_id, body.user_id, actor_id=ctx.actor_user_id
         )
     except DomainError as exc:
         raise _map(exc) from exc
@@ -67,12 +65,12 @@ async def invite_membership(
 )
 async def list_memberships(
     business_id: UUID,
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("security.membership.read")),
     session: AsyncSession = Depends(get_session),
 ) -> list[MembershipRead]:
-    org = OrganizationService(session)
+    if ctx.business_id != business_id:
+        raise HTTPException(status_code=403, detail="Business context mismatch")
     try:
-        await org.require_active_membership(user.id, business_id)
         rows = await MembershipService(session).list_for_business(business_id)
     except DomainError as exc:
         raise _map(exc) from exc
@@ -95,26 +93,32 @@ async def activate_membership(
 @router.post("/memberships/{membership_id}/suspend", response_model=MembershipRead)
 async def suspend_membership(
     membership_id: UUID,
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("security.membership.suspend")),
     session: AsyncSession = Depends(get_session),
 ) -> MembershipRead:
     try:
         m = await MembershipService(session).suspend(membership_id)
     except DomainError as exc:
         raise _map(exc) from exc
+    if m.business_id != ctx.business_id:
+        raise HTTPException(status_code=403, detail="Business context mismatch")
     return MembershipRead.model_validate(m)
 
 
 @router.post("/memberships/{membership_id}/revoke", response_model=MembershipRead)
 async def revoke_membership(
     membership_id: UUID,
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("security.membership.revoke")),
     session: AsyncSession = Depends(get_session),
 ) -> MembershipRead:
     try:
-        m = await MembershipService(session).revoke(membership_id, actor_user_id=user.id)
+        m = await MembershipService(session).revoke(
+            membership_id, actor_user_id=ctx.actor_user_id
+        )
     except DomainError as exc:
         raise _map(exc) from exc
+    if m.business_id != ctx.business_id:
+        raise HTTPException(status_code=403, detail="Business context mismatch")
     return MembershipRead.model_validate(m)
 
 
@@ -122,12 +126,12 @@ async def revoke_membership(
 async def create_role(
     business_id: UUID,
     body: RoleCreate,
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("security.role.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> RoleRead:
-    org = OrganizationService(session)
+    if ctx.business_id != business_id:
+        raise HTTPException(status_code=403, detail="Business context mismatch")
     try:
-        await org.require_active_membership(user.id, business_id)
         role = await RoleService(session).create_role(business_id, body.name)
     except DomainError as exc:
         raise _map(exc) from exc
@@ -138,7 +142,7 @@ async def create_role(
 async def attach_permission(
     role_id: UUID,
     body: PermissionAttach,
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("security.role.manage")),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     try:
@@ -151,7 +155,7 @@ async def attach_permission(
 async def assign_role(
     membership_id: UUID,
     body: RoleAssign,
-    user: User = Depends(get_current_user),
+    ctx: TenantContext = Depends(require_perms("security.role.assign")),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     try:
@@ -162,17 +166,10 @@ async def assign_role(
 
 @router.get("/me/permissions")
 async def my_permissions(
-    business_id: UUID,
-    user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
+    ctx: TenantContext = Depends(get_tenant_context),
 ) -> dict:
-    authz = AuthorizationService(session)
-    try:
-        ctx = await authz.build_tenant_context(
-            user_id=user.id,
-            business_id=business_id,
-            request_id=uuid4(),
-        )
-    except DomainError as exc:
-        raise _map(exc) from exc
-    return {"business_id": str(business_id), "permissions": sorted(ctx.permissions)}
+    return {
+        "business_id": str(ctx.business_id),
+        "permissions": sorted(ctx.permissions),
+        "membership_id": str(ctx.membership_id),
+    }

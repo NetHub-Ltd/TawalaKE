@@ -1,4 +1,4 @@
-"""Membership, roles, permissions, authorization (SPEC M6)."""
+"""Membership, roles, permissions, authorization (SPEC M6 + P0 hardening)."""
 
 from __future__ import annotations
 
@@ -190,14 +190,42 @@ class RoleService:
         self._session.add(MembershipRole(membership_id=membership_id, role_id=role_id))
         await self._session.commit()
 
+    async def bootstrap_owner(
+        self, business_id: UUID, membership_id: UUID
+    ) -> Role:
+        """Create system Owner role with all Core permissions for a new business."""
+        await self.ensure_system_permissions()
+        role = Role(
+            id=uuid4(),
+            business_id=business_id,
+            name="Owner",
+            is_system=True,
+        )
+        self._session.add(role)
+        await self._session.flush()
+        perms = (
+            await self._session.scalars(select(Permission))
+        ).all()
+        for perm in perms:
+            self._session.add(
+                RolePermission(role_id=role.id, permission_id=perm.id)
+            )
+        self._session.add(
+            MembershipRole(membership_id=membership_id, role_id=role.id)
+        )
+        await self._session.commit()
+        await self._session.refresh(role)
+        return role
+
 
 class AuthorizationService:
     """Resolve effective permissions and assert access."""
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession | None) -> None:
         self._session = session
 
     async def effective_permissions(self, membership_id: UUID) -> frozenset[str]:
+        assert self._session is not None
         role_ids = (
             await self._session.scalars(
                 select(MembershipRole.role_id).where(
@@ -232,23 +260,25 @@ class AuthorizationService:
         branch_id: UUID | None = None,
         location_id: UUID | None = None,
     ) -> TenantContext:
+        assert self._session is not None
         m = await self._session.scalar(
             select(Membership).where(
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
+                Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
         )
         if m is None:
             raise DomainError(
                 DomainErrorCode.FORBIDDEN, "No active membership for this business"
             )
-        # Scope check: if membership has scope rows, branch/location must match
         scopes = list(
             (
                 await self._session.scalars(
                     select(ScopeAssignment).where(
-                        ScopeAssignment.membership_id == m.id
+                        ScopeAssignment.membership_id == m.id,
+                        ScopeAssignment.deleted_at.is_(None),  # type: ignore[attr-defined]
                     )
                 )
             ).all()

@@ -1,16 +1,13 @@
 # Task — Core V2
 
+## Status
+Core M11 complete + **P0 security hardening** in progress/done on core/v2
+
+## Issues
+- #258 TenantContext — Done (this commit)
+- #259 require_permission — Done
+- #260 Owner bootstrap — Done
+- #261–#263 P1 open
+
 ## Board
 https://github.com/orgs/NetHub-Ltd/projects/5
-
-## Status
-**Core complete gate M11 closed.**
-
-M1–M11 done on core/v2. See docs/architecture/CORE_COMPATIBILITY_MATRIX.md
-
-## Residual
-- #245 branch protection (operator)
-- Confirm core-image.yml green on GitHub Actions
-
-## Rules
-Never merge core/v2 into main/dev

@@ -1,12 +1,15 @@
-"""FastAPI dependencies for Core."""
+"""FastAPI dependencies for Core — auth + TenantContext (P0 hardening)."""
 
 from __future__ import annotations
 
-from fastapi import Depends, Header, HTTPException
+from uuid import UUID, uuid4
+
+from fastapi import Depends, Header, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core_platform.identity.service import IdentityService
-from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.core_platform.security.service import AuthorizationService
+from app.core_platform.shared.types import DomainError, DomainErrorCode, TenantContext
 from app.db.session import get_session
 from app.models.identity import User
 
@@ -34,3 +37,70 @@ async def get_current_user(
         if exc.code == DomainErrorCode.UNAUTHORIZED:
             raise HTTPException(status_code=401, detail=exc.message) from exc
         raise HTTPException(status_code=400, detail=exc.message) from exc
+
+
+def _uuid_or_none(raw: str | None) -> UUID | None:
+    if not raw:
+        return None
+    try:
+        return UUID(str(raw))
+    except ValueError:
+        return None
+
+
+async def get_tenant_context(
+    request: Request,
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> TenantContext:
+    """Resolve membership + permissions + scope.
+
+    business_id is taken from path or query. branch_id / location_id from query only.
+    """
+    raw_biz = request.path_params.get("business_id") or request.query_params.get(
+        "business_id"
+    )
+    if not raw_biz:
+        raise HTTPException(
+            status_code=400,
+            detail="business_id is required (path or query)",
+        )
+    try:
+        business_id = UUID(str(raw_biz))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid business_id") from exc
+
+    branch_id = _uuid_or_none(request.query_params.get("branch_id"))
+    location_id = _uuid_or_none(request.query_params.get("location_id"))
+
+    authz = AuthorizationService(session)
+    try:
+        return await authz.build_tenant_context(
+            user_id=user.id,
+            business_id=business_id,
+            request_id=uuid4(),
+            branch_id=branch_id,
+            location_id=location_id,
+        )
+    except DomainError as exc:
+        status = {
+            DomainErrorCode.FORBIDDEN: 403,
+            DomainErrorCode.UNAUTHORIZED: 401,
+            DomainErrorCode.NOT_FOUND: 404,
+        }.get(exc.code, 400)
+        raise HTTPException(status_code=status, detail=exc.message) from exc
+
+
+def require_perms(*codes: str):
+    """Dependency factory: ensure TenantContext holds all listed permission codes."""
+
+    async def _checker(ctx: TenantContext = Depends(get_tenant_context)) -> TenantContext:
+        authz = AuthorizationService(session=None)
+        for code in codes:
+            try:
+                authz.require_permission(ctx, code)
+            except DomainError as exc:
+                raise HTTPException(status_code=403, detail=exc.message) from exc
+        return ctx
+
+    return _checker

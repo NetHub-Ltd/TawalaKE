@@ -59,15 +59,20 @@ class OrganizationService:
         )
         self._session.add(business)
         await self._session.flush()
+        from datetime import UTC as _UTC
+
+        from app.core_platform.security.service import RoleService
+
         membership = Membership(
             id=uuid4(),
             business_id=business.id,
             user_id=owner_user_id,
             status=MembershipStatus.ACTIVE,
-            activated_at=datetime.utcnow(),
+            activated_at=__import__("datetime").datetime.now(_UTC),
         )
         self._session.add(membership)
-        await self._session.commit()
+        await self._session.flush()
+        await RoleService(self._session).bootstrap_owner(business.id, membership.id)
         await self._session.refresh(business)
         return business
 
