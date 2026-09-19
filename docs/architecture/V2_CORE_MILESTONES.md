@@ -15,7 +15,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M6 Membership / RBAC | #252 | Done |
 | M7 Parties | #253 | Done |
 | M8 Catalog | #254 | Done |
-| M9 Events / Audit / Config | #255 | Todo |
+| M9 Events / Audit / Config | #255 | Done |
 | M10 Image `tawala-core` | #256 | Todo |
 | M11 Core complete gate | #257 | Todo |
 
@@ -91,7 +91,7 @@ Note: M10 may proceed once M1 skeleton exists.
 
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
-| M9 | Events, outbox, audit, config | [ ] | SPEC D.6 | Audit on revoke; event append |
+| M9 | Events, outbox, audit, config | [x] | emit+outbox; audit on revoke; configs | Audit on revoke; event append |
 | M11 | Core complete gate | [ ] | Full SPEC Part H suite green | Full CI |
 
 ---

@@ -112,7 +112,7 @@ async def revoke_membership(
     session: AsyncSession = Depends(get_session),
 ) -> MembershipRead:
     try:
-        m = await MembershipService(session).revoke(membership_id)
+        m = await MembershipService(session).revoke(membership_id, actor_user_id=user.id)
     except DomainError as exc:
         raise _map(exc) from exc
     return MembershipRead.model_validate(m)

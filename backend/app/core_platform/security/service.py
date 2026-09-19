@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -53,7 +53,7 @@ class MembershipService:
             raise DomainError(DomainErrorCode.CONFLICT, "Membership already exists")
         if existing:
             existing.status = MembershipStatus.INVITED
-            existing.invited_at = datetime.utcnow()
+            existing.invited_at = datetime.now(UTC)
             existing.revoked_at = None
             existing.touch()
             self._session.add(existing)
@@ -65,7 +65,7 @@ class MembershipService:
             business_id=business_id,
             user_id=user_id,
             status=MembershipStatus.INVITED,
-            invited_at=datetime.utcnow(),
+            invited_at=datetime.now(UTC),
         )
         self._session.add(m)
         await self._session.commit()
@@ -79,7 +79,7 @@ class MembershipService:
         if m.status == MembershipStatus.REVOKED:
             raise DomainError(DomainErrorCode.CONFLICT, "Cannot activate revoked membership")
         m.status = MembershipStatus.ACTIVE
-        m.activated_at = datetime.utcnow()
+        m.activated_at = datetime.now(UTC)
         m.touch()
         self._session.add(m)
         await self._session.commit()
@@ -97,14 +97,42 @@ class MembershipService:
         await self._session.refresh(m)
         return m
 
-    async def revoke(self, membership_id: UUID) -> Membership:
+    async def revoke(
+        self, membership_id: UUID, *, actor_user_id: UUID | None = None
+    ) -> Membership:
+        from app.core_platform.audit.service import AuditService
+        from app.core_platform.events.service import EventService
+        from app.models.audit import AuditOutcome
+
         m = await self._session.get(Membership, membership_id)
         if m is None:
             raise DomainError(DomainErrorCode.NOT_FOUND, "Membership not found")
+        before = {"status": m.status.value}
         m.status = MembershipStatus.REVOKED
-        m.revoked_at = datetime.utcnow()
+        m.revoked_at = datetime.now(UTC)
         m.touch()
         self._session.add(m)
+        await self._session.flush()
+        await AuditService(self._session).record(
+            action="security.membership.revoke",
+            resource_type="membership",
+            resource_id=m.id,
+            business_id=m.business_id,
+            actor_user_id=actor_user_id,
+            outcome=AuditOutcome.SUCCESS,
+            before=before,
+            after={"status": m.status.value},
+            commit=False,
+        )
+        await EventService(self._session).emit(
+            event_type="membership.revoked",
+            aggregate_type="membership",
+            aggregate_id=m.id,
+            business_id=m.business_id,
+            actor_user_id=actor_user_id,
+            payload={"membership_id": str(m.id), "user_id": str(m.user_id)},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(m)
         return m
