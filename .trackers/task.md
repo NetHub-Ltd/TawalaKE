@@ -2,39 +2,26 @@
 
 ## Goal
 
-Establish an isolated `core/v2` branch and produce the **Tawala Core design blueprint** (layout, database design, relationships, invariants, contracts ownership) aligned to the architecture documents. No product code. No frontend.
+Produce a complete Core Development Specification so implementation can proceed without inventing architecture; agents can resume from docs if trackers are stale.
 
 ## Approved scope
 
-- [x] Create `core/v2` from `main`
-- [x] Clean-slate: remove product application tree
-- [x] MERGE_POLICY + AGENTS + trackers
-- [x] CI guard against merge to main/dev
-- [ ] Draft `docs/architecture/TAWALA_CORE_DESIGN.md` (blueprint)
-- [ ] Draft `docs/architecture/V2_CORE_MILESTONES.md`
-- [ ] User review / acceptance of Core Design
+- [x] Isolate core/v2 clean-slate
+- [x] MERGE_POLICY + CI merge guard
+- [x] TAWALA_CORE_DESIGN.md
+- [x] TAWALA_CORE_DEVELOPMENT_SPEC.md
+- [x] V2_CORE_MILESTONES.md aligned to SPEC
+- [ ] User acceptance of DEVELOPMENT_SPEC
+- [ ] Operator: GitHub branch protection on main
+- [ ] GitHub issues/project board from M1–M11
 
-## Explicitly out of scope (this task)
+## Out of scope
 
-- Implementing SQLAlchemy/SQLModel tables
-- Implementing APIs or auth runtime
-- Migrating product data
-- Frontend of any kind
-- Merging into `main` or `dev`
-
-## Decisions
-
-- Clean-slate: strict (no product code retained)
-- Core = design first (what the code will do), then implementation later
-- Tenant boundary = Business (per architecture docs)
-
-## Risks
-
-- Operator must still set GitHub branch protection to fully block `core/**` → `main`
-- Design must not reintroduce dual tenancy fields or Catalog+Inventory mix
+- Application code until SPEC accepted
+- Frontend
+- Merge to main/dev
 
 ## Verification
 
-- Branch contains no `backend/` or `frontend/` product code
-- MERGE_POLICY and CI guard present
-- Trackers accurate
+- DEVELOPMENT_SPEC under docs/architecture/
+- Milestones reference SPEC parts
