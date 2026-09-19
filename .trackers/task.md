@@ -4,10 +4,10 @@
 https://github.com/orgs/NetHub-Ltd/projects/5
 
 ## Done
-M1 #247, M2 #248, M3 #249, M4 #250
+M1–M5 (#247–#251)
 
 ## Next
-M5 #251 Organization (Business, Branch, Location)
+M6 #252 Membership, RBAC, scope (roles/permissions deepen M5 membership)
 
 ## Rules
 core/v2 only; never merge to main/dev

@@ -11,7 +11,7 @@ https://github.com/orgs/NetHub-Ltd/projects/5
 | M2 Core CI | #248 | Done (closed) |
 | M3 DB + Alembic | #249 | Done |
 | M4 Identity | #250 | Done |
-| M5 Organization | #251 | Todo |
+| M5 Organization | #251 | Done |
 | M6 Membership / RBAC | #252 | Todo |
 | M7 Parties | #253 | Todo |
 | M8 Catalog | #254 | Todo |
@@ -66,7 +66,7 @@ Note: M10 may proceed once M1 skeleton exists.
 | ID | Milestone | Status | Acceptance | Tests |
 |----|-----------|--------|------------|-------|
 | M4 | Identity models + auth API | [x] | users/credentials/sessions, register/login/logout/me | `tests/identity/` |
-| M5 | Organization models + API | [ ] | SPEC D.2 + F.3 | `tests/isolation/` start |
+| M5 | Organization models + API | [x] | Business/Branch/Location + membership gate | `tests/isolation/` start |
 
 ---
 
