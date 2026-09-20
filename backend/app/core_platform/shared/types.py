@@ -2,6 +2,8 @@
 
 TenantContext and domain errors are defined here so every module
 depends on one contract shape for tenancy and failures.
+
+Authoritative contract reference: docs/architecture/CORE_CONTRACTS.md
 """
 
 from __future__ import annotations

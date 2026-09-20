@@ -1,4 +1,7 @@
-"""FastAPI dependencies for Core — auth + TenantContext (P0 hardening)."""
+"""FastAPI dependencies for Core — auth + TenantContext (P0 hardening).
+
+Authoritative contract reference: docs/architecture/CORE_CONTRACTS.md
+"""
 
 from __future__ import annotations
 
