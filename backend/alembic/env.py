@@ -1,39 +1,30 @@
-"""Alembic environment for Tawala Core — SQLModel is the schema source of truth.
+"""Alembic environment — uses synchronous DATABASE_URL_SYNC / DB_* creds.
 
-Migrations must stay aligned with ``SQLModel.metadata`` (all models imported via
-``app.models``). Prefer:
-
-    alembic revision --autogenerate -m "..."
-
-over hand-written ``sa.Column`` tables when adding new SQLModel entities.
-Existing revisions remain as historical DDL; new work should autogenerate from
-SQLModel and then be reviewed.
+SQLModel.metadata is the schema source of truth for compare/autogenerate.
+Apply with: alembic upgrade head
 """
 
 from __future__ import annotations
 
-import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
+from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
 from app.core_platform.shared.settings import get_settings
-from app import models  # noqa: F401  — register all SQLModel tables on metadata
+from app import models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# SQLModel metadata is the single schema contract for Core.
 target_metadata = SQLModel.metadata
 
 settings = get_settings()
-if settings.database_url:
-    config.set_main_option("sqlalchemy.url", settings.database_url)
+sync_url = settings.database_url_sync
+if sync_url:
+    config.set_main_option("sqlalchemy.url", sync_url)
 
 
 def run_migrations_offline() -> None:
@@ -50,36 +41,27 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection: Connection) -> None:
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata,
-        compare_type=True,
-        compare_server_default=True,
-    )
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-async def run_async_migrations() -> None:
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-    await connectable.dispose()
-
-
 def run_migrations_online() -> None:
     url = config.get_main_option("sqlalchemy.url")
     if not url or url.startswith("driver://"):
         raise RuntimeError(
-            "Set DATABASE_URL (postgresql+asyncpg://...) before running "
-            "alembic upgrade. SQLModel models are the schema source of truth."
+            "Set DB_HOST/DB_USER/DB_PASSWORD/DB_NAME or DATABASE_URL_SYNC "
+            "before running alembic upgrade."
         )
-    asyncio.run(run_async_migrations())
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+    with connectable.connect() as connection:
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
+        )
+        with context.begin_transaction():
+            context.run_migrations()
 
 
 if context.is_offline_mode():

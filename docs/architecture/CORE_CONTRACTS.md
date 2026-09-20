@@ -299,3 +299,21 @@ Application authorization remains mandatory. RLS does not replace membership or 
 - Status / type / kind fields are **VARCHAR** via ``str_enum_col`` (not native PostgreSQL ENUMs).
 - RLS policies are applied after ``create_all`` (not expressible as SQLModel fields).
 - Future schema changes: update SQLModel models, then a new revision that alters via metadata-driven migration (review before apply).
+
+
+---
+
+## 16. Database configuration
+
+Credentials (preferred): ``DB_HOST``, ``DB_USER``, ``DB_PASSWORD``, ``DB_NAME``, optional ``DB_PORT``.
+
+From those, Settings builds:
+
+| URL | Driver | Used by |
+|-----|--------|---------|
+| ``database_url`` | ``postgresql+asyncpg://`` | SQLModel ``AsyncSession`` / app |
+| ``database_url_sync`` | ``postgresql+psycopg://`` | Alembic ``upgrade`` |
+
+Explicit ``DATABASE_URL`` / ``DATABASE_URL_SYNC`` still work (CI). Sync is derived from async if only async is set.
+
+**Startup:** ``start.sh`` runs ``alembic upgrade head`` then uvicorn. FastAPI **lifespan** fails process start if Postgres is unreachable.
