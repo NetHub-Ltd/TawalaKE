@@ -1,7 +1,7 @@
 """Shared fixtures — real PostgreSQL only. No FakeSession.
 
 Requires DATABASE_URL (postgresql+asyncpg://...) and ENVIRONMENT=test.
-CI provides a Postgres service.
+CI provides a Postgres service and sets both variables.
 """
 
 from __future__ import annotations
@@ -13,13 +13,11 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-os.environ.setdefault("ENVIRONMENT", "test")
-
+from alembic import command
 from app.core_platform.shared.settings import clear_settings_cache, get_settings
 from app.db.session import get_session_factory, reset_engine, set_tenant_guc
 from app.main import app
@@ -88,10 +86,16 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
     biz_b = Business(id=uuid4(), name="Business B", status=BusinessStatus.ACTIVE)
     db_session.add_all([biz_a, biz_b])
 
-    user_a = User(id=uuid4(), email=f"a-{uuid4().hex[:8]}@example.com", status=UserStatus.ACTIVE)
-    user_b = User(id=uuid4(), email=f"b-{uuid4().hex[:8]}@example.com", status=UserStatus.ACTIVE)
+    user_a = User(
+        id=uuid4(), email=f"a-{uuid4().hex[:8]}@example.com", status=UserStatus.ACTIVE
+    )
+    user_b = User(
+        id=uuid4(), email=f"b-{uuid4().hex[:8]}@example.com", status=UserStatus.ACTIVE
+    )
     user_none = User(
-        id=uuid4(), email=f"none-{uuid4().hex[:8]}@example.com", status=UserStatus.ACTIVE
+        id=uuid4(),
+        email=f"none-{uuid4().hex[:8]}@example.com",
+        status=UserStatus.ACTIVE,
     )
     db_session.add_all([user_a, user_b, user_none])
 
@@ -123,7 +127,6 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
     db_session.add_all([mem_a, mem_b])
     await db_session.flush()
 
-    # Owner roles with full permissions
     roles = RoleService(db_session)
     await set_tenant_guc(db_session, None, bypass=True)
     await roles.bootstrap_owner(biz_a.id, mem_a.id)
@@ -152,13 +155,19 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
             status=LinkStatus.ACTIVE,
         )
     )
-    prod_a = Product(id=uuid4(), business_id=biz_a.id, name="Product A", sku=f"A-{uuid4().hex[:6]}")
-    prod_b = Product(id=uuid4(), business_id=biz_b.id, name="Product B", sku=f"B-{uuid4().hex[:6]}")
+    prod_a = Product(
+        id=uuid4(), business_id=biz_a.id, name="Product A", sku=f"A-{uuid4().hex[:6]}"
+    )
+    prod_b = Product(
+        id=uuid4(), business_id=biz_b.id, name="Product B", sku=f"B-{uuid4().hex[:6]}"
+    )
     db_session.add_all([prod_a, prod_b])
     await db_session.commit()
 
     async def _login(email: str) -> str:
-        r = await client.post("/api/v1/auth/login", json={"email": email, "password": pwd})
+        r = await client.post(
+            "/api/v1/auth/login", json={"email": email, "password": pwd}
+        )
         assert r.status_code == 200, r.text
         return r.json()["access_token"]
 

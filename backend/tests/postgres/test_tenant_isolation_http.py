@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+
 import pytest
 from sqlalchemy import select
 
@@ -42,7 +43,6 @@ async def test_user_without_membership_cannot_access_business(client, two_tenant
 
 async def test_idor_party_other_tenant(client, two_tenants):
     t = two_tenants
-    # User A tries to read Party B (linked only to Business B)
     r = await client.get(
         f"/api/v1/parties/{t['party_b']}?business_id={t['biz_a']}",
         headers={"Authorization": f"Bearer {t['token_a']}"},
