@@ -2,6 +2,9 @@
 
 Requires DATABASE_URL (postgresql+asyncpg://...) and ENVIRONMENT=test.
 CI provides a Postgres service and sets both variables.
+
+Note: migration setup is a *sync* session-scoped fixture so it does not
+conflict with pytest-asyncio's default function-scoped event loop.
 """
 
 from __future__ import annotations
@@ -13,11 +16,11 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from alembic import command
 from app.core_platform.shared.settings import clear_settings_cache, get_settings
 from app.db.session import get_session_factory, reset_engine, set_tenant_guc
 from app.main import app
@@ -37,8 +40,9 @@ def database_url() -> str:
     return get_settings().require_database_url()
 
 
-@pytest_asyncio.fixture(scope="session")
-async def prepared_database(database_url: str) -> None:
+@pytest.fixture(scope="session")
+def prepared_database(database_url: str) -> None:
+    """Run Alembic migrations once per test session (sync — avoids ScopeMismatch)."""
     clear_settings_cache()
     reset_engine()
     cfg = Config("alembic.ini")
