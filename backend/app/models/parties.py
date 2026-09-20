@@ -9,6 +9,7 @@ from sqlalchemy import UniqueConstraint
 from sqlmodel import Field
 
 from app.models.base import BaseMixin
+from app.models.column_types import str_enum_col
 
 
 class PartyKind(StrEnum):
@@ -34,7 +35,7 @@ class Party(BaseMixin, table=True):
 
     __tablename__ = "parties"
 
-    kind: PartyKind = Field(default=PartyKind.PERSON)
+    kind: PartyKind = str_enum_col(PartyKind.PERSON)
     display_name: str = Field(max_length=255)
     primary_email: str | None = Field(default=None, max_length=320, index=True)
     primary_phone: str | None = Field(default=None, max_length=32, index=True)
@@ -53,6 +54,6 @@ class PartyBusinessLink(BaseMixin, table=True):
 
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     party_id: UUID = Field(foreign_key="parties.id", index=True)
-    relationship: PartyRelationship = Field(default=PartyRelationship.CUSTOMER)
-    status: LinkStatus = Field(default=LinkStatus.ACTIVE)
+    relationship: PartyRelationship = str_enum_col(PartyRelationship.CUSTOMER)
+    status: LinkStatus = str_enum_col(LinkStatus.ACTIVE)
     external_ref: str | None = Field(default=None, max_length=128)

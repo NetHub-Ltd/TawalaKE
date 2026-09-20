@@ -10,6 +10,7 @@ from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.models.base import BaseMixin
+from app.models.column_types import str_enum_col
 
 
 class MembershipStatus(StrEnum):
@@ -29,7 +30,7 @@ class Membership(BaseMixin, table=True):
 
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     user_id: UUID = Field(foreign_key="users.id", index=True)
-    status: MembershipStatus = Field(default=MembershipStatus.ACTIVE)
+    status: MembershipStatus = str_enum_col(MembershipStatus.ACTIVE)
     invited_at: datetime | None = Field(default=None)
     activated_at: datetime | None = Field(default=None)
     revoked_at: datetime | None = Field(default=None)

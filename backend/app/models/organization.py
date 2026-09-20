@@ -8,6 +8,7 @@ from uuid import UUID
 from sqlmodel import Field
 
 from app.models.base import BaseMixin
+from app.models.column_types import str_enum_col
 
 
 class BusinessStatus(StrEnum):
@@ -39,7 +40,7 @@ class Business(BaseMixin, table=True):
 
     name: str = Field(max_length=255)
     slug: str | None = Field(default=None, max_length=64, unique=True, index=True)
-    status: BusinessStatus = Field(default=BusinessStatus.ACTIVE)
+    status: BusinessStatus = str_enum_col(BusinessStatus.ACTIVE)
 
 
 class Branch(BaseMixin, table=True):
@@ -48,7 +49,7 @@ class Branch(BaseMixin, table=True):
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     name: str = Field(max_length=255)
     code: str | None = Field(default=None, max_length=64)
-    status: BranchStatus = Field(default=BranchStatus.ACTIVE)
+    status: BranchStatus = str_enum_col(BranchStatus.ACTIVE)
 
 
 class Location(BaseMixin, table=True):
@@ -57,5 +58,5 @@ class Location(BaseMixin, table=True):
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     branch_id: UUID = Field(foreign_key="branches.id", index=True)
     name: str = Field(max_length=255)
-    kind: LocationKind = Field(default=LocationKind.OTHER)
-    status: LocationStatus = Field(default=LocationStatus.ACTIVE)
+    kind: LocationKind = str_enum_col(LocationKind.OTHER)
+    status: LocationStatus = str_enum_col(LocationStatus.ACTIVE)

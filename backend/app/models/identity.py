@@ -6,10 +6,11 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Column, String, Text, UniqueConstraint
+from sqlalchemy import Column, Text, UniqueConstraint
 from sqlmodel import Field
 
 from app.models.base import BaseMixin
+from app.models.column_types import str_enum_col
 
 
 class UserStatus(StrEnum):
@@ -32,17 +33,14 @@ class User(BaseMixin, table=True):
     email: str | None = Field(default=None, max_length=320, index=True)
     phone: str | None = Field(default=None, max_length=32, index=True)
     display_name: str | None = Field(default=None, max_length=255)
-    status: UserStatus = Field(default=UserStatus.ACTIVE)
+    status: UserStatus = str_enum_col(UserStatus.ACTIVE)
 
 
 class Credential(BaseMixin, table=True):
     __tablename__ = "credentials"
 
     user_id: UUID = Field(foreign_key="users.id", index=True)
-    type: CredentialType = Field(
-        default=CredentialType.PASSWORD,
-        sa_column=Column(String(32), nullable=False),
-    )
+    type: CredentialType = str_enum_col(CredentialType.PASSWORD)
     secret_hash: str = Field(sa_column=Column(Text, nullable=False))
     rotated_at: datetime | None = Field(default=None)
 

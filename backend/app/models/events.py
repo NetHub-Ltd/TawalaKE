@@ -13,6 +13,7 @@ from sqlalchemy.types import JSON
 from sqlmodel import Field
 
 from app.models.base import BaseMixin
+from app.models.column_types import str_enum_col
 
 
 class OutboxStatus(StrEnum):
@@ -44,7 +45,7 @@ class OutboxEntry(BaseMixin, table=True):
     __tablename__ = "outbox_entries"
 
     event_id: UUID = Field(foreign_key="domain_events.id", unique=True, index=True)
-    status: OutboxStatus = Field(default=OutboxStatus.PENDING)
+    status: OutboxStatus = str_enum_col(OutboxStatus.PENDING)
     attempts: int = Field(default=0)
     next_attempt_at: datetime | None = Field(default=None)
     last_error: str | None = Field(default=None, max_length=1024)

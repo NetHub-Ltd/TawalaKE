@@ -286,3 +286,13 @@ Defense-in-depth on business-scoped tables:
 After `TenantContext` is built, `get_tenant_context` sets the tenant GUC for the remainder of the transaction.
 
 Application authorization remains mandatory. RLS does not replace membership or permission checks.
+
+
+---
+
+## 15. SQLModel is the schema source of truth
+
+- Domain persistence uses **SQLModel** models under ``app.models``.
+- Alembic ``target_metadata = SQLModel.metadata``; prefer ``alembic revision --autogenerate``.
+- Status / type / kind fields are **VARCHAR**, not native PostgreSQL ENUMs (see ``str_enum_col``).
+- Application and tests use the ORM session (``AsyncSession`` / SQLModel) — no parallel schema definitions.

@@ -1,4 +1,14 @@
-"""Alembic environment for Tawala Core (online + offline)."""
+"""Alembic environment for Tawala Core — SQLModel is the schema source of truth.
+
+Migrations must stay aligned with ``SQLModel.metadata`` (all models imported via
+``app.models``). Prefer:
+
+    alembic revision --autogenerate -m "..."
+
+over hand-written ``sa.Column`` tables when adding new SQLModel entities.
+Existing revisions remain as historical DDL; new work should autogenerate from
+SQLModel and then be reviewed.
+"""
 
 from __future__ import annotations
 
@@ -12,12 +22,13 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 from app.core_platform.shared.settings import get_settings
-from app import models  # noqa: F401
+from app import models  # noqa: F401  — register all SQLModel tables on metadata
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+# SQLModel metadata is the single schema contract for Core.
 target_metadata = SQLModel.metadata
 
 settings = get_settings()
@@ -32,13 +43,20 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
+    )
     with context.begin_transaction():
         context.run_migrations()
 
@@ -59,7 +77,7 @@ def run_migrations_online() -> None:
     if not url or url.startswith("driver://"):
         raise RuntimeError(
             "Set DATABASE_URL (postgresql+asyncpg://...) before running "
-            "alembic upgrade. See DEVELOPMENT_SPEC milestone M3."
+            "alembic upgrade. SQLModel models are the schema source of truth."
         )
     asyncio.run(run_async_migrations())
 

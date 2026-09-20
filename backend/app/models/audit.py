@@ -13,6 +13,7 @@ from sqlalchemy.types import JSON
 from sqlmodel import Field
 
 from app.models.base import BaseMixin
+from app.models.column_types import str_enum_col
 
 
 class AuditOutcome(StrEnum):
@@ -29,7 +30,7 @@ class AuditRecord(BaseMixin, table=True):
     action: str = Field(max_length=128, index=True)
     resource_type: str = Field(max_length=64)
     resource_id: UUID | None = Field(default=None)
-    outcome: AuditOutcome = Field(default=AuditOutcome.SUCCESS)
+    outcome: AuditOutcome = str_enum_col(AuditOutcome.SUCCESS)
     request_id: UUID | None = Field(default=None)
     before: dict[str, Any] | None = Field(
         default=None,

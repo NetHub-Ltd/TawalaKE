@@ -11,6 +11,7 @@ from uuid import UUID
 from sqlmodel import Field
 
 from app.models.base import BaseMixin
+from app.models.column_types import str_enum_col
 
 
 class CatalogStatus(StrEnum):
@@ -35,7 +36,7 @@ class Product(BaseMixin, table=True):
     barcode: str | None = Field(default=None, max_length=128)
     category_id: UUID | None = Field(default=None, foreign_key="categories.id")
     unit: str = Field(default="ea", max_length=32)
-    status: CatalogStatus = Field(default=CatalogStatus.ACTIVE)
+    status: CatalogStatus = str_enum_col(CatalogStatus.ACTIVE)
     # NO quantity / stock / on_hand — enforced by schema tests and SPEC
 
 
@@ -45,4 +46,4 @@ class Service(BaseMixin, table=True):
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     name: str = Field(max_length=255)
     code: str | None = Field(default=None, max_length=128)
-    status: CatalogStatus = Field(default=CatalogStatus.ACTIVE)
+    status: CatalogStatus = str_enum_col(CatalogStatus.ACTIVE)
