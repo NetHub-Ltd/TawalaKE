@@ -331,6 +331,40 @@ class AuthorizationService:
         ).all()
         return frozenset(codes)
 
+    @staticmethod
+    def assert_scope(
+        scopes: list[ScopeAssignment],
+        *,
+        branch_id: UUID | None,
+        location_id: UUID | None,
+    ) -> None:
+        """Enforce branch/location allowlists from ScopeAssignment rows.
+
+        Semantics (M13 — frozen contract):
+
+        - **Empty scope list** → unrestricted within the business. Membership
+          + permissions already authorize business access; HQ/Owner staff often
+          have no ScopeAssignment rows and must operate across all branches.
+        - **Non-empty scope list** → explicit allowlist. If the request carries
+          ``branch_id`` / ``location_id`` and the membership has at least one
+          non-null assignment of that kind, the requested id must be in the set.
+        - **No branch_id/location_id on the request** → business-level only;
+          no branch/location check is applied.
+        - Domains must not re-implement this; they receive TenantContext from Core.
+        """
+        if not scopes:
+            return
+        allowed_branches = {s.branch_id for s in scopes if s.branch_id is not None}
+        allowed_locations = {s.location_id for s in scopes if s.location_id is not None}
+        if branch_id is not None and allowed_branches and branch_id not in allowed_branches:
+            raise DomainError(DomainErrorCode.FORBIDDEN, "Branch out of scope")
+        if (
+            location_id is not None
+            and allowed_locations
+            and location_id not in allowed_locations
+        ):
+            raise DomainError(DomainErrorCode.FORBIDDEN, "Location out of scope")
+
     async def build_tenant_context(
         self,
         *,
@@ -363,13 +397,7 @@ class AuthorizationService:
                 )
             ).all()
         )
-        if scopes:
-            allowed_branches = {s.branch_id for s in scopes if s.branch_id}
-            allowed_locations = {s.location_id for s in scopes if s.location_id}
-            if branch_id and allowed_branches and branch_id not in allowed_branches:
-                raise DomainError(DomainErrorCode.FORBIDDEN, "Branch out of scope")
-            if location_id and allowed_locations and location_id not in allowed_locations:
-                raise DomainError(DomainErrorCode.FORBIDDEN, "Location out of scope")
+        self.assert_scope(scopes, branch_id=branch_id, location_id=location_id)
         perms = await self.effective_permissions(m.id)
         return TenantContext(
             business_id=business_id,

@@ -97,13 +97,24 @@ ctx: TenantContext = Depends(require_perms("some.permission.code"))
 - Membership is the gate between a user and a business.
 - Permissions are code-based (`frozenset[str]` on `TenantContext`).
 - `require_permission(ctx, code)` and the `require_perms(...)` dependency enforce permission checks.
-- Scope assignments (`ScopeAssignment`) constrain branch/location access.
+- Scope assignments (`ScopeAssignment`) constrain branch/location access via `AuthorizationService.assert_scope`.
+
+### Scope semantics (M13 — frozen)
+
+| Situation | Behavior |
+|-----------|----------|
+| **No ScopeAssignment rows** (empty scope) | **Unrestricted within the business.** Membership + permissions authorize business access; HQ/Owner staff typically have no scope rows. |
+| **Explicit ScopeAssignment rows** | Allowlist. If the request includes `branch_id` / `location_id` and the membership has at least one non-null assignment of that kind, the requested id **must** be in the allowed set or Core raises `FORBIDDEN` (`Branch out of scope` / `Location out of scope`). |
+| **Request omits branch_id and location_id** | Business-level access only; no branch/location check. |
+| **Revoked / soft-deleted assignments** | Ignored (`deleted_at` filtered). |
+
+Domains receive `TenantContext` from Core (`get_tenant_context` / `require_perms`). They **must not** call services with a raw `business_id` as a substitute for Core authorization.
 
 ### Hard rule for future domains
 
 - Domains **must** consume Core authorization (TenantContext + permission helpers).
 - Domains **must not** implement local “is this user allowed?” checks that bypass Core.
-- Empty-scope vs explicit-scope semantics are finalized under **M13**. Until then, treat current `AuthorizationService` behavior as the source of truth and do not invent alternatives.
+- Scope semantics above are binding; do not invent alternatives.
 
 ---
 
@@ -251,7 +262,7 @@ Domains must not “fire and forget” side effects outside this boundary withou
 
 - Changes to these contracts require an explicit proposal and update to this file in the same commit(s).
 - Later gates (M12–M23) refine or complete behavior; they must not silently replace the rules above without updating this document.
-- Empty-scope semantics → M13.  
+- Empty-scope semantics → **M13 (done):** empty = unrestricted within business.  
 - Full audit / outbox publisher / universal idempotency → M14.  
 - Capability vs permission separation → M15.
 

@@ -1,26 +1,18 @@
 # Task — Core V2
 
-## Authoritative scope source
-Roadmap + issues #264–#276 (M11–M23).
-
 ## Completed
-- **M11** Core contracts freeze — `docs/architecture/CORE_CONTRACTS.md` (`cfaa162`).
-- **M12 (in progress)** Real PostgreSQL Isolation & Security Proof:
-  - Settings: BaseSettings with `environment`, required `DATABASE_URL` in test/production, URL validator.
-  - Session: `set_tenant_guc` for RLS (`app.current_business_id`, `app.current_user_id`, `app.rls_bypass`).
-  - deps: set GUCs after TenantContext resolution.
-  - Alembic `20260920_0009` — ENABLE/FORCE RLS + policies on business-scoped tables.
-  - Tests: real Postgres HTTP isolation suite (`tests/postgres/`); FakeSession tests removed.
-  - CI: Postgres 16 service + `DATABASE_URL` for all pytest runs.
-
-## Remaining for M12 verification
-- Confirm CI green (agent environment cannot run full Postgres suite reliably).
-- Close issue #265 when CI passes.
+- M11 Core contracts freeze
+- M12 PostgreSQL isolation + RLS + HTTP tests (CI green)
+- **M13 Authorization & Scope Hardening**
+  - `AuthorizationService.assert_scope` — single implementation path
+  - Empty scope = unrestricted within business (documented in CORE_CONTRACTS.md §4)
+  - Unit tests: `tests/rbac/test_scope_semantics.py`
+  - Postgres HTTP tests: `tests/postgres/test_scope_http.py`
 
 ## Next
-M13 — Authorization & Scope Hardening (after M12 verified).
+M14 — Audit, Event, Outbox & Idempotency Completion
 
 ## Hard rules
-- Never PR `core/**` → `main`/`dev`.
-- No FakeSession.
-- No frontend on this branch.
+- Never PR `core/**` → `main`/`dev`
+- No FakeSession
+- No frontend on this branch
