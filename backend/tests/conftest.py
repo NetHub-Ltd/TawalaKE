@@ -26,7 +26,6 @@ from app.db.session import dispose_engine, get_session_factory, reset_engine, se
 from app.main import app
 
 
-
 def _has_database_url() -> bool:
     return bool(os.environ.get("DATABASE_URL", "").strip())
 
