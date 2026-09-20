@@ -110,6 +110,9 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
         status=UserStatus.ACTIVE,
     )
     db_session.add_all([user_a, user_b, user_none])
+    # Credentials reference users through a scalar FK; flush the parent rows
+    # before the executemany credential insert.
+    await db_session.flush()
 
     pwd = "TestPass123!"
     for u in (user_a, user_b, user_none):
