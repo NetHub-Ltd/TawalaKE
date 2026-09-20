@@ -50,21 +50,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Smoke test /health
+      # start.sh requires DATABASE_URL + Postgres (alembic upgrade head, then uvicorn).
+      - name: Smoke test /health (with Postgres)
         run: |
-          docker run -d --name tawala-core-smoke -p 8000:8000 "tawala-core:${{ steps.meta.outputs.sha }}"
-          for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -fsS http://127.0.0.1:8000/health; then
+          set -e
+          docker network create tawala-smoke || true
+          docker run -d --name tawala-pg --network tawala-smoke \
+            -e POSTGRES_USER=tawala \
+            -e POSTGRES_PASSWORD=tawala \
+            -e POSTGRES_DB=tawala_core \
+            postgres:16
+          # wait for postgres
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if docker exec tawala-pg pg_isready -U tawala -d tawala_core; then
               break
             fi
             sleep 2
           done
+          docker run -d --name tawala-core-smoke --network tawala-smoke -p 8000:8000 \
+            -e DATABASE_URL="postgresql+asyncpg://tawala:tawala@tawala-pg:5432/tawala_core" \
+            -e ENVIRONMENT=production \
+            "tawala-core:${{ steps.meta.outputs.sha }}"
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              break
+            fi
+            echo "waiting for health ($i)..."
+            docker logs tawala-core-smoke 2>&1 | tail -20 || true
+            sleep 3
+          done
           curl -fsS http://127.0.0.1:8000/health | tee /tmp/health.json
-          grep -q '"service":"tawala-core"' /tmp/health.json || grep -q 'tawala-core' /tmp/health.json
-          docker rm -f tawala-core-smoke
+          grep -q 'tawala-core' /tmp/health.json
+          docker rm -f tawala-core-smoke tawala-pg || true
+          docker network rm tawala-smoke || true
 
-      # Optional publish: set repo Variables/Secrets CORE_IMAGE_REGISTRY + credentials.
-      # Never pushes as tawala-api.
       - name: Log in to Core registry
         if: github.event_name == 'push' && vars.CORE_IMAGE_REGISTRY != ''
         uses: docker/login-action@v3

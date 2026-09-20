@@ -17,7 +17,7 @@ COPY pyproject.toml README.md ./
 COPY app ./app
 
 RUN pip install --upgrade pip \
-    && pip install --prefix=/install ".[dev]"
+    && pip install --prefix=/install .
 
 FROM python:3.12-slim AS runtime
 
