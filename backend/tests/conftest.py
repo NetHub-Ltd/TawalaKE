@@ -13,6 +13,8 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
+from alembic import command
+from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,9 +41,6 @@ def database_url() -> str:
 
 @pytest_asyncio.fixture(scope="session")
 async def prepared_database(database_url: str) -> None:
-    from alembic import command
-    from alembic.config import Config
-
     clear_settings_cache()
     reset_engine()
     cfg = Config("alembic.ini")
