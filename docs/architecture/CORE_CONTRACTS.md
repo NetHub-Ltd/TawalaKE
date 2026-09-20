@@ -258,3 +258,20 @@ Domains must not “fire and forget” side effects outside this boundary withou
 ---
 
 **M11 exit condition:** Every cross-cutting Core guarantee listed in the roadmap has one authoritative implementation or documentation location, and future domains have an explicit dependency rule for consuming Core.
+
+
+---
+
+## 14. PostgreSQL Row Level Security (M12)
+
+**Authoritative implementation:** migration `20260920_0009_rls_tenant_isolation.py` + `app.db.session.set_tenant_guc`.
+
+Defense-in-depth on business-scoped tables:
+
+- `ENABLE` + `FORCE ROW LEVEL SECURITY`
+- Policy keys off `app.current_business_id` (and memberships also allow `app.current_user_id` for auth resolution)
+- `app.rls_bypass=on` is for seed/migration only — never for normal request handling
+
+After `TenantContext` is built, `get_tenant_context` sets the tenant GUC for the remainder of the transaction.
+
+Application authorization remains mandatory. RLS does not replace membership or permission checks.

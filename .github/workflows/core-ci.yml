@@ -14,6 +14,23 @@ defaults:
 jobs:
   lint-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tawala
+          POSTGRES_PASSWORD: tawala
+          POSTGRES_DB: tawala_core_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tawala -d tawala_core_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ENVIRONMENT: test
+      DATABASE_URL: postgresql+asyncpg://tawala:tawala@localhost:5432/tawala_core_test
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +46,5 @@ jobs:
       - name: Ruff
         run: ruff check app tests
 
-      - name: Pytest
+      - name: Pytest (real PostgreSQL)
         run: pytest -q
-
-  # Image build is a separate optional job (M10); skeleton verifies Dockerfile syntax later.

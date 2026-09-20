@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core_platform.identity.service import IdentityService
 from app.core_platform.security.service import AuthorizationService
 from app.core_platform.shared.types import DomainError, DomainErrorCode, TenantContext
-from app.db.session import get_session
+from app.db.session import get_session, set_tenant_guc
 from app.models.identity import User
 
 
@@ -56,9 +56,11 @@ async def get_tenant_context(
     user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> TenantContext:
-    """Resolve membership + permissions + scope.
+    """Resolve membership + permissions + scope, then set RLS GUCs.
 
     business_id is taken from path or query. branch_id / location_id from query only.
+    After a successful TenantContext is built, ``app.current_business_id`` is set
+    for the remainder of the transaction so PostgreSQL RLS policies apply.
     """
     raw_biz = request.path_params.get("business_id") or request.query_params.get(
         "business_id"
@@ -76,9 +78,18 @@ async def get_tenant_context(
     branch_id = _uuid_or_none(request.query_params.get("branch_id"))
     location_id = _uuid_or_none(request.query_params.get("location_id"))
 
+    # Allow membership lookup for this user before business GUC is known.
+    await set_tenant_guc(session, business_id=None, bypass=False)
+    from sqlalchemy import text
+
+    await session.execute(
+        text("SELECT set_config('app.current_user_id', :uid, true)"),
+        {"uid": str(user.id)},
+    )
+
     authz = AuthorizationService(session)
     try:
-        return await authz.build_tenant_context(
+        ctx = await authz.build_tenant_context(
             user_id=user.id,
             business_id=business_id,
             request_id=uuid4(),
@@ -93,12 +104,16 @@ async def get_tenant_context(
         }.get(exc.code, 400)
         raise HTTPException(status_code=status, detail=exc.message) from exc
 
+    # Defense-in-depth: RLS policies key off this GUC for the rest of the request.
+    await set_tenant_guc(session, business_id=ctx.business_id, bypass=False)
+    return ctx
+
 
 def require_perms(*codes: str):
     """Dependency factory: ensure TenantContext holds all listed permission codes."""
 
     async def _checker(ctx: TenantContext = Depends(get_tenant_context)) -> TenantContext:
-        authz = AuthorizationService(session=None)
+        authz = AuthorizationService(session=None)  # type: ignore[arg-type]
         for code in codes:
             try:
                 authz.require_permission(ctx, code)

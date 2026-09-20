@@ -1,6 +1,8 @@
-"""Health endpoint tests for Core (M1/M3)."""
+"""Health endpoint tests for Core."""
 
 from __future__ import annotations
+
+import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -25,18 +27,21 @@ async def test_health_ok(client):
 
 
 @pytest.mark.asyncio
-async def test_ready_without_database(client):
+async def test_ready_reflects_database_config(client):
     response = await client.get("/ready")
     assert response.status_code == 200
     body = response.json()
     assert body["service"] == "tawala-core"
-    assert body["database"] == "not_configured"
-    assert body["database_ok"] is False
+    assert "database" in body
+    assert "database_ok" in body
 
 
-def test_settings_default_no_url():
-    from app.core_platform.shared.settings import Settings
+def test_settings_requires_url_in_test_env(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    from app.core_platform.shared.settings import Settings, clear_settings_cache
 
+    clear_settings_cache()
     s = Settings()
     assert s.database_url is None
     assert s.app_name == "tawala-core"

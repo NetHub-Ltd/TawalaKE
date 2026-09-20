@@ -1,21 +1,13 @@
-"""Isolation: membership required for business access (M5)."""
+"""Membership gate — behavior proven under tests/postgres (real PostgreSQL).
 
-from uuid import uuid4
+This module keeps a lightweight contract check that does not use FakeSession.
+Full isolation evidence lives in tests/postgres/test_tenant_isolation_http.py.
+"""
 
-import pytest
+from __future__ import annotations
 
-from app.core_platform.organization.service import OrganizationService
-from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.core_platform.shared.types import DomainErrorCode
 
 
-@pytest.mark.asyncio
-async def test_require_membership_raises_without_row(monkeypatch):
-    """Without a DB session implementing scalar, we document the error contract."""
-    class FakeSession:
-        async def scalar(self, *_a, **_k):
-            return None
-
-    svc = OrganizationService(FakeSession())  # type: ignore[arg-type]
-    with pytest.raises(DomainError) as ei:
-        await svc.require_active_membership(uuid4(), uuid4())
-    assert ei.value.code == DomainErrorCode.FORBIDDEN
+def test_forbidden_code_stable():
+    assert DomainErrorCode.FORBIDDEN == "forbidden"

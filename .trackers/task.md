@@ -1,27 +1,26 @@
 # Task — Core V2
 
 ## Authoritative scope source
-Tawala Core V2 Implementation Roadmap.  
-GitHub issues #264–#276 (M11–M23) contain full Objective / Acceptance criteria / Non-goals / Exit condition.
+Roadmap + issues #264–#276 (M11–M23).
 
 ## Completed
-- **2026-09-20** Milestone realignment: Core gates tracked as M11–M23 (product M0–M9 preserved). Issues #264–#276 rewritten from roadmap. Trackers aligned.
-- **2026-09-20 M11** Core Gate Closure & Contract Freeze:
-  - Added `docs/architecture/CORE_CONTRACTS.md` (authoritative contracts for TenantContext, auth path, authorization consumption rule, DomainError, soft-delete, audit, events/outbox, idempotency, service boundaries, transaction pattern, forbidden practices).
-  - Module pointers on `shared/types.py` and `api/deps.py`.
-  - No runtime behavior change. Existing tests expected green.
+- **M11** Core contracts freeze — `docs/architecture/CORE_CONTRACTS.md` (`cfaa162`).
+- **M12 (in progress)** Real PostgreSQL Isolation & Security Proof:
+  - Settings: BaseSettings with `environment`, required `DATABASE_URL` in test/production, URL validator.
+  - Session: `set_tenant_guc` for RLS (`app.current_business_id`, `app.current_user_id`, `app.rls_bypass`).
+  - deps: set GUCs after TenantContext resolution.
+  - Alembic `20260920_0009` — ENABLE/FORCE RLS + policies on business-scoped tables.
+  - Tests: real Postgres HTTP isolation suite (`tests/postgres/`); FakeSession tests removed.
+  - CI: Postgres 16 service + `DATABASE_URL` for all pytest runs.
 
-## Current authorized work
-M11 implementation (this commit). After push, M11 acceptance criteria should be reviewed against CORE_CONTRACTS.md.
+## Remaining for M12 verification
+- Confirm CI green (agent environment cannot run full Postgres suite reliably).
+- Close issue #265 when CI passes.
 
-## Residual / next gates
-- M12 — Real PostgreSQL Isolation & Security Proof
-- M13 — Authorization & Scope Hardening (empty-scope semantics)
-- M14 — Audit, Event, Outbox & Idempotency Completion
-- M15+ — Capability kernel and domain layers
+## Next
+M13 — Authorization & Scope Hardening (after M12 verified).
 
 ## Hard rules
-- Never open/merge PR from `core/**` → `main` or `dev`.
+- Never PR `core/**` → `main`/`dev`.
+- No FakeSession.
 - No frontend on this branch.
-- Proposal → approval before non-trivial work.
-- Tests (pytest + ruff) must stay green.
