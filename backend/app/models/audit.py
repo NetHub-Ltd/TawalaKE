@@ -7,7 +7,7 @@ from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column
+from sqlalchemy import Column, DateTime
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import JSON
 from sqlmodel import Field
@@ -41,4 +41,6 @@ class AuditRecord(BaseMixin, table=True):
         sa_column=Column(JSON().with_variant(JSONB(), "postgresql"), nullable=True),
     )
     reason: str | None = Field(default=None, max_length=512)
-    occurred_at: datetime = Field(nullable=False)
+    occurred_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )

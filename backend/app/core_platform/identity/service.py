@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.identity.password import hash_password, hash_token, verify_password
 from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.models.base import utc_now
 from app.models.identity import Credential, CredentialType, Session, User, UserStatus
 from app.schemas.identity import UserLogin, UserRegister
 
@@ -110,7 +111,7 @@ class IdentityService:
             id=uuid4(),
             user_id=user.id,
             token_hash=hash_token(raw_token),
-            expires_at=datetime.utcnow() + SESSION_TTL,
+            expires_at=utc_now() + SESSION_TTL,
             user_agent=user_agent,
             ip=ip,
         )
@@ -124,7 +125,7 @@ class IdentityService:
         session = await self._session.scalar(select(Session).where(Session.token_hash == token_h))
         if session is None or session.revoked_at is not None:
             return
-        session.revoked_at = datetime.utcnow()
+        session.revoked_at = utc_now()
         self._session.add(session)
         await self._session.commit()
 
@@ -133,7 +134,7 @@ class IdentityService:
         session = await self._session.scalar(select(Session).where(Session.token_hash == token_h))
         if session is None or session.revoked_at is not None:
             raise DomainError(DomainErrorCode.UNAUTHORIZED, "Invalid or revoked session")
-        if session.expires_at < datetime.utcnow():
+        if session.expires_at < utc_now():
             raise DomainError(DomainErrorCode.UNAUTHORIZED, "Session expired")
         user = await self._session.get(User, session.user_id)
         if user is None or user.status != UserStatus.ACTIVE:

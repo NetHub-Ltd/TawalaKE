@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from app.models.base import utc_now_naive
+from app.models.base import utc_now
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -45,7 +45,7 @@ class AuditService:
             before=before,
             after=after,
             reason=reason,
-            occurred_at=utc_now_naive(),
+            occurred_at=utc_now(),
         )
         self._session.add(row)
         if commit:

@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Column, DateTime, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.models.base import BaseMixin
@@ -31,9 +31,18 @@ class Membership(BaseMixin, table=True):
     business_id: UUID = Field(foreign_key="businesses.id", index=True)
     user_id: UUID = Field(foreign_key="users.id", index=True)
     status: MembershipStatus = str_enum_col(MembershipStatus.ACTIVE)
-    invited_at: datetime | None = Field(default=None)
-    activated_at: datetime | None = Field(default=None)
-    revoked_at: datetime | None = Field(default=None)
+    invited_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    activated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    revoked_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
 
 
 class Permission(BaseMixin, table=True):

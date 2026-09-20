@@ -139,6 +139,15 @@ HTTP mapping lives in `deps.py` / route handlers. Domains raise `DomainError`; t
 
 ---
 
+## 5.1 Timestamps (timezone-aware UTC)
+
+All Core timestamp columns are **timezone-aware UTC** (`TIMESTAMPTZ` in PostgreSQL).
+
+- Factory: `app.models.base.utc_now()` → `datetime.now(UTC)`
+- `BaseMixin.created_at` / `updated_at` / `deleted_at` use `DateTime(timezone=True)`
+- Domain fields (`expires_at`, `occurred_at`, `invited_at`, …) follow the same rule
+- Writers must not use naive `datetime.utcnow()`
+
 ## 6. Soft deletion
 
 **Convention:** Models that support soft delete expose a nullable `deleted_at` timestamp.

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from app.models.base import utc_now_naive
+from app.models.base import utc_now
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -71,7 +71,7 @@ class MembershipService:
             raise DomainError(DomainErrorCode.CONFLICT, "Membership already exists")
         if existing:
             existing.status = MembershipStatus.INVITED
-            existing.invited_at = utc_now_naive()
+            existing.invited_at = utc_now()
             existing.revoked_at = None
             existing.touch()
             self._session.add(existing)
@@ -83,7 +83,7 @@ class MembershipService:
             business_id=business_id,
             user_id=user_id,
             status=MembershipStatus.INVITED,
-            invited_at=utc_now_naive(),
+            invited_at=utc_now(),
         )
         self._session.add(m)
         await self._session.flush()
@@ -122,7 +122,7 @@ class MembershipService:
         if m.status == MembershipStatus.REVOKED:
             raise DomainError(DomainErrorCode.CONFLICT, "Cannot activate revoked membership")
         m.status = MembershipStatus.ACTIVE
-        m.activated_at = utc_now_naive()
+        m.activated_at = utc_now()
         m.touch()
         self._session.add(m)
         await self._session.commit()
@@ -170,7 +170,7 @@ class MembershipService:
             raise DomainError(DomainErrorCode.NOT_FOUND, "Membership not found")
         before = {"status": m.status.value}
         m.status = MembershipStatus.REVOKED
-        m.revoked_at = utc_now_naive()
+        m.revoked_at = utc_now()
         m.touch()
         self._session.add(m)
         await self._session.flush()

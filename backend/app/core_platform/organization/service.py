@@ -1,3 +1,4 @@
+from app.models.base import utc_now
 """OrganizationService — Business, Branch, Location (SPEC E.2 / M5)."""
 
 from __future__ import annotations
@@ -68,7 +69,7 @@ class OrganizationService:
             business_id=business.id,
             user_id=owner_user_id,
             status=MembershipStatus.ACTIVE,
-            activated_at=__import__("datetime").datetime.now(_UTC),
+            activated_at=utc_now(),
         )
         self._session.add(membership)
         await self._session.flush()
@@ -105,7 +106,7 @@ class OrganizationService:
             business.name = data.name
         if data.slug is not None:
             business.slug = data.slug
-        business.updated_at = datetime.utcnow()
+        business.updated_at = utc_now()
         self._session.add(business)
         await self._session.commit()
         await self._session.refresh(business)
