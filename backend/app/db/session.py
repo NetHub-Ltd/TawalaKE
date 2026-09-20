@@ -6,6 +6,9 @@ created and get_session raises so protected paths fail closed.
 RLS: after authentication, call set_tenant_guc(session, business_id) so
 PostgreSQL policies on business_id columns can enforce isolation as
 defense-in-depth (M12). See docs/architecture/CORE_CONTRACTS.md.
+
+Engine uses NullPool so connections are not bound across pytest-asyncio
+function-scoped event loops.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 
 from app.core_platform.shared.settings import get_settings
@@ -39,6 +43,7 @@ def get_engine() -> AsyncEngine | None:
             settings.database_url,
             pool_pre_ping=settings.database_pool_pre_ping,
             echo=False,
+            poolclass=NullPool,
         )
         _session_factory = async_sessionmaker(
             _engine,
@@ -54,8 +59,17 @@ def get_session_factory() -> async_sessionmaker[AsyncSession] | None:
 
 
 def reset_engine() -> None:
-    """Test helper: drop cached engine after DATABASE_URL changes."""
+    """Drop cached engine (tests must call after loop changes)."""
     global _engine, _session_factory
+    _engine = None
+    _session_factory = None
+
+
+async def dispose_engine() -> None:
+    """Dispose engine connections then clear cache."""
+    global _engine, _session_factory
+    if _engine is not None:
+        await _engine.dispose()
     _engine = None
     _session_factory = None
 
@@ -75,11 +89,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 async def set_tenant_guc(
     session: AsyncSession, business_id: UUID | None, *, bypass: bool = False
 ) -> None:
-    """Set transaction-local GUCs used by RLS policies.
-
-    - app.current_business_id: tenant key for policies
-    - app.rls_bypass: when 'on', policies allow all (seed/migration only)
-    """
+    """Set transaction-local GUCs used by RLS policies."""
     settings = get_settings()
     if not settings.rls_enabled:
         return

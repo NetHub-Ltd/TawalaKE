@@ -22,8 +22,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from alembic import command
 from app.core_platform.shared.settings import clear_settings_cache, get_settings
-from app.db.session import get_session_factory, reset_engine, set_tenant_guc
+from app.db.session import dispose_engine, get_session_factory, reset_engine, set_tenant_guc
 from app.main import app
+
 
 
 def _has_database_url() -> bool:
@@ -52,19 +53,27 @@ def prepared_database(database_url: str) -> None:
 
 @pytest_asyncio.fixture
 async def db_session(prepared_database: None) -> AsyncGenerator[AsyncSession, None]:
+    # Fresh engine on this test's event loop (avoids "Future attached to different loop").
+    await dispose_engine()
+    reset_engine()
     factory = get_session_factory()
     assert factory is not None
     async with factory() as session:
         await set_tenant_guc(session, business_id=None, bypass=True)
         yield session
         await session.rollback()
+    await dispose_engine()
 
 
 @pytest_asyncio.fixture
 async def client(prepared_database: None) -> AsyncGenerator[AsyncClient, None]:
+    # Ensure app DB deps use an engine bound to this loop.
+    await dispose_engine()
+    reset_engine()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
+    await dispose_engine()
 
 
 @pytest_asyncio.fixture
