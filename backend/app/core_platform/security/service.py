@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.security.permissions_seed import SYSTEM_PERMISSIONS
 from app.core_platform.shared.types import DomainError, DomainErrorCode, TenantContext

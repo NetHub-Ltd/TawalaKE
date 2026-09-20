@@ -1,14 +1,10 @@
-"""Async database engine, session factory, and RLS session context.
+"""Async database engine and SQLModel session factory + RLS helpers.
+
+Uses ``sqlmodel.ext.asyncio.session.AsyncSession`` as the session type.
+Engine factory remains SQLAlchemy async (required under SQLModel).
 
 When Settings.database_url is unset (development only), the engine is not
 created and get_session raises so protected paths fail closed.
-
-RLS: after authentication, call set_tenant_guc(session, business_id) so
-PostgreSQL policies on business_id columns can enforce isolation as
-defense-in-depth (M12). See docs/architecture/CORE_CONTRACTS.md.
-
-Engine uses NullPool so connections are not bound across pytest-asyncio
-function-scoped event loops.
 """
 
 from __future__ import annotations
@@ -17,22 +13,18 @@ from collections.abc import AsyncGenerator
 from uuid import UUID
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.settings import get_settings
 
-_engine: AsyncEngine | None = None
+_engine = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
-def get_engine() -> AsyncEngine | None:
+def get_engine():
     """Return the process-wide async engine, creating it if configured."""
     global _engine, _session_factory
     settings = get_settings()
@@ -75,7 +67,7 @@ async def dispose_engine() -> None:
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency: yield an async session or raise if DB is not configured."""
+    """FastAPI dependency: yield a SQLModel AsyncSession or raise if DB unset."""
     factory = get_session_factory()
     if factory is None:
         raise RuntimeError(

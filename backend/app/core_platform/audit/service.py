@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.audit import AuditOutcome, AuditRecord
 

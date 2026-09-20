@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.identity.password import hash_password, hash_token, verify_password
 from app.core_platform.shared.types import DomainError, DomainErrorCode

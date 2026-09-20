@@ -8,7 +8,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from fastapi import Depends, Header, HTTPException, Request
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.identity.service import IdentityService
 from app.core_platform.security.service import AuthorizationService

@@ -293,6 +293,8 @@ Application authorization remains mandatory. RLS does not replace membership or 
 ## 15. SQLModel is the schema source of truth
 
 - Domain persistence uses **SQLModel** models under ``app.models``.
-- Alembic ``target_metadata = SQLModel.metadata``; prefer ``alembic revision --autogenerate``.
-- Status / type / kind fields are **VARCHAR**, not native PostgreSQL ENUMs (see ``str_enum_col``).
-- Application and tests use the ORM session (``AsyncSession`` / SQLModel) — no parallel schema definitions.
+- **Single baseline migration** ``20260920_0001`` creates all tables via ``SQLModel.metadata.create_all`` (no hand-written ``sa.Column`` table DDL).
+- Session type is ``sqlmodel.ext.asyncio.session.AsyncSession`` everywhere (routes, services, tests).
+- Status / type / kind fields are **VARCHAR** via ``str_enum_col`` (not native PostgreSQL ENUMs).
+- RLS policies are applied after ``create_all`` (not expressible as SQLModel fields).
+- Future schema changes: update SQLModel models, then a new revision that alters via metadata-driven migration (review before apply).
