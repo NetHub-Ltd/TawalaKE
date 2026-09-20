@@ -1,15 +1,14 @@
-from app.models.base import utc_now
 """OrganizationService — Business, Branch, Location (SPEC E.2 / M5)."""
 
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.models.base import utc_now
 from app.models.organization import (
     Branch,
     BranchStatus,
