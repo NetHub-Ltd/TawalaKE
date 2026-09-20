@@ -4,6 +4,9 @@ All Core tables extend :class:`BaseMixin` so identity, tenancy, and domain
 models share the same primary key and lifecycle columns.
 
 **Time policy:** every timestamp is timezone-aware UTC (``TIMESTAMPTZ`` in PostgreSQL).
+
+Use ``sa_type=DateTime(timezone=True)`` (not a shared ``Column`` instance) so each
+subclass table gets its own column object.
 """
 
 from __future__ import annotations
@@ -11,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import DateTime
 from sqlmodel import Field, SQLModel
 
 
@@ -43,15 +46,18 @@ class BaseMixin(SQLModel):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     created_at: datetime = Field(
         default_factory=utc_now,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_type=DateTime(timezone=True),
+        nullable=False,
     )
     updated_at: datetime = Field(
         default_factory=utc_now,
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_type=DateTime(timezone=True),
+        nullable=False,
     )
     deleted_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+        sa_type=DateTime(timezone=True),
+        nullable=True,
     )
     deleted_by: UUID | None = Field(default=None, nullable=True)
 

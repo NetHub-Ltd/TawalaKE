@@ -42,5 +42,6 @@ class AuditRecord(BaseMixin, table=True):
     )
     reason: str | None = Field(default=None, max_length=512)
     occurred_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_type=DateTime(timezone=True),
+        nullable=False,
     )

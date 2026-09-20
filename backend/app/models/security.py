@@ -33,15 +33,18 @@ class Membership(BaseMixin, table=True):
     status: MembershipStatus = str_enum_col(MembershipStatus.ACTIVE)
     invited_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+        sa_type=DateTime(timezone=True),
+        nullable=True,
     )
     activated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+        sa_type=DateTime(timezone=True),
+        nullable=True,
     )
     revoked_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+        sa_type=DateTime(timezone=True),
+        nullable=True,
     )
 
 

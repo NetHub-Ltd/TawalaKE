@@ -44,7 +44,8 @@ class Credential(BaseMixin, table=True):
     secret_hash: str = Field(sa_column=Column(Text, nullable=False))
     rotated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+        sa_type=DateTime(timezone=True),
+        nullable=True,
     )
 
 
@@ -54,11 +55,13 @@ class Session(BaseMixin, table=True):
     user_id: UUID = Field(foreign_key="users.id", index=True)
     token_hash: str = Field(sa_column=Column(Text, nullable=False, unique=True))
     expires_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_type=DateTime(timezone=True),
+        nullable=False,
     )
     revoked_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+        sa_type=DateTime(timezone=True),
+        nullable=True,
     )
     user_agent: str | None = Field(default=None, max_length=512)
     ip: str | None = Field(default=None, max_length=64)

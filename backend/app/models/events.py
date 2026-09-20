@@ -29,7 +29,8 @@ class DomainEvent(BaseMixin, table=True):
 
     event_type: str = Field(max_length=128, index=True)
     occurred_at: datetime = Field(
-        sa_column=Column(DateTime(timezone=True), nullable=False),
+        sa_type=DateTime(timezone=True),
+        nullable=False,
     )
     business_id: UUID | None = Field(default=None, index=True)
     actor_user_id: UUID | None = Field(default=None)
@@ -51,6 +52,7 @@ class OutboxEntry(BaseMixin, table=True):
     attempts: int = Field(default=0)
     next_attempt_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), nullable=True),
+        sa_type=DateTime(timezone=True),
+        nullable=True,
     )
     last_error: str | None = Field(default=None, max_length=1024)
