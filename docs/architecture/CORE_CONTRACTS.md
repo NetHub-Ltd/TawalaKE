@@ -165,9 +165,13 @@ Minimum fields written for an auditable mutation:
 
 ### Convention
 
-Auditable Core mutations should call `AuditService` in the **same unit of work** as the mutation (same session / same eventual commit) so audit and business state stay consistent.
+Auditable Core mutations call `record_activity` (audit + event) in the **same unit of work** as the mutation (`commit=False` then single service commit).
 
-Full mutation coverage and automated guarantees are completed under **M14**.
+Canonical helper: `backend/app/core_platform/shared/activity.py`.
+
+Core mutators covered: organization create/update paths, membership suspend/revoke, role assign, parties create/link, catalog product/service/category create & product update, **configuration set** (T4).
+
+Identity register/login remain intentionally light (credentials path); expand when product policy requires session audit.
 
 ---
 
@@ -175,23 +179,30 @@ Full mutation coverage and automated guarantees are completed under **M14**.
 
 **Authoritative implementation:**  
 - Models: `backend/app/models/events.py` (`DomainEvent`, `OutboxEntry`)  
-- Service: `backend/app/core_platform/events/service.py`
+- Emit: `backend/app/core_platform/events/service.py` (`EventService.emit`)  
+- Publisher: `backend/app/core_platform/events/publisher.py` (`OutboxPublisher`)  
+- Worker CLI: `python -m app.core_platform.events.worker`
 
 Required atomic pattern:
 
 ```text
 Domain mutation
     ↓
-DomainEvent + OutboxEntry
+DomainEvent + OutboxEntry (PENDING)
     ↓
 same DB transaction
     ↓
 commit
+    ↓
+publisher claim (FOR UPDATE SKIP LOCKED)
+    ↓
+deliver → PUBLISHED  |  fail → FAILED + backoff / max attempts
 ```
 
 - Events describe facts that occurred (not commands).
 - Outbox entries are persisted with the source mutation.
-- Publisher / worker (claim → deliver → retry → mark processed) is completed under **M14**.
+- Default deliver sink is in-process (log success); inject a custom `deliver` coroutine for bus/webhook.
+- Concurrent workers are safe via `SKIP LOCKED`.
 
 ---
 
@@ -200,12 +211,22 @@ commit
 **Authoritative helpers:** `backend/app/core_platform/shared/idempotency.py`  
 **Model:** `backend/app/models/idempotency.py` (`IdempotencyRecord`)
 
-- Scoped by `(scope, key)`.
-- `lookup` / `store` helpers; `require_key_format` validates key length.
-- Duplicate requests with the same key must not create duplicate business effects.
-- Event deduplication ≠ command idempotency (distinct concerns).
+- Scoped by `(scope, key)` unique constraint.
+- `lookup` / `store` helpers; `require_key_format` validates key length (max 128).
+- Duplicate requests with the same key must not create duplicate business effects (`store` returns prior row).
+- **Command idempotency ≠ event deduplication** — outbox marks delivery once; command keys prevent double business creates.
 
-Selected operations already use the helpers. Universal command-category policy and PostgreSQL-backed proof are completed under **M14**.
+### Command categories (Core policy)
+
+| Category | Idempotency required? | Current Core coverage |
+|----------|----------------------|------------------------|
+| User registration | Yes (platform scope) | `IdentityService.register` |
+| Membership invite | Yes (business scope) | `MembershipService.invite` |
+| Catalog product create | Yes (business scope) | `CatalogService.create_product` |
+| Config set | Optional (last-write-wins) | Not keyed; audit/event only |
+| Read endpoints | No | — |
+
+Future domains (payments, stock mutations, document finalization) **must** use command idempotency keys.
 
 ---
 
