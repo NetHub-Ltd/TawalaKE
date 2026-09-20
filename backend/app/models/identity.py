@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from sqlalchemy import Column, Text, UniqueConstraint
+from sqlalchemy import Column, String, Text, UniqueConstraint
 from sqlmodel import Field
 
 from app.models.base import BaseMixin
@@ -39,7 +39,10 @@ class Credential(BaseMixin, table=True):
     __tablename__ = "credentials"
 
     user_id: UUID = Field(foreign_key="users.id", index=True)
-    type: CredentialType = Field(default=CredentialType.PASSWORD)
+    type: CredentialType = Field(
+        default=CredentialType.PASSWORD,
+        sa_column=Column(String(32), nullable=False),
+    )
     secret_hash: str = Field(sa_column=Column(Text, nullable=False))
     rotated_at: datetime | None = Field(default=None)
 
