@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+
+from app.models.base import utc_now_naive
 from typing import Any
 from uuid import UUID
 
@@ -58,7 +60,7 @@ class OutboxPublisher:
 
         Uses ``FOR UPDATE SKIP LOCKED`` so multiple workers do not double-claim.
         """
-        now = datetime.now(UTC)
+        now = utc_now_naive()
         stmt = (
             select(OutboxEntry, DomainEvent)
             .join(DomainEvent, DomainEvent.id == OutboxEntry.event_id)
@@ -105,7 +107,7 @@ class OutboxPublisher:
             entry.next_attempt_at = None
         else:
             delay = BASE_BACKOFF_SECONDS * entry.attempts
-            entry.next_attempt_at = datetime.now(UTC) + timedelta(seconds=delay)
+            entry.next_attempt_at = utc_now_naive() + timedelta(seconds=delay)
         entry.touch()
         self._session.add(entry)
 
