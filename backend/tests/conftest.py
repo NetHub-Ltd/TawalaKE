@@ -177,6 +177,20 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
         id=uuid4(), business_id=biz_b.id, name="Product B", sku=f"B-{uuid4().hex[:6]}"
     )
     db_session.add_all([prod_a, prod_b])
+
+    # Capture scalar IDs before the commit. The ORM instances will be used later
+    # only as plain values in the generated JWT fixture payload.
+    biz_a_id = biz_a.id
+    biz_b_id = biz_b.id
+    party_a_id = party_a.id
+    party_b_id = party_b.id
+    prod_a_id = prod_a.id
+    prod_b_id = prod_b.id
+    mem_a_id = mem_a.id
+    email_a = user_a.email
+    email_b = user_b.email
+    email_none = user_none.email
+
     await db_session.commit()
 
     async def _login(email: str) -> str:
@@ -187,16 +201,16 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
         return r.json()["access_token"]
 
     return {
-        "biz_a": biz_a.id,
-        "biz_b": biz_b.id,
-        "party_a": party_a.id,
-        "party_b": party_b.id,
-        "prod_a": prod_a.id,
-        "prod_b": prod_b.id,
-        "mem_a": mem_a.id,
-        "token_a": await _login(user_a.email),
-        "token_b": await _login(user_b.email),
-        "token_none": await _login(user_none.email),
-        "email_a": user_a.email,
+        "biz_a": biz_a_id,
+        "biz_b": biz_b_id,
+        "party_a": party_a_id,
+        "party_b": party_b_id,
+        "prod_a": prod_a_id,
+        "prod_b": prod_b_id,
+        "mem_a": mem_a_id,
+        "token_a": await _login(email_a),
+        "token_b": await _login(email_b),
+        "token_none": await _login(email_none),
+        "email_a": email_a,
         "session": db_session,
     }
