@@ -16,11 +16,11 @@ from uuid import uuid4
 
 import pytest
 import pytest_asyncio
-from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from alembic import command
 from app.core_platform.shared.settings import clear_settings_cache, get_settings
 from app.db.session import get_session_factory, reset_engine, set_tenant_guc
 from app.main import app
