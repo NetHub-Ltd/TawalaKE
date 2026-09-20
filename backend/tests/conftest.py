@@ -142,21 +142,37 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
     db_session.add_all([mem_a, mem_b])
     await db_session.flush()
 
+    # Capture scalar PKs once after flush. Always use these plain UUIDs — never
+    # re-read ORM attributes after set_tenant_guc / commit (async safety).
+    biz_a_id = biz_a.id
+    biz_b_id = biz_b.id
+    mem_a_id = mem_a.id
+    mem_b_id = mem_b.id
+    user_a_id = user_a.id
+    user_b_id = user_b.id
+    email_a = user_a.email
+    email_b = user_b.email
+    email_none = user_none.email
+
     roles = RoleService(db_session)
     await set_tenant_guc(db_session, None, bypass=True)
-    await roles.bootstrap_owner(biz_a.id, mem_a.id)
+    await roles.bootstrap_owner(biz_a_id, mem_a_id)
     await set_tenant_guc(db_session, None, bypass=True)
-    await roles.bootstrap_owner(biz_b.id, mem_b.id)
+    await roles.bootstrap_owner(biz_b_id, mem_b_id)
 
     await set_tenant_guc(db_session, None, bypass=True)
-    party_a = Party(id=uuid4(), kind=PartyKind.PERSON, display_name="Party A")
-    party_b = Party(id=uuid4(), kind=PartyKind.PERSON, display_name="Party B")
+    party_a_id = uuid4()
+    party_b_id = uuid4()
+    prod_a_id = uuid4()
+    prod_b_id = uuid4()
+    party_a = Party(id=party_a_id, kind=PartyKind.PERSON, display_name="Party A")
+    party_b = Party(id=party_b_id, kind=PartyKind.PERSON, display_name="Party B")
     db_session.add_all([party_a, party_b])
     db_session.add(
         PartyBusinessLink(
             id=uuid4(),
-            business_id=biz_a.id,
-            party_id=party_a.id,
+            business_id=biz_a_id,
+            party_id=party_a_id,
             relationship=PartyRelationship.CUSTOMER,
             status=LinkStatus.ACTIVE,
         )
@@ -164,32 +180,19 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
     db_session.add(
         PartyBusinessLink(
             id=uuid4(),
-            business_id=biz_b.id,
-            party_id=party_b.id,
+            business_id=biz_b_id,
+            party_id=party_b_id,
             relationship=PartyRelationship.CUSTOMER,
             status=LinkStatus.ACTIVE,
         )
     )
     prod_a = Product(
-        id=uuid4(), business_id=biz_a.id, name="Product A", sku=f"A-{uuid4().hex[:6]}"
+        id=prod_a_id, business_id=biz_a_id, name="Product A", sku=f"A-{uuid4().hex[:6]}"
     )
     prod_b = Product(
-        id=uuid4(), business_id=biz_b.id, name="Product B", sku=f"B-{uuid4().hex[:6]}"
+        id=prod_b_id, business_id=biz_b_id, name="Product B", sku=f"B-{uuid4().hex[:6]}"
     )
     db_session.add_all([prod_a, prod_b])
-
-    # Capture scalar IDs before the commit. The ORM instances will be used later
-    # only as plain values in the generated JWT fixture payload.
-    biz_a_id = biz_a.id
-    biz_b_id = biz_b.id
-    party_a_id = party_a.id
-    party_b_id = party_b.id
-    prod_a_id = prod_a.id
-    prod_b_id = prod_b.id
-    mem_a_id = mem_a.id
-    email_a = user_a.email
-    email_b = user_b.email
-    email_none = user_none.email
 
     await db_session.commit()
 

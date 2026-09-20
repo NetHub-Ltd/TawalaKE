@@ -83,8 +83,10 @@ async def set_tenant_guc(
 ) -> None:
     """Set transaction-local GUCs used by RLS policies.
 
-    Expires the SQLAlchemy identity map so previously loaded rows from another
-    tenant/bypass context cannot leak into subsequent queries.
+    Does **not** touch the SQLAlchemy identity map. Callers that need a clean
+    read after switching tenants should open a new session or run raw SQL.
+    Never call ``session.expire_all()`` here — it forces lazy IO on the next
+    attribute access and breaks async fixtures (MissingGreenlet).
     """
     settings = get_settings()
     if not settings.rls_enabled:
@@ -92,17 +94,15 @@ async def set_tenant_guc(
     if bypass:
         await session.execute(text("SELECT set_config('app.rls_bypass', 'on', true)"))
         await session.execute(text("SELECT set_config('app.current_business_id', '', true)"))
-    elif business_id is None:
-        await session.execute(text("SELECT set_config('app.rls_bypass', 'off', true)"))
+        return
+    await session.execute(text("SELECT set_config('app.rls_bypass', 'off', true)"))
+    if business_id is None:
         await session.execute(text("SELECT set_config('app.current_business_id', '', true)"))
     else:
-        await session.execute(text("SELECT set_config('app.rls_bypass', 'off', true)"))
         await session.execute(
             text("SELECT set_config('app.current_business_id', :bid, true)"),
             {"bid": str(business_id)},
         )
-    # Drop cached instances that may belong to a prior GUC context.
-    session.expire_all()
 
 
 async def check_database() -> bool:
