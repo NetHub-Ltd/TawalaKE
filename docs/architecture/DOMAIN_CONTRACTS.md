@@ -178,3 +178,31 @@ Authenticate → TenantContext → RBAC → Entitlement → Scope → Domain op 
 ## 7. Evolution
 
 Later domain milestones (Inventory, Sales, …) **extend** this document with domain-specific sections; they must not contradict ownership rules above without an explicit contracts revision on `core/v2`.
+
+## 8. Inventory contract (T7 / M17)
+
+Inventory is the **sole owner of stock state**.
+
+| Entity | Role |
+|--------|------|
+| `StockLevel` | Authoritative on-hand (and reserved) per product × location × business |
+| `StockMovement` | Auditable history of every mutation |
+
+### Negative stock policy
+
+`quantity_on_hand` **must not** go below zero. Issue, transfer-out, and adjust targets that would undershoot raise `VALIDATION_FAILED`. Enforced in domain logic and DB check constraint.
+
+### Mutation primitives
+
+- `receive` — stock-in
+- `issue` — stock-out
+- `adjust` — set absolute on-hand (count); creates adjust movement
+- `transfer` — atomic `transfer_out` + `transfer_in` with shared `transfer_group_id`
+
+All mutations write a movement, update the level in the **same transaction**, emit audit/event via `record_activity`, and support command idempotency keys.
+
+### Authoritative code
+
+- Models: `backend/app/models/inventory.py`
+- Service: `backend/app/core_platform/inventory/service.py`
+- Routes: `backend/app/api/routes/inventory.py`

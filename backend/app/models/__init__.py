@@ -7,6 +7,7 @@ from app.models.configuration import BusinessConfig
 from app.models.entitlements import BusinessEntitlement, Capability
 from app.models.events import DomainEvent, OutboxEntry
 from app.models.idempotency import IdempotencyRecord
+from app.models.inventory import StockLevel, StockMovement
 from app.models.identity import Credential, Session, User
 from app.models.organization import Branch, Business, Location
 from app.models.parties import Party, PartyBusinessLink
@@ -45,4 +46,6 @@ __all__ = [
     "IdempotencyRecord",
     "Capability",
     "BusinessEntitlement",
+    "StockLevel",
+    "StockMovement",
 ]
