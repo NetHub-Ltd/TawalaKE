@@ -35,4 +35,7 @@ SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
     ("inventory.stock.issue", "Issue stock"),
     ("inventory.stock.adjust", "Adjust stock counts"),
     ("inventory.stock.transfer", "Transfer stock between locations"),
+    ("sales.document.manage", "Create and convert sales documents"),
+    ("sales.document.finalize", "Finalize invoices and returns"),
+    ("sales.payment.record", "Record customer payments"),
 ]
