@@ -4,6 +4,10 @@ DB credentials build two URLs:
   - database_url       → postgresql+asyncpg://...  (SQLModel AsyncSession)
   - database_url_sync  → postgresql+psycopg://...  (Alembic)
 
+Render/Heroku-style DATABASE_URL often uses the non-SQLAlchemy scheme
+``postgres://`` — that is normalized here so Alembic does not fail with:
+  NoSuchModuleError: Can't load plugin: sqlalchemy.dialects:postgres
+
 See docs/architecture/CORE_CONTRACTS.md.
 """
 
@@ -11,10 +15,33 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse, urlunparse
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _normalize_postgres_scheme(url: str) -> str:
+    """Map postgres:// (and bare postgresql://) to a real SQLAlchemy scheme later."""
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://") :]
+    return url
+
+
+def _with_driver(url: str, driver: str) -> str:
+    """Ensure URL uses postgresql+{driver}:// (asyncpg | psycopg)."""
+    url = _normalize_postgres_scheme(url)
+    # Strip any existing driver suffix on the scheme
+    for prefix in (
+        "postgresql+asyncpg://",
+        "postgresql+psycopg://",
+        "postgresql+psycopg2://",
+        "postgresql://",
+    ):
+        if url.startswith(prefix):
+            rest = url[len(prefix) :]
+            return f"postgresql+{driver}://{rest}"
+    return url
 
 
 class Settings(BaseSettings):
@@ -53,7 +80,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _build_urls_from_creds(self) -> Settings:
-        has_creds = all([self.db_host, self.db_user, self.db_password is not None, self.db_name])
+        has_creds = all(
+            [self.db_host, self.db_user, self.db_password is not None, self.db_name]
+        )
         if has_creds:
             user = quote_plus(self.db_user or "")
             password = quote_plus(self.db_password or "")
@@ -68,14 +97,16 @@ class Settings(BaseSettings):
                 self.database_url_sync = (
                     f"postgresql+psycopg://{user}:{password}@{host}:{port}/{name}"
                 )
-        elif self.database_url and not self.database_url_sync:
-            # Derive sync URL from async URL for Alembic.
-            sync = self.database_url
-            sync = sync.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
-            sync = sync.replace("postgres+asyncpg://", "postgresql+psycopg://", 1)
-            if sync.startswith("postgresql://") and "+psycopg" not in sync:
-                sync = sync.replace("postgresql://", "postgresql+psycopg://", 1)
-            self.database_url_sync = sync
+
+        # Always normalize any provided URLs (Render/Heroku postgres://, etc.)
+        if self.database_url:
+            self.database_url = _with_driver(self.database_url, "asyncpg")
+        if self.database_url_sync:
+            self.database_url_sync = _with_driver(self.database_url_sync, "psycopg")
+        elif self.database_url:
+            # Derive sync from async when only DATABASE_URL is set
+            self.database_url_sync = _with_driver(self.database_url, "psycopg")
+
         return self
 
     def require_database_url(self) -> str:
