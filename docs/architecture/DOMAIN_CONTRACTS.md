@@ -239,3 +239,23 @@ CRM organizes **customer intelligence** on top of Party identity.
 - Purchase history is **queried from Sales** finalized invoices — not copied into CRM tables.
 - **Credit status authority:** `CustomerProfile.credit_status` / `credit_limit` (CRM). Accounting may inform UI later; CRM does not post journals.
 - CRM never mutates Sales documents or Accounting journals.
+
+## 11. Reporting contract (T12)
+
+Reporting is a **read-only** consumer of authoritative domain data.
+
+| Metric | Authoritative source | Calculation | Scope | Time |
+|--------|---------------------|-------------|-------|------|
+| sales_by_day | `sales_documents` + `sales_lines` | Sum line_total on FINALIZED invoices | business, optional branch | `finalized_at` UTC day |
+| sales_by_product | same | Group by product_id | business, optional branch/day | finalized_at |
+| sales_by_customer | same | Group by party_id | business, optional day | finalized_at |
+| inventory_on_hand | `stock_levels` | Current quantity | business, optional location | point-in-time |
+| purchasing_open_pos | `purchase_orders` | Status in draft/confirmed/partial | business | current |
+| grn_finalized_count | `goods_receipts` | FINALIZED count | business, optional day | created_at |
+| payments_collected | `sales_payments` | Sum amount | business, optional day | received_at |
+| journal_posted_count | `journal_entries` | POSTED count | business | current |
+
+### Rules
+- Reporting **must not** write Sales, Inventory, Accounting, Purchasing, or CRM tables.
+- Metrics never invent financial or stock truth; they only project source rows.
+- Tenant filter is always `business_id` from the caller context.

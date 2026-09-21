@@ -1,10 +1,10 @@
 # Task — Core V2
 
 ## Completed
-- T1–T10
+- T1–T11
 
 ## In progress
-- **T11 CRM** — Party-backed profiles, notes, sales purchase history projection
+- **T12 Reporting / Read Model Layer**
 
 ## Next
-T12 — Reporting / Read Model Layer
+T13 — Cross-Domain Integrity & Full Core Certification
