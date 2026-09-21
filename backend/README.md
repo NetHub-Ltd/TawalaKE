@@ -27,10 +27,27 @@ pytest
 
 ## Docker
 
+**Python:** 3.13 (image base `python:3.13-slim`).
+
+Build context must be this `backend/` directory (CI does `context: ./backend`):
+
 ```bash
+# from backend/
 docker build -t tawala-core:local .
-docker run --rm -p 8000:8000 tawala-core:local
+
+# from repo root
+docker build -t tawala-core:local -f backend/Dockerfile backend
+# or use the root Dockerfile:
+docker build -t tawala-core:local .
 ```
+
+```bash
+docker run --rm -p 8000:8000 \
+  -e DB_HOST=... -e DB_USER=... -e DB_PASSWORD=... -e DB_NAME=... \
+  tawala-core:local
+```
+
+Do **not** run `docker build -f backend/Dockerfile .` from the repo root — that uses the wrong context and fails with missing `app/`, `start.sh`, `pyproject.toml`.
 
 ## Isolation
 
