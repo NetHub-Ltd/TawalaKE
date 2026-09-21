@@ -1,6 +1,6 @@
-"""Minimal Accounting contract entries (T8 bridge until full Accounting Core).
+"""Minimal Accounting contract entries (T8/T9 bridge until full Accounting Core).
 
-Sales posts financial effects here; full GL is a later milestone.
+Sales and Purchasing post financial effects here; full GL is a later milestone.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ class FinancialEntry(BaseMixin, table=True):
     entry_type: FinancialEntryType = str_enum_col(FinancialEntryType.SALE_REVENUE)
     amount: Decimal = Field(sa_column=Column(Numeric(18, 4), nullable=False))
     currency: str = Field(default="KES", max_length=3)
-    source_type: str = Field(max_length=64)  # sales_document, sales_payment
+    source_type: str = Field(max_length=64)
     source_id: UUID = Field(index=True)
     party_id: UUID | None = Field(default=None)
     memo: str | None = Field(default=None, max_length=512)
