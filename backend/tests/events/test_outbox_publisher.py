@@ -1,4 +1,9 @@
-"""Outbox publisher claim / publish / retry (T4)."""
+"""Outbox publisher claim / publish / retry (T4).
+
+Important: after session.commit(), ORM instances are expired (expire_on_commit).
+Always capture scalar ids (UUID) before commit/process and use those in filters —
+never touch attributes on expired instances (causes MissingGreenlet under async).
+"""
 
 from __future__ import annotations
 
@@ -22,7 +27,6 @@ async def _drain_outbox(session, pub: OutboxPublisher, *, max_rounds: int = 20) 
         totals["failed"] += stats["failed"]
         if stats["claimed"] == 0:
             break
-    session.expire_all()
     return totals
 
 
@@ -37,13 +41,15 @@ async def test_publisher_marks_published(db_session):
         business_id=biz,
         commit=True,
     )
+    event_id = event.id  # capture before further commits expire the instance
+
     pub = OutboxPublisher(db_session)
     stats = await _drain_outbox(db_session, pub)
     assert stats["claimed"] >= 1
     assert stats["published"] >= 1
 
     entry = (
-        await db_session.exec(select(OutboxEntry).where(OutboxEntry.event_id == event.id))
+        await db_session.exec(select(OutboxEntry).where(OutboxEntry.event_id == event_id))
     ).first()
     assert entry is not None
     assert entry.status == OutboxStatus.PUBLISHED
@@ -59,18 +65,17 @@ async def test_publisher_retry_on_failure(db_session):
         payload={},
         commit=True,
     )
+    event_id = event.id
 
     async def boom(_event, _entry):
         raise RuntimeError("delivery down")
 
     pub = OutboxPublisher(db_session, deliver=boom, max_attempts=3)
-    # Only process batches until this event is failed (avoid draining unrelated rows with boom)
     for _ in range(20):
         stats = await pub.process_batch(limit=50)
-        db_session.expire_all()
         entry = (
             await db_session.exec(
-                select(OutboxEntry).where(OutboxEntry.event_id == event.id)
+                select(OutboxEntry).where(OutboxEntry.event_id == event_id)
             )
         ).first()
         assert entry is not None
@@ -80,7 +85,7 @@ async def test_publisher_retry_on_failure(db_session):
             break
 
     entry = (
-        await db_session.exec(select(OutboxEntry).where(OutboxEntry.event_id == event.id))
+        await db_session.exec(select(OutboxEntry).where(OutboxEntry.event_id == event_id))
     ).first()
     assert entry is not None
     assert entry.status == OutboxStatus.FAILED
@@ -99,13 +104,15 @@ async def test_published_not_reclaimed(db_session):
         payload={},
         commit=True,
     )
+    event_id = event.id
+
     pub = OutboxPublisher(db_session)
     await _drain_outbox(db_session, pub)
     stats = await pub.process_batch(limit=50)
     assert stats["claimed"] == 0
 
     entry = (
-        await db_session.exec(select(OutboxEntry).where(OutboxEntry.event_id == event.id))
+        await db_session.exec(select(OutboxEntry).where(OutboxEntry.event_id == event_id))
     ).first()
     assert entry is not None
     assert entry.status == OutboxStatus.PUBLISHED
