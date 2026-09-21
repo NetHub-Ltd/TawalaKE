@@ -28,6 +28,6 @@ SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
     ("catalog.category.read", "Read catalog categories"),
     ("organization.config.manage", "Manage business configuration"),
     ("security.scope.manage", "Manage membership scope assignments"),
-]
     ("organization.entitlements.read", "List business entitlements"),
     ("organization.entitlements.manage", "Grant/revoke business entitlements"),
+]
