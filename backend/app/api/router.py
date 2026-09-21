@@ -17,6 +17,7 @@ from app.api.routes import (
     organization,
     parties,
     purchasing,
+    reporting,
     sales,
     security,
 )
@@ -36,3 +37,4 @@ api_router.include_router(entitlements.router)
 api_router.include_router(inventory.router)
 api_router.include_router(sales.router)
 api_router.include_router(purchasing.router)
+api_router.include_router(reporting.router)
