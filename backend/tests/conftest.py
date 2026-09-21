@@ -198,7 +198,6 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
 
     # T5: product paths require module.catalog entitlement (deny-by-default)
     from app.core_platform.entitlements.service import EntitlementService
-    from app.db.session import set_tenant_guc
 
     await set_tenant_guc(db_session, None, bypass=True)
     ent = EntitlementService(db_session)
