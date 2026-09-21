@@ -9,23 +9,18 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from app.models.base import utc_now
-from typing import Any
-from uuid import UUID
-
-from sqlalchemy import and_, or_
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy import and_, or_
 
+from app.models.base import utc_now
 from app.models.events import DomainEvent, OutboxEntry, OutboxStatus
 
 logger = logging.getLogger(__name__)
 
-# Max delivery attempts before permanent FAILED
 DEFAULT_MAX_ATTEMPTS = 8
-# Base backoff seconds (linear: attempts * BASE_BACKOFF)
 BASE_BACKOFF_SECONDS = 30
 
 DeliverFn = Callable[[DomainEvent, OutboxEntry], Awaitable[None]]
@@ -56,15 +51,17 @@ class OutboxPublisher:
         self._max_attempts = max_attempts
         self._deliver = deliver or _default_deliver
 
-    async def claim_batch(self, *, limit: int = 20) -> list[tuple[OutboxEntry, DomainEvent]]:
-        """Select claimable PENDING/FAILED-with-backoff rows and bump attempts.
+    async def claim_batch(
+        self, *, limit: int = 20
+    ) -> list[tuple[OutboxEntry, DomainEvent]]:
+        """Select claimable rows with FOR UPDATE SKIP LOCKED, then load events.
 
-        Uses ``FOR UPDATE SKIP LOCKED`` so multiple workers do not double-claim.
+        Avoids JOIN + FOR UPDATE (problematic under asyncpg) by locking
+        ``outbox_entries`` alone, then fetching ``domain_events`` by id.
         """
         now = utc_now()
         stmt = (
-            select(OutboxEntry, DomainEvent)
-            .join(DomainEvent, DomainEvent.id == OutboxEntry.event_id)
+            select(OutboxEntry)
             .where(
                 OutboxEntry.deleted_at.is_(None),  # type: ignore[attr-defined]
                 or_(
@@ -72,20 +69,24 @@ class OutboxPublisher:
                     and_(
                         OutboxEntry.status == OutboxStatus.FAILED,
                         or_(
-                            OutboxEntry.next_attempt_at.is_(None),
-                            OutboxEntry.next_attempt_at <= now,
+                            OutboxEntry.next_attempt_at.is_(None),  # type: ignore[union-attr]
+                            OutboxEntry.next_attempt_at <= now,  # type: ignore[operator]
                         ),
                         OutboxEntry.attempts < self._max_attempts,
                     ),
                 ),
             )
-            .order_by(OutboxEntry.created_at.asc())
+            .order_by(OutboxEntry.created_at.asc())  # type: ignore[attr-defined]
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
-        rows = (await self._session.exec(stmt)).all()
+        entries = list((await self._session.exec(stmt)).all())
         claimed: list[tuple[OutboxEntry, DomainEvent]] = []
-        for entry, event in rows:
+        for entry in entries:
+            event = await self._session.get(DomainEvent, entry.event_id)
+            if event is None:
+                logger.warning("outbox.missing_event entry_id=%s event_id=%s", entry.id, entry.event_id)
+                continue
             entry.attempts = int(entry.attempts or 0) + 1
             entry.touch()
             self._session.add(entry)
@@ -122,7 +123,7 @@ class OutboxPublisher:
                 await self._deliver(event, entry)
                 await self.mark_published(entry)
                 published += 1
-            except Exception as exc:  # noqa: BLE001 — worker must not die on one bad event
+            except Exception as exc:  # noqa: BLE001
                 logger.exception("outbox.delivery_failed event_id=%s", entry.event_id)
                 await self.mark_failed(entry, str(exc))
                 failed += 1

@@ -8,6 +8,7 @@ from app.api.routes import (
     accounting,
     audit,
     catalog,
+    crm,
     configuration,
     entitlements,
     health,
@@ -28,6 +29,7 @@ api_router.include_router(organization.router)
 api_router.include_router(security.router)
 api_router.include_router(parties.router)
 api_router.include_router(catalog.router)
+api_router.include_router(crm.router)
 api_router.include_router(audit.router)
 api_router.include_router(configuration.router)
 api_router.include_router(entitlements.router)

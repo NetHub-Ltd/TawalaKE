@@ -42,4 +42,6 @@ SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
     ("purchasing.receive", "Create and finalize goods receipts"),
     ("purchasing.payment.record", "Record supplier payments"),
     ("accounting.read", "Read chart of accounts and journals"),
+    ("crm.customer.read", "Read customer CRM profile and history"),
+    ("crm.customer.manage", "Update CRM profile, notes, credit"),
 ]

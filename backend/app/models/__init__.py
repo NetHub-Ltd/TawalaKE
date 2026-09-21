@@ -27,6 +27,7 @@ from app.models.accounting import (
     JournalLine,
     PaymentAllocation,
 )
+from app.models.crm import CustomerActivity, CustomerNote, CustomerProfile
 from app.models.purchasing import (
     GoodsReceipt,
     GoodsReceiptLine,
@@ -76,4 +77,7 @@ __all__ = [
     "GoodsReceipt",
     "GoodsReceiptLine",
     "PurchasePayment",
+    "CustomerProfile",
+    "CustomerNote",
+    "CustomerActivity",
 ]
