@@ -11,8 +11,8 @@ from app.main import app
 
 @pytest_asyncio.fixture
 async def client():
-    # lifespan off — unit tests must not require a live DB
-    transport = ASGITransport(app=app, lifespan="off")
+    # httpx 0.28 ASGITransport has no lifespan= kwarg; startup is not run.
+    transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
