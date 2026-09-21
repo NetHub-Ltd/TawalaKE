@@ -6,11 +6,8 @@ Infrastructure boundary: ``create_async_engine`` / ``async_sessionmaker`` come f
 for ORM queries; ``session.execute(text(...))`` is reserved for raw SQL (GUCs).
 Alembic remains the only sync DB path.
 
-Uses ``sqlmodel.ext.asyncio.session.AsyncSession`` as the session type.
-Engine factory remains SQLAlchemy async (required under SQLModel).
-
-When Settings.database_url is unset (development only), the engine is not
-created and get_session raises so protected paths fail closed.
+Credentials (DB_HOST/DB_USER/DB_PASSWORD/DB_NAME) build the async DSN; when they
+are unset (development only), the engine is not created and get_session fails closed.
 """
 
 from __future__ import annotations
@@ -31,10 +28,10 @@ _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
 def get_engine():
-    """Return the process-wide async engine, creating it if configured."""
+    """Return the process-wide async engine, creating it if credentials are set."""
     global _engine, _session_factory
     settings = get_settings()
-    if not settings.database_url:
+    if not settings.db_host:
         return None
     if _engine is None:
         _engine = create_async_engine(
@@ -77,8 +74,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     factory = get_session_factory()
     if factory is None:
         raise RuntimeError(
-            "Database is not configured. Set DATABASE_URL "
-            "(e.g. postgresql+asyncpg://user:pass@host/db)."
+            "Database is not configured. Set DB_HOST, DB_USER, "
+            "DB_PASSWORD, DB_NAME (optional DB_PORT)."
         )
     async with factory() as session:
         yield session

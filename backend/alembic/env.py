@@ -1,10 +1,7 @@
-"""Alembic environment — uses synchronous DATABASE_URL_SYNC / DB_* creds.
+"""Alembic environment — credentials only → postgresql+psycopg sync URL.
 
 SQLModel.metadata is the schema source of truth for compare/autogenerate.
 Apply with: alembic upgrade head
-
-Always normalizes postgres:// → postgresql+psycopg:// so Render-style
-DATABASE_URL does not raise: Can't load plugin: sqlalchemy.dialects:postgres
 """
 
 from __future__ import annotations
@@ -15,10 +12,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
-from app.core_platform.shared.settings import (
-    _with_driver,
-    get_settings,
-)
+from app.core_platform.shared.settings import get_settings
 from app import models  # noqa: F401
 
 config = context.config
@@ -28,16 +22,12 @@ if config.config_file_name is not None:
 target_metadata = SQLModel.metadata
 
 settings = get_settings()
-sync_url = settings.database_url_sync or settings.database_url
-if sync_url:
-    sync_url = _with_driver(sync_url, "psycopg")
-    config.set_main_option("sqlalchemy.url", sync_url)
+sync_url = settings.require_database_url_sync()
+config.set_main_option("sqlalchemy.url", sync_url)
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
-    if url:
-        url = _with_driver(url, "psycopg")
+    url = config.get_main_option("sqlalchemy.url") or settings.require_database_url_sync()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -51,13 +41,11 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = config.get_main_option("sqlalchemy.url") or settings.require_database_url_sync()
     if not url or url.startswith("driver://"):
         raise RuntimeError(
-            "Set DB_HOST/DB_USER/DB_PASSWORD/DB_NAME or DATABASE_URL "
-            "(or DATABASE_URL_SYNC) before running alembic upgrade."
+            "Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME before running alembic upgrade."
         )
-    url = _with_driver(url, "psycopg")
     section = dict(config.get_section(config.config_ini_section, {}) or {})
     section["sqlalchemy.url"] = url
     connectable = engine_from_config(

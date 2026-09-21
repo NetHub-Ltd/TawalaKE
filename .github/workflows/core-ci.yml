@@ -32,7 +32,12 @@ jobs:
           --health-retries 10
     env:
       ENVIRONMENT: test
-      DATABASE_URL: postgresql+asyncpg://tawala:tawala@localhost:5432/tawala_core_test
+      LOG_LEVEL: DEBUG
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: tawala
+      DB_PASSWORD: tawala
+      DB_NAME: tawala_core_test
     steps:
       - uses: actions/checkout@v4
 
