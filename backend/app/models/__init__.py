@@ -20,7 +20,13 @@ from app.models.security import (
 )
 from app.models.inventory import StockLevel, StockMovement
 from app.models.sales import SalesDocument, SalesLine, SalesPayment
-from app.models.accounting import FinancialEntry
+from app.models.accounting import (
+    Account,
+    FinancialEntry,
+    JournalEntry,
+    JournalLine,
+    PaymentAllocation,
+)
 from app.models.purchasing import (
     GoodsReceipt,
     GoodsReceiptLine,
@@ -61,6 +67,10 @@ __all__ = [
     "SalesLine",
     "SalesPayment",
     "FinancialEntry",
+    "Account",
+    "JournalEntry",
+    "JournalLine",
+    "PaymentAllocation",
     "PurchaseOrder",
     "PurchaseOrderLine",
     "GoodsReceipt",

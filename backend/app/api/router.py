@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.api.routes import (
+    accounting,
     audit,
     catalog,
     configuration,
@@ -21,6 +22,7 @@ from app.api.routes import (
 
 api_router = APIRouter()
 api_router.include_router(health.router)
+api_router.include_router(accounting.router)
 api_router.include_router(identity.router)
 api_router.include_router(organization.router)
 api_router.include_router(security.router)

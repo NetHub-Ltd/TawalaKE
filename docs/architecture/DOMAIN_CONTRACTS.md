@@ -206,3 +206,20 @@ All mutations write a movement, update the level in the **same transaction**, em
 - Models: `backend/app/models/inventory.py`
 - Service: `backend/app/core_platform/inventory/service.py`
 - Routes: `backend/app/api/routes/inventory.py`
+
+## 9. Accounting contract (T10 / M20)
+
+Accounting is the **sole owner of financial truth**.
+
+| Entity | Role |
+|--------|------|
+| `Account` | Business chart of accounts |
+| `JournalEntry` / `JournalLine` | Balanced double-entry postings |
+| `PaymentAllocation` | Link payment journals to invoices/POs |
+| `FinancialEntry` | Domain adapter row (Sales/Purchasing) linked to `journal_entry_id` |
+
+### Rules
+- Journals must balance (debits = credits) or post is rejected.
+- Reversals create compensating journals; originals are marked `reversed` (never deleted).
+- Sales/Purchasing call `AccountingService.post_entry` only — they do not write journals directly.
+- Tax hook: optional `tax_code` / `tax_amount` on domain posts (Tax Payable account).

@@ -41,4 +41,5 @@ SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
     ("purchasing.order.manage", "Create/confirm/cancel purchase orders"),
     ("purchasing.receive", "Create and finalize goods receipts"),
     ("purchasing.payment.record", "Record supplier payments"),
+    ("accounting.read", "Read chart of accounts and journals"),
 ]
