@@ -1,13 +1,10 @@
 # Task — Core V2
 
 ## Completed
-- T1–T9
+- T1–T10
 
 ## In progress
-- **T10 Accounting Core**
-  - COA, journals, lines, allocations, reversals, tax hook
-  - post_entry adapter for Sales/Purchasing
-  - Migration 20260921_0007
+- **T11 CRM** — Party-backed profiles, notes, sales purchase history projection
 
 ## Next
-T11 — CRM / Customer Intelligence
+T12 — Reporting / Read Model Layer

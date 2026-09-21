@@ -223,3 +223,19 @@ Accounting is the **sole owner of financial truth**.
 - Reversals create compensating journals; originals are marked `reversed` (never deleted).
 - Sales/Purchasing call `AccountingService.post_entry` only — they do not write journals directly.
 - Tax hook: optional `tax_code` / `tax_amount` on domain posts (Tax Payable account).
+
+## 10. CRM contract (T11)
+
+CRM organizes **customer intelligence** on top of Party identity.
+
+| Entity | Role |
+|--------|------|
+| `CustomerProfile` | Business-scoped credit, segment, tags (not identity) |
+| `CustomerNote` | Staff notes |
+| `CustomerActivity` | CRM activity history |
+
+### Rules
+- Identity remains `Party` + `PartyBusinessLink` (customer).
+- Purchase history is **queried from Sales** finalized invoices — not copied into CRM tables.
+- **Credit status authority:** `CustomerProfile.credit_status` / `credit_limit` (CRM). Accounting may inform UI later; CRM does not post journals.
+- CRM never mutates Sales documents or Accounting journals.
