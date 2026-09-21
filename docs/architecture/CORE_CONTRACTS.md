@@ -3,7 +3,7 @@
 **Branch:** `core/v2` only  
 **Gate:** M11 — Core Gate Closure & Contract Freeze  
 **Status:** Binding for all future domain work on this branch  
-**Related:** `AGENTS.md`, `MERGE_POLICY.md`, `TAWALA_CORE_DESIGN.md`, `TAWALA_CORE_DEVELOPMENT_SPEC.md`
+**Related:** `AGENTS.md`, `MERGE_POLICY.md`, `TAWALA_CORE_DESIGN.md`, `TAWALA_CORE_DEVELOPMENT_SPEC.md`, **`DOMAIN_CONTRACTS.md`** (Org/Party/Catalog ownership)
 
 This document is the single place future domains must consult for cross-cutting Core guarantees.  
 Domains **consume** these contracts. They do **not** invent parallel tenancy, authorization, audit, or transaction rules.
@@ -371,3 +371,6 @@ Authenticate → Membership → RBAC permission → Entitlement → Scope → Do
 
 Never overload RBAC permission strings as plan gates.
 
+## 18. Domain ownership (T6)
+
+Entity ownership, hierarchy, and Catalog≠Inventory rules for downstream domains are defined in **`docs/architecture/DOMAIN_CONTRACTS.md`** (T6 / M16).

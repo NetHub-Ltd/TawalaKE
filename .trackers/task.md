@@ -1,20 +1,18 @@
 # Task — Core V2
 
 ## Completed
-- T1–T4 (contracts, postgres isolation, scope, audit/outbox)
+- T1–T5 (contracts, isolation, scope, audit/outbox, entitlements)
 
 ## In progress
-- **T5 Capability / Entitlement Kernel**
-  - Models: Capability, BusinessEntitlement
-  - EntitlementService + seed catalog
-  - Routes + require_capability
-  - POST /products gated on module.catalog
-  - Migration 20260921_0003
+- **T6 Core Domain Contract Layer**
+  - DOMAIN_CONTRACTS.md (Org / Party / Catalog ownership)
+  - Structural invariant tests (no stock on Product)
+  - CORE_CONTRACTS §18 pointer
 
 ## Next
-T6 — Core Domain Contract Layer
+T7 — Inventory Core (when scheduled)
 
 ## Hard rules
 - Never PR core/** → main/dev
-- SQLModel AsyncSession + session.exec for ORM
-- Alembic is the only sync DB path
+- SQLModel AsyncSession + session.exec
+- Catalog ≠ Inventory
