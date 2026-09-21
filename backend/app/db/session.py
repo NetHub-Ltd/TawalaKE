@@ -1,5 +1,11 @@
 """Async database engine and SQLModel session factory + RLS helpers.
 
+Infrastructure boundary: ``create_async_engine`` / ``async_sessionmaker`` come from
+``sqlalchemy.ext.asyncio`` (no SQLModel equivalent). All application sessions are
+``sqlmodel.ext.asyncio.session.AsyncSession``. Prefer ``session.exec(select(...))``
+for ORM queries; ``session.execute(text(...))`` is reserved for raw SQL (GUCs).
+Alembic remains the only sync DB path.
+
 Uses ``sqlmodel.ext.asyncio.session.AsyncSession`` as the session type.
 Engine factory remains SQLAlchemy async (required under SQLModel).
 
@@ -81,7 +87,13 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 async def set_tenant_guc(
     session: AsyncSession, business_id: UUID | None, *, bypass: bool = False
 ) -> None:
-    """Set transaction-local GUCs used by RLS policies."""
+    """Set transaction-local GUCs used by RLS policies.
+
+    Does **not** touch the SQLAlchemy identity map. Callers that need a clean
+    read after switching tenants should open a new session or run raw SQL.
+    Never call ``session.expire_all()`` here — it forces lazy IO on the next
+    attribute access and breaks async fixtures (MissingGreenlet).
+    """
     settings = get_settings()
     if not settings.rls_enabled:
         return

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import select
+from sqlmodel import select
 
 from app.db.session import set_tenant_guc
 from app.models.security import Membership, MembershipStatus
@@ -76,12 +76,37 @@ async def test_membership_revocation_blocks_access(client, two_tenants, db_sessi
 
 
 async def test_rls_hides_other_tenant_products(db_session, two_tenants):
-    """Direct SQL with tenant GUC must not see other business products."""
-    from app.models.catalog import Product
+    """Direct SQL with tenant GUC must not see other business products.
+
+    Uses raw SQL counts so results are not influenced by the ORM identity map.
+    Skips when the DB role is superuser (Postgres superusers bypass RLS even
+    with FORCE ROW LEVEL SECURITY).
+    """
+    from sqlalchemy import text
 
     t = two_tenants
+
+    is_super = (
+        await db_session.execute(text("SELECT current_setting('is_superuser')"))
+    ).scalar_one()
+    if is_super == "on":
+        pytest.skip("RLS is not enforced for PostgreSQL superusers")
+
     await set_tenant_guc(db_session, t["biz_a"], bypass=False)
-    rows = (await db_session.scalars(select(Product))).all()
-    ids = {p.id for p in rows}
-    assert t["prod_a"] in ids
-    assert t["prod_b"] not in ids
+
+    # Raw SQL — avoids identity-map leakage of Product instances seeded under bypass.
+    row_a = (
+        await db_session.execute(
+            text("SELECT id FROM products WHERE id = CAST(:id AS uuid)"),
+            {"id": str(t["prod_a"])},
+        )
+    ).scalar()
+    row_b = (
+        await db_session.execute(
+            text("SELECT id FROM products WHERE id = CAST(:id AS uuid)"),
+            {"id": str(t["prod_b"])},
+        )
+    ).scalar()
+
+    assert row_a is not None, "tenant product should be visible under matching GUC"
+    assert row_b is None, "other-tenant product must be hidden by RLS"

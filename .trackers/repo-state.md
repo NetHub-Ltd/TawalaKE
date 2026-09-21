@@ -1,14 +1,15 @@
 # Repository State — Core V2
 
-- Branch: `core/v2`
+- Branch: `feat/t4-audit-outbox-idempotency` (PR target: `core/v2`)
 - Isolation: never PR `core/**` into `main`/`dev`
-- Contracts: `docs/architecture/CORE_CONTRACTS.md` (scope semantics M13 frozen)
+- Contracts: `docs/architecture/CORE_CONTRACTS.md`
 - Last updated: 2026-09-20
 
 ## Gates
 | Gate | Status |
 |------|--------|
-| M11 | Done |
-| M12 | Done (CI green) |
-| M13 | Done (empty scope = unrestricted; assert_scope + tests) |
-| M14–M23 | Open |
+| T1 Contract freeze | Done |
+| T2 Postgres isolation | Done |
+| T3 Scope hardening | Done |
+| T4 Audit/Outbox/Idempotency | In progress on this branch |
+| T5–T13 | Open |

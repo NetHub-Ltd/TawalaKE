@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
+from app.models.base import utc_now
 from app.models.organization import (
     Branch,
     BranchStatus,
@@ -32,23 +32,23 @@ class OrganizationService:
         self._session = session
 
     async def require_active_membership(self, user_id: UUID, business_id: UUID) -> Membership:
-        m = await self._session.scalar(
+        m = (await self._session.exec(
             select(Membership).where(
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
                 Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
         if m is None:
             raise DomainError(DomainErrorCode.FORBIDDEN, "No active membership for this business")
         return m
 
     async def create_business(self, data: BusinessCreate, *, owner_user_id: UUID) -> Business:
         if data.slug:
-            existing = await self._session.scalar(
+            existing = (await self._session.exec(
                 select(Business).where(Business.slug == data.slug)
-            )
+            )).first()
             if existing:
                 raise DomainError(DomainErrorCode.CONFLICT, "Slug already in use")
         business = Business(
@@ -68,7 +68,7 @@ class OrganizationService:
             business_id=business.id,
             user_id=owner_user_id,
             status=MembershipStatus.ACTIVE,
-            activated_at=__import__("datetime").datetime.now(_UTC),
+            activated_at=utc_now(),
         )
         self._session.add(membership)
         await self._session.flush()
@@ -105,7 +105,7 @@ class OrganizationService:
             business.name = data.name
         if data.slug is not None:
             business.slug = data.slug
-        business.updated_at = datetime.utcnow()
+        business.updated_at = utc_now()
         self._session.add(business)
         await self._session.commit()
         await self._session.refresh(business)
@@ -143,7 +143,7 @@ class OrganizationService:
 
     async def list_branches(self, business_id: UUID, *, user_id: UUID) -> list[Branch]:
         await self.require_active_membership(user_id, business_id)
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(Branch).where(Branch.business_id == business_id)
         )
         return list(result.all())
@@ -191,7 +191,7 @@ class OrganizationService:
         if branch is None:
             raise DomainError(DomainErrorCode.NOT_FOUND, "Branch not found")
         await self.require_active_membership(user_id, branch.business_id)
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(Location).where(Location.branch_id == branch_id)
         )
         return list(result.all())

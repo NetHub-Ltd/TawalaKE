@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
+
+from app.models.base import utc_now
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -31,7 +33,7 @@ class EventService:
         event = DomainEvent(
             id=uuid4(),
             event_type=event_type,
-            occurred_at=datetime.now(UTC),
+            occurred_at=utc_now(),
             business_id=business_id,
             actor_user_id=actor_user_id,
             request_id=request_id,

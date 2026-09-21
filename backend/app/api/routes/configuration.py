@@ -30,7 +30,10 @@ async def set_config(
 ) -> ConfigRead:
     try:
         row = await ConfigService(session).set(
-            ctx.business_id, body.key, body.value
+            ctx.business_id,
+            body.key,
+            body.value,
+            actor_user_id=ctx.actor_user_id,
         )
     except DomainError as exc:
         raise _map(exc) from exc
