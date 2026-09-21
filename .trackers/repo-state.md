@@ -1,15 +1,12 @@
 # Repository State — Core V2
 
-- Branch: `feat/t4-audit-outbox-idempotency` (PR target: `core/v2`)
-- Isolation: never PR `core/**` into `main`/`dev`
-- Contracts: `docs/architecture/CORE_CONTRACTS.md`
-- Last updated: 2026-09-20
+- Branch: `feat/t5-capability-entitlement-kernel` → PR target `core/v2`
+- Isolation: never merge core into main/dev
+- Last updated: 2026-09-21
 
 ## Gates
 | Gate | Status |
 |------|--------|
-| T1 Contract freeze | Done |
-| T2 Postgres isolation | Done |
-| T3 Scope hardening | Done |
-| T4 Audit/Outbox/Idempotency | In progress on this branch |
-| T5–T13 | Open |
+| T1–T4 | Done (merged) |
+| T5 Capability / Entitlement | In progress |
+| T6–T13 | Open |

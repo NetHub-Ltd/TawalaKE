@@ -1,19 +1,20 @@
 # Task — Core V2
 
-## Completed (T-series aligned)
-- T1 Core Gate Closure & Contract Freeze (`CORE_CONTRACTS.md`)
-- T2 Real PostgreSQL Isolation & Security Proof
-- T3 Authorization & Scope Hardening
-- **T4 Audit, Event, Outbox & Idempotency Completion** (this branch)
-  - `OutboxPublisher` + worker CLI (`python -m app.core_platform.events.worker`)
-  - Config `set` now emits audit + domain event
-  - Contracts §7–9 updated with publisher pattern + idempotency categories
-  - Tests: `tests/events/test_outbox_publisher.py`, `tests/unit/test_idempotency_semantics.py`
+## Completed
+- T1–T4 (contracts, postgres isolation, scope, audit/outbox)
+
+## In progress
+- **T5 Capability / Entitlement Kernel**
+  - Models: Capability, BusinessEntitlement
+  - EntitlementService + seed catalog
+  - Routes + require_capability
+  - POST /products gated on module.catalog
+  - Migration 20260921_0003
 
 ## Next
-T5 — Capability / Entitlement Kernel
+T6 — Core Domain Contract Layer
 
 ## Hard rules
-- Never PR `core/**` → `main`/`dev`
-- No FakeSession for isolation guarantees
-- No frontend on this branch
+- Never PR core/** → main/dev
+- SQLModel AsyncSession + session.exec for ORM
+- Alembic is the only sync DB path

@@ -4,6 +4,7 @@ from app.models.audit import AuditRecord
 from app.models.base import BaseMixin
 from app.models.catalog import Category, Product, Service
 from app.models.configuration import BusinessConfig
+from app.models.entitlements import BusinessEntitlement, Capability
 from app.models.events import DomainEvent, OutboxEntry
 from app.models.idempotency import IdempotencyRecord
 from app.models.identity import Credential, Session, User
@@ -42,4 +43,6 @@ __all__ = [
     "AuditRecord",
     "BusinessConfig",
     "IdempotencyRecord",
+    "Capability",
+    "BusinessEntitlement",
 ]
