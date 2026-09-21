@@ -21,6 +21,8 @@ class FinancialEntryType(StrEnum):
     SALE_REVENUE = "sale_revenue"
     CUSTOMER_RECEIPT = "customer_receipt"
     SALE_RETURN = "sale_return"
+    SUPPLIER_LIABILITY = "supplier_liability"
+    SUPPLIER_PAYMENT = "supplier_payment"
 
 
 class FinancialEntry(BaseMixin, table=True):
