@@ -196,6 +196,15 @@ async def two_tenants(db_session: AsyncSession, client: AsyncClient) -> dict:
 
     await db_session.commit()
 
+    # T5: product paths require module.catalog entitlement (deny-by-default)
+    from app.core_platform.entitlements.service import EntitlementService
+
+    await set_tenant_guc(db_session, None, bypass=True)
+    ent = EntitlementService(db_session)
+    await ent.ensure_catalog_seeded()
+    await ent.grant(biz_a_id, "module.catalog", source="test")
+    await ent.grant(biz_b_id, "module.catalog", source="test")
+
     async def _login(email: str) -> str:
         r = await client.post(
             "/api/v1/auth/login", json={"email": email, "password": pwd}

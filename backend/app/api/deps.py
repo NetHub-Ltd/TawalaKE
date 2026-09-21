@@ -122,3 +122,27 @@ def require_perms(*codes: str):
         return ctx
 
     return _checker
+
+
+def require_capability(*codes: str):
+    """Dependency factory: RBAC already applied via get_tenant_context path when combined.
+
+    Use with require_perms for full chain, or after get_tenant_context.
+    Checks product entitlements for the tenant business (deny by default).
+    """
+
+    async def _checker(
+        ctx: TenantContext = Depends(get_tenant_context),
+        session: AsyncSession = Depends(get_session),
+    ) -> TenantContext:
+        from app.core_platform.entitlements.service import EntitlementService
+
+        svc = EntitlementService(session)
+        for code in codes:
+            try:
+                await svc.require(ctx.business_id, code)
+            except DomainError as exc:
+                raise HTTPException(status_code=403, detail=exc.message) from exc
+        return ctx
+
+    return _checker

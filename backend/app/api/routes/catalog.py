@@ -9,6 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.api.deps import require_perms
 from app.core_platform.catalog.service import CatalogService
+from app.core_platform.entitlements.service import EntitlementService
 from app.core_platform.shared.types import DomainError, DomainErrorCode, TenantContext
 from app.db.session import get_session
 from app.schemas.catalog import (
@@ -39,6 +40,10 @@ async def create_product(
     ctx: TenantContext = Depends(require_perms("catalog.product.create")),
     session: AsyncSession = Depends(get_session),
 ) -> ProductRead:
+    try:
+        await EntitlementService(session).require(ctx.business_id, "module.catalog")
+    except DomainError as exc:
+        raise _map(exc) from exc
     try:
         p = await CatalogService(session).create_product(
             body, user_id=ctx.actor_user_id, business_id=ctx.business_id

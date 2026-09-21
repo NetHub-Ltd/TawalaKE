@@ -347,3 +347,27 @@ From those, Settings builds:
 Explicit ``DATABASE_URL`` / ``DATABASE_URL_SYNC`` still work (CI). Sync is derived from async if only async is set.
 
 **Startup:** ``start.sh`` runs ``alembic upgrade head`` then uvicorn. FastAPI **lifespan** fails process start if Postgres is unreachable.
+
+## 17. Capabilities & entitlements (T5 / M15)
+
+Product **capabilities** are orthogonal to RBAC **permissions**:
+
+| Axis | Question | Implementation |
+|------|----------|----------------|
+| Permission | May this *user* perform action X? | Membership → Role → Permission codes |
+| Capability / Entitlement | Is feature X enabled for this *business*? | `Capability` catalog + `BusinessEntitlement` grants |
+
+**Evaluation order** (deny by default at each step):
+
+```text
+Authenticate → Membership → RBAC permission → Entitlement → Scope → Domain rule → Audit
+```
+
+- Catalog seed: `backend/app/core_platform/entitlements/seed.py` (`module.*`, `limit.*`, `flag.*`)
+- Service: `EntitlementService` (`has` / `require` / `limit` / `grant` / `revoke`)
+- FastAPI: `require_capability("module.catalog")` in `app.api.deps`
+- Example enforcement: `POST /api/v1/products` requires entitlement `module.catalog` in addition to `catalog.product.create`
+- Missing or expired entitlement → `DomainErrorCode.FORBIDDEN`
+
+Never overload RBAC permission strings as plan gates.
+
