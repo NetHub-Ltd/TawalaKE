@@ -1,5 +1,5 @@
 # Build tawala-core image on core/v2. Never tags as product tawala-api.
-# No runtime smoke here — app requires a live DB (FastAPI lifespan + start.sh).
+# Multi-platform (linux/amd64, linux/arm64) on push when registry is configured.
 name: Core Image
 
 on:
@@ -28,14 +28,19 @@ jobs:
         run: |
           echo "tawala-core:${{ steps.meta.outputs.sha }}" | grep -vq tawala-api
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build image
+      - name: Build (PR / no registry) — linux/amd64
+        if: github.event_name == 'pull_request' || vars.CORE_IMAGE_REGISTRY == ''
         uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
+          platforms: linux/amd64
           push: false
           load: true
           tags: |
@@ -52,12 +57,16 @@ jobs:
           username: ${{ secrets.CORE_IMAGE_USERNAME }}
           password: ${{ secrets.CORE_IMAGE_PASSWORD }}
 
-      - name: Push tawala-core tags only
+      - name: Build & push multi-platform
         if: github.event_name == 'push' && vars.CORE_IMAGE_REGISTRY != ''
-        run: |
-          REG="${{ vars.CORE_IMAGE_REGISTRY }}"
-          SHA="${{ steps.meta.outputs.sha }}"
-          docker tag "tawala-core:${SHA}" "${REG}/tawala-core:${SHA}"
-          docker tag "tawala-core:${SHA}" "${REG}/tawala-core:core-v2"
-          docker push "${REG}/tawala-core:${SHA}"
-          docker push "${REG}/tawala-core:core-v2"
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ vars.CORE_IMAGE_REGISTRY }}/tawala-core:${{ steps.meta.outputs.sha }}
+            ${{ vars.CORE_IMAGE_REGISTRY }}/tawala-core:core-v2
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
