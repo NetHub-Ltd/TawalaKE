@@ -1,10 +1,11 @@
 """Shared fixtures — real PostgreSQL only. No FakeSession.
 
-Requires DATABASE_URL (postgresql+asyncpg://...) and ENVIRONMENT=test.
-CI provides a Postgres service and sets both variables.
+Requires DB credentials (DB_HOST, DB_USER, DB_PASSWORD, DB_NAME) and ENVIRONMENT=test.
+CI provides a Postgres service and sets those variables.
 
 Note: migration setup is a *sync* session-scoped fixture so it does not
 conflict with pytest-asyncio's default function-scoped event loop.
+Pytest-asyncio options live only in pyproject.toml (single source of truth).
 """
 
 from __future__ import annotations
@@ -26,27 +27,31 @@ from app.db.session import dispose_engine, get_session_factory, reset_engine, se
 from app.main import app
 
 
-def _has_database_url() -> bool:
-    return bool(os.environ.get("DATABASE_URL", "").strip())
+def _has_db_credentials() -> bool:
+    return all(
+        os.environ.get(k, "").strip()
+        for k in ("DB_HOST", "DB_USER", "DB_NAME")
+    ) and os.environ.get("DB_PASSWORD") is not None
 
 
 @pytest.fixture(scope="session")
-def database_url() -> str:
-    if not _has_database_url():
-        pytest.skip("DATABASE_URL not set — PostgreSQL required")
+def database_url_sync() -> str:
+    """Sync DSN for Alembic (built from credentials only)."""
+    if not _has_db_credentials():
+        pytest.skip("DB_HOST/DB_USER/DB_PASSWORD/DB_NAME not set — PostgreSQL required")
     os.environ["ENVIRONMENT"] = "test"
     clear_settings_cache()
     reset_engine()
-    return get_settings().require_database_url()
+    return get_settings().require_database_url_sync()
 
 
 @pytest.fixture(scope="session")
-def prepared_database(database_url: str) -> None:
+def prepared_database(database_url_sync: str) -> None:
     """Run Alembic migrations once per test session (sync — avoids ScopeMismatch)."""
     clear_settings_cache()
     reset_engine()
     cfg = Config("alembic.ini")
-    cfg.set_main_option("sqlalchemy.url", database_url)
+    cfg.set_main_option("sqlalchemy.url", database_url_sync)
     command.upgrade(cfg, "head")
 
 

@@ -1,12 +1,12 @@
 """Application settings for Tawala Core.
 
-DB credentials build two URLs:
-  - database_url       → postgresql+asyncpg://...  (SQLModel AsyncSession)
-  - database_url_sync  → postgresql+psycopg://...  (Alembic)
+Database configuration is **credentials only** (no full DATABASE_URL input):
 
-Render/Heroku-style DATABASE_URL often uses the non-SQLAlchemy scheme
-``postgres://`` — that is normalized here so Alembic does not fail with:
-  NoSuchModuleError: Can't load plugin: sqlalchemy.dialects:postgres
+  DB_HOST, DB_PORT (optional, default 5432), DB_USER, DB_PASSWORD, DB_NAME
+
+From those we always build:
+  - database_url      → postgresql+asyncpg://…  (SQLModel AsyncSession)
+  - database_url_sync → postgresql+psycopg://…  (Alembic)
 
 See docs/architecture/CORE_CONTRACTS.md.
 """
@@ -15,33 +15,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
-from urllib.parse import quote_plus, urlparse, urlunparse
+from urllib.parse import quote_plus
 
-from pydantic import Field, model_validator
+from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-def _normalize_postgres_scheme(url: str) -> str:
-    """Map postgres:// (and bare postgresql://) to a real SQLAlchemy scheme later."""
-    if url.startswith("postgres://"):
-        return "postgresql://" + url[len("postgres://") :]
-    return url
-
-
-def _with_driver(url: str, driver: str) -> str:
-    """Ensure URL uses postgresql+{driver}:// (asyncpg | psycopg)."""
-    url = _normalize_postgres_scheme(url)
-    # Strip any existing driver suffix on the scheme
-    for prefix in (
-        "postgresql+asyncpg://",
-        "postgresql+psycopg://",
-        "postgresql+psycopg2://",
-        "postgresql://",
-    ):
-        if url.startswith(prefix):
-            rest = url[len(prefix) :]
-            return f"postgresql+{driver}://{rest}"
-    return url
 
 
 class Settings(BaseSettings):
@@ -57,83 +34,75 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = Field(
         default="development",
     )
+    log_level: str = Field(
+        default="DEBUG",
+        description="Loguru level (DEBUG|INFO|WARNING|ERROR). Default DEBUG.",
+    )
 
-    # --- DB credentials (preferred) ---
     db_host: str | None = Field(default=None, description="Postgres host")
     db_port: int = Field(default=5432, description="Postgres port")
     db_user: str | None = Field(default=None, description="Postgres user")
     db_password: str | None = Field(default=None, description="Postgres password")
     db_name: str | None = Field(default=None, description="Postgres database name")
 
-    # --- Or explicit URLs (override / CI convenience) ---
-    database_url: str | None = Field(
-        default=None,
-        description="Async URL (postgresql+asyncpg://...). Built from creds if unset.",
-    )
-    database_url_sync: str | None = Field(
-        default=None,
-        description="Sync URL for Alembic (postgresql+psycopg://...). Built from creds if unset.",
-    )
-
     database_pool_pre_ping: bool = True
     rls_enabled: bool = True
 
     @model_validator(mode="after")
-    def _build_urls_from_creds(self) -> Settings:
-        has_creds = all(
-            [self.db_host, self.db_user, self.db_password is not None, self.db_name]
-        )
-        if has_creds:
-            user = quote_plus(self.db_user or "")
-            password = quote_plus(self.db_password or "")
-            host = self.db_host
-            port = self.db_port
-            name = self.db_name
-            if not self.database_url:
-                self.database_url = (
-                    f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{name}"
-                )
-            if not self.database_url_sync:
-                self.database_url_sync = (
-                    f"postgresql+psycopg://{user}:{password}@{host}:{port}/{name}"
-                )
-
-        # Always normalize any provided URLs (Render/Heroku postgres://, etc.)
-        if self.database_url:
-            self.database_url = _with_driver(self.database_url, "asyncpg")
-        if self.database_url_sync:
-            self.database_url_sync = _with_driver(self.database_url_sync, "psycopg")
-        elif self.database_url:
-            # Derive sync from async when only DATABASE_URL is set
-            self.database_url_sync = _with_driver(self.database_url, "psycopg")
-
+    def _require_db_creds_in_strict_envs(self) -> Settings:
+        if self.environment in ("test", "production"):
+            self.require_db_credentials()
         return self
 
-    def require_database_url(self) -> str:
-        if not self.database_url:
+    def require_db_credentials(self) -> None:
+        missing: list[str] = []
+        if not self.db_host:
+            missing.append("DB_HOST")
+        if not self.db_user:
+            missing.append("DB_USER")
+        if self.db_password is None:
+            missing.append("DB_PASSWORD")
+        if not self.db_name:
+            missing.append("DB_NAME")
+        if missing:
             raise RuntimeError(
-                "Database is not configured. Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME "
-                "(and optional DB_PORT) or DATABASE_URL "
-                f"(environment={self.environment})."
+                "Database credentials required: "
+                + ", ".join(missing)
+                + f" (environment={self.environment}). "
+                "Set DB_HOST, DB_USER, DB_PASSWORD, DB_NAME (optional DB_PORT)."
             )
+
+    def _dsn(self, driver: str) -> str:
+        self.require_db_credentials()
+        user = quote_plus(self.db_user or "")
+        password = quote_plus(self.db_password or "")
+        return (
+            f"postgresql+{driver}://{user}:{password}"
+            f"@{self.db_host}:{self.db_port}/{self.db_name}"
+        )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def database_url(self) -> str:
+        """Async SQLAlchemy URL (asyncpg). Built from credentials only."""
+        return self._dsn("asyncpg")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def database_url_sync(self) -> str:
+        """Sync SQLAlchemy URL (psycopg) for Alembic. Built from credentials only."""
+        return self._dsn("psycopg")
+
+    def require_database_url(self) -> str:
         return self.database_url
 
     def require_database_url_sync(self) -> str:
-        if not self.database_url_sync:
-            raise RuntimeError(
-                "Sync database URL is not configured. Set DB_* credentials or "
-                "DATABASE_URL_SYNC for Alembic."
-            )
         return self.database_url_sync
 
 
 @lru_cache
 def get_settings() -> Settings:
-    settings = Settings()
-    if settings.environment in ("test", "production"):
-        settings.require_database_url()
-        settings.require_database_url_sync()
-    return settings
+    return Settings()
 
 
 def clear_settings_cache() -> None:

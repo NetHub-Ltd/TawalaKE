@@ -20,19 +20,25 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: tawala
-          POSTGRES_PASSWORD: tawala
+          POSTGRES_USER: core_ci
           POSTGRES_DB: tawala_core_test
+          # Trust local connections in the CI service network (no secret to scan).
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U tawala -d tawala_core_test"
+          --health-cmd "pg_isready -U core_ci -d tawala_core_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
       ENVIRONMENT: test
-      DATABASE_URL: postgresql+asyncpg://tawala:tawala@localhost:5432/tawala_core_test
+      LOG_LEVEL: DEBUG
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: core_ci
+      DB_PASSWORD: ""
+      DB_NAME: tawala_core_test
     steps:
       - uses: actions/checkout@v4
 
