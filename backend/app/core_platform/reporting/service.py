@@ -265,7 +265,7 @@ class ReportingService:
                 {
                     "product_id": str(r.product_id),
                     "location_id": str(r.location_id),
-                    "quantity": str(r.quantity),
+                    "quantity_on_hand": str(r.quantity_on_hand),
                 }
                 for r in rows
             ],

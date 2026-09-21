@@ -116,7 +116,7 @@ async def test_sales_by_day_from_finalized_invoices(db_session):
 
     inv_on = await report.inventory_on_hand(business_id=biz.id, location_id=loc.id)
     assert any(
-        i["product_id"] == str(product.id) and Decimal(i["quantity"]) == Decimal("8")
+        i["product_id"] == str(product.id) and Decimal(i["quantity_on_hand"]) == Decimal("8")
         for i in inv_on["items"]
     )
 
