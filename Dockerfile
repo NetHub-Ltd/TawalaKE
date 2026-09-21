@@ -1,13 +1,11 @@
-# Tawala Core image — tag as tawala-core:<sha> only (MERGE_POLICY).
-# Never publish as product tawala-api.
+# Convenience Dockerfile for builds from the repository root.
+# Sources live under backend/; this file only re-paths COPY instructions.
 #
-# Build context MUST be the backend/ directory:
+# Preferred (CI uses this):
 #   docker build -t tawala-core:local -f backend/Dockerfile backend
-#   # or from inside backend/:
-#   docker build -t tawala-core:local .
 #
-# Do NOT run `docker build -f backend/Dockerfile .` from the repo root —
-# that sends the wrong context (no app/, start.sh, pyproject.toml).
+# From repo root:
+#   docker build -t tawala-core:local .
 
 FROM python:3.13-slim AS builder
 
@@ -21,10 +19,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml README.md ./
-COPY app ./app
+COPY backend/pyproject.toml backend/README.md ./
+COPY backend/app ./app
 
-# venv avoids hard-coded PYTHONPATH and is portable across Python minors
 RUN python -m venv /install \
     && /install/bin/pip install --upgrade pip \
     && /install/bin/pip install .
@@ -42,10 +39,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /install /install
-COPY app ./app
-COPY alembic ./alembic
-COPY alembic.ini ./alembic.ini
-COPY start.sh ./start.sh
+COPY backend/app ./app
+COPY backend/alembic ./alembic
+COPY backend/alembic.ini ./alembic.ini
+COPY backend/start.sh ./start.sh
 
 RUN chmod +x /app/start.sh
 

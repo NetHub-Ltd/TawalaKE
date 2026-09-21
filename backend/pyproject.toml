@@ -3,7 +3,7 @@ name = "tawala-core"
 version = "0.1.0"
 description = "Tawala Core platform foundation (core/v2 — not product POS)"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
@@ -40,7 +40,7 @@ testpaths = ["tests"]
 
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 strict = false
 ignore_missing_imports = true
 packages = ["app"]
