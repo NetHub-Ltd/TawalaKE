@@ -11,6 +11,7 @@ from app.api.routes import (
     entitlements,
     health,
     identity,
+    inventory,
     organization,
     parties,
     security,
@@ -26,3 +27,4 @@ api_router.include_router(catalog.router)
 api_router.include_router(audit.router)
 api_router.include_router(configuration.router)
 api_router.include_router(entitlements.router)
+api_router.include_router(inventory.router)

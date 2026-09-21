@@ -30,4 +30,9 @@ SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
     ("security.scope.manage", "Manage membership scope assignments"),
     ("organization.entitlements.read", "List business entitlements"),
     ("organization.entitlements.manage", "Grant/revoke business entitlements"),
+    ("inventory.stock.read", "Read stock levels and movements"),
+    ("inventory.stock.receive", "Receive stock"),
+    ("inventory.stock.issue", "Issue stock"),
+    ("inventory.stock.adjust", "Adjust stock counts"),
+    ("inventory.stock.transfer", "Transfer stock between locations"),
 ]

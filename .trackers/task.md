@@ -1,18 +1,18 @@
 # Task — Core V2
 
 ## Completed
-- T1–T5 (contracts, isolation, scope, audit/outbox, entitlements)
+- T1–T6
 
 ## In progress
-- **T6 Core Domain Contract Layer**
-  - DOMAIN_CONTRACTS.md (Org / Party / Catalog ownership)
-  - Structural invariant tests (no stock on Product)
-  - CORE_CONTRACTS §18 pointer
+- **T7 Inventory Core**
+  - stock_levels + stock_movements
+  - receive / issue / adjust / transfer
+  - non-negative policy, idempotency, audit
+  - migration 20260921_0004 + RLS
 
 ## Next
-T7 — Inventory Core (when scheduled)
+T8 — Sales Core
 
 ## Hard rules
 - Never PR core/** → main/dev
-- SQLModel AsyncSession + session.exec
 - Catalog ≠ Inventory
