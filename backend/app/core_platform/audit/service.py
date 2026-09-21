@@ -8,7 +8,7 @@ from app.models.base import utc_now
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.audit import AuditOutcome, AuditRecord
@@ -56,7 +56,7 @@ class AuditService:
     async def list_for_business(
         self, business_id: UUID, *, limit: int = 100
     ) -> list[AuditRecord]:
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(AuditRecord)
             .where(AuditRecord.business_id == business_id)
             .order_by(AuditRecord.occurred_at.desc())

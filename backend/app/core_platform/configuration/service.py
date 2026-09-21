@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
@@ -17,13 +17,13 @@ class ConfigService:
         self._session = session
 
     async def get(self, business_id: UUID, key: str) -> BusinessConfig | None:
-        return await self._session.scalar(
+        return (await self._session.exec(
             select(BusinessConfig).where(
                 BusinessConfig.business_id == business_id,
                 BusinessConfig.key == key,
                 BusinessConfig.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
 
     async def set(
         self,

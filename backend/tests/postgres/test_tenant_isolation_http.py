@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
-from sqlalchemy import select
+from sqlmodel import select
 
 from app.db.session import set_tenant_guc
 from app.models.security import Membership, MembershipStatus
@@ -88,7 +88,7 @@ async def test_rls_hides_other_tenant_products(db_session, two_tenants):
 
     is_super = (
         await db_session.execute(text("SELECT current_setting('is_superuser')"))
-    ).scalar()
+    ).scalar_one()
     if is_super == "on":
         pytest.skip("RLS is not enforced for PostgreSQL superusers")
 

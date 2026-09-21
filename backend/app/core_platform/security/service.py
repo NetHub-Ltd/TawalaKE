@@ -7,7 +7,7 @@ from datetime import datetime
 from app.models.base import utc_now
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.security.permissions_seed import SYSTEM_PERMISSIONS
@@ -30,14 +30,14 @@ class MembershipService:
     async def get_active(
         self, user_id: UUID, business_id: UUID
     ) -> Membership | None:
-        return await self._session.scalar(
+        return (await self._session.exec(
             select(Membership).where(
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
                 Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
 
     async def invite(
         self,
@@ -58,12 +58,12 @@ class MembershipService:
                 m_prior = await self._session.get(Membership, prior.resource_id)
                 if m_prior is not None:
                     return m_prior
-        existing = await self._session.scalar(
+        existing = (await self._session.exec(
             select(Membership).where(
                 Membership.business_id == business_id,
                 Membership.user_id == user_id,
             )
-        )
+        )).first()
         if existing and existing.status not in (
             MembershipStatus.REVOKED,
             MembershipStatus.SUSPENDED,
@@ -199,7 +199,7 @@ class MembershipService:
         return m
 
     async def list_for_business(self, business_id: UUID) -> list[Membership]:
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(Membership).where(
                 Membership.business_id == business_id,
                 Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
@@ -214,9 +214,9 @@ class RoleService:
 
     async def ensure_system_permissions(self) -> None:
         for code, description in SYSTEM_PERMISSIONS:
-            existing = await self._session.scalar(
+            existing = (await self._session.exec(
                 select(Permission).where(Permission.code == code)
-            )
+            )).first()
             if existing is None:
                 self._session.add(
                     Permission(id=uuid4(), code=code, description=description)
@@ -233,9 +233,9 @@ class RoleService:
         return role
 
     async def attach_permission(self, role_id: UUID, permission_code: str) -> None:
-        perm = await self._session.scalar(
+        perm = (await self._session.exec(
             select(Permission).where(Permission.code == permission_code)
-        )
+        )).first()
         if perm is None:
             raise DomainError(DomainErrorCode.NOT_FOUND, f"Permission {permission_code}")
         existing = await self._session.get(RolePermission, (role_id, perm.id))
@@ -286,7 +286,7 @@ class RoleService:
         self._session.add(role)
         await self._session.flush()
         perms = (
-            await self._session.scalars(select(Permission))
+            await self._session.exec(select(Permission))
         ).all()
         for perm in perms:
             self._session.add(
@@ -309,7 +309,7 @@ class AuthorizationService:
     async def effective_permissions(self, membership_id: UUID) -> frozenset[str]:
         assert self._session is not None
         role_ids = (
-            await self._session.scalars(
+            await self._session.exec(
                 select(MembershipRole.role_id).where(
                     MembershipRole.membership_id == membership_id
                 )
@@ -318,7 +318,7 @@ class AuthorizationService:
         if not role_ids:
             return frozenset()
         perm_ids = (
-            await self._session.scalars(
+            await self._session.exec(
                 select(RolePermission.permission_id).where(
                     RolePermission.role_id.in_(role_ids)
                 )
@@ -327,7 +327,7 @@ class AuthorizationService:
         if not perm_ids:
             return frozenset()
         codes = (
-            await self._session.scalars(
+            await self._session.exec(
                 select(Permission.code).where(Permission.id.in_(perm_ids))
             )
         ).all()
@@ -377,21 +377,21 @@ class AuthorizationService:
         location_id: UUID | None = None,
     ) -> TenantContext:
         assert self._session is not None
-        m = await self._session.scalar(
+        m = (await self._session.exec(
             select(Membership).where(
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
                 Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
         if m is None:
             raise DomainError(
                 DomainErrorCode.FORBIDDEN, "No active membership for this business"
             )
         scopes = list(
             (
-                await self._session.scalars(
+                await self._session.exec(
                     select(ScopeAssignment).where(
                         ScopeAssignment.membership_id == m.id,
                         ScopeAssignment.deleted_at.is_(None),  # type: ignore[attr-defined]
@@ -465,7 +465,7 @@ class AuthorizationService:
         m = await self._session.get(Membership, membership_id)
         if m is None or m.business_id != business_id:
             raise DomainError(DomainErrorCode.NOT_FOUND, "Membership not found")
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(ScopeAssignment).where(
                 ScopeAssignment.membership_id == membership_id,
                 ScopeAssignment.deleted_at.is_(None),  # type: ignore[attr-defined]

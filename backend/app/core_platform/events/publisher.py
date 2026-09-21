@@ -15,7 +15,8 @@ from app.models.base import utc_now
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models.events import DomainEvent, OutboxEntry, OutboxStatus
@@ -82,7 +83,7 @@ class OutboxPublisher:
             .limit(limit)
             .with_for_update(skip_locked=True)
         )
-        rows = (await self._session.execute(stmt)).all()
+        rows = (await self._session.exec(stmt)).all()
         claimed: list[tuple[OutboxEntry, DomainEvent]] = []
         for entry, event in rows:
             entry.attempts = int(entry.attempts or 0) + 1

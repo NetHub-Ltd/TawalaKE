@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.identity.password import hash_password, hash_token, verify_password
@@ -34,13 +34,13 @@ class IdentityService:
                 if user is not None:
                     return user
         if data.email:
-            existing = await self._session.scalar(
+            existing = (await self._session.exec(
                 select(User).where(User.email == str(data.email).lower())
-            )
+            )).first()
             if existing:
                 raise DomainError(DomainErrorCode.CONFLICT, "Email already registered")
         if data.phone:
-            existing = await self._session.scalar(select(User).where(User.phone == data.phone))
+            existing = (await self._session.exec(select(User).where(User.phone == data.phone))).first()
             if existing:
                 raise DomainError(DomainErrorCode.CONFLICT, "Phone already registered")
 
@@ -88,21 +88,21 @@ class IdentityService:
     ) -> tuple[User, Session, str]:
         user: User | None = None
         if data.email:
-            user = await self._session.scalar(
+            user = (await self._session.exec(
                 select(User).where(User.email == str(data.email).lower())
-            )
+            )).first()
         elif data.phone:
-            user = await self._session.scalar(select(User).where(User.phone == data.phone))
+            user = (await self._session.exec(select(User).where(User.phone == data.phone))).first()
 
         if user is None or user.status != UserStatus.ACTIVE:
             raise DomainError(DomainErrorCode.UNAUTHORIZED, "Invalid credentials")
 
-        cred = await self._session.scalar(
+        cred = (await self._session.exec(
             select(Credential).where(
                 Credential.user_id == user.id,
                 Credential.type == CredentialType.PASSWORD,
             )
-        )
+        )).first()
         if cred is None or not verify_password(data.password, cred.secret_hash):
             raise DomainError(DomainErrorCode.UNAUTHORIZED, "Invalid credentials")
 
@@ -122,7 +122,7 @@ class IdentityService:
 
     async def logout(self, raw_token: str) -> None:
         token_h = hash_token(raw_token)
-        session = await self._session.scalar(select(Session).where(Session.token_hash == token_h))
+        session = (await self._session.exec(select(Session).where(Session.token_hash == token_h))).first()
         if session is None or session.revoked_at is not None:
             return
         session.revoked_at = utc_now()
@@ -131,7 +131,7 @@ class IdentityService:
 
     async def resolve_user(self, raw_token: str) -> User:
         token_h = hash_token(raw_token)
-        session = await self._session.scalar(select(Session).where(Session.token_hash == token_h))
+        session = (await self._session.exec(select(Session).where(Session.token_hash == token_h))).first()
         if session is None or session.revoked_at is not None:
             raise DomainError(DomainErrorCode.UNAUTHORIZED, "Invalid or revoked session")
         if session.expires_at < utc_now():

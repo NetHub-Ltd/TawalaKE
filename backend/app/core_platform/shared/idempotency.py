@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
@@ -15,13 +15,13 @@ from app.models.idempotency import IdempotencyRecord
 async def lookup(
     session: AsyncSession, *, scope: str, key: str
 ) -> IdempotencyRecord | None:
-    return await session.scalar(
+    return (await session.exec(
         select(IdempotencyRecord).where(
             IdempotencyRecord.scope == scope,
             IdempotencyRecord.key == key,
             IdempotencyRecord.deleted_at.is_(None),  # type: ignore[attr-defined]
         )
-    )
+    )).first()
 
 
 async def store(

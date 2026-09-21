@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
@@ -18,14 +18,14 @@ class CatalogService:
         self._session = session
 
     async def _require_membership(self, user_id: UUID, business_id: UUID) -> Membership:
-        m = await self._session.scalar(
+        m = (await self._session.exec(
             select(Membership).where(
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
                 Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
         if m is None:
             raise DomainError(
                 DomainErrorCode.FORBIDDEN, "No active membership for this business"
@@ -147,7 +147,7 @@ class CatalogService:
         self, *, user_id: UUID, business_id: UUID
     ) -> list[Product]:
         await self._require_membership(user_id, business_id)
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(Product).where(
                 Product.business_id == business_id,
                 Product.deleted_at.is_(None),  # type: ignore[attr-defined]
@@ -232,7 +232,7 @@ class CatalogService:
         self, *, user_id: UUID, business_id: UUID
     ) -> list[Category]:
         await self._require_membership(user_id, business_id)
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(Category).where(
                 Category.business_id == business_id,
                 Category.deleted_at.is_(None),  # type: ignore[attr-defined]

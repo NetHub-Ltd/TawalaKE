@@ -1,5 +1,11 @@
 """Async database engine and SQLModel session factory + RLS helpers.
 
+Infrastructure boundary: ``create_async_engine`` / ``async_sessionmaker`` come from
+``sqlalchemy.ext.asyncio`` (no SQLModel equivalent). All application sessions are
+``sqlmodel.ext.asyncio.session.AsyncSession``. Prefer ``session.exec(select(...))``
+for ORM queries; ``session.execute(text(...))`` is reserved for raw SQL (GUCs).
+Alembic remains the only sync DB path.
+
 Uses ``sqlmodel.ext.asyncio.session.AsyncSession`` as the session type.
 Engine factory remains SQLAlchemy async (required under SQLModel).
 

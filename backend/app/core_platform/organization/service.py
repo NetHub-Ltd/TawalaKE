@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
@@ -32,23 +32,23 @@ class OrganizationService:
         self._session = session
 
     async def require_active_membership(self, user_id: UUID, business_id: UUID) -> Membership:
-        m = await self._session.scalar(
+        m = (await self._session.exec(
             select(Membership).where(
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
                 Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
         if m is None:
             raise DomainError(DomainErrorCode.FORBIDDEN, "No active membership for this business")
         return m
 
     async def create_business(self, data: BusinessCreate, *, owner_user_id: UUID) -> Business:
         if data.slug:
-            existing = await self._session.scalar(
+            existing = (await self._session.exec(
                 select(Business).where(Business.slug == data.slug)
-            )
+            )).first()
             if existing:
                 raise DomainError(DomainErrorCode.CONFLICT, "Slug already in use")
         business = Business(
@@ -143,7 +143,7 @@ class OrganizationService:
 
     async def list_branches(self, business_id: UUID, *, user_id: UUID) -> list[Branch]:
         await self.require_active_membership(user_id, business_id)
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(Branch).where(Branch.business_id == business_id)
         )
         return list(result.all())
@@ -191,7 +191,7 @@ class OrganizationService:
         if branch is None:
             raise DomainError(DomainErrorCode.NOT_FOUND, "Branch not found")
         await self.require_active_membership(user_id, branch.business_id)
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(Location).where(Location.branch_id == branch_id)
         )
         return list(result.all())

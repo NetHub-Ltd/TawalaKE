@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlmodel import select
 
 from app.core_platform.events.publisher import OutboxPublisher
 from app.core_platform.events.service import EventService
@@ -30,9 +30,9 @@ async def test_publisher_marks_published(db_session):
     assert stats["published"] >= 1
     assert stats["failed"] == 0
 
-    entry = await db_session.scalar(
+    entry = (await db_session.exec(
         select(OutboxEntry).where(OutboxEntry.event_id == event.id)
-    )
+    )).first()
     assert entry is not None
     assert entry.status == OutboxStatus.PUBLISHED
     assert entry.attempts >= 1
@@ -55,9 +55,9 @@ async def test_publisher_retry_on_failure(db_session):
     stats = await pub.process_batch(limit=10)
     assert stats["failed"] >= 1
 
-    entry = await db_session.scalar(
+    entry = (await db_session.exec(
         select(OutboxEntry).where(OutboxEntry.event_id == event.id)
-    )
+    )).first()
     assert entry is not None
     assert entry.status == OutboxStatus.FAILED
     assert entry.attempts >= 1

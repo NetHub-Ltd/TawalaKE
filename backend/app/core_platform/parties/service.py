@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.shared.types import DomainError, DomainErrorCode
@@ -24,14 +24,14 @@ class PartyService:
         self._session = session
 
     async def _require_membership(self, user_id: UUID, business_id: UUID) -> Membership:
-        m = await self._session.scalar(
+        m = (await self._session.exec(
             select(Membership).where(
                 Membership.user_id == user_id,
                 Membership.business_id == business_id,
                 Membership.status == MembershipStatus.ACTIVE,
                 Membership.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
         if m is None:
             raise DomainError(
                 DomainErrorCode.FORBIDDEN, "No active membership for this business"
@@ -87,13 +87,13 @@ class PartyService:
             rel = PartyRelationship(data.relationship)
         except ValueError:
             rel = PartyRelationship.OTHER
-        existing = await self._session.scalar(
+        existing = (await self._session.exec(
             select(PartyBusinessLink).where(
                 PartyBusinessLink.business_id == business_id,
                 PartyBusinessLink.party_id == party_id,
                 PartyBusinessLink.relationship == rel,
             )
-        )
+        )).first()
         if existing and existing.deleted_at is None:
             raise DomainError(DomainErrorCode.CONFLICT, "Link already exists")
         link = PartyBusinessLink(
@@ -130,13 +130,13 @@ class PartyService:
         self, party_id: UUID, *, user_id: UUID, business_id: UUID
     ) -> Party:
         await self._require_membership(user_id, business_id)
-        link = await self._session.scalar(
+        link = (await self._session.exec(
             select(PartyBusinessLink).where(
                 PartyBusinessLink.party_id == party_id,
                 PartyBusinessLink.business_id == business_id,
                 PartyBusinessLink.deleted_at.is_(None),  # type: ignore[attr-defined]
             )
-        )
+        )).first()
         if link is None:
             # IDOR: do not reveal whether party exists globally
             raise DomainError(DomainErrorCode.NOT_FOUND, "Party not found")
@@ -149,7 +149,7 @@ class PartyService:
         self, business_id: UUID, *, user_id: UUID
     ) -> list[PartyBusinessLink]:
         await self._require_membership(user_id, business_id)
-        result = await self._session.scalars(
+        result = await self._session.exec(
             select(PartyBusinessLink).where(
                 PartyBusinessLink.business_id == business_id,
                 PartyBusinessLink.deleted_at.is_(None),  # type: ignore[attr-defined]
