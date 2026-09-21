@@ -7,9 +7,6 @@ from app.models.configuration import BusinessConfig
 from app.models.entitlements import BusinessEntitlement, Capability
 from app.models.events import DomainEvent, OutboxEntry
 from app.models.idempotency import IdempotencyRecord
-from app.models.inventory import StockLevel, StockMovement
-from app.models.sales import SalesDocument, SalesLine, SalesPayment
-from app.models.accounting import FinancialEntry
 from app.models.identity import Credential, Session, User
 from app.models.organization import Branch, Business, Location
 from app.models.parties import Party, PartyBusinessLink
@@ -20,6 +17,16 @@ from app.models.security import (
     Role,
     RolePermission,
     ScopeAssignment,
+)
+from app.models.inventory import StockLevel, StockMovement
+from app.models.sales import SalesDocument, SalesLine, SalesPayment
+from app.models.accounting import FinancialEntry
+from app.models.purchasing import (
+    GoodsReceipt,
+    GoodsReceiptLine,
+    PurchaseOrder,
+    PurchaseOrderLine,
+    PurchasePayment,
 )
 
 __all__ = [
@@ -54,4 +61,9 @@ __all__ = [
     "SalesLine",
     "SalesPayment",
     "FinancialEntry",
+    "PurchaseOrder",
+    "PurchaseOrderLine",
+    "GoodsReceipt",
+    "GoodsReceiptLine",
+    "PurchasePayment",
 ]

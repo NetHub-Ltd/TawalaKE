@@ -38,4 +38,7 @@ SYSTEM_PERMISSIONS: list[tuple[str, str]] = [
     ("sales.document.manage", "Create and convert sales documents"),
     ("sales.document.finalize", "Finalize invoices and returns"),
     ("sales.payment.record", "Record customer payments"),
+    ("purchasing.order.manage", "Create/confirm/cancel purchase orders"),
+    ("purchasing.receive", "Create and finalize goods receipts"),
+    ("purchasing.payment.record", "Record supplier payments"),
 ]
