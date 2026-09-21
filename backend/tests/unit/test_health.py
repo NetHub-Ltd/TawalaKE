@@ -3,14 +3,16 @@
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client():
-    transport = ASGITransport(app=app)
+    # lifespan off — unit tests must not require a live DB
+    transport = ASGITransport(app=app, lifespan="off")
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
@@ -34,12 +36,17 @@ async def test_ready_reflects_database_config(client):
     assert "database_ok" in body
 
 
-def test_settings_requires_url_in_test_env(monkeypatch):
+def test_settings_without_creds_in_development(monkeypatch):
+    """Development allows missing creds; database_url property then raises."""
     monkeypatch.setenv("ENVIRONMENT", "development")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    for key in ("DB_HOST", "DB_USER", "DB_PASSWORD", "DB_NAME", "DATABASE_URL"):
+        monkeypatch.delenv(key, raising=False)
     from app.core_platform.shared.settings import Settings, clear_settings_cache
 
     clear_settings_cache()
     s = Settings()
-    assert s.database_url is None
+    assert s.db_host is None
     assert s.app_name == "tawala-core"
+    with pytest.raises(RuntimeError, match="DB_HOST"):
+        _ = s.database_url
+    clear_settings_cache()
