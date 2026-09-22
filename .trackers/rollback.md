@@ -1,6 +1,5 @@
-# Rollback — Core V2 / T4
+# Rollback — T13 Certification
 
-- Topic branch: `feat/t4-audit-outbox-idempotency`
-- Rollback: close PR without merge; or revert merge commit on `core/v2`
-- No product `main`/`dev` impact (isolation policy)
-- No irreversible migrations in this change (publisher is application-only)
+- Topic branch: `feat/t13-cross-domain-certification`
+- Rollback: close PR unmerged — adds tests + docs only (no migrations)
+- No product main/dev impact

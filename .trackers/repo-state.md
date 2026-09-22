@@ -1,11 +1,12 @@
 # Repository State — Core V2
 
-- Branch: `feat/t6-domain-contract-layer` → PR target `core/v2`
-- Last updated: 2026-09-21
+- Branch target: `core/v2`
+- HEAD theme: T12 Reporting merged (PR #288); T13 certification in flight
+- Image: `tawala-core` / Python 3.13
+- DB: credentials only (DB_HOST/USER/PASSWORD/NAME)
 
 ## Gates
 | Gate | Status |
 |------|--------|
-| T1–T5 | Done (merged) |
-| T6 Domain contract layer | In progress |
-| T7+ | Open |
+| T1–T12 | Done |
+| T13 Certification | In progress (this branch) |
