@@ -1,9 +1,11 @@
 # Task
 Update backend/.env.example and add frontend/.env.example with platform + auth vars.
 
+## Goal
+#301 — Document platform org hard-delete cleanup window runbook.
+
 ## Completed
-- backend/.env.example: hard-session, platform hard-delete, MFA TTL knobs, comments
-- frontend/.env.example: AUTH_SECRET, BACKEND_URL, NEXT_PUBLIC_*
+- docs/platform/cleanup-window-runbook.md
 
 ## Out of scope
-Changing runtime defaults; deploying secrets
+Executing the cleanup; soft-delete product flow; merging other open PRs.

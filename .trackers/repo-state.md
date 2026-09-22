@@ -1,2 +1,4 @@
 # Repository State
-- Branch: chore/env-example-platform → PR to dev
+- Branch: docs/platform-cleanup-runbook (from origin/dev)
+- Target: dev
+- Issue: #301
