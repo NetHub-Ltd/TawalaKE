@@ -174,7 +174,7 @@ async def test_full_chain_tenant_stock_sale_pay_crm_report(db_session):
 
     pay = await sales.record_payment(
         business_id=t["biz_a"].id,
-        document_id=invoice.id,
+        invoice_id=invoice.id,
         amount=Decimal("300"),
         method="cash",
     )
