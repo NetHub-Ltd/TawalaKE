@@ -380,6 +380,20 @@ Entity ownership, hierarchy, and Catalog≠Inventory rules for downstream domain
 
 ---
 
+## Platform-scoped RLS (audit / domain_events)
+
+`audit_records` and `domain_events` allow **nullable** `business_id` for platform
+identity events (register/login). RLS policies (migration `20260922_0009`):
+
+| Clause | Rule |
+|--------|------|
+| **USING** (read) | `rls_bypass` **or** `business_id` matches `app.current_business_id` |
+| **WITH CHECK** (write) | same as USING **or** `business_id IS NULL` |
+
+Platform rows are **not** visible to tenant sessions (no bypass). Operators and
+tests that need them set `rls_bypass`. Domains must **not** disable RLS to write
+auth audit — write `business_id=NULL` and rely on WITH CHECK.
+
 ## Auth events (register / login)
 
 Platform identity mutations are audited via `record_activity` with `resource_type` of `user` / `session` and `business_id=None` (platform scope):
