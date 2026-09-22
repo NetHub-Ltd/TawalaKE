@@ -1,16 +1,23 @@
 # Task
 
 ## Goal
-#299 — /platform/login two-step UI (password + email MFA code).
+#300 — Platform orgs admin UI with hard-delete friction modal.
 
-## Scope completed
-- /platform/login page + PlatformLoginForm (password → code → session)
-- sessionStorage keys isolated from staff NextAuth
-- /platform landing with session check + sign out
-- Resend cooldown UI, error states, store-login cross-link
+## Product intent
+Operators need to find and permanently remove test orgs after cleanup, without accidental deletes.
 
-## Depends on
-#298 / PR #303 (MFA API) — must be merged for login to succeed against API.
+## Evidence
+- API exists on dev (#297): GET/DELETE /api/v1/platform/organizations
+- Friction contract: confirm_name, phrase DELETE, reason; flag PLATFORM_ORG_HARD_DELETE
+
+## Approach
+- /platform/orgs list + search
+- Modal friction matching API
+- Auth via platform sessionStorage token
+- Branched from feat/platform-login-ui (#299)
 
 ## Out of scope
-Org list/delete UI (#300)
+MFA API (#298), soft-delete product flow, create/update org forms
+
+## Risks
+Hard delete irreversible; flag must stay off outside cleanup window (#301)
