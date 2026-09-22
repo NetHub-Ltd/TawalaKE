@@ -3,13 +3,11 @@
 **Updated:** 2026-09-22
 
 ## Completed
-- T1–T12 (board #267–#275 closed; T12 = PR #288)
-- Ops: Docker 3.13, credentials-only DB, loguru, lifespan (PRs #285–#287)
+- T1–T13 domain program (board #267–#276 closed)
+- Ops: Docker 3.13, credentials-only DB, loguru, lifespan
 
-## In progress
-- **T13 / M23 (#276)** Cross-Domain Integrity & Full Core Certification
-  - `tests/certification/test_cross_domain_chain.py`
-  - `docs/architecture/CORE_ARCHITECTURE_MAP.md`
+## Docs
+- Root README is the documentation hub (links architecture docs)
 
 ## Remaining board
-- #245 M0.4 branch protection on main (ops — not domain)
+- #245 M0.4 branch protection on main (ops)
