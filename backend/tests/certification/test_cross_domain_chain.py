@@ -8,6 +8,10 @@ Chain under test:
 Asserts: tenant isolation, stock authority, sales authority,
 accounting posts, CRM non-duplication, reporting read-only projection,
 outbox claim/publish.
+
+Note: domain services often ``commit()``. Postgres GUCs set with
+``set_config(..., true)`` are transaction-local, so bypass must be
+re-applied after every committing call or RLS hides rows.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from uuid import uuid4
 
 import pytest
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core_platform.crm.service import CrmService
 from app.core_platform.events.publisher import OutboxPublisher
@@ -25,6 +30,7 @@ from app.core_platform.events.service import EventService
 from app.core_platform.inventory.service import InventoryService
 from app.core_platform.reporting.service import ReportingService
 from app.core_platform.sales.service import SalesService
+from app.core_platform.shared.types import DomainError
 from app.db.session import set_tenant_guc
 from app.models.accounting import JournalEntry, JournalStatus
 from app.models.catalog import CatalogStatus, Product
@@ -50,8 +56,13 @@ from app.models.parties import (
 from app.models.sales import SalesDocumentStatus, SalesDocumentType
 
 
-async def _seed_two_tenants(session):
+async def _bypass(session: AsyncSession) -> None:
+    """Re-enable RLS bypass after a service ``commit()`` ends the prior txn."""
     await set_tenant_guc(session, None, bypass=True)
+
+
+async def _seed_two_tenants(session: AsyncSession) -> dict:
+    await _bypass(session)
     biz_a = Business(id=uuid4(), name="Cert A", status=BusinessStatus.ACTIVE)
     biz_b = Business(id=uuid4(), name="Cert B", status=BusinessStatus.ACTIVE)
     session.add_all([biz_a, biz_b])
@@ -90,6 +101,7 @@ async def _seed_two_tenants(session):
         )
     )
     await session.commit()
+    await _bypass(session)
     return {
         "biz_a": biz_a,
         "biz_b": biz_b,
@@ -103,7 +115,6 @@ async def _seed_two_tenants(session):
 @pytest.mark.asyncio
 async def test_full_chain_tenant_stock_sale_pay_crm_report(db_session):
     t = await _seed_two_tenants(db_session)
-    await set_tenant_guc(db_session, None, bypass=True)
 
     inv = InventoryService(db_session)
     await inv.receive(
@@ -112,6 +123,7 @@ async def test_full_chain_tenant_stock_sale_pay_crm_report(db_session):
         location_id=t["loc"].id,
         quantity=Decimal("20"),
     )
+    await _bypass(db_session)
 
     level = (
         await db_session.exec(
@@ -141,22 +153,32 @@ async def test_full_chain_tenant_stock_sale_pay_crm_report(db_session):
             }
         ],
     )
+    await _bypass(db_session)
     invoice = await sales.finalize_invoice(
         business_id=t["biz_a"].id, invoice_id=invoice.id
     )
+    await _bypass(db_session)
     assert invoice.status == SalesDocumentStatus.FINALIZED
 
-    # Stock reduced by issue on finalize
-    await db_session.refresh(level)
+    level = (
+        await db_session.exec(
+            select(StockLevel).where(
+                StockLevel.business_id == t["biz_a"].id,
+                StockLevel.product_id == t["product"].id,
+                StockLevel.location_id == t["loc"].id,
+            )
+        )
+    ).first()
+    assert level is not None
     assert level.quantity_on_hand == Decimal("17")
 
-    # Payment → accounting path
     pay = await sales.record_payment(
         business_id=t["biz_a"].id,
         document_id=invoice.id,
         amount=Decimal("300"),
         method="cash",
     )
+    await _bypass(db_session)
     assert pay.amount == Decimal("300")
 
     journals = list(
@@ -171,16 +193,15 @@ async def test_full_chain_tenant_stock_sale_pay_crm_report(db_session):
     )
     assert len(journals) >= 1
 
-    # CRM uses Party — does not invent a second customer id
     crm = CrmService(db_session)
     profile = await crm.get_or_create_profile(
         business_id=t["biz_a"].id, party_id=t["party"].id
     )
+    await _bypass(db_session)
     assert profile.party_id == t["party"].id
     hist = await crm.purchase_history(t["biz_a"].id, t["party"].id)
     assert len(hist) >= 1
 
-    # Reporting projects sales (read-only)
     report = ReportingService(db_session)
     by_day = await report.sales_by_day(
         business_id=t["biz_a"].id,
@@ -199,7 +220,6 @@ async def test_full_chain_tenant_stock_sale_pay_crm_report(db_session):
         for i in on_hand["items"]
     )
 
-    # Cross-tenant: business B sees none of A's truth
     other_day = await report.sales_by_day(
         business_id=t["biz_b"].id, day=date.today()
     )
@@ -220,7 +240,7 @@ async def test_full_chain_tenant_stock_sale_pay_crm_report(db_session):
 
 @pytest.mark.asyncio
 async def test_outbox_publish_after_domain_event(db_session):
-    await set_tenant_guc(db_session, None, bypass=True)
+    await _bypass(db_session)
     event = await EventService(db_session).emit(
         event_type="cert.chain.tick",
         aggregate_type="certification",
@@ -230,9 +250,11 @@ async def test_outbox_publish_after_domain_event(db_session):
         commit=True,
     )
     event_id = event.id
+    await _bypass(db_session)
     pub = OutboxPublisher(db_session)
     for _ in range(10):
         stats = await pub.process_batch(limit=50)
+        await _bypass(db_session)
         if stats["claimed"] == 0:
             break
     entry = (
@@ -247,13 +269,13 @@ async def test_outbox_publish_after_domain_event(db_session):
 @pytest.mark.asyncio
 async def test_insufficient_stock_blocks_finalize(db_session):
     t = await _seed_two_tenants(db_session)
-    await set_tenant_guc(db_session, None, bypass=True)
     await InventoryService(db_session).receive(
         business_id=t["biz_a"].id,
         product_id=t["product"].id,
         location_id=t["loc"].id,
         quantity=Decimal("1"),
     )
+    await _bypass(db_session)
     sales = SalesService(db_session)
     invoice = await sales.create_document(
         business_id=t["biz_a"].id,
@@ -269,8 +291,7 @@ async def test_insufficient_stock_blocks_finalize(db_session):
             }
         ],
     )
-    from app.core_platform.shared.types import DomainError
-
+    await _bypass(db_session)
     with pytest.raises(DomainError):
         await sales.finalize_invoice(
             business_id=t["biz_a"].id, invoice_id=invoice.id
