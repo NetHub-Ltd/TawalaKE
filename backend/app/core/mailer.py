@@ -346,6 +346,55 @@ class EmailService:
     # =========================================================================
 
     @classmethod
+    def send_platform_user_invite(
+        cls,
+        to_email: str,
+        *,
+        temporary_password: str,
+        login_url: str,
+        user_name: Optional[str] = None,
+        inviter_name: Optional[str] = None,
+    ) -> None:
+        """Platform operator invite — generated password + login CTA (no hardcoded bootstrap)."""
+        name = (user_name or "").strip() or "there"
+        inviter = (inviter_name or "").strip() or "A platform administrator"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"{inviter} invited you to the <strong>Tawala platform</strong> operator console."
+            )
+            + cls._p(
+                "Use the temporary password below for your first sign-in. "
+                "You will also need the email verification code (MFA) when that step is enabled."
+            )
+            + cls._p(
+                f'<span style="font-size:16px;font-family:ui-monospace,monospace;'
+                f'letter-spacing:1px;"><strong>{temporary_password}</strong></span>'
+            )
+            + cls._p(
+                "After you sign in the first time, you will be asked to "
+                "<strong>change this password</strong> before continuing."
+            )
+            + cls._cta(login_url, "Sign in to platform")
+            + cls._muted(
+                "If you were not expecting this invitation, ignore this email and contact support."
+            )
+            + cls._raw_link(login_url)
+        )
+        html = cls.render_shell(
+            title="Your Tawala platform invitation",
+            preheader="Temporary password and platform sign-in link",
+            eyebrow="Platform access",
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_security,
+            to_addresses=[to_email],
+            subject="You are invited to the Tawala platform",
+            html_content=html,
+        )
+
+    @classmethod
     def send_password_reset(
         cls,
         to_email: str,

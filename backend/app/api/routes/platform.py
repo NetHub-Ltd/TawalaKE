@@ -8,7 +8,9 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import secrets
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlmodel import select
 
 from app.api.deps import SessionDep
@@ -18,6 +20,7 @@ from app.api.platform_deps import (
     require_platform_permissions,
 )
 from app.core.config import settings
+from app.core.mailer import mailer
 from app.core.platform_rbac import (
     PlatformPermission,
     effective_platform_role,
@@ -32,6 +35,7 @@ from app.schemas.platform import (
     PlatformOrgHardDeleteResponse,
     PlatformOrgRead,
     PlatformTokenResponse,
+    PlatformChangePasswordRequest,
     PlatformUserCreate,
     PlatformUserRead,
     PlatformUserUpdate,
@@ -111,6 +115,47 @@ async def platform_login(
         access_token=token,
         expires_at=expires_at,
         role=role or PlatformRole.SUPPORT,
+        must_change_password=bool(getattr(user, "must_change_password", False)),
+    )
+
+
+@router.post("/auth/change-password", response_model=PlatformMeResponse)
+async def platform_change_password(
+    request: Request,
+    body: PlatformChangePasswordRequest,
+    db: SessionDep,
+    actor: PlatformAuthUser,
+) -> PlatformMeResponse:
+    """Change password (required after invite when must_change_password is true)."""
+    if body.new_password == body.current_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the current password",
+        )
+    if not actor.hashed_password or not security.verify_password(
+        body.current_password, actor.hashed_password
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    actor.hashed_password = security.hash_password(body.new_password)
+    actor.must_change_password = False
+    db.add(actor)
+    await db.commit()
+    await db.refresh(actor)
+    await record_platform_audit(
+        db,
+        actor=actor,
+        action="platform.auth.change_password",
+        outcome="success",
+        resource_type="platform_user",
+        resource_id=actor.id,
+        request_id=request.headers.get("x-request-id"),
+    )
+    return PlatformMeResponse(
+        user=PlatformUserRead.model_validate(actor),
+        permissions=[p.value for p in permissions_for(actor)],
     )
 
 
@@ -153,8 +198,14 @@ async def create_platform_user(
     body: PlatformUserCreate,
     db: SessionDep,
     actor: PlatformAuthUser,
+    background_tasks: BackgroundTasks,
 ) -> PlatformUserRead:
-    """Create a platform user. SUPER_ADMIN only via USERS_WRITE."""
+    """
+    Invite a platform user (email + name only).
+
+    Generates a temporary password, sets must_change_password=True, and emails
+    credentials with a platform login button. Client must not supply a password.
+    """
     email = body.email.strip().lower()
     existing = (
         await db.exec(select(PlatformUser).where(PlatformUser.email == email))
@@ -165,7 +216,6 @@ async def create_platform_user(
             detail="A platform user with this email already exists",
         )
 
-    # Only SUPER_ADMIN may create another SUPER_ADMIN
     actor_role = effective_platform_role(actor)
     if body.role == PlatformRole.SUPER_ADMIN and actor_role != PlatformRole.SUPER_ADMIN:
         raise HTTPException(
@@ -173,16 +223,32 @@ async def create_platform_user(
             detail="Only SUPER_ADMIN can create SUPER_ADMIN users",
         )
 
+    temporary_password = secrets.token_urlsafe(18)
     user = PlatformUser(
         email=email,
         full_name=body.full_name.strip(),
-        hashed_password=security.hash_password(body.password),
+        hashed_password=security.hash_password(temporary_password),
         role=body.role,
         active=body.active,
+        must_change_password=True,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
+    frontend = (settings.frontend_url or "").rstrip("/")
+    if frontend and not frontend.startswith("http"):
+        frontend = f"https://{frontend}"
+    login_url = f"{frontend}/platform/login" if frontend else "/platform/login"
+
+    background_tasks.add_task(
+        mailer.send_platform_user_invite,
+        to_email=email,
+        temporary_password=temporary_password,
+        login_url=login_url,
+        user_name=user.full_name,
+        inviter_name=getattr(actor, "full_name", None) or getattr(actor, "email", None),
+    )
 
     await record_platform_audit(
         db,
@@ -191,7 +257,12 @@ async def create_platform_user(
         outcome="success",
         resource_type="platform_user",
         resource_id=user.id,
-        meta={"email": user.email, "role": user.role.value},
+        meta={
+            "email": user.email,
+            "role": user.role.value,
+            "invite": True,
+            "must_change_password": True,
+        },
         request_id=request.headers.get("x-request-id"),
     )
     return PlatformUserRead.model_validate(user)
@@ -239,6 +310,7 @@ async def update_platform_user(
         target.active = data["active"]
     if "password" in data and data["password"]:
         target.hashed_password = security.hash_password(data["password"])
+        target.must_change_password = True
 
     db.add(target)
     await db.commit()

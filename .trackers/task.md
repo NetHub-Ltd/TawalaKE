@@ -1,11 +1,12 @@
 # Task
-Update backend/.env.example and add frontend/.env.example with platform + auth vars.
-
-## Goal
-#301 — Document platform org hard-delete cleanup window runbook.
+Platform user invite: email+name only, generated password mailed with login CTA, must_change_password.
 
 ## Completed
-- docs/platform/cleanup-window-runbook.md
+- model + migration must_change_password
+- PlatformUserCreate without password
+- create user emails invite
+- POST /auth/change-password
+- bootstrap script aligned (no password env)
 
-## Out of scope
-Executing the cleanup; soft-delete product flow; merging other open PRs.
+## Note
+When MFA PR merges, add must_change_password to verify-code token response as well.

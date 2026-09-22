@@ -361,6 +361,8 @@ class PlatformUser(BaseMixin, table=True):
         default=PlatformRole.SUPPORT
     )
     active: bool = Field(default=True, index=True)
+    # Set True when password was system-generated (invite). Cleared after change-password.
+    must_change_password: bool = Field(default=False)
     last_login_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True)
