@@ -14,7 +14,7 @@
 # from app.core.session import engine
 # from app.core.redis_client import redis_manager, limiter # Import slowapi limiter setup
 # from app.utils.logging import logger
-# from app.prestart import create_admin_tenant
+# from app.prestart import create_admin_tenant, ensure_platform_superadmin
 # from app.utils.helpers import utc_now
 
 
@@ -153,7 +153,7 @@ from app.core.config import settings
 from app.core.session import engine
 from app.core.redis_client import redis_manager, limiter
 from app.utils.logging import logger
-from app.prestart import create_admin_tenant
+from app.prestart import create_admin_tenant, ensure_platform_superadmin
 from app.utils.helpers import utc_now
 
 # Private / internal ranges we never want to see as "client" IP
@@ -207,6 +207,8 @@ async def lifespan(app: FastAPI):
         logger.info("Database connectivity verified.")
         logger.info("Checking admin account")
         await create_admin_tenant()
+        logger.info("Checking platform SUPER_ADMIN bootstrap")
+        await ensure_platform_superadmin()
     except Exception as e:
         logger.critical(f"Database connection failed: {str(e)}")
         raise RuntimeError("Database unavailable. Aborting startup.") from e
