@@ -24,16 +24,21 @@ from app.core.platform_rbac import (
     permissions_for,
 )
 from app.core.security import security
-from app.models.models import PlatformRole, PlatformUser
+from app.models.models import Organization, PlatformRole, PlatformUser
 from app.schemas.platform import (
     PlatformLoginRequest,
     PlatformMeResponse,
+    PlatformOrgHardDeleteRequest,
+    PlatformOrgHardDeleteResponse,
+    PlatformOrgRead,
     PlatformTokenResponse,
     PlatformUserCreate,
     PlatformUserRead,
     PlatformUserUpdate,
 )
 from app.services.audit import record_platform_audit
+from app.services.platform_org_delete import hard_delete_organization
+from app.core.redis_client import limiter
 from app.utils.logging import logger
 
 router = APIRouter()
@@ -250,3 +255,206 @@ async def update_platform_user(
         request_id=request.headers.get("x-request-id"),
     )
     return PlatformUserRead.model_validate(target)
+
+
+# ---------------------------------------------------------------------------
+# Organizations (cross-tenant) — issue #297
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/organizations",
+    response_model=List[PlatformOrgRead],
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.ORGS_READ))],
+)
+async def list_platform_organizations(
+    db: SessionDep,
+    user: PlatformAuthUser,
+    active: bool | None = None,
+    q: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> List[PlatformOrgRead]:
+    """
+    List organizations across all tenants (platform operators only).
+
+    Optional filters: active, q (name/email substring).
+    """
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    stmt = select(Organization).order_by(Organization.created_at.desc())
+    if active is not None:
+        stmt = stmt.where(Organization.active == active)
+    if q:
+        like = f"%{q.strip()}%"
+        stmt = stmt.where(
+            (Organization.name.ilike(like)) | (Organization.email.ilike(like))
+        )
+    stmt = stmt.offset(offset).limit(limit)
+    rows = list(await db.exec(stmt))
+    return [PlatformOrgRead.model_validate(r) for r in rows]
+
+
+@router.get(
+    "/organizations/{organization_id}",
+    response_model=PlatformOrgRead,
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.ORGS_READ))],
+)
+async def get_platform_organization(
+    organization_id: UUID,
+    db: SessionDep,
+    user: PlatformAuthUser,
+) -> PlatformOrgRead:
+    """Get a single organization by id (any tenant)."""
+    org = (
+        await db.exec(select(Organization).where(Organization.id == organization_id))
+    ).first()
+    if not org:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    return PlatformOrgRead.model_validate(org)
+
+
+@router.delete(
+    "/organizations/{organization_id}",
+    response_model=PlatformOrgHardDeleteResponse,
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.ORGS_WRITE))],
+)
+@limiter.limit("5/hour")
+async def hard_delete_platform_organization(
+    request: Request,
+    organization_id: UUID,
+    body: PlatformOrgHardDeleteRequest,
+    db: SessionDep,
+    actor: PlatformAuthUser,
+) -> PlatformOrgHardDeleteResponse:
+    """
+    Permanently delete an organization and its org-scoped data.
+
+    Temporary cleanup tool (issue #297). Requires:
+    - settings.platform_org_hard_delete == True
+    - SUPER_ADMIN role
+    - confirm_name exact match and confirm_phrase == \"DELETE\"
+    """
+    if not settings.platform_org_hard_delete:
+        await record_platform_audit(
+            db,
+            actor=actor,
+            action="platform.orgs.hard_delete",
+            outcome="denied_flag_off",
+            resource_type="organization",
+            resource_id=organization_id,
+            meta={"reason": body.reason},
+            request_id=request.headers.get("x-request-id"),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "HARD_DELETE_DISABLED",
+                "message": (
+                    "Platform org hard delete is disabled. "
+                    "Set PLATFORM_ORG_HARD_DELETE=true only during a cleanup window."
+                ),
+            },
+        )
+
+    actor_role = effective_platform_role(actor)
+    if actor_role != PlatformRole.SUPER_ADMIN:
+        await record_platform_audit(
+            db,
+            actor=actor,
+            action="platform.orgs.hard_delete",
+            outcome="denied_role",
+            resource_type="organization",
+            resource_id=organization_id,
+            meta={"reason": body.reason, "role": str(actor_role)},
+            request_id=request.headers.get("x-request-id"),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only SUPER_ADMIN may hard-delete organizations",
+        )
+
+    if body.confirm_phrase.strip() != "DELETE":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "CONFIRM_PHRASE_INVALID",
+                "message": 'confirm_phrase must be exactly DELETE',
+            },
+        )
+
+    org = (
+        await db.exec(select(Organization).where(Organization.id == organization_id))
+    ).first()
+    if not org:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    if org.name.strip() != body.confirm_name.strip():
+        await record_platform_audit(
+            db,
+            actor=actor,
+            action="platform.orgs.hard_delete",
+            outcome="denied_name_mismatch",
+            resource_type="organization",
+            resource_id=organization_id,
+            meta={
+                "reason": body.reason,
+                "provided_name": body.confirm_name,
+                "actual_name": org.name,
+            },
+            request_id=request.headers.get("x-request-id"),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "CONFIRM_NAME_MISMATCH",
+                "message": "confirm_name does not match the organization name",
+            },
+        )
+
+    try:
+        result = await hard_delete_organization(db, org_id=organization_id)
+    except LookupError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    except Exception as exc:
+        logger.exception(
+            "platform_org_hard_delete failed org=%s err=%s",
+            organization_id,
+            type(exc).__name__,
+        )
+        await record_platform_audit(
+            db,
+            actor=actor,
+            action="platform.orgs.hard_delete",
+            outcome="error",
+            resource_type="organization",
+            resource_id=organization_id,
+            meta={"reason": body.reason, "error": type(exc).__name__},
+            request_id=request.headers.get("x-request-id"),
+            independent=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "HARD_DELETE_FAILED",
+                "message": "Organization hard delete failed; see server logs",
+            },
+        ) from exc
+
+    await record_platform_audit(
+        db,
+        actor=actor,
+        action="platform.orgs.hard_delete",
+        outcome="success",
+        resource_type="organization",
+        resource_id=organization_id,
+        meta={
+            "reason": body.reason,
+            "name": result.get("name"),
+            "pre_delete_counts": result.get("pre_delete_counts"),
+            "deleted_table_rows": result.get("deleted_table_rows"),
+        },
+        request_id=request.headers.get("x-request-id"),
+        independent=True,
+    )
+    return PlatformOrgHardDeleteResponse(**result)

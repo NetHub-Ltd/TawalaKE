@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     # RBAC matrix source (phase 1 dual-read). Default OFF = in-code ROLE_PERMISSIONS.
     auth_rbac_from_db: bool = False
 
+    # Temporary platform org hard-delete (test cleanup). Default OFF — enable only
+    # during a controlled cleanup window, then disable again (issue #297 / #301).
+    platform_org_hard_delete: bool = False
+
     # Soft-delete retention archive pipeline (purge/email off until ready)
     archive_enabled: bool = False
     archive_signed_url_ttl_days: int = 7
