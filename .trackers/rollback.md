@@ -1,3 +1,3 @@
 # Rollback
-- Revert PR
-- Frontend only; no migration
+- Revert docs PR only
+- No runtime/config change in this PR
