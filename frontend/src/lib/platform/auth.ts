@@ -133,3 +133,93 @@ export async function platformResendCode(
   }
   return data as PlatformChallenge;
 }
+
+// ---------------------------------------------------------------------------
+// Platform organizations (issue #300 — uses #297 API)
+// ---------------------------------------------------------------------------
+
+export type PlatformOrg = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  active: boolean;
+  onboarding?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type PlatformOrgHardDeleteResult = {
+  organization_id: string;
+  name?: string | null;
+  email?: string | null;
+  pre_delete_counts: Record<string, number>;
+  deleted_table_rows: Record<string, number>;
+};
+
+async function platformFetch(
+  path: string,
+  init: RequestInit = {}
+): Promise<Response> {
+  const token = getPlatformAccessToken();
+  if (!token) {
+    throw Object.assign(new Error("Not signed in"), { status: 401 });
+  }
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(`${apiBase()}${path}`, { ...init, headers });
+}
+
+function throwPlatformError(data: unknown, status: number, fallback: string): never {
+  const detail =
+    data && typeof data === "object"
+      ? (data as { detail?: unknown }).detail
+      : undefined;
+  const msg =
+    typeof detail === "string"
+      ? detail
+      : detail && typeof detail === "object" && "message" in detail
+        ? String((detail as { message: string }).message)
+        : fallback;
+  throw Object.assign(new Error(msg), { status, data });
+}
+
+export async function listPlatformOrganizations(params?: {
+  q?: string;
+  active?: boolean;
+  limit?: number;
+}): Promise<PlatformOrg[]> {
+  const sp = new URLSearchParams();
+  if (params?.q) sp.set("q", params.q);
+  if (params?.active !== undefined) sp.set("active", String(params.active));
+  if (params?.limit) sp.set("limit", String(params.limit));
+  const qs = sp.toString();
+  const res = await platformFetch(
+    `/api/v1/platform/organizations${qs ? `?${qs}` : ""}`
+  );
+  const data = await res.json().catch(() => ([]));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not load organizations");
+  return data as PlatformOrg[];
+}
+
+export async function hardDeletePlatformOrganization(
+  organizationId: string,
+  body: { confirm_name: string; confirm_phrase: string; reason: string }
+): Promise<PlatformOrgHardDeleteResult> {
+  const res = await platformFetch(
+    `/api/v1/platform/organizations/${organizationId}`,
+    { method: "DELETE", body: JSON.stringify(body) }
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throwPlatformError(
+      data,
+      res.status,
+      "Hard delete failed (flag off, permissions, or server error)"
+    );
+  }
+  return data as PlatformOrgHardDeleteResult;
+}

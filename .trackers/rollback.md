@@ -1,3 +1,3 @@
 # Rollback
-- Revert PR; removes /platform routes only
-- No backend / migration changes
+- Revert PR
+- Frontend only; no migration

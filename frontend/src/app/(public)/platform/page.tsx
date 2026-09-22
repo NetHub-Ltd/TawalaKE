@@ -9,8 +9,8 @@ import {
 } from "@/lib/platform/auth";
 
 /**
- * Minimal platform landing after MFA login.
- * Org admin UI lands in #300; this confirms session only.
+ * Platform home after MFA login.
+ * Links to orgs admin (#300).
  */
 export default function PlatformHomePage() {
   const router = useRouter();
@@ -44,11 +44,18 @@ export default function PlatformHomePage() {
       <div className="space-y-2">
         <h1 className="text-h3 text-foreground">Platform console</h1>
         <p className="text-sm text-muted">
-          You are signed in as a platform operator. Organization tools will
-          appear here next (cleanup list &amp; hard delete).
+          You are signed in as a platform operator. Manage organizations for
+          test cleanup, or sign out when finished.
         </p>
       </div>
       <div className="flex flex-wrap gap-3">
+        <Button
+          type="button"
+          variant="primary"
+          onClick={() => router.push("/platform/orgs")}
+        >
+          Organizations
+        </Button>
         <Button
           type="button"
           variant="outline"
