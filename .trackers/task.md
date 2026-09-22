@@ -2,14 +2,18 @@
 
 **Updated:** 2026-09-22
 
-## Completed
-- T1–T12 (board #267–#275 closed; T12 = PR #288)
-- Ops: Docker 3.13, credentials-only DB, loguru, lifespan (PRs #285–#287)
+## Active — pre-migration 48h fixes
+- #292 RLS GUC persistence (session-level set_config)
+- #293 Auth register/login audit activity
+- #294 Critical write idempotency (coverage + tests; post_journal key)
+- #295 Empty scope semantics documented (CORE_CONTRACTS + assert_scope)
 
-## In progress
-- **T13 / M23 (#276)** Cross-Domain Integrity & Full Core Certification
-  - `tests/certification/test_cross_domain_chain.py`
-  - `docs/architecture/CORE_ARCHITECTURE_MAP.md`
+## Completed domain program
+- T1–T13 (board #267–#276 closed)
 
-## Remaining board
-- #245 M0.4 branch protection on main (ops — not domain)
+## Ops residuals (not this PR)
+- #245 branch protection on main (operator)
+- Secret management / pool tuning (deploy)
+
+## Branch
+`fix/core-pre-migration-48h` → core/v2

@@ -75,6 +75,20 @@ class IdentityService:
                 resource_id=user.id,
                 commit=False,
             )
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="auth.register",
+            event_type="auth.user.registered",
+            resource_type="user",
+            resource_id=user.id,
+            business_id=None,
+            actor_user_id=user.id,
+            payload={"email": user.email, "phone": user.phone},
+            after={"id": str(user.id), "status": user.status.value},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(user)
         return user
@@ -116,6 +130,20 @@ class IdentityService:
             ip=ip,
         )
         self._session.add(session)
+        from app.core_platform.shared.activity import record_activity
+
+        await record_activity(
+            self._session,
+            action="auth.login",
+            event_type="auth.session.created",
+            resource_type="session",
+            resource_id=session.id,
+            business_id=None,
+            actor_user_id=user.id,
+            payload={"user_agent": user_agent, "ip": ip},
+            after={"user_id": str(user.id), "session_id": str(session.id)},
+            commit=False,
+        )
         await self._session.commit()
         await self._session.refresh(user)
         return user, session, raw_token

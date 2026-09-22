@@ -342,16 +342,20 @@ class AuthorizationService:
     ) -> None:
         """Enforce branch/location allowlists from ScopeAssignment rows.
 
-        Semantics (M13 — frozen contract):
+        Semantics (frozen contract — see CORE_CONTRACTS §Scope):
 
-        - **Empty scope list** → unrestricted within the business. Membership
-          + permissions already authorize business access; HQ/Owner staff often
-          have no ScopeAssignment rows and must operate across all branches.
-        - **Non-empty scope list** → explicit allowlist. If the request carries
-          ``branch_id`` / ``location_id`` and the membership has at least one
-          non-null assignment of that kind, the requested id must be in the set.
+        - **Empty scope list (no ScopeAssignment rows)** → **full business access**.
+          Intended for single-branch SMEs and HQ/Owner staff who operate across
+          all branches. Membership + permissions already authorize the business;
+          empty does **not** mean "denied".
+        - **Non-empty scope list** → explicit **allowlist**. When branch scoping
+          is enabled for a membership (at least one ScopeAssignment row), the
+          requested ``branch_id`` / ``location_id`` must be in the allowed set
+          or Core raises FORBIDDEN.
         - **No branch_id/location_id on the request** → business-level only;
           no branch/location check is applied.
+        - Future policy option: businesses that enable mandatory branch scoping
+          could treat empty as denied for non-Owner roles — not current behavior.
         - Domains must not re-implement this; they receive TenantContext from Core.
         """
         if not scopes:

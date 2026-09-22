@@ -112,8 +112,16 @@ class AccountingService:
         domain_entry_type: str | None = None,
         reverses_entry_id: UUID | None = None,
         commit: bool = False,
+        idempotency_key: str | None = None,
     ) -> JournalEntry:
         """Post a balanced journal. lines: {account_id, debit, credit, tax_code?, tax_amount?}."""
+        key = idem.require_key_format(idempotency_key)
+        if key:
+            prior = await idem.lookup(self._session, scope=str(business_id), key=key)
+            if prior and prior.resource_id:
+                existing = await self._session.get(JournalEntry, prior.resource_id)
+                if existing is not None:
+                    return existing
         if not lines:
             raise DomainError(DomainErrorCode.VALIDATION_FAILED, "Journal requires lines")
 
@@ -186,6 +194,17 @@ class AccountingService:
             payload={"number": entry.entry_number, "source_type": source_type},
             commit=False,
         )
+        if key:
+            await idem.store(
+                self._session,
+                scope=str(business_id),
+                key=key,
+                operation="accounting.journal.post",
+                response_body={"id": str(entry.id), "number": entry.entry_number},
+                response_status=201,
+                resource_id=entry.id,
+                commit=False,
+            )
         if commit:
             await self._session.commit()
             await self._session.refresh(entry)

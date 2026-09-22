@@ -103,10 +103,12 @@ ctx: TenantContext = Depends(require_perms("some.permission.code"))
 
 | Situation | Behavior |
 |-----------|----------|
-| **No ScopeAssignment rows** (empty scope) | **Unrestricted within the business.** Membership + permissions authorize business access; HQ/Owner staff typically have no scope rows. |
-| **Explicit ScopeAssignment rows** | Allowlist. If the request includes `branch_id` / `location_id` and the membership has at least one non-null assignment of that kind, the requested id **must** be in the allowed set or Core raises `FORBIDDEN` (`Branch out of scope` / `Location out of scope`). |
+| **No ScopeAssignment rows** (empty scope) | **Full business access** (unrestricted within the tenant). Intended for **single-branch SMEs** and HQ/Owner staff who operate across all branches. Empty does **not** mean denied. |
+| **Explicit ScopeAssignment rows** (branch scoping enabled for that membership) | **Allowlist.** Requested `branch_id` / `location_id` must be in the allowed set or Core raises `FORBIDDEN`. |
 | **Request omits branch_id and location_id** | Business-level access only; no branch/location check. |
 | **Revoked / soft-deleted assignments** | Ignored (`deleted_at` filtered). |
+
+**Policy note:** A future option may treat empty scope as **denied** for non-Owner roles when a business enables mandatory branch scoping. That is **not** current behavior.
 
 Domains receive `TenantContext` from Core (`get_tenant_context` / `require_perms`). They **must not** call services with a raw `business_id` as a substitute for Core authorization.
 
@@ -374,3 +376,39 @@ Never overload RBAC permission strings as plan gates.
 ## 18. Domain ownership (T6)
 
 Entity ownership, hierarchy, and Catalog≠Inventory rules for downstream domains are defined in **`docs/architecture/DOMAIN_CONTRACTS.md`** (T6 / M16).
+
+
+---
+
+## Auth events (register / login)
+
+Platform identity mutations are audited via `record_activity` with `resource_type` of `user` / `session` and `business_id=None` (platform scope):
+
+| Action | event_type | Notes |
+|--------|------------|-------|
+| `auth.register` | `auth.user.registered` | After user + credential created |
+| `auth.login` | `auth.session.created` | After session row created |
+
+These are **security/identity events**, not business-domain audit. They share the `AuditRecord` + outbox mechanism so migration and forensics have a trail. Failed login attempts that raise before session create do not write audit rows (no durable resource).
+
+---
+
+## RLS GUC lifetime
+
+`set_tenant_guc` uses **session-level** `set_config(..., is_local=false)` so tenant GUCs survive intermediate `session.commit()` calls within one HTTP request. GUCs are cleared when the FastAPI `get_session` dependency exits.
+
+Do not use transaction-local GUCs (`is_local=true`) for request-scoped tenancy — they reset on every domain service commit.
+
+---
+
+## Ops residuals (not Core code)
+
+Tracked outside domain milestones:
+
+| Item | Status |
+|------|--------|
+| GitHub branch protection on product `main` (#245) | Operator-owned |
+| Production secret management | Deploy environment |
+| Connection pool tuning (beyond NullPool in Core image) | Deploy environment |
+
+These remain **Unknown / ops** relative to Core repository evidence.
