@@ -1,3 +1,2 @@
 # Rollback
-- Revert PR
-- Frontend only; no migration
+- Revert PR (docs/templates only)

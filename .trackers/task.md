@@ -1,23 +1,9 @@
 # Task
+Update backend/.env.example and add frontend/.env.example with platform + auth vars.
 
-## Goal
-#300 — Platform orgs admin UI with hard-delete friction modal.
-
-## Product intent
-Operators need to find and permanently remove test orgs after cleanup, without accidental deletes.
-
-## Evidence
-- API exists on dev (#297): GET/DELETE /api/v1/platform/organizations
-- Friction contract: confirm_name, phrase DELETE, reason; flag PLATFORM_ORG_HARD_DELETE
-
-## Approach
-- /platform/orgs list + search
-- Modal friction matching API
-- Auth via platform sessionStorage token
-- Branched from feat/platform-login-ui (#299)
+## Completed
+- backend/.env.example: hard-session, platform hard-delete, MFA TTL knobs, comments
+- frontend/.env.example: AUTH_SECRET, BACKEND_URL, NEXT_PUBLIC_*
 
 ## Out of scope
-MFA API (#298), soft-delete product flow, create/update org forms
-
-## Risks
-Hard delete irreversible; flag must stay off outside cleanup window (#301)
+Changing runtime defaults; deploying secrets
