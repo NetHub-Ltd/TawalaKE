@@ -1,35 +1,26 @@
 # Task
 
 ## Goal
-Platform org list + hard delete with friction for test-org cleanup (issue **#297**).
+Platform login email MFA (issue **#298**).
 
-## Approved scope
-- GET /api/v1/platform/organizations (+ optional active, q, pagination)
-- GET /api/v1/platform/organizations/{id}
-- DELETE /api/v1/platform/organizations/{id} with:
-  - PLATFORM_ORG_HARD_DELETE flag (default false)
-  - SUPER_ADMIN only
-  - confirm_name exact match + confirm_phrase == DELETE + reason
-  - ordered cascade hard delete + platform audit
-  - rate limit 5/hour
+## Scope
+- POST /api/v1/platform/auth/login → challenge only (no access token)
+- Redis MFA challenge + hashed 6-digit code
+- POST /api/v1/platform/auth/verify-code → platform JWT
+- POST /api/v1/platform/auth/resend-code (cooldown)
+- mailer.send_platform_login_code
+- Config: platform_mfa_code_ttl_sec, max_attempts, resend_cooldown_sec
+- Unit tests test_platform_mfa.py
 
-## Roadmap issues (do not drift)
-1. #297 — org list + hard delete (this branch) in progress
-2. #298 — platform login email MFA
-3. #299 — /platform/login two-step UI
-4. #300 — platform orgs admin UI + delete modal
-5. #301 — cleanup window runbook (enable flag, purge, disable)
+## Breaking change
+Password-only platform login no longer returns access_token. Clients must complete verify-code.
 
-## Out of scope (this PR)
-- MFA / login UI
-- Soft-delete product flow
-- Impersonation
-- Frontend
+## Roadmap
+1. #297 org hard-delete — done (merged #302)
+2. #298 MFA — this branch
+3. #299 /platform/login UI
+4. #300 orgs admin UI
+5. #301 cleanup runbook
 
-## Verification
-- Unit tests: test_platform_org_hard_delete.py
-- Flag default off
-- SUPPORT cannot hard-delete
-
-## Debt
-- Hard delete is temporary; after cleanup set flag false and prefer soft-delete (#301).
+## Out of scope
+Frontend UI (#299), trusted device skip.

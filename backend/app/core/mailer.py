@@ -346,6 +346,47 @@ class EmailService:
     # =========================================================================
 
     @classmethod
+    def send_platform_login_code(
+        cls,
+        to_email: str,
+        code: str,
+        user_name: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        expire_minutes: int = 10,
+    ) -> None:
+        """Platform operator login MFA — six-digit email code (issue #298)."""
+        name = (user_name or "").strip() or "there"
+        ip = ip_address or "Unknown"
+        time_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                "Use this code to finish signing in to the <strong>Tawala platform</strong> console. "
+                f"It expires in <strong>{expire_minutes} minutes</strong>."
+            )
+            + cls._p(
+                f'<span style="font-size:28px;letter-spacing:6px;font-weight:700;'
+                f'font-family:ui-monospace,monospace;">{code}</span>'
+            )
+            + cls._muted(
+                "If you did not try to sign in, ignore this email and consider rotating your password."
+            )
+            + cls._muted(f"Request time: {time_str} · IP: {ip}")
+        )
+        html = cls.render_shell(
+            title="Your platform sign-in code",
+            preheader=f"Platform login code expires in {expire_minutes} minutes",
+            eyebrow="Security",
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_security,
+            to_addresses=[to_email],
+            subject="Your Tawala platform sign-in code",
+            html_content=html,
+        )
+
+    @classmethod
     def send_password_reset(
         cls,
         to_email: str,

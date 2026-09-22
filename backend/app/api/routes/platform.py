@@ -8,16 +8,17 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlmodel import select
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, get_redis, AsyncRedis
 from app.api.platform_deps import (
     PlatformAuthUser,
     get_current_platform_user,
     require_platform_permissions,
 )
 from app.core.config import settings
+from app.core.mailer import mailer
 from app.core.platform_rbac import (
     PlatformPermission,
     effective_platform_role,
@@ -28,6 +29,9 @@ from app.models.models import Organization, PlatformRole, PlatformUser
 from app.schemas.platform import (
     PlatformLoginRequest,
     PlatformMeResponse,
+    PlatformMfaChallengeResponse,
+    PlatformMfaResendRequest,
+    PlatformMfaVerifyRequest,
     PlatformOrgHardDeleteRequest,
     PlatformOrgHardDeleteResponse,
     PlatformOrgRead,
@@ -44,17 +48,33 @@ from app.utils.logging import logger
 router = APIRouter()
 
 
-@router.post("/auth/login", response_model=PlatformTokenResponse)
+def _email_hint(email: str) -> str:
+    """Mask email for client display (a***@domain)."""
+    parts = email.split("@", 1)
+    if len(parts) != 2:
+        return "***"
+    local, domain = parts
+    if len(local) <= 1:
+        masked = "*"
+    else:
+        masked = local[0] + "***"
+    return f"{masked}@{domain}"
+
+
+@router.post("/auth/login", response_model=PlatformMfaChallengeResponse)
+@limiter.limit("10/minute")
 async def platform_login(
     request: Request,
     body: PlatformLoginRequest,
     db: SessionDep,
-) -> PlatformTokenResponse:
+    background_tasks: BackgroundTasks,
+    redis_client: AsyncRedis = Depends(get_redis),
+) -> PlatformMfaChallengeResponse:
     """
-    Authenticate a platform user (email + password).
+    Platform password step (issue #298).
 
-    Returns a short-lived access token with kind=platform.
-    Does not set tenant refresh cookies.
+    On success does **not** return an access token. Creates an MFA challenge,
+    emails a 6-digit code, and returns challenge_id for verify-code.
     """
     email = body.email.strip().lower()
     stmt = select(PlatformUser).where(PlatformUser.email == email)
@@ -81,6 +101,72 @@ async def platform_login(
             detail="Invalid email or password",
         )
 
+    challenge_id, plain_code, ttl = await security.create_platform_mfa_challenge(
+        user_id=user.id,
+        email=email,
+        redis_client=redis_client,
+    )
+    client_ip = request.client.host if request.client else "Unknown"
+    expire_minutes = max(1, ttl // 60)
+    background_tasks.add_task(
+        mailer.send_platform_login_code,
+        to_email=email,
+        code=plain_code,
+        user_name=user.full_name,
+        ip_address=client_ip,
+        expire_minutes=expire_minutes,
+    )
+
+    await record_platform_audit(
+        db,
+        actor=user,
+        action="platform.auth.login_challenge",
+        outcome="success",
+        resource_type="platform_user",
+        resource_id=user.id,
+        meta={"challenge_id_prefix": challenge_id[:8]},
+        request_id=request.headers.get("x-request-id"),
+    )
+    logger.info(f"Platform MFA challenge issued user={user.id}")
+    return PlatformMfaChallengeResponse(
+        challenge_id=challenge_id,
+        expires_in=ttl,
+        email_hint=_email_hint(email),
+    )
+
+
+@router.post("/auth/verify-code", response_model=PlatformTokenResponse)
+@limiter.limit("20/minute")
+async def platform_verify_mfa_code(
+    request: Request,
+    body: PlatformMfaVerifyRequest,
+    db: SessionDep,
+    redis_client: AsyncRedis = Depends(get_redis),
+) -> PlatformTokenResponse:
+    """
+    Complete platform login with the email MFA code.
+
+    Issues a short-lived access token with kind=platform.
+    """
+    user_id = await security.verify_platform_mfa_challenge(
+        challenge_id=body.challenge_id,
+        code=body.code,
+        redis_client=redis_client,
+    )
+    user = (
+        await db.exec(
+            select(PlatformUser).where(
+                PlatformUser.id == UUID(user_id),
+                PlatformUser.deleted_at.is_(None),
+            )
+        )
+    ).first()
+    if not user or not user.active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is inactive or not found",
+        )
+
     role = effective_platform_role(user)
     role_value = role.value if role else PlatformRole.SUPPORT.value
     perms = [p.value for p in permissions_for(user)]
@@ -96,21 +182,105 @@ async def platform_login(
     await record_platform_audit(
         db,
         actor=user,
-        action="platform.auth.login",
+        action="platform.auth.verify_code",
         outcome="success",
         resource_type="platform_user",
         resource_id=user.id,
         request_id=request.headers.get("x-request-id"),
     )
-
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.access_token_expire_minutes
     )
-    logger.info(f"Platform login ok user={user.id} role={role_value}")
+    logger.info(f"Platform MFA verified user={user.id} role={role_value}")
     return PlatformTokenResponse(
         access_token=token,
         expires_at=expires_at,
         role=role or PlatformRole.SUPPORT,
+    )
+
+
+@router.post("/auth/resend-code", response_model=PlatformMfaChallengeResponse)
+@limiter.limit("5/minute")
+async def platform_resend_mfa_code(
+    request: Request,
+    body: PlatformMfaResendRequest,
+    db: SessionDep,
+    background_tasks: BackgroundTasks,
+    redis_client: AsyncRedis = Depends(get_redis),
+) -> PlatformMfaChallengeResponse:
+    """Resend MFA code for an existing challenge (cooldown enforced)."""
+    redis_key = f"platform:mfa:challenge:{body.challenge_id.strip()}"
+    raw = await redis_client.get(redis_key)
+    if not raw:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "MFA_CHALLENGE_INVALID",
+                "message": "Invalid or expired challenge. Sign in again.",
+            },
+        )
+    import json as _json
+
+    data = _json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+    user_id = data.get("user_id")
+    email = data.get("email")
+    if not user_id or not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid challenge payload",
+        )
+
+    if not await security.platform_mfa_resend_allowed(user_id, redis_client):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "code": "MFA_RESEND_COOLDOWN",
+                "message": "Please wait before requesting another code.",
+                "retry_after_sec": settings.platform_mfa_resend_cooldown_sec,
+            },
+        )
+
+    user = (
+        await db.exec(
+            select(PlatformUser).where(
+                PlatformUser.id == UUID(str(user_id)),
+                PlatformUser.deleted_at.is_(None),
+            )
+        )
+    ).first()
+    if not user or not user.active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is inactive or not found",
+        )
+
+    challenge_id, plain_code, ttl = await security.create_platform_mfa_challenge(
+        user_id=user.id,
+        email=email,
+        redis_client=redis_client,
+    )
+    client_ip = request.client.host if request.client else "Unknown"
+    background_tasks.add_task(
+        mailer.send_platform_login_code,
+        to_email=email,
+        code=plain_code,
+        user_name=user.full_name,
+        ip_address=client_ip,
+        expire_minutes=max(1, ttl // 60),
+    )
+    await record_platform_audit(
+        db,
+        actor=user,
+        action="platform.auth.resend_code",
+        outcome="success",
+        resource_type="platform_user",
+        resource_id=user.id,
+        request_id=request.headers.get("x-request-id"),
+    )
+    return PlatformMfaChallengeResponse(
+        challenge_id=challenge_id,
+        expires_in=ttl,
+        email_hint=_email_hint(email),
     )
 
 
