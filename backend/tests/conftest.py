@@ -47,12 +47,24 @@ def database_url_sync() -> str:
 
 @pytest.fixture(scope="session")
 def prepared_database(database_url_sync: str) -> None:
-    """Run Alembic migrations once per test session (sync — avoids ScopeMismatch)."""
+    """Ensure schema is at head (sync — avoids ScopeMismatch).
+
+    CI migrates as superuser before pytest, then runs tests as non-superuser
+    ``tawala_app`` so RLS is enforced. Local runs may migrate here if the
+    configured user can DDL.
+    """
     clear_settings_cache()
     reset_engine()
     cfg = Config("alembic.ini")
     cfg.set_main_option("sqlalchemy.url", database_url_sync)
-    command.upgrade(cfg, "head")
+    try:
+        command.upgrade(cfg, "head")
+    except Exception as exc:
+        # Non-superuser app role cannot create tables; schema must already exist.
+        msg = str(exc).lower()
+        if "permission" in msg or "must be owner" in msg:
+            return
+        raise
 
 
 @pytest_asyncio.fixture

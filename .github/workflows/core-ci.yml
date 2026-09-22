@@ -1,5 +1,8 @@
 # Core CI — runs on core/v2 only. Does not deploy product.
 # Pytest against real PostgreSQL is the sole quality gate.
+#
+# Postgres Docker's POSTGRES_USER is a superuser (bypasses RLS even with FORCE).
+# Migrations run as superuser; tests run as non-superuser `tawala_app` so RLS is real.
 name: Core CI
 
 on:
@@ -36,7 +39,6 @@ jobs:
       LOG_LEVEL: DEBUG
       DB_HOST: localhost
       DB_PORT: "5432"
-      DB_USER: core_ci
       DB_PASSWORD: ""
       DB_NAME: tawala_core_test
     steps:
@@ -51,5 +53,45 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Pytest (real PostgreSQL)
+      - name: Migrate as superuser + create non-superuser app role
+        env:
+          DB_USER: core_ci
+          PGPASSWORD: ""
+        run: |
+          # Alembic as owner/superuser so FORCE RLS policies can be installed.
+          export DB_USER=core_ci
+          python -c "
+          from alembic.config import Config
+          from alembic import command
+          from app.core_platform.shared.settings import clear_settings_cache
+          clear_settings_cache()
+          cfg = Config('alembic.ini')
+          from app.core_platform.shared.settings import get_settings
+          cfg.set_main_option('sqlalchemy.url', get_settings().require_database_url_sync())
+          command.upgrade(cfg, 'head')
+          print('migrations ok')
+          "
+          # App role: NOT a superuser — RLS + FORCE actually apply.
+          psql -h localhost -U core_ci -d tawala_core_test -v ON_ERROR_STOP=1 <<'SQL'
+          DO \$\$
+          BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'tawala_app') THEN
+              CREATE ROLE tawala_app LOGIN PASSWORD '' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+            END IF;
+          END
+          \$\$;
+          GRANT CONNECT ON DATABASE tawala_core_test TO tawala_app;
+          GRANT USAGE ON SCHEMA public TO tawala_app;
+          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO tawala_app;
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO tawala_app;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO tawala_app;
+          ALTER DEFAULT PRIVILEGES IN SCHEMA public
+            GRANT USAGE, SELECT ON SEQUENCES TO tawala_app;
+          SQL
+
+      - name: Pytest (real PostgreSQL, non-superuser)
+        env:
+          # Tests must not use the Docker superuser or RLS is a no-op.
+          DB_USER: tawala_app
         run: pytest -q

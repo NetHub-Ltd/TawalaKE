@@ -1,10 +1,10 @@
 """RLS GUCs must survive intermediate session.commit() within one request (#292).
 
 NullPool releases the connection on commit; tenant intent is stored on
-session.info and re-applied via after_begin so RLS still applies mid-request.
+session.info and re-applied via after_begin.
 
-ORM ``select(Product)`` is **not** used for isolation assertions — the identity
-map can still hold rows loaded earlier under bypass. Raw SQL is authoritative.
+RLS visibility assertions require a **non-superuser** DB role (FORCE RLS does
+not bind superusers). CI uses ``tawala_app`` for that reason.
 """
 
 from __future__ import annotations
@@ -18,9 +18,21 @@ from app.db.session import set_tenant_guc
 from app.models.catalog import Product
 
 
+async def _is_superuser(session) -> bool:
+    conn = await session.connection()
+    val = (await conn.execute(text("SELECT current_setting('is_superuser')"))).scalar_one()
+    return val == "on"
+
+
 @pytest.mark.asyncio
 async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants):
-    """create product → commit → second raw query still tenant-scoped by RLS."""
+    """create product → commit → GUC restored; other tenant hidden by RLS."""
+    if await _is_superuser(db_session):
+        pytest.skip(
+            "Postgres superusers bypass RLS (even FORCE). "
+            "CI must run tests as non-superuser tawala_app."
+        )
+
     t = two_tenants
     biz_a = t["biz_a"]
 
@@ -37,7 +49,6 @@ async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants
     await db_session.commit()
     await db_session.refresh(prod)
 
-    # New transaction after commit restores GUC from session.info
     conn = await db_session.connection()
     row = (
         await conn.execute(
@@ -46,7 +57,6 @@ async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants
     ).scalar_one()
     assert row == str(biz_a), f"GUC lost after commit; got {row!r}"
 
-    # Raw SQL — not ORM — so identity-map rows from fixture seeding cannot leak
     own = (
         await conn.execute(
             text("SELECT id FROM products WHERE id = CAST(:id AS uuid)"),
