@@ -1,3 +1,2 @@
 # Rollback
-- Revert docs PR only
-- No runtime/config change in this PR
+- Revert PR (docs/templates only)

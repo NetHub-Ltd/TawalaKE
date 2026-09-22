@@ -1,4 +1,5 @@
 # Task
+Update backend/.env.example and add frontend/.env.example with platform + auth vars.
 
 ## Goal
 #301 — Document platform org hard-delete cleanup window runbook.
