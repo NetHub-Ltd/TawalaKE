@@ -2,6 +2,9 @@
 
 NullPool releases the connection on commit; tenant intent is stored on
 session.info and re-applied via after_begin so RLS still applies mid-request.
+
+ORM ``select(Product)`` is **not** used for isolation assertions — the identity
+map can still hold rows loaded earlier under bypass. Raw SQL is authoritative.
 """
 
 from __future__ import annotations
@@ -10,7 +13,6 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import text
-from sqlmodel import select
 
 from app.db.session import set_tenant_guc
 from app.models.catalog import Product
@@ -18,10 +20,9 @@ from app.models.catalog import Product
 
 @pytest.mark.asyncio
 async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants):
-    """create product → commit → second query still tenant-scoped by RLS."""
+    """create product → commit → second raw query still tenant-scoped by RLS."""
     t = two_tenants
     biz_a = t["biz_a"]
-    biz_b = t["biz_b"]
 
     await set_tenant_guc(db_session, biz_a, bypass=False)
 
@@ -36,7 +37,7 @@ async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants
     await db_session.commit()
     await db_session.refresh(prod)
 
-    # New transaction after commit must restore GUC from session.info
+    # New transaction after commit restores GUC from session.info
     conn = await db_session.connection()
     row = (
         await conn.execute(
@@ -45,11 +46,21 @@ async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants
     ).scalar_one()
     assert row == str(biz_a), f"GUC lost after commit; got {row!r}"
 
-    products = (await db_session.exec(select(Product))).all()
-    assert all(p.business_id == biz_a for p in products)
-    assert any(p.id == prod.id for p in products)
-    # Other tenant product must not appear under RLS
-    assert all(p.id != t["prod_b"] for p in products)
+    # Raw SQL — not ORM — so identity-map rows from fixture seeding cannot leak
+    own = (
+        await conn.execute(
+            text("SELECT id FROM products WHERE id = CAST(:id AS uuid)"),
+            {"id": str(prod.id)},
+        )
+    ).scalar()
+    other = (
+        await conn.execute(
+            text("SELECT id FROM products WHERE id = CAST(:id AS uuid)"),
+            {"id": str(t["prod_b"])},
+        )
+    ).scalar()
+    assert own is not None, "own product must remain visible under matching GUC"
+    assert other is None, "other-tenant product must stay hidden by RLS after commit"
 
 
 @pytest.mark.asyncio
