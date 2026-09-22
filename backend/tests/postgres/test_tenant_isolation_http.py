@@ -86,8 +86,9 @@ async def test_rls_hides_other_tenant_products(db_session, two_tenants):
 
     t = two_tenants
 
+    conn = await db_session.connection()
     is_super = (
-        await db_session.execute(text("SELECT current_setting('is_superuser')"))
+        await conn.execute(text("SELECT current_setting('is_superuser')"))
     ).scalar_one()
     if is_super == "on":
         pytest.skip("RLS is not enforced for PostgreSQL superusers")
@@ -95,14 +96,15 @@ async def test_rls_hides_other_tenant_products(db_session, two_tenants):
     await set_tenant_guc(db_session, t["biz_a"], bypass=False)
 
     # Raw SQL — avoids identity-map leakage of Product instances seeded under bypass.
+    conn = await db_session.connection()
     row_a = (
-        await db_session.execute(
+        await conn.execute(
             text("SELECT id FROM products WHERE id = CAST(:id AS uuid)"),
             {"id": str(t["prod_a"])},
         )
     ).scalar()
     row_b = (
-        await db_session.execute(
+        await conn.execute(
             text("SELECT id FROM products WHERE id = CAST(:id AS uuid)"),
             {"id": str(t["prod_b"])},
         )

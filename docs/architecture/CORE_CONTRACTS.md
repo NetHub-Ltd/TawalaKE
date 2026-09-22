@@ -395,9 +395,13 @@ These are **security/identity events**, not business-domain audit. They share th
 
 ## RLS GUC lifetime
 
-`set_tenant_guc` uses **session-level** `set_config(..., is_local=false)` so tenant GUCs survive intermediate `session.commit()` calls within one HTTP request. GUCs are cleared when the FastAPI `get_session` dependency exits.
+With `NullPool`, SQLAlchemy **releases the DB connection on `commit()`**, so PostgreSQL session GUCs cannot survive a commit by themselves.
 
-Do not use transaction-local GUCs (`is_local=true`) for request-scoped tenancy — they reset on every domain service commit.
+Core stores tenant intent on `session.info['tenant_guc']` and re-applies GUCs on every new transaction via a SQLAlchemy `after_begin` listener (`backend/app/db/session.py`). `set_tenant_guc` updates that info and applies immediately on the current connection.
+
+`get_session` clears `tenant_guc` when the request ends so intent never leaks across requests.
+
+Raw SQL uses `await session.connection().execute(text(...))` (not `session.execute`) to avoid SQLModel deprecation warnings on non-ORM statements.
 
 ---
 

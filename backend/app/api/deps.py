@@ -82,8 +82,10 @@ async def get_tenant_context(
     await set_tenant_guc(session, business_id=None, bypass=False)
     from sqlalchemy import text
 
-    await session.execute(
-        text("SELECT set_config('app.current_user_id', :uid, true)"),
+    # connection.execute avoids SQLModel session.execute deprecation on raw SQL
+    conn = await session.connection()
+    await conn.execute(
+        text("SELECT set_config('app.current_user_id', :uid, false)"),
         {"uid": str(user.id)},
     )
 

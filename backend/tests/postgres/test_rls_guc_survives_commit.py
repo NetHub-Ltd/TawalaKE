@@ -1,4 +1,8 @@
-"""RLS GUCs must survive intermediate session.commit() within one request (#292)."""
+"""RLS GUCs must survive intermediate session.commit() within one request (#292).
+
+NullPool releases the connection on commit; tenant intent is stored on
+session.info and re-applied via after_begin so RLS still applies mid-request.
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,6 @@ async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants
 
     await set_tenant_guc(db_session, biz_a, bypass=False)
 
-    # Intermediate commit must not clear session-level GUCs
     prod = Product(
         id=uuid4(),
         business_id=biz_a,
@@ -33,33 +36,35 @@ async def test_rls_guc_survives_commit_then_second_query(db_session, two_tenants
     await db_session.commit()
     await db_session.refresh(prod)
 
-    # GUC still set after commit
+    # New transaction after commit must restore GUC from session.info
+    conn = await db_session.connection()
     row = (
-        await db_session.execute(
+        await conn.execute(
             text("SELECT current_setting('app.current_business_id', true)")
         )
     ).scalar_one()
-    assert row == str(biz_a)
+    assert row == str(biz_a), f"GUC lost after commit; got {row!r}"
 
-    # Query still only sees tenant A products (not B)
     products = (await db_session.exec(select(Product))).all()
-    ids = {p.business_id for p in products}
-    assert biz_a in ids or any(p.id == prod.id for p in products)
-    assert biz_b not in ids or all(p.business_id == biz_a for p in products if p.id == prod.id)
-    # Stronger: no product from biz_b visible under GUC
     assert all(p.business_id == biz_a for p in products)
+    assert any(p.id == prod.id for p in products)
+    # Other tenant product must not appear under RLS
+    assert all(p.id != t["prod_b"] for p in products)
 
 
 @pytest.mark.asyncio
-async def test_rls_guc_session_level_flag(db_session, two_tenants):
-    """After set_tenant_guc, is_local semantics leave GUC after COMMIT."""
+async def test_rls_guc_restored_after_commit(db_session, two_tenants):
+    """session.info tenant_guc re-applied on next transaction after COMMIT."""
     t = two_tenants
     await set_tenant_guc(db_session, t["biz_a"], bypass=False)
-    await db_session.execute(text("SELECT 1"))
+    conn = await db_session.connection()
+    await conn.execute(text("SELECT 1"))
     await db_session.commit()
+
+    conn = await db_session.connection()
     val = (
-        await db_session.execute(
+        await conn.execute(
             text("SELECT current_setting('app.current_business_id', true)")
         )
     ).scalar_one()
-    assert val == str(t["biz_a"])
+    assert val == str(t["biz_a"]), f"expected tenant GUC after commit, got {val!r}"
