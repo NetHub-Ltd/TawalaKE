@@ -21,12 +21,14 @@ class PlatformTokenResponse(BaseModel):
     expires_at: datetime
     role: PlatformRole
     kind: str = "platform"
+    must_change_password: bool = False
 
 
 class PlatformUserCreate(BaseModel):
+    """Invite a platform operator. Password is generated server-side and emailed."""
+
     email: EmailStr
     full_name: str = Field(min_length=1, max_length=100)
-    password: str = Field(min_length=8, max_length=128)
     role: PlatformRole = PlatformRole.SUPPORT
     active: bool = True
 
@@ -35,7 +37,8 @@ class PlatformUserUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     role: Optional[PlatformRole] = None
     active: Optional[bool] = None
-    password: Optional[str] = Field(default=None, min_length=8, max_length=128)
+    # Optional admin reset; when set, must_change_password is forced True.
+    password: Optional[str] = Field(default=None, min_length=12, max_length=128)
 
 
 class PlatformUserRead(BaseModel):
@@ -44,6 +47,7 @@ class PlatformUserRead(BaseModel):
     full_name: str
     role: PlatformRole
     active: bool
+    must_change_password: bool = False
     last_login_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -54,6 +58,11 @@ class PlatformUserRead(BaseModel):
 class PlatformMeResponse(BaseModel):
     user: PlatformUserRead
     permissions: list[str]
+
+
+class PlatformChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=8, max_length=128)
+    new_password: str = Field(min_length=12, max_length=128)
 
 
 # ---------------------------------------------------------------------------
