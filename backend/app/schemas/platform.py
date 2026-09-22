@@ -54,3 +54,52 @@ class PlatformUserRead(BaseModel):
 class PlatformMeResponse(BaseModel):
     user: PlatformUserRead
     permissions: list[str]
+
+
+# ---------------------------------------------------------------------------
+# Platform organization admin (issue #297) — list + hard delete
+# ---------------------------------------------------------------------------
+
+
+class PlatformOrgRead(BaseModel):
+    """Organization summary for platform operators (cross-tenant)."""
+
+    id: UUID
+    name: str
+    email: EmailStr
+    phone: Optional[str] = None
+    active: bool
+    onboarding: Optional[bool] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PlatformOrgHardDeleteRequest(BaseModel):
+    """Friction body for irreversible org hard delete."""
+
+    confirm_name: str = Field(
+        ...,
+        min_length=1,
+        max_length=255,
+        description="Must match the organization name exactly (trimmed).",
+    )
+    confirm_phrase: str = Field(
+        ...,
+        description="Must be exactly the string DELETE.",
+    )
+    reason: str = Field(
+        ...,
+        min_length=3,
+        max_length=500,
+        description="Why this org is being permanently removed.",
+    )
+
+
+class PlatformOrgHardDeleteResponse(BaseModel):
+    organization_id: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    pre_delete_counts: dict[str, int]
+    deleted_table_rows: dict[str, int]

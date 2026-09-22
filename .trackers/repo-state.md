@@ -1,4 +1,7 @@
 # Repository State
-- Branch: docs/auth-m0-contracts-threat-model → PR to dev
-- Auth program: M0 docs in progress / complete on this branch
-- Board: https://github.com/orgs/NetHub-Ltd/projects/3
+
+- Branch: feat/platform-org-hard-delete (from dev @ 9cfb14c)
+- Target PR base: dev
+- Issue: #297
+- Platform Slice A + Auth M0/M1 already on dev
+- Core/v2 tracking moved to https://github.com/NetHub-Ltd/tawala-core
