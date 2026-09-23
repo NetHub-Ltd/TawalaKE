@@ -265,7 +265,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           {product.label}
         </h1>
         <p className="text-sm text-muted">
-          View levels, run stock actions, and see history. Use Settings for name, category, cost, and tracking — not selling price, SKU, or on-hand quantity.
+          View levels, run stock actions, and see history. Change name, selling price, cost, and SKU in Settings. Change on-hand quantity with Receive, Count, or Adjust.
         </p>
       </header>
 
@@ -310,8 +310,18 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <Metric label="On hand" value={`${onHand}`} />
-            <Metric label="Value (KES)" value={value.toLocaleString()} />
-            <Metric label="Selling price" value={String(product.selling_price ?? "—")} />
+            <Metric
+              label="Value (KES)"
+              value={formatKes(value)}
+            />
+            <Metric
+              label="Selling price"
+              value={
+                product.selling_price == null
+                  ? "—"
+                  : formatKes(Number(product.selling_price))
+              }
+            />
             <Metric label="Category" value={product.category || "—"} />
             <Metric
               label="Stock status"
@@ -394,6 +404,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
               notes: fields.notes || undefined,
               reference_type: fields.reference || "PURCHASE_ORDER",
               buying_price: fields.buyingPrice || undefined,
+              selling_price: fields.sellingPrice || undefined,
             });
           }}
           onCount={async (fields) => {
@@ -495,8 +506,8 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           <div>
             <h2 className="text-base font-semibold text-foreground">Catalogue settings</h2>
             <p className="mt-1 text-sm text-muted">
-              Name, category, cost, and tracking. Selling price, SKU, and on-hand stock are not
-              edited here — use Receive, Count, or Adjust for quantity; price/SKU stay outside this form.
+              Name, selling price, cost, SKU, and tracking. On-hand quantity is not edited here —
+              use Receive, Count, or Adjust for stock levels.
             </p>
           </div>
           <ProductSettingsForm
@@ -568,6 +579,10 @@ function ProductSettingsForm({
   const [buyingPrice, setBuyingPrice] = useState(
     String(attrs.buying_price ?? product.cost_price ?? "")
   );
+  const [sellingPrice, setSellingPrice] = useState(
+    String(product.selling_price ?? "")
+  );
+  const [sku, setSku] = useState(String(attrs.sku ?? ""));
   const [trackStock, setTrackStock] = useState(Boolean(product.track_stock));
   const [active, setActive] = useState(product.active !== false);
   const [minStock, setMinStock] = useState(String(product.min_stock_level ?? 10));
@@ -579,7 +594,13 @@ function ProductSettingsForm({
     setError(null);
     setSaving(true);
     try {
-      // Selling price, SKU, and on-hand stock are intentionally omitted from this form.
+      const sell = sellingPrice === "" ? NaN : Number(sellingPrice);
+      if (sellingPrice !== "" && (Number.isNaN(sell) || sell < 0)) {
+        setError("Selling price must be a valid number (0 or more).");
+        setSaving(false);
+        return;
+      }
+      // On-hand quantity stays on Receive / Count / Adjust — not here.
       await onSave({
         label: label.trim(),
         category,
@@ -587,9 +608,11 @@ function ProductSettingsForm({
         active,
         min_stock_level: Number(minStock) || 0,
         cost_price: buyingPrice === "" ? undefined : Number(buyingPrice),
+        selling_price: sellingPrice === "" ? undefined : sell,
         attributes: {
           unit_of_measure: uom || null,
           buying_price: buyingPrice === "" ? null : Number(buyingPrice),
+          sku: sku.trim() || null,
         },
       });
     } catch (err) {
@@ -622,6 +645,28 @@ function ProductSettingsForm({
             className={field}
             value={buyingPrice}
             onChange={(e) => setBuyingPrice(e.target.value)}
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Selling price (KES) *</span>
+          <input
+            type="number"
+            min={0}
+            step="any"
+            required
+            className={field}
+            value={sellingPrice}
+            onChange={(e) => setSellingPrice(e.target.value)}
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">SKU</span>
+          <input
+            className={field}
+            value={sku}
+            onChange={(e) => setSku(e.target.value)}
+            placeholder="Barcode or code"
+            autoComplete="off"
           />
         </label>
         <label className="block space-y-1.5">
@@ -779,6 +824,15 @@ function MovementsTable({
   );
 }
 
+function formatKes(amount: number): string {
+  return new Intl.NumberFormat("en-KE", {
+    style: "currency",
+    currency: "KES",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 function Metric({
   label,
   value,
@@ -843,7 +897,7 @@ function StockActionForm({
   submitting: boolean;
   error: string | null;
   onCancel: () => void;
-  onReceive: (f: { quantity: number; notes: string; reference: string; buyingPrice?: number }) => Promise<void>;
+  onReceive: (f: { quantity: number; notes: string; reference: string; buyingPrice?: number; sellingPrice?: number }) => Promise<void>;
   onCount: (f: { physical: number; reason: string; notes: string }) => Promise<void>;
   onAdjust: (f: { quantity: number; direction: string; reason: string; notes: string }) => Promise<void>;
 }) {
@@ -854,6 +908,7 @@ function StockActionForm({
   const [notes, setNotes] = useState("");
   const [reference, setReference] = useState("");
   const [buyingPrice, setBuyingPrice] = useState("");
+  const [sellingPrice, setSellingPrice] = useState("");
 
   const change =
     action === "receive"
@@ -880,6 +935,7 @@ function StockActionForm({
         notes,
         reference,
         buyingPrice: buyingPrice ? Number(buyingPrice) : undefined,
+        sellingPrice: sellingPrice ? Number(sellingPrice) : undefined,
       });
     } else if (action === "count") {
       await onCount({ physical: Number(physical), reason, notes });
@@ -924,6 +980,18 @@ function StockActionForm({
                 value={buyingPrice}
                 onChange={(e) => setBuyingPrice(e.target.value)}
                 className={inputClass}
+                placeholder="Cost from supplier"
+              />
+            </Field>
+            <Field label="New selling price (KES)">
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={sellingPrice}
+                onChange={(e) => setSellingPrice(e.target.value)}
+                className={inputClass}
+                placeholder="Optional — leave blank to keep current"
               />
             </Field>
             <Field label="Reference">
