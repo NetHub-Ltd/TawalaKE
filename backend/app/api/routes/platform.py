@@ -27,16 +27,20 @@ from app.core.platform_rbac import (
     permissions_for,
 )
 from app.core.security import security
-from app.models.models import Organization, PlatformRole, PlatformUser
+from app.models.models import Organization, Plan, PlatformRole, PlatformUser, Subscription
 from app.schemas.platform import (
     PlatformLoginRequest,
     PlatformMeResponse,
     PlatformMfaChallengeResponse,
     PlatformMfaResendRequest,
     PlatformMfaVerifyRequest,
+    PlatformOrgCreate,
     PlatformOrgHardDeleteRequest,
     PlatformOrgHardDeleteResponse,
     PlatformOrgRead,
+    PlatformOrgStats,
+    PlatformOrgSubscriptionRead,
+    PlatformOrgUpdate,
     PlatformTokenResponse,
     PlatformChangePasswordRequest,
     PlatformUserCreate,
@@ -44,7 +48,10 @@ from app.schemas.platform import (
     PlatformUserUpdate,
 )
 from app.services.audit import record_platform_audit
-from app.services.platform_org_delete import hard_delete_organization
+from app.services.platform_org_delete import (
+    collect_org_delete_stats,
+    hard_delete_organization,
+)
 from app.core.redis_client import limiter
 from app.utils.logging import logger
 
@@ -503,6 +510,7 @@ async def update_platform_user(
 # ---------------------------------------------------------------------------
 
 
+
 @router.get(
     "/organizations",
     response_model=List[PlatformOrgRead],
@@ -515,11 +523,13 @@ async def list_platform_organizations(
     q: str | None = None,
     limit: int = 50,
     offset: int = 0,
+    include_stats: bool = True,
 ) -> List[PlatformOrgRead]:
     """
     List organizations across all tenants (platform operators only).
 
     Optional filters: active, q (name/email substring).
+    Stats and subscription summaries included when include_stats=true (default).
     """
     limit = max(1, min(limit, 200))
     offset = max(0, offset)
@@ -533,7 +543,10 @@ async def list_platform_organizations(
         )
     stmt = stmt.offset(offset).limit(limit)
     rows = list(await db.exec(stmt))
-    return [PlatformOrgRead.model_validate(r) for r in rows]
+    out: list[PlatformOrgRead] = []
+    for r in rows:
+        out.append(await _serialize_platform_org(db, r, include_stats=include_stats))
+    return out
 
 
 @router.get(
@@ -546,13 +559,116 @@ async def get_platform_organization(
     db: SessionDep,
     user: PlatformAuthUser,
 ) -> PlatformOrgRead:
-    """Get a single organization by id (any tenant)."""
+    """Get a single organization by id with stats and subscriptions."""
     org = (
         await db.exec(select(Organization).where(Organization.id == organization_id))
     ).first()
     if not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return PlatformOrgRead.model_validate(org)
+    return await _serialize_platform_org(db, org, include_stats=True)
+
+
+@router.post(
+    "/organizations",
+    response_model=PlatformOrgRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.ORGS_WRITE))],
+)
+async def create_platform_organization(
+    request: Request,
+    body: PlatformOrgCreate,
+    db: SessionDep,
+    actor: PlatformAuthUser,
+) -> PlatformOrgRead:
+    """Create an organization (platform admin). Does not create staff or subscriptions."""
+    email = str(body.email).strip().lower()
+    existing = (
+        await db.exec(select(Organization).where(Organization.email == email))
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An organization with this email already exists",
+        )
+    org = Organization(
+        name=body.name.strip(),
+        email=email,
+        phone=(body.phone or None),
+        address=(body.address or None),
+        active=body.active,
+        onboarding=body.onboarding,
+    )
+    db.add(org)
+    await db.commit()
+    await db.refresh(org)
+    await record_platform_audit(
+        db,
+        actor=actor,
+        action="platform.orgs.create",
+        outcome="success",
+        resource_type="organization",
+        resource_id=org.id,
+        meta={"name": org.name, "email": org.email},
+        request_id=request.headers.get("x-request-id"),
+        independent=True,
+    )
+    return await _serialize_platform_org(db, org, include_stats=True)
+
+
+@router.patch(
+    "/organizations/{organization_id}",
+    response_model=PlatformOrgRead,
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.ORGS_WRITE))],
+)
+async def update_platform_organization(
+    request: Request,
+    organization_id: UUID,
+    body: PlatformOrgUpdate,
+    db: SessionDep,
+    actor: PlatformAuthUser,
+) -> PlatformOrgRead:
+    """Update organization catalogue fields (platform admin)."""
+    org = (
+        await db.exec(select(Organization).where(Organization.id == organization_id))
+    ).first()
+    if not org:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+    data = body.model_dump(exclude_unset=True)
+    if "email" in data and data["email"] is not None:
+        new_email = str(data["email"]).strip().lower()
+        clash = (
+            await db.exec(
+                select(Organization).where(
+                    Organization.email == new_email,
+                    Organization.id != organization_id,
+                )
+            )
+        ).first()
+        if clash:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="An organization with this email already exists",
+            )
+        data["email"] = new_email
+    if "name" in data and data["name"] is not None:
+        data["name"] = str(data["name"]).strip()
+    for k, v in data.items():
+        setattr(org, k, v)
+    db.add(org)
+    await db.commit()
+    await db.refresh(org)
+    await record_platform_audit(
+        db,
+        actor=actor,
+        action="platform.orgs.update",
+        outcome="success",
+        resource_type="organization",
+        resource_id=org.id,
+        meta={"fields": list(data.keys())},
+        request_id=request.headers.get("x-request-id"),
+        independent=True,
+    )
+    return await _serialize_platform_org(db, org, include_stats=True)
 
 
 @router.delete(
@@ -574,7 +690,7 @@ async def hard_delete_platform_organization(
     Temporary cleanup tool (issue #297). Requires:
     - settings.platform_org_hard_delete == True
     - SUPER_ADMIN role
-    - confirm_name exact match and confirm_phrase == \"DELETE\"
+    - confirm_name exact match and confirm_phrase == "DELETE"
     """
     if not settings.platform_org_hard_delete:
         await record_platform_audit(
@@ -618,10 +734,7 @@ async def hard_delete_platform_organization(
     if body.confirm_phrase.strip() != "DELETE":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "CONFIRM_PHRASE_INVALID",
-                "message": 'confirm_phrase must be exactly DELETE',
-            },
+            detail="confirm_phrase must be exactly DELETE",
         )
 
     org = (
@@ -629,28 +742,10 @@ async def hard_delete_platform_organization(
     ).first()
     if not org:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-
-    if org.name.strip() != body.confirm_name.strip():
-        await record_platform_audit(
-            db,
-            actor=actor,
-            action="platform.orgs.hard_delete",
-            outcome="denied_name_mismatch",
-            resource_type="organization",
-            resource_id=organization_id,
-            meta={
-                "reason": body.reason,
-                "provided_name": body.confirm_name,
-                "actual_name": org.name,
-            },
-            request_id=request.headers.get("x-request-id"),
-        )
+    if body.confirm_name.strip() != (org.name or "").strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "CONFIRM_NAME_MISMATCH",
-                "message": "confirm_name does not match the organization name",
-            },
+            detail="confirm_name must match the organization name exactly",
         )
 
     try:
@@ -699,3 +794,57 @@ async def hard_delete_platform_organization(
         independent=True,
     )
     return PlatformOrgHardDeleteResponse(**result)
+
+
+async def _serialize_platform_org(
+    db: SessionDep,
+    org: Organization,
+    *,
+    include_stats: bool,
+) -> PlatformOrgRead:
+    base = PlatformOrgRead.model_validate(org)
+    if not include_stats:
+        return base
+    stats_raw = await collect_org_delete_stats(db, org.id)
+    stats = PlatformOrgStats(
+        businesses=int(stats_raw.get("businesses") or 0),
+        staff=int(stats_raw.get("staff") or 0),
+        sales=int(stats_raw.get("sales") or 0),
+        subscriptions=int(stats_raw.get("subscriptions") or 0),
+        products=int(stats_raw.get("products") or 0),
+        customers=int(stats_raw.get("customers") or 0),
+    )
+    subs_out: list[PlatformOrgSubscriptionRead] = []
+    try:
+        sub_rows = list(
+            await db.exec(
+                select(Subscription).where(Subscription.organization_id == org.id)
+            )
+        )
+        plan_ids = [s.plan_id for s in sub_rows if getattr(s, "plan_id", None)]
+        plan_map: dict = {}
+        if plan_ids:
+            plans = list(await db.exec(select(Plan).where(Plan.id.in_(list(plan_ids)))))
+            plan_map = {p.id: p for p in plans}
+        for s in sub_rows:
+            plan = plan_map.get(s.plan_id) if s.plan_id else None
+            tier_val = None
+            try:
+                tier_val = s.tier.value if hasattr(s.tier, "value") else str(s.tier)
+            except Exception:
+                tier_val = str(getattr(s, "tier", None) or "")
+            subs_out.append(
+                PlatformOrgSubscriptionRead(
+                    id=s.id,
+                    active=bool(s.active),
+                    tier=tier_val,
+                    plan_id=s.plan_id,
+                    plan_name=getattr(plan, "name", None) if plan else None,
+                    start_date=s.start_date,
+                    end_date=s.end_date,
+                    current_usage=getattr(s, "current_usage", None) or {},
+                )
+            )
+    except Exception as exc:
+        logger.warning("platform org subscriptions serialize failed: %s", exc)
+    return base.model_copy(update={"stats": stats, "subscriptions": subs_out})

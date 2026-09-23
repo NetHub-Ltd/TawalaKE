@@ -17,7 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.models import (
     Business,
+    Customer,
     Organization,
+    Product,
     Sale,
     Staff,
     Subscription,
@@ -25,7 +27,8 @@ from app.models.models import (
 from app.utils.logging import logger
 
 
-# Leaf → parent. Must match __tablename__ values in models.
+# Leaf → parent. Align with models that carry organization_id.
+# Missing tables are skipped via SAVEPOINT (rowcount 0) so schema drift is safe.
 _ORG_SCOPED_TABLES_ORDERED: tuple[str, ...] = (
     "sale_items",
     "payments",
@@ -49,15 +52,30 @@ _ORG_SCOPED_TABLES_ORDERED: tuple[str, ...] = (
     "staff",
 )
 
+# Second pass: rows that may only be keyed by business_id (legacy / partial org_id).
+_BUSINESS_SCOPED_TABLES: tuple[str, ...] = (
+    "sale_items",
+    "payments",
+    "financial_documents",
+    "sales",
+    "stock_history",
+    "products",
+    "categories",
+    "expenses",
+    "customers",
+)
+
 
 async def collect_org_delete_stats(db: AsyncSession, org_id: UUID) -> dict[str, Any]:
-    """Snapshot counts for audit meta (sales, staff, businesses, subscriptions)."""
+    """Snapshot counts for audit meta and platform UI."""
     stats: dict[str, Any] = {}
     for label, model in (
         ("sales", Sale),
         ("staff", Staff),
         ("businesses", Business),
         ("subscriptions", Subscription),
+        ("products", Product),
+        ("customers", Customer),
     ):
         try:
             q = await db.execute(
@@ -74,11 +92,7 @@ async def collect_org_delete_stats(db: AsyncSession, org_id: UUID) -> dict[str, 
 async def _delete_org_scoped(
     db: AsyncSession, table: str, org_id: UUID
 ) -> int:
-    """
-    Delete rows for org_id from one table.
-
-    Uses a SAVEPOINT so a missing table does not abort the outer transaction.
-    """
+    """Delete rows for org_id from one table (SAVEPOINT on missing table)."""
     try:
         async with db.begin_nested():
             result = await db.execute(
@@ -93,6 +107,29 @@ async def _delete_org_scoped(
             org_id,
         )
         return 0
+
+
+async def _delete_business_scoped(
+    db: AsyncSession, table: str, business_ids: list[UUID]
+) -> int:
+    if not business_ids:
+        return 0
+    total = 0
+    for bid in business_ids:
+        try:
+            async with db.begin_nested():
+                r = await db.execute(
+                    text(f"DELETE FROM {table} WHERE business_id = :bid"),
+                    {"bid": str(bid)},
+                )
+                total += int(r.rowcount or 0)
+        except ProgrammingError:
+            logger.warning(
+                "platform_org_hard_delete business_scoped_skip table=%s",
+                table,
+            )
+            return total
+    return total
 
 
 async def hard_delete_organization(
@@ -116,9 +153,23 @@ async def hard_delete_organization(
     org_name = org.name
     org_email = org.email
 
+    # Capture business ids before cascade for orphan cleanup.
+    biz_rows = (
+        await db.execute(
+            select(Business.id).where(Business.organization_id == org_id)
+        )
+    ).scalars().all()
+    business_ids = list(biz_rows)
+
     deleted_tables: dict[str, int] = {}
     for table in _ORG_SCOPED_TABLES_ORDERED:
         deleted_tables[table] = await _delete_org_scoped(db, table, org_id)
+
+    # Sweep leftovers that only had business_id set.
+    for table in _BUSINESS_SCOPED_TABLES:
+        extra = await _delete_business_scoped(db, table, business_ids)
+        if extra:
+            deleted_tables[table] = deleted_tables.get(table, 0) + extra
 
     deleted_tables["audit_logs"] = await _delete_org_scoped(db, "audit_logs", org_id)
 
@@ -129,7 +180,7 @@ async def hard_delete_organization(
         "platform_org_hard_delete ok org_id=%s name=%s pre=%s",
         org_id,
         org_name,
-        {k: stats.get(k) for k in ("sales", "staff", "businesses")},
+        {k: stats.get(k) for k in ("sales", "staff", "businesses", "products")},
     )
     return {
         "organization_id": str(org_id),
@@ -137,7 +188,14 @@ async def hard_delete_organization(
         "email": org_email,
         "pre_delete_counts": {
             k: stats.get(k, 0)
-            for k in ("sales", "staff", "businesses", "subscriptions")
+            for k in (
+                "sales",
+                "staff",
+                "businesses",
+                "subscriptions",
+                "products",
+                "customers",
+            )
         },
         "deleted_table_rows": deleted_tables,
     }

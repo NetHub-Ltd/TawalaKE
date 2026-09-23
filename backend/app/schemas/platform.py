@@ -91,6 +91,28 @@ class PlatformChangePasswordRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class PlatformOrgStats(BaseModel):
+    businesses: int = 0
+    staff: int = 0
+    sales: int = 0
+    subscriptions: int = 0
+    products: int = 0
+    customers: int = 0
+
+
+class PlatformOrgSubscriptionRead(BaseModel):
+    id: UUID
+    active: bool
+    tier: Optional[str] = None
+    plan_id: Optional[UUID] = None
+    plan_name: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    current_usage: Optional[dict] = None
+
+    model_config = {"from_attributes": True}
+
+
 class PlatformOrgRead(BaseModel):
     """Organization summary for platform operators (cross-tenant)."""
 
@@ -98,12 +120,33 @@ class PlatformOrgRead(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = None
+    address: Optional[str] = None
     active: bool
     onboarding: Optional[bool] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    stats: Optional[PlatformOrgStats] = None
+    subscriptions: Optional[list[PlatformOrgSubscriptionRead]] = None
 
     model_config = {"from_attributes": True}
+
+
+class PlatformOrgCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    email: EmailStr
+    phone: Optional[str] = Field(default=None, max_length=32)
+    address: Optional[str] = Field(default=None, max_length=500)
+    active: bool = True
+    onboarding: bool = False
+
+
+class PlatformOrgUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, max_length=32)
+    address: Optional[str] = Field(default=None, max_length=500)
+    active: Optional[bool] = None
+    onboarding: Optional[bool] = None
 
 
 class PlatformOrgHardDeleteRequest(BaseModel):
@@ -119,12 +162,7 @@ class PlatformOrgHardDeleteRequest(BaseModel):
         ...,
         description="Must be exactly the string DELETE.",
     )
-    reason: str = Field(
-        ...,
-        min_length=3,
-        max_length=500,
-        description="Why this org is being permanently removed.",
-    )
+    reason: str = Field(min_length=3, max_length=500)
 
 
 class PlatformOrgHardDeleteResponse(BaseModel):
