@@ -17,7 +17,7 @@ import {
   HelpCircle,
   Users,
 } from "lucide-react";
-import { can, canAny, Permission, permissionsForRole } from "@/lib/rbac";
+import { canAny, Permission, permissionsForRole } from "@/lib/rbac";
 
 export interface BusinessItem {
   id: string;
