@@ -64,12 +64,52 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
         : Date.now() + 15 * 60 * 1000;
     }
 
+    // Re-fetch profile so role/org stay accurate after refresh (Owner staff manage depends on this).
+    let nextUser = token.user;
+    try {
+      const meRes = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${newTokens.access_token}`,
+        },
+        cache: "no-store",
+      });
+      if (meRes.ok) {
+        const profile = await meRes.json();
+        const roleRaw = profile?.role;
+        const normalizedRole =
+          typeof roleRaw === "string"
+            ? roleRaw.toUpperCase().trim()
+            : undefined;
+        const prev = (typeof token.user === "object" && token.user
+          ? token.user
+          : {}) as {
+          id?: string;
+          email?: string;
+          name?: string;
+          role?: string;
+          organization_id?: string;
+        };
+        nextUser = {
+          ...prev,
+          id: profile?.id != null ? String(profile.id) : prev.id,
+          email: profile?.email ?? prev.email,
+          name: profile?.full_name ?? prev.name,
+          role: normalizedRole ?? prev.role,
+          organization_id: profile?.organization_id ?? prev.organization_id,
+        };
+      }
+    } catch (e) {
+      console.error("[Auth Engine] Profile refresh after token rotation failed:", e);
+    }
+
     return {
       ...token,
       accessToken: newTokens.access_token,
       refreshToken: newTokens.refresh_token ?? token.refreshToken,
       expiresAt,
       error: undefined,
+      user: nextUser,
     };
   } catch (error) {
     console.error("[Auth Engine] Token rotation failure:", error);
@@ -171,11 +211,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             : Date.now() + 15 * 60 * 1000;
         }
 
+        const normalizedRole =
+          typeof profile.role === "string"
+            ? profile.role.toUpperCase().trim()
+            : profile.role;
+
         return {
           id: String(profile.id),
           email: profile.email,
           name: profile.full_name,
-          role: profile.role,
+          role: normalizedRole,
           organization_id: profile.organization_id,
           accessToken: tokens.access_token,
           refreshToken: tokens.refresh_token,
@@ -241,13 +286,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return session;
       }
 
+      const rawRole = token.user.role;
+      const normalizedRole =
+        typeof rawRole === "string" ? rawRole.toUpperCase().trim() : "";
+
       session.user = {
         ...session.user,
-        id: token.user.id as string,
-        email: token.user.email as string,
-        name: token.user.name as string,
-        role: token.user.role as string,
-        organization_id: token.user.organization_id as string,
+        id: String(token.user.id ?? ""),
+        email: String(token.user.email ?? ""),
+        name: String(token.user.name ?? ""),
+        role: normalizedRole,
+        organization_id: String(token.user.organization_id ?? ""),
       };
 
       // Server Route Handlers may still read this via auth() on the server.
