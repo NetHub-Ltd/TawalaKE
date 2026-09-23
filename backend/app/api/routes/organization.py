@@ -156,6 +156,31 @@ async def list_billing_plans(db: SessionDep, user: AuthUser):
     return ApiResponse(status=True, status_code=200, message="Plans retrieved", data=data)
 
 
+@router.get("/plans/public", response_model=ApiResponse[list])
+async def list_public_billing_plans(db: SessionDep):
+    """Public catalogue of active is_public plans — no auth (marketing /pricing)."""
+    plans = await subscription_crud.list_public_plans(db)
+    data = [
+        {
+            "id": str(p.id),
+            "code": p.code,
+            "name": p.name,
+            "description": p.description,
+            "price_monthly": p.price_monthly,
+            "price_yearly": p.price_yearly,
+            "currency": p.currency,
+            "trial_days": p.trial_days,
+            "sort_order": p.sort_order,
+            "features": p.features or {},
+            "limits": p.limits or {},
+        }
+        for p in plans
+    ]
+    return ApiResponse(
+        status=True, status_code=200, message="Public plans retrieved", data=data
+    )
+
+
 @router.get("/subscription", response_model=ApiResponse[dict])
 async def get_my_subscription(db: SessionDep, user: AuthUser):
     org_id = user.organization_id or user.tenant_id

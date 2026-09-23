@@ -44,7 +44,7 @@ export const metadata: Metadata = {
 
 const TRIAL_HREF = "/onboarding/personal-details";
 const LOGIN_HREF = "/login";
-const PLANS_HREF = "/onboarding/plans";
+const PLANS_HREF = "/pricing";
 
 const BENEFITS = [
   {

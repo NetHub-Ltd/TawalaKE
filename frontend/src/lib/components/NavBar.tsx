@@ -52,7 +52,7 @@ const SOLUTIONS: SolutionItem[] = [
 ];
 
 const NAV_LINKS = [
-  { name: "Pricing", href: "/onboarding/plans" },
+  { name: "Pricing", href: "/pricing" },
   { name: "Blog", href: "/blog" },
   { name: "Support", href: "/support" },
 ] as const;
