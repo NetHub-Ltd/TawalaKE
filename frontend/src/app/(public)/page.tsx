@@ -33,12 +33,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_KE",
     siteName: "Tawala",
+    images: [
+      {
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: "Tawala — retail OS for Kenyan shops",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Tawala biashara yako bila stress",
     description:
       "Shop POS built for Kenya — cash, M-Pesa, stock, credit, and real profit.",
+    images: ["/og-default.png"],
   },
 };
 
