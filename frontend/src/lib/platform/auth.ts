@@ -187,15 +187,38 @@ export async function platformChangePassword(
   return data;
 }
 
+export type PlatformOrgStats = {
+  businesses: number;
+  staff: number;
+  sales: number;
+  subscriptions: number;
+  products: number;
+  customers: number;
+};
+
+export type PlatformOrgSubscription = {
+  id: string;
+  active: boolean;
+  tier?: string | null;
+  plan_id?: string | null;
+  plan_name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  current_usage?: Record<string, unknown> | null;
+};
+
 export type PlatformOrg = {
   id: string;
   name: string;
   email: string;
   phone?: string | null;
+  address?: string | null;
   active: boolean;
   onboarding?: boolean | null;
   created_at?: string | null;
   updated_at?: string | null;
+  stats?: PlatformOrgStats | null;
+  subscriptions?: PlatformOrgSubscription[] | null;
 };
 
 export type PlatformOrgHardDeleteResult = {
@@ -221,6 +244,53 @@ export async function listPlatformOrganizations(params?: {
   if (!res.ok)
     throwPlatformError(data, res.status, "Could not load organizations");
   return data as PlatformOrg[];
+}
+
+
+export async function getPlatformOrganization(
+  organizationId: string
+): Promise<PlatformOrg> {
+  const res = await platformFetch(`/organizations/${organizationId}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not load organization");
+  return data as PlatformOrg;
+}
+
+export async function createPlatformOrganization(body: {
+  name: string;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  active?: boolean;
+  onboarding?: boolean;
+}): Promise<PlatformOrg> {
+  const res = await platformFetch(`/organizations`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not create organization");
+  return data as PlatformOrg;
+}
+
+export async function updatePlatformOrganization(
+  organizationId: string,
+  body: {
+    name?: string;
+    email?: string;
+    phone?: string | null;
+    address?: string | null;
+    active?: boolean;
+    onboarding?: boolean;
+  }
+): Promise<PlatformOrg> {
+  const res = await platformFetch(`/organizations/${organizationId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not update organization");
+  return data as PlatformOrg;
 }
 
 export async function hardDeletePlatformOrganization(
