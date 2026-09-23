@@ -435,9 +435,6 @@ class EmailService:
             html_content=html,
         )
 
-            html_content=html,
-        )
-
     @classmethod
     def send_password_reset(
         cls,
