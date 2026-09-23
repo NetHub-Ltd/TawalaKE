@@ -56,7 +56,7 @@ const FALLBACK_PLANS: PublicPlan[] = [
     name: "Ndovu",
     description: "For growing shops that need full inventory, credit, and multi-branch.",
     price_monthly: 2499,
-    price_yearly: 23990,
+    price_yearly: 29988,
     currency: "KES",
     trial_days: 14,
     limits: { max_businesses: 5, max_staff: 15, max_products: 5000 },
