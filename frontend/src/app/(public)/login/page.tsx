@@ -64,6 +64,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://tawala.nethub.co.ke/login",
   },
+  robots: { index: false, follow: false },
 };
 
 function LoginFormFallback() {

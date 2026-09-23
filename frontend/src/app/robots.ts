@@ -12,7 +12,6 @@ export default function robots(): MetadataRoute.Robots {
           "/solutions",
           "/solutions/",
           "/support",
-          "/login",
           "/pricing",
           "/onboarding/plans",
           "/blog",
@@ -22,6 +21,8 @@ export default function robots(): MetadataRoute.Robots {
         ],
         disallow: [
           "/org/",
+          "/platform",
+          "/platform/",
           "/api/",
           "/themetest",
           "/onboarding/personal-details",
