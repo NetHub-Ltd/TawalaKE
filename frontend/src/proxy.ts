@@ -73,6 +73,7 @@ const publicApiRoutes = [
   "/api/v1/org/onboarding/personal-details",
   "/api/v1/org/onboading/personal-details", // legacy typo
   "/api/v1/auth/onboarding/set-password",
+  "/api/v1/organizations/plans/public",
 
   // Platform operator auth — isolated from tenant NextAuth; must be reachable
   // without a staff session (BFF proxies to FastAPI platform JWT flow).

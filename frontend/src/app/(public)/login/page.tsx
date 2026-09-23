@@ -4,7 +4,6 @@
 // import { LoginForm } from "@/features/auth/components/LoginForm";
 
 // export const metadata: Metadata = {
-  robots: { index: false, follow: false },
 //   title: 'Sign In | Tawala Console',
 //   description: 'Sign in to access your Tawala business dashboard, manage sales, and track inventory in real time.',
 //   alternates: {
@@ -65,6 +64,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://tawala.nethub.co.ke/login",
   },
+  robots: { index: false, follow: false },
 };
 
 function LoginFormFallback() {

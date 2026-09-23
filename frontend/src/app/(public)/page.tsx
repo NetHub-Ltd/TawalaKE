@@ -53,7 +53,7 @@ export const metadata: Metadata = {
 
 const TRIAL_HREF = "/onboarding/personal-details";
 const LOGIN_HREF = "/login";
-const PLANS_HREF = "/onboarding/plans";
+const PLANS_HREF = "/pricing";
 
 const BENEFITS = [
   {
@@ -194,17 +194,42 @@ const faqJsonLd = {
   })),
 };
 
-const orgJsonLd = {
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Tawala",
+  legalName: "NetHub Limited",
+  url: "https://tawala.nethub.co.ke",
+  logo: "https://tawala.nethub.co.ke/web-app-manifest-512x512.png",
+  description:
+    "Modern retail OS for Kenyan shops: POS, inventory, staff PINs, store credit, and daily profit.",
+  areaServed: { "@type": "Country", name: "Kenya" },
+  contactPoint: [
+    {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: "support@nethub.co.ke",
+      availableLanguage: ["en", "sw"],
+      url: "https://tawala.nethub.co.ke/support",
+    },
+  ],
+  sameAs: ["https://tawala.nethub.co.ke"],
+};
+
+const softwareJsonLd = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Tawala",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   offers: {
-    "@type": "Offer",
-    price: "1490",
+    "@type": "AggregateOffer",
+    lowPrice: "1490",
+    highPrice: "8990",
     priceCurrency: "KES",
-    description: "Plans from KSh 1,490/month; 14-day free trial",
+    offerCount: 3,
+    url: "https://tawala.nethub.co.ke/pricing",
+    description: "Public plans from KSh 1,490 to 8,990/month; 14-day free trial",
   },
   description:
     "Modern retail OS for Kenyan shops: POS, inventory, staff PINs, store credit, and daily profit.",
@@ -221,7 +246,11 @@ export default function HomePage() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }}
       />
 
       {/* Hero */}
