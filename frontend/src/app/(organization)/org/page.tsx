@@ -342,7 +342,7 @@ async function OrgDecisionWrapper() {
     return (
       <SessionIssue
         title="No store assigned"
-        message="Your account isn’t linked to a store yet. Ask your manager to assign one."
+        message="Your account isn’t linked to a store yet. Ask your organization Owner or Admin to assign you to a branch."
         showLogin={false}
       />
     );
