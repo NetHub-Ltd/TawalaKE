@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 const PRODUCT = [
-  { name: "Pricing", href: "/onboarding/plans" },
+  { name: "Pricing", href: "/pricing" },
   { name: "Solutions", href: "/solutions" },
   { name: "Retail", href: "/solutions/retail" },
   { name: "Pharmacies", href: "/solutions/pharmacy" },

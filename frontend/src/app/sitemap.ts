@@ -15,7 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/solutions/pharmacy", priority: 0.85, changeFrequency: "weekly" },
     { path: "/solutions/hardware", priority: 0.85, changeFrequency: "weekly" },
     { path: "/solutions/wholesale", priority: 0.85, changeFrequency: "weekly" },
-    { path: "/onboarding/plans", priority: 0.8, changeFrequency: "weekly" },
+    { path: "/pricing", priority: 0.95, changeFrequency: "weekly" },
     { path: "/blog", priority: 0.8, changeFrequency: "weekly" },
     { path: "/support", priority: 0.7, changeFrequency: "monthly" },
     { path: "/login", priority: 0.6, changeFrequency: "monthly" },
