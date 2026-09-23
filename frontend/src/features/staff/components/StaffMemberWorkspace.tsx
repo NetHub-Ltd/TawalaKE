@@ -343,7 +343,8 @@ export default function StaffMemberWorkspace({
             </button>
           </div>
           <div className="rounded-md border border-dashed border-border p-4 text-sm text-foreground0 lg:col-span-2 dark:border-border">
-            Activity history (events on this member and actions they performed) arrives in a later phase.
+            Open the <span className="font-medium text-foreground">Activity</span> tab for a full
+            history of actions on this member (create, role, branches, password, status).
           </div>
         </div>
       )}
