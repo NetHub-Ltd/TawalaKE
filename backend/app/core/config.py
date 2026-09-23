@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     # during a controlled cleanup window, then disable again (issue #297 / #301).
     platform_org_hard_delete: bool = False
 
+    # Platform login email MFA (issue #298). Always on for platform password login.
+    platform_mfa_code_ttl_sec: int = 600
+    platform_mfa_max_attempts: int = 5
+    platform_mfa_resend_cooldown_sec: int = 60
+
     # First platform SUPER_ADMIN (optional). When set, prestart creates the user
     # once if no SUPER_ADMIN exists, generates a password, and emails an invite.
     # Leave empty to skip. No password in env — safer than hardcoding.

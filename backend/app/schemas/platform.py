@@ -24,6 +24,27 @@ class PlatformTokenResponse(BaseModel):
     must_change_password: bool = False
 
 
+class PlatformMfaChallengeResponse(BaseModel):
+    """Returned after successful password step — no access token until verify-code."""
+
+    challenge_id: str
+    expires_in: int
+    email_hint: str
+    message: str = (
+        "A verification code was sent to your email. "
+        "Submit it to /api/v1/platform/auth/verify-code."
+    )
+
+
+class PlatformMfaVerifyRequest(BaseModel):
+    challenge_id: str = Field(min_length=8, max_length=128)
+    code: str = Field(min_length=6, max_length=8)
+
+
+class PlatformMfaResendRequest(BaseModel):
+    challenge_id: str = Field(min_length=8, max_length=128)
+
+
 class PlatformUserCreate(BaseModel):
     """Invite a platform operator. Password is generated server-side and emailed."""
 
