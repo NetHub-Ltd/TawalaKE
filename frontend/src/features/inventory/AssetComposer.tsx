@@ -67,7 +67,7 @@ export function AssetComposer({
   isPending = false,
 }: AssetComposerProps) {
   const { businessId } = useBusinessContext();
-  const { units, categories, loading: catalogLoading } = useCatalogOptions(businessId);
+  const { units, categories } = useCatalogOptions(businessId);
 
   const businessIdString = useMemo(() => {
     return (Array.isArray(businessId) ? businessId[0] : businessId) || "";
