@@ -4,6 +4,7 @@
 // import { LoginForm } from "@/features/auth/components/LoginForm";
 
 // export const metadata: Metadata = {
+  robots: { index: false, follow: false },
 //   title: 'Sign In | Tawala Console',
 //   description: 'Sign in to access your Tawala business dashboard, manage sales, and track inventory in real time.',
 //   alternates: {
