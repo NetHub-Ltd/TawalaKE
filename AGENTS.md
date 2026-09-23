@@ -110,15 +110,74 @@ Agents **must not**:
 
 ---
 
-## 6. Session Start Checklist
+
+## 6. Ecosystem Auth Program — Mandatory Progress Check (Non-Optional)
+
+> **Until this program is fully complete, every AI agent session on this repository MUST check and report auth-program progress before doing other work.**
+
+This is **not optional**. It applies to every agent, every session, regardless of the user’s stated task (unless the user is explicitly only asking about something that cannot wait and still requires a one-line auth status).
+
+### 6.1 Program identity
+
+| Item | Value |
+|------|--------|
+| **Goal** | Keycloak (IdP) → NetHubKe (AS) → Tawala hard session + PIN soft session; staff only in Tawala; owners/billing via NetHub; no per-request hop to NetHub |
+| **Project board** | https://github.com/orgs/NetHub-Ltd/projects/3 |
+| **Umbrella issue** | https://github.com/NetHub-Ltd/TawalaKE/issues/238 |
+| **Milestones** | M0–M9 on TawalaKE (GitHub milestones titled `M0` … `M9`) |
+| **Issue range** | #220–#237 (work items) + #238 (tracker) |
+
+### 6.2 Required actions at session start
+
+Before implementing **any** feature, fix, or refactor, the agent **must**:
+
+1. Open or query the **project board** and/or issues #220–#238.
+2. Determine:
+   - Which milestone is the **current** one (first incomplete M0→M9 in order)
+   - Which issues in that milestone are open vs closed
+   - Whether any **feature flags** for later milestones have been enabled early (they must not be, without explicit approval)
+3. **Report a short status block** to the user, for example:
+
+```text
+Auth program: M2 in progress — #225 open, #226 closed. Legacy staff login still required. Next: NetHubKe exchange.
+```
+
+4. **Refuse to skip milestones.** Work proceeds **M0 → M1 → … → M9** unless the user explicitly reprioritizes **within** the approved non-blocking plan (e.g. docs in parallel). Agents must **not**:
+   - Start **M9** (#237 — deprecate legacy staff password login) until M8 is done **and** the user gives **written approval** again at cutover time
+   - Disable legacy `/auth/login` or force dual-gate in production while earlier milestones are incomplete
+   - Put cashier/staff rows in NetHubKe’s database
+   - Add per-request NetHub introspection on POS hot paths
+
+5. If the user’s request conflicts with the above (e.g. “remove password login now”), the agent must **decline**, explain the dependency on M0–M8, and point at the board.
+
+### 6.3 Non-blocking rule (reminder)
+
+Every stage until cutover ships **behind flags default off** (or docs-only). Current staff email/password JWT auth remains the production path until **M9 is explicitly approved after M8**.
+
+### 6.4 When the program is “fully done”
+
+Only when:
+
+- [ ] M0–M8 acceptance criteria met
+- [ ] M9 closed with explicit cutover approval
+- [ ] Umbrella #238 closed
+- [ ] Project board shows program complete
+
+After that, this section may be removed or reduced in a dedicated docs PR. Until then, **agents must keep checking progress every session.**
+
+---
+
+## 7. Session Start Checklist
 
 ```
 [ ] Read all relevant `.skills/` files
+[ ] **Auth program progress check (section 6) — mandatory until #238 closed**
+[ ] Report short auth milestone status to the user
 [ ] Read `.trackers/repo-state.md`
 [ ] Read `.trackers/task.md`
 [ ] Read `.trackers/rollback.md`
 [ ] Verify tracker state against actual Git state
-[ ] Identify current task scope
+[ ] Identify current task scope (do not skip auth milestones M0–M9 order)
 [ ] For UI work: re-read section 5 (Design System & UI Kit)
 [ ] Propose before implementing non-trivial work
 [ ] Wait for approval
@@ -129,6 +188,6 @@ Agents **must not**:
 ```
 
 ---
-**Last updated:** 2026-09-14  
+**Last updated:** 2026-09-16  
 **Skills version:** 1.0.0  
 **Theme:** Canonical Modern Retail OS (locked)

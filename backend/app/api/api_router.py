@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers, platform
 from app.core.config import settings
 
 from app.utils.logging import logger
@@ -88,4 +88,11 @@ api_router.include_router(
         Depends(require_active_plan),
         Depends(require_paywall("basic_stock_tracking", "pos_and_sales", "invoicing")),
     ],
+)
+
+# Platform identity (non-tenant). Slice A: auth + users CRUD + RBAC.
+api_router.include_router(
+    platform.router,
+    prefix="/platform",
+    tags=["Platform"],
 )

@@ -1,9 +1,11 @@
+import hashlib
+import json
 import os
 import uuid
 import secrets
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List, Union, Tuple
 
 from fastapi import HTTPException, status, Depends
 from fastapi.security import SecurityScopes, OAuth2PasswordBearer
@@ -92,10 +94,13 @@ class TokenData(BaseModel):
     Strongly-typed representation of the claims inside a verified JWT.
     All fields that can appear in the payload are declared here so that
     TokenData(**payload) is safe and IDE-friendly.
+
+    Tenant staff tokens carry organization_id.
+    Platform tokens set kind="platform" and omit organization_id.
     """
 
     sub: str
-    organization_id: str
+    organization_id: Optional[str] = None
     business_id: Optional[str] = None
     role: str
     jti: str
@@ -105,6 +110,7 @@ class TokenData(BaseModel):
     iat: int
     type: str = "access"
     scopes: List[str] = Field(default_factory=list)
+    kind: str = "staff"  # "staff" | "platform"
 
 
 # ========================= SECURITY SERVICE CLASS =========================
@@ -241,6 +247,32 @@ class SecurityService:
             refresh_token=refresh_token,
             id_token=id_token,
         )
+
+    def create_platform_access_token(
+        self,
+        *,
+        user_id: str,
+        role: str,
+        scopes: Optional[List[str]] = None,
+    ) -> str:
+        """
+        Issue a short-lived access token for a PlatformUser.
+
+        Claims: kind=platform, no organization_id. Tenant APIs that require
+        organization_id must reject these tokens.
+        """
+        base_claims: Dict[str, Any] = {
+            "sub": str(user_id),
+            "role": str(role).strip().upper(),
+            "kind": "platform",
+        }
+        return self._create_token(
+            base_claims,
+            timedelta(minutes=settings.access_token_expire_minutes),
+            "access",
+            scopes or [],
+        )
+
 
     # ------------------------------------------------------------------
     # 3. VERIFICATION & REPLAY PROTECTION (REDIS)
@@ -538,6 +570,134 @@ class SecurityService:
         await redis_client.delete(redis_key)
         await redis_client.delete(f"auth:staff_invite_by_staff:{staff_id}")
         return staff_id
+
+    # ------------------------------------------------------------------
+    # 6. PLATFORM LOGIN MFA (email code) — issue #298
+    # Password success creates a challenge; access token only after verify.
+    # ------------------------------------------------------------------
+
+    def _platform_mfa_code_hash(self, code: str) -> str:
+        """HMAC-ish hash of MFA code with app secret (not reversible)."""
+        material = f"{settings.secret_key}:platform-mfa:{code}".encode("utf-8")
+        return hashlib.sha256(material).hexdigest()
+
+    def generate_platform_mfa_code(self) -> str:
+        """Six-digit numeric code for email MFA."""
+        return f"{secrets.randbelow(1_000_000):06d}"
+
+    async def create_platform_mfa_challenge(
+        self,
+        *,
+        user_id: Union[str, uuid.UUID],
+        email: str,
+        redis_client: AsyncRedis,
+    ) -> Tuple[str, str, int]:
+        """
+        Create a one-time MFA challenge in Redis.
+
+        Returns (challenge_id, plain_code, expires_in_seconds).
+        Invalidates any prior challenge for the same user.
+        """
+        uid = str(user_id)
+        ttl = int(getattr(settings, "platform_mfa_code_ttl_sec", 600) or 600)
+        by_user_key = f"platform:mfa:user:{uid}"
+        old = await redis_client.get(by_user_key)
+        if old:
+            old_id = old.decode("utf-8") if isinstance(old, bytes) else str(old)
+            await redis_client.delete(f"platform:mfa:challenge:{old_id}")
+
+        challenge_id = secrets.token_urlsafe(24)
+        plain_code = self.generate_platform_mfa_code()
+        payload = {
+            "user_id": uid,
+            "email": email.strip().lower(),
+            "code_hash": self._platform_mfa_code_hash(plain_code),
+            "attempts": 0,
+        }
+        await redis_client.set(
+            f"platform:mfa:challenge:{challenge_id}",
+            json.dumps(payload),
+            ex=ttl,
+        )
+        await redis_client.set(by_user_key, challenge_id, ex=ttl)
+        # Resend cooldown marker (set on create so immediate double-submit is limited)
+        await redis_client.set(
+            f"platform:mfa:resend:{uid}",
+            "1",
+            ex=int(getattr(settings, "platform_mfa_resend_cooldown_sec", 60) or 60),
+        )
+        logger.info(f"Platform MFA challenge created user={uid} ttl={ttl}s")
+        return challenge_id, plain_code, ttl
+
+    async def platform_mfa_resend_allowed(
+        self,
+        user_id: Union[str, uuid.UUID],
+        redis_client: AsyncRedis,
+    ) -> bool:
+        """False while resend cooldown key exists."""
+        val = await redis_client.get(f"platform:mfa:resend:{str(user_id)}")
+        return val is None
+
+    async def verify_platform_mfa_challenge(
+        self,
+        *,
+        challenge_id: str,
+        code: str,
+        redis_client: AsyncRedis,
+    ) -> str:
+        """
+        Validate MFA code and consume the challenge (single-use on success).
+
+        Returns platform user_id string.
+        Raises HTTPException on invalid/expired/locked challenges.
+        """
+        redis_key = f"platform:mfa:challenge:{challenge_id.strip()}"
+        raw = await redis_client.get(redis_key)
+        if not raw:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "MFA_CHALLENGE_INVALID",
+                    "message": "Invalid or expired verification code. Sign in again.",
+                },
+            )
+        data = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+        max_attempts = int(getattr(settings, "platform_mfa_max_attempts", 5) or 5)
+        attempts = int(data.get("attempts") or 0)
+        if attempts >= max_attempts:
+            await redis_client.delete(redis_key)
+            await redis_client.delete(f"platform:mfa:user:{data.get('user_id')}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "MFA_LOCKED",
+                    "message": "Too many incorrect codes. Sign in again to get a new code.",
+                },
+            )
+
+        expected = data.get("code_hash") or ""
+        provided = self._platform_mfa_code_hash(code.strip())
+        if not secrets.compare_digest(expected, provided):
+            data["attempts"] = attempts + 1
+            ttl = await redis_client.ttl(redis_key)
+            if ttl is None or ttl < 1:
+                ttl = int(getattr(settings, "platform_mfa_code_ttl_sec", 600) or 600)
+            await redis_client.set(redis_key, json.dumps(data), ex=int(ttl))
+            remaining = max_attempts - data["attempts"]
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "MFA_CODE_INVALID",
+                    "message": "Incorrect verification code.",
+                    "attempts_remaining": remaining,
+                },
+            )
+
+        user_id = str(data["user_id"])
+        await redis_client.delete(redis_key)
+        await redis_client.delete(f"platform:mfa:user:{user_id}")
+        await redis_client.delete(f"platform:mfa:resend:{user_id}")
+        return user_id
 
 
 # Global thread-safe instance used throughout the application

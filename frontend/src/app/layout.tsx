@@ -50,10 +50,10 @@ export const metadata: Metadata = {
       "Take control of your biashara. Track sales, stop stock leakages, and hold staff accountable — built for Kenyan shops.",
     images: [
       {
-        url: "/web-app-manifest-512x512.png",
-        width: 512,
-        height: 512,
-        alt: "Tawala Business Management System",
+        url: "/og-default.png",
+        width: 1200,
+        height: 630,
+        alt: "Tawala — retail OS for Kenyan shops",
       },
     ],
   },
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     title: "Tawala | Tawala biashara yako",
     description:
       "Take control of your biashara. Track sales, stop stock leakages, and hold staff accountable — built for Kenyan shops.",
-    images: ["/web-app-manifest-512x512.png"],
+    images: ["/og-default.png"],
   },
   appleWebApp: {
     capable: true,

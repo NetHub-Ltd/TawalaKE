@@ -45,6 +45,32 @@ class Settings(BaseSettings):
     rbac_cache_ttl_sec: int = 120
     audit_enabled: bool = True
 
+    # Ecosystem auth M1: dual-mode hard session (Keycloak→NetHubKe→Tawala). Default OFF.
+    auth_hard_session_v2: bool = False
+    auth_hard_issuer: str = ""
+    auth_hard_audience: str = "tawala-api"
+    auth_hard_jwks_url: str = ""
+    auth_hard_jwks_cache_ttl_sec: int = 600
+    auth_hard_leeway_sec: int = 10
+
+    # RBAC matrix source (phase 1 dual-read). Default OFF = in-code ROLE_PERMISSIONS.
+    auth_rbac_from_db: bool = False
+
+    # Temporary platform org hard-delete (test cleanup). Default OFF — enable only
+    # during a controlled cleanup window, then disable again (issue #297 / #301).
+    platform_org_hard_delete: bool = False
+
+    # Platform login email MFA (issue #298). Always on for platform password login.
+    platform_mfa_code_ttl_sec: int = 600
+    platform_mfa_max_attempts: int = 5
+    platform_mfa_resend_cooldown_sec: int = 60
+
+    # First platform SUPER_ADMIN (optional). When set, prestart creates the user
+    # once if no SUPER_ADMIN exists, generates a password, and emails an invite.
+    # Leave empty to skip. No password in env — safer than hardcoding.
+    platform_bootstrap_email: str | None = None
+    platform_bootstrap_name: str = "Platform Super Admin"
+
     # Soft-delete retention archive pipeline (purge/email off until ready)
     archive_enabled: bool = False
     archive_signed_url_ttl_days: int = 7

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ForgotPasswordForm } from "@/features/auth/components/ForgotPasswordForm";
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title: "Forgot password | Tawala",
   description: "Request a secure link to reset your Tawala account password.",
   alternates: {

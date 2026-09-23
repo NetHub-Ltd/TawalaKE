@@ -1,4 +1,6 @@
 # Rollback
-- Revert PR / reset branch to main @ 04e17e1
-- No migrations or data changes
-- Frontend-only token + lab page; product behavior unchanged aside from token color remapping on existing utility classes
+
+- Revert PR / restore prior platform_login that issued tokens on password success
+- No migration for MFA itself
+- In-flight MFA challenges expire via Redis TTL
+- Bootstrap/invite and BFF changes on dev are independent; do not revert those unless intended

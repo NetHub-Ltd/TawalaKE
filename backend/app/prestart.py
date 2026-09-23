@@ -14,7 +14,11 @@ from app.models.models import (
     StaffBusinessAssignment,
     StaffRole,
     Plan,
+    PlatformUser,
+    PlatformRole,
 )
+import secrets
+from app.core.mailer import mailer
 from app.schemas.schemas import TenantCreate
 from app.schemas.plans import PlanSeed
 
@@ -190,9 +194,94 @@ async def create_admin_tenant(payload: TenantCreate = data) -> None:
             raise error
 
 
+
+async def ensure_platform_superadmin() -> None:
+    """
+    Idempotent: if PLATFORM_BOOTSTRAP_EMAIL is set and no SUPER_ADMIN exists,
+    create one with a generated password and email the platform invite.
+
+    Does not create tenant Staff. Safe to call on every startup.
+    """
+    raw = getattr(settings, "platform_bootstrap_email", None) or ""
+    email = str(raw).strip().lower()
+    if not email or "@" not in email:
+        logger.info("Platform bootstrap skipped (PLATFORM_BOOTSTRAP_EMAIL not set)")
+        return
+
+    name = (getattr(settings, "platform_bootstrap_name", None) or "Platform Super Admin").strip()
+
+    async with AsyncSessionLocal() as session:
+        try:
+            existing_sa = (
+                await session.exec(
+                    select(PlatformUser).where(
+                        PlatformUser.role == PlatformRole.SUPER_ADMIN,
+                        PlatformUser.deleted_at.is_(None),
+                    )
+                )
+            ).first()
+            if existing_sa:
+                logger.info(
+                    f"Platform SUPER_ADMIN already exists ({existing_sa.email}); bootstrap skipped"
+                )
+                return
+
+            dup = (
+                await session.exec(select(PlatformUser).where(PlatformUser.email == email))
+            ).first()
+            if dup and dup.deleted_at is None:
+                logger.warning(
+                    f"PLATFORM_BOOTSTRAP_EMAIL={email} already exists as platform user "
+                    f"but not SUPER_ADMIN; not auto-promoting. Bootstrap skipped."
+                )
+                return
+
+            temporary_password = secrets.token_urlsafe(18)
+            user = PlatformUser(
+                email=email,
+                full_name=name,
+                hashed_password=security.hash_password(temporary_password),
+                role=PlatformRole.SUPER_ADMIN,
+                active=True,
+                must_change_password=True,
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+
+            try:
+                login_url = f"{settings.frontend_origin}/platform/login"
+            except Exception:
+                login_url = "/platform/login"
+
+            try:
+                mailer.send_platform_user_invite(
+                    to_email=email,
+                    temporary_password=temporary_password,
+                    login_url=login_url,
+                    user_name=name,
+                    inviter_name="Tawala platform bootstrap",
+                )
+                logger.info(
+                    f"Platform SUPER_ADMIN created id={user.id} email={email}; invite email sent"
+                )
+            except Exception as mail_err:
+                logger.error(
+                    f"Platform SUPER_ADMIN created id={user.id} email={email} but invite email "
+                    f"failed: {type(mail_err).__name__}: {mail_err}. "
+                    "Password was not logged; fix mailer and use password reset / re-invite."
+                )
+        except Exception as error:
+            await session.rollback()
+            logger.error(f"Platform bootstrap failed: {error}")
+            raise
+
+
+
 async def main() -> None:
     logger.info("Starting initialization sequence...")
     await create_admin_tenant()
+    await ensure_platform_superadmin()
 
 
 if __name__ == "__main__":
