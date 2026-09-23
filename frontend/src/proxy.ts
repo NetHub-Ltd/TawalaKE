@@ -115,6 +115,13 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
+  // Platform operator APIs use platform JWT (Bearer via BFF → FastAPI), not
+  // tenant NextAuth. Enforcing staff session here 401s orgs/me/delete and
+  // bounces the operator back to /platform/login after a successful MFA.
+  if (pathname.startsWith("/api/v1/platform")) {
+    return NextResponse.next();
+  }
+
   const requiresAuth =
     pathname.startsWith("/org") || pathname.startsWith("/api/v1");
 
