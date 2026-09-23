@@ -333,7 +333,14 @@ export default function TeamDirectory({
                 <label className="mb-1 block text-xs font-medium text-muted">Branches</label>
               {!(businesses || []).length ? (
                 <p className="rounded-md border border-dashed border-border p-3 text-xs text-foreground0">
-                  No branches yet. Create a branch first, then invite staff to it.
+                  No branches yet.{" "}
+                  <a
+                    href={`/org/${organizationId}/stores/new`}
+                    className="font-medium text-brand-primary underline underline-offset-2"
+                  >
+                    Create a branch
+                  </a>
+                  , then invite staff to it.
                 </p>
               ) : (
               <div className="max-h-32 space-y-1 overflow-auto rounded-md border border-border p-2 text-sm dark:border-border">

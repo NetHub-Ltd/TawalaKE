@@ -8,6 +8,7 @@ interface OverviewPageProps {
     organizationId: string;
     businessId: string;
   }>;
+  searchParams: Promise<{ inviteStaff?: string }>;
 }
 
 export async function generateMetadata({ params }: OverviewPageProps): Promise<Metadata> {
@@ -21,8 +22,10 @@ export async function generateMetadata({ params }: OverviewPageProps): Promise<M
   };
 }
 
-export default async function OverviewPage({ params }: OverviewPageProps) {
+export default async function OverviewPage({ params, searchParams }: OverviewPageProps) {
   const { organizationId, businessId } = await params;
+  const sp = await searchParams;
+  const showInvite = sp?.inviteStaff === "1";
 
   // JSON-LD Structured Data (BreadcrumbList)
   const jsonLd = {
@@ -56,6 +59,17 @@ export default async function OverviewPage({ params }: OverviewPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {showInvite && (
+        <div className="mx-2 mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 sm:mx-4">
+          Branch created.{" "}
+          <a
+            href={`/org/${organizationId}/staff`}
+            className="font-semibold underline underline-offset-2"
+          >
+            Invite staff to this branch
+          </a>
+        </div>
+      )}
       <Suspense fallback={<OverviewSkeleton />}>
         <OverviewClient organizationId={organizationId} businessId={businessId} />
       </Suspense>

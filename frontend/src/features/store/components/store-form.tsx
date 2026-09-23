@@ -194,7 +194,10 @@ export default function StoreForm({
       if (onSuccess) onSuccess(data);
       const createdId = body?.id || body?.data?.id;
       if (createdId) {
-        router.push(`/org/${organizationId}/${createdId}/overview`);
+        // Land on branch overview; inviteStaff=1 prompts Owner to assign staff next.
+        router.push(
+          `/org/${organizationId}/${createdId}/overview?inviteStaff=1`,
+        );
       } else {
         router.push(`/org/${organizationId}/stores`);
       }
