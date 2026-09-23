@@ -58,7 +58,7 @@ export function OrgCommandCenterClient({
     },
     {
       id: "stores",
-      label: "Store Locations",
+      label: "Branches",
       href: `/org/new-store`,
       icon: Store,
       badge: `${activeCount}`,
@@ -266,7 +266,7 @@ export function OrgCommandCenterClient({
               className="min-h-[44px] px-4 py-2 rounded-md bg-brand-primary hover:opacity-90 text-white text-xs font-semibold transition-all duration-200 flex items-center gap-2 shadow-sm shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
             >
               <Plus size={16} strokeWidth={2.5} />
-              <span className="hidden sm:inline">Provision New Store</span>
+              <span className="hidden sm:inline">New branch</span>
               <span className="sm:hidden">New Store</span>
             </Link>
           </div>
@@ -277,11 +277,11 @@ export function OrgCommandCenterClient({
           <div className="max-w-7xl mx-auto space-y-8">
           
             {/* ACTIVE STORES GRID */}
-            <section aria-label="Assigned Store Locations" className="space-y-4">
+            <section aria-label="Assigned Branches" className="space-y-4">
               <div className="flex items-center justify-between border-b border-border pb-2">
                 <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground dark:text-muted flex items-center gap-2">
                   <Store size={14} className="text-brand-primary" />
-                  Active Store Locations ({businesses.length})
+                  Active Branches ({businesses.length})
                 </h2>
               </div>
 
