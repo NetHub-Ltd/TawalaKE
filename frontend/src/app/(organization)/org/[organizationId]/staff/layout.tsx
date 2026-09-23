@@ -34,6 +34,8 @@ export default async function OrgStaffLayout({
   const userRole = (session.user.role || "").toUpperCase().trim();
   if (!userRole) redirect("/org");
 
+  // OWNER and ADMIN both receive org:staff:manage in the matrix.
+  // Role must be present and normalized; missing role was causing Owners to be redirected.
   const perms = permissionsForRole(userRole);
   if (!can(perms, Permission.ORG_STAFF_MANAGE)) {
     redirect(`/org/${organizationId}`);
