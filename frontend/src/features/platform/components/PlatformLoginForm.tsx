@@ -44,9 +44,18 @@ export function PlatformLoginForm() {
       setLoading(true);
       try {
         clearPlatformSession();
-        const challenge = await platformLogin(email.trim(), password);
-        setChallengeId(challenge.challenge_id);
-        setEmailHint(challenge.email_hint);
+        const result = await platformLogin(email.trim(), password);
+        // Current backend returns access_token; MFA returns challenge_id.
+        if (result.kind === "token") {
+          setPlatformSession(
+            result.token.access_token,
+            result.token.expires_at
+          );
+          router.replace("/platform");
+          return;
+        }
+        setChallengeId(result.challenge.challenge_id);
+        setEmailHint(result.challenge.email_hint);
         setStep("code");
         setCode("");
         setResendIn(RESEND_COOLDOWN_SEC);
@@ -58,7 +67,7 @@ export function PlatformLoginForm() {
         setLoading(false);
       }
     },
-    [email, password]
+    [email, password, router]
   );
 
   const onCodeSubmit = useCallback(

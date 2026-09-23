@@ -1,10 +1,15 @@
 /**
  * Platform operator auth helpers (isolated from staff NextAuth session).
- * Token is stored under a dedicated key so it never collides with store login.
+ *
+ * Browser calls are same-origin BFF only (`/api/v1/platform/...`).
+ * BACKEND_URL is never used in the client.
  */
 
 const PLATFORM_TOKEN_KEY = "tawala.platform.access_token";
 const PLATFORM_TOKEN_EXPIRES_KEY = "tawala.platform.expires_at";
+
+/** Same-origin BFF prefix — never point this at the FastAPI host. */
+const BFF = "/api/v1/platform";
 
 export type PlatformChallenge = {
   challenge_id: string;
@@ -19,12 +24,13 @@ export type PlatformTokenResponse = {
   expires_at: string;
   role: string;
   kind: string;
+  must_change_password?: boolean;
 };
 
-function apiBase(): string {
-  const base = process.env.NEXT_PUBLIC_BASE_URL || "";
-  return base.replace(/\/$/, "");
-}
+/** Login may return a token (current API) or an MFA challenge (when MFA ships). */
+export type PlatformLoginResult =
+  | { kind: "token"; token: PlatformTokenResponse }
+  | { kind: "challenge"; challenge: PlatformChallenge };
 
 export function getPlatformAccessToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -55,61 +61,96 @@ export function isPlatformAuthenticated(): boolean {
   return Boolean(getPlatformAccessToken());
 }
 
-/** Extract human-readable error from FastAPI / network failures. */
-export function platformApiErrorMessage(err: unknown, fallback: string): string {
-  if (!err || typeof err !== "object") return fallback;
-  const ax = err as {
-    response?: { data?: { detail?: unknown } };
-    message?: string;
-  };
-  const detail = ax.response?.data?.detail;
+function detailMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== "object") return fallback;
+  const detail = (data as { detail?: unknown }).detail;
   if (typeof detail === "string") return detail;
-  if (detail && typeof detail === "object") {
-    const d = detail as { message?: string; code?: string };
-    if (d.message) return d.message;
+  if (detail && typeof detail === "object" && "message" in detail) {
+    return String((detail as { message: string }).message);
   }
-  if (ax.message && !ax.message.startsWith("Request failed")) return ax.message;
+  if (
+    "message" in (data as object) &&
+    typeof (data as { message: unknown }).message === "string"
+  ) {
+    return (data as { message: string }).message;
+  }
   return fallback;
+}
+
+async function bffFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(`${BFF}${path}`, { ...init, headers });
+}
+
+async function platformFetch(
+  path: string,
+  init: RequestInit = {}
+): Promise<Response> {
+  const token = getPlatformAccessToken();
+  if (!token) {
+    throw Object.assign(new Error("Not signed in"), { status: 401 });
+  }
+  const headers = new Headers(init.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+  return fetch(`${BFF}${path}`, { ...init, headers });
+}
+
+function throwPlatformError(
+  data: unknown,
+  status: number,
+  fallback: string
+): never {
+  throw Object.assign(new Error(detailMessage(data, fallback)), {
+    status,
+    data,
+  });
 }
 
 export async function platformLogin(
   email: string,
   password: string
-): Promise<PlatformChallenge> {
-  const res = await fetch(`${apiBase()}/api/v1/platform/auth/login`, {
+): Promise<PlatformLoginResult> {
+  const res = await bffFetch("/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : detail?.message || "Invalid email or password";
-    throw Object.assign(new Error(msg), { status: res.status, data });
+    throwPlatformError(data, res.status, "Invalid email or password");
   }
-  return data as PlatformChallenge;
+  if (data && typeof data === "object" && "access_token" in data) {
+    return { kind: "token", token: data as PlatformTokenResponse };
+  }
+  if (data && typeof data === "object" && "challenge_id" in data) {
+    return { kind: "challenge", challenge: data as PlatformChallenge };
+  }
+  throw Object.assign(new Error("Unexpected login response"), {
+    status: res.status,
+    data,
+  });
 }
 
 export async function platformVerifyCode(
   challengeId: string,
   code: string
 ): Promise<PlatformTokenResponse> {
-  const res = await fetch(`${apiBase()}/api/v1/platform/auth/verify-code`, {
+  const res = await bffFetch("/auth/verify-code", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ challenge_id: challengeId, code }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : detail?.message || "Incorrect or expired verification code";
-    throw Object.assign(new Error(msg), { status: res.status, data });
+    throwPlatformError(
+      data,
+      res.status,
+      "Incorrect or expired verification code"
+    );
   }
   return data as PlatformTokenResponse;
 }
@@ -117,26 +158,34 @@ export async function platformVerifyCode(
 export async function platformResendCode(
   challengeId: string
 ): Promise<PlatformChallenge> {
-  const res = await fetch(`${apiBase()}/api/v1/platform/auth/resend-code`, {
+  const res = await bffFetch("/auth/resend-code", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ challenge_id: challengeId }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = data?.detail;
-    const msg =
-      typeof detail === "string"
-        ? detail
-        : detail?.message || "Could not resend code";
-    throw Object.assign(new Error(msg), { status: res.status, data });
+    throwPlatformError(data, res.status, "Could not resend code");
   }
   return data as PlatformChallenge;
 }
 
-// ---------------------------------------------------------------------------
-// Platform organizations (issue #300 — uses #297 API)
-// ---------------------------------------------------------------------------
+export async function platformChangePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<unknown> {
+  const res = await platformFetch("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throwPlatformError(data, res.status, "Could not change password");
+  }
+  return data;
+}
 
 export type PlatformOrg = {
   id: string;
@@ -157,36 +206,6 @@ export type PlatformOrgHardDeleteResult = {
   deleted_table_rows: Record<string, number>;
 };
 
-async function platformFetch(
-  path: string,
-  init: RequestInit = {}
-): Promise<Response> {
-  const token = getPlatformAccessToken();
-  if (!token) {
-    throw Object.assign(new Error("Not signed in"), { status: 401 });
-  }
-  const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${token}`);
-  if (init.body && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-  return fetch(`${apiBase()}${path}`, { ...init, headers });
-}
-
-function throwPlatformError(data: unknown, status: number, fallback: string): never {
-  const detail =
-    data && typeof data === "object"
-      ? (data as { detail?: unknown }).detail
-      : undefined;
-  const msg =
-    typeof detail === "string"
-      ? detail
-      : detail && typeof detail === "object" && "message" in detail
-        ? String((detail as { message: string }).message)
-        : fallback;
-  throw Object.assign(new Error(msg), { status, data });
-}
-
 export async function listPlatformOrganizations(params?: {
   q?: string;
   active?: boolean;
@@ -197,11 +216,10 @@ export async function listPlatformOrganizations(params?: {
   if (params?.active !== undefined) sp.set("active", String(params.active));
   if (params?.limit) sp.set("limit", String(params.limit));
   const qs = sp.toString();
-  const res = await platformFetch(
-    `/api/v1/platform/organizations${qs ? `?${qs}` : ""}`
-  );
-  const data = await res.json().catch(() => ([]));
-  if (!res.ok) throwPlatformError(data, res.status, "Could not load organizations");
+  const res = await platformFetch(`/organizations${qs ? `?${qs}` : ""}`);
+  const data = await res.json().catch(() => []);
+  if (!res.ok)
+    throwPlatformError(data, res.status, "Could not load organizations");
   return data as PlatformOrg[];
 }
 
@@ -209,10 +227,10 @@ export async function hardDeletePlatformOrganization(
   organizationId: string,
   body: { confirm_name: string; confirm_phrase: string; reason: string }
 ): Promise<PlatformOrgHardDeleteResult> {
-  const res = await platformFetch(
-    `/api/v1/platform/organizations/${organizationId}`,
-    { method: "DELETE", body: JSON.stringify(body) }
-  );
+  const res = await platformFetch(`/organizations/${organizationId}`, {
+    method: "DELETE",
+    body: JSON.stringify(body),
+  });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throwPlatformError(
