@@ -363,6 +363,15 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
 
             await purge_staff_rbac_cache(redis, staff.id)
         logger.info(f"Staff invite accepted for {staff.id}")
+        await record_audit(
+            db,
+            actor=staff,
+            action="staff.invite_accept",
+            resource_type="staff",
+            resource_id=staff.id,
+            organization_id=staff.organization_id,
+            meta={"email": staff.email},
+        )
         return staff
 
     async def update_managed(
@@ -598,6 +607,18 @@ class StaffCrud(BaseCRUD[Staff, StaffCreate, StaffUpdate]):
         db.add(staff)
         await db.flush()
         await db.refresh(staff)
+        actor = None
+        if actor_id is not None:
+            actor = await self.get(db, actor_id, include_deleted=True)
+        await record_audit(
+            db,
+            actor=actor,
+            action="staff.soft_delete",
+            resource_type="staff",
+            resource_id=staff.id,
+            organization_id=staff.organization_id,
+            meta={"original_email_suffix": original[-40:] if original else None},
+        )
         return staff
 
 

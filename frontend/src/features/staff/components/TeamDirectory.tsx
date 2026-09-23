@@ -122,10 +122,19 @@ export default function TeamDirectory({
   });
 
   if (!canManage) {
+    const roleLabel = actorRole ? String(actorRole) : "unknown";
     return (
-      <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
-        <AlertCircle className="h-8 w-8 text-amber-500" />
-        <p className="text-sm font-medium">You do not have permission to manage team members.</p>
+      <div className="flex flex-col items-center justify-center gap-3 p-12 text-center text-muted">
+        <AlertCircle className="h-8 w-8 text-amber-500" aria-hidden />
+        <p className="text-sm font-medium text-foreground">
+          You do not have permission to manage team members.
+        </p>
+        <p className="max-w-md text-sm text-muted">
+          Signed in as <span className="font-medium text-foreground">{roleLabel}</span>.
+          Only the organization <strong>Owner</strong> or an <strong>Admin</strong> can invite
+          and manage staff. If you believe you should have access, sign out and back in, or
+          contact your organization Owner.
+        </p>
       </div>
     );
   }

@@ -99,7 +99,7 @@ export function Header() {
               {/* Operator Identity Block */}
               <div className="px-3 py-2.5 bg-surface/40 rounded-lg border border-border/20 flex flex-col gap-1">
                 <p className="text-xs font-bold text-foreground truncate">
-                  Manager Operator
+                  Operator
                 </p>
                 <p className="text-xs text-muted truncate">
                   ops@tawala.internal

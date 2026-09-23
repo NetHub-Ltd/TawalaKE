@@ -106,7 +106,7 @@ export default function StaffMemberWorkspace({
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
         <AlertCircle className="h-8 w-8 text-amber-500" />
-        <p className="text-sm">You do not have permission to view this workspace.</p>
+        <p className="text-sm">You do not have permission to view this team member.</p>
         <Link href={`/org/${organizationId}/staff`} className="text-sm text-[var(--success)]">
           Back to Team
         </Link>
@@ -343,7 +343,8 @@ export default function StaffMemberWorkspace({
             </button>
           </div>
           <div className="rounded-md border border-dashed border-border p-4 text-sm text-foreground0 lg:col-span-2 dark:border-border">
-            Activity history (events on this member and actions they performed) arrives in a later phase.
+            Open the <span className="font-medium text-foreground">Activity</span> tab for a full
+            history of actions on this member (create, role, branches, password, status).
           </div>
         </div>
       )}
