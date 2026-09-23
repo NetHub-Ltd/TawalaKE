@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Users,
 } from "lucide-react";
+import { canAny, Permission, permissionsForRole } from "@/lib/rbac";
 
 export interface BusinessItem {
   id: string;
@@ -48,69 +49,50 @@ export function OrgCommandCenterClient({
   const activeCount = businesses.length;
   const licensePercentage = Math.round((activeCount / maxLicenses) * 100);
 
-  const navItems = [
+  // Permission-based nav (aligned with OrgShell / backend ROLE_PERMISSIONS).
+  // Do not hard-code role name lists — OWNER must see Team via org:staff:manage.
+  const perms = permissionsForRole(userRole);
+  const navItems: Array<{
+    id: string;
+    label: string;
+    href: string;
+    icon: typeof LayoutDashboard;
+    badge?: string;
+    anyOf: string[];
+  }> = [
     {
       id: "overview",
       label: "Dashboard",
       href: `/org`,
       icon: LayoutDashboard,
-      roles: ["OWNER", "MANAGER"],
+      anyOf: [Permission.ORG_READ],
     },
     {
       id: "stores",
-      label: "Store Locations",
-      href: `/org/new-store`,
+      label: "Branches",
+      href: `/org/${orgId}/stores`,
       icon: Store,
       badge: `${activeCount}`,
-      roles: ["OWNER", "MANAGER"],
+      anyOf: [Permission.ORG_READ, Permission.ORG_WRITE],
     },
     {
       id: "staff",
       label: "Team",
       href: `/org/${orgId}/staff`,
       icon: Users,
-      roles: ["OWNER", "MANAGER", "ADMIN"],
+      anyOf: [Permission.ORG_STAFF_MANAGE],
     },
-    // {
-    //   id: "billing",
-    //   label: "Billing & Subscription",
-    //   href: `/org/${orgId}/billing`,
-    //   icon: CreditCard,
-    //   badge: "Pro",
-    //   roles: ["OWNER"],
-    // },
-    // {
-    //   id: "analytics",
-    //   label: "Cross-Store Analytics",
-    //   href: `/org/${orgId}/analytics`,
-    //   icon: BarChart3,
-    //   roles: ["OWNER", "MANAGER"],
-    // },
-    // {
-    //   id: "tax-compliance",
-    //   label: "Tax & E-Invoicing",
-    //   href: `/org/${orgId}/tax-compliance`,
-    //   icon: Receipt,
-    //   roles: ["OWNER"],
-    // },
-    // {
-    //   id: "audit-logs",
-    //   label: "Security & Audit Logs",
-    //   href: `/org/${orgId}/audit-logs`,
-    //   icon: ShieldAlert,
-    //   roles: ["OWNER"],
-    // },
     {
       id: "settings",
       label: "Organization Settings",
       href: `/org/${orgId}/settings`,
       icon: Settings,
-      roles: ["OWNER"],
+      anyOf: [Permission.ORG_WRITE],
     },
   ];
 
   const filteredNavItems = navItems.filter((item) =>
-    item.roles.includes(userRole)
+    canAny(perms, item.anyOf as Parameters<typeof canAny>[1]),
   );
 
   return (
