@@ -78,16 +78,25 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
         const profile = await meRes.json();
         const roleRaw = profile?.role;
         const normalizedRole =
-          typeof roleRaw === "string" ? roleRaw.toUpperCase().trim() : roleRaw;
+          typeof roleRaw === "string"
+            ? roleRaw.toUpperCase().trim()
+            : undefined;
+        const prev = (typeof token.user === "object" && token.user
+          ? token.user
+          : {}) as {
+          id?: string;
+          email?: string;
+          name?: string;
+          role?: string;
+          organization_id?: string;
+        };
         nextUser = {
-          ...(typeof token.user === "object" && token.user ? token.user : {}),
-          id: profile?.id != null ? String(profile.id) : (token.user as { id?: string } | undefined)?.id,
-          email: profile?.email ?? (token.user as { email?: string } | undefined)?.email,
-          name: profile?.full_name ?? (token.user as { name?: string } | undefined)?.name,
-          role: normalizedRole ?? (token.user as { role?: string } | undefined)?.role,
-          organization_id:
-            profile?.organization_id ??
-            (token.user as { organization_id?: string } | undefined)?.organization_id,
+          ...prev,
+          id: profile?.id != null ? String(profile.id) : prev.id,
+          email: profile?.email ?? prev.email,
+          name: profile?.full_name ?? prev.name,
+          role: normalizedRole ?? prev.role,
+          organization_id: profile?.organization_id ?? prev.organization_id,
         };
       }
     } catch (e) {
@@ -277,15 +286,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return session;
       }
 
+      const rawRole = token.user.role;
+      const normalizedRole =
+        typeof rawRole === "string" ? rawRole.toUpperCase().trim() : "";
+
       session.user = {
         ...session.user,
-        id: token.user.id as string,
-        email: token.user.email as string,
-        name: token.user.name as string,
-        role: typeof token.user.role === "string"
-          ? token.user.role.toUpperCase().trim()
-          : (token.user.role as string),
-        organization_id: token.user.organization_id as string,
+        id: String(token.user.id ?? ""),
+        email: String(token.user.email ?? ""),
+        name: String(token.user.name ?? ""),
+        role: normalizedRole,
+        organization_id: String(token.user.organization_id ?? ""),
       };
 
       // Server Route Handlers may still read this via auth() on the server.
