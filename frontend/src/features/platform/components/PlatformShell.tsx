@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { clearPlatformSession } from "@/lib/platform/auth";
 import { cn } from "@/lib/utils";
 
 /**
