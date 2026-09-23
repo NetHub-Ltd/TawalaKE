@@ -65,6 +65,12 @@ class Settings(BaseSettings):
     platform_mfa_max_attempts: int = 5
     platform_mfa_resend_cooldown_sec: int = 60
 
+    # First platform SUPER_ADMIN (optional). When set, prestart creates the user
+    # once if no SUPER_ADMIN exists, generates a password, and emails an invite.
+    # Leave empty to skip. No password in env — safer than hardcoding.
+    platform_bootstrap_email: str | None = None
+    platform_bootstrap_name: str = "Platform Super Admin"
+
     # Soft-delete retention archive pipeline (purge/email off until ready)
     archive_enabled: bool = False
     archive_signed_url_ttl_days: int = 7
