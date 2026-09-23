@@ -32,7 +32,7 @@ export function AcceptInviteForm() {
 
   const onSubmit = async (data: PasswordConfirmValues) => {
     if (!token) {
-      toast.error("Missing invite link. Ask a team manager to resend.");
+      toast.error("Missing invite link. Ask an organization Owner or Admin to resend.");
       return;
     }
     try {
@@ -63,7 +63,7 @@ export function AcceptInviteForm() {
     return (
       <div className="space-y-4 text-center">
         <p className="text-sm text-muted">
-          This invite link is missing or invalid. Ask a team manager to resend your
+          This invite link is missing or invalid. Ask an organization Owner or Admin to resend your
           invite from the staff page.
         </p>
         <Link

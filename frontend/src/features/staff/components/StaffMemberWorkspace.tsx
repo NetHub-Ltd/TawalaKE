@@ -106,7 +106,7 @@ export default function StaffMemberWorkspace({
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
         <AlertCircle className="h-8 w-8 text-amber-500" />
-        <p className="text-sm">You do not have permission to view this workspace.</p>
+        <p className="text-sm">You do not have permission to view this team member.</p>
         <Link href={`/org/${organizationId}/staff`} className="text-sm text-[var(--success)]">
           Back to Team
         </Link>
