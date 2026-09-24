@@ -1,0 +1,41 @@
+import React from "react";
+import { auth } from "@/auth";
+import { redirect, notFound } from "next/navigation";
+import { orgMatchesSession } from "@/lib/auth/require-api-auth";
+import { OrgShell } from "@/features/org/components/OrgShell";
+import { permissionsForRole, can, Permission } from "@/lib/rbac";
+
+interface Props {
+  children: React.ReactNode;
+  params: Promise<{ organizationId: string }>;
+}
+
+/** Org updates — any staff with org:read */
+export default async function OrgUpdatesLayout({ children, params }: Props) {
+  const { organizationId } = await params;
+  const session = await auth();
+
+  if (!session?.user || session.error) {
+    redirect(
+      `/login?callbackUrl=${encodeURIComponent(`/org/${organizationId}/updates`)}`,
+    );
+  }
+
+  if (!orgMatchesSession(organizationId, session.user.organization_id)) {
+    notFound();
+  }
+
+  const userRole = (session.user.role || "").toUpperCase().trim();
+  if (!userRole) redirect("/org");
+
+  const perms = permissionsForRole(userRole);
+  if (!can(perms, Permission.ORG_READ)) {
+    redirect(`/org/${organizationId}`);
+  }
+
+  return (
+    <OrgShell organizationId={organizationId} userRole={userRole}>
+      {children}
+    </OrgShell>
+  );
+}
