@@ -25,8 +25,6 @@
 //   name: string;
 //   price: number;
 //   qty: number;
-  /** Max sellable when track_stock; omit for untracked */
-  stockMax?: number;
 //   category: string;
 //   sku?: string;
 // }
@@ -436,6 +434,8 @@ export interface CartItem {
   name: string;
   price: number;
   qty: number;
+  /** Max sellable when track_stock; omit for untracked */
+  stockMax?: number;
   category: string;
   sku?: string;
 }
