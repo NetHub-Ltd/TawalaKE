@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   LogOut,
   type LucideIcon,
-  Sparkles,
 } from "lucide-react";
 import {
   Permission,
