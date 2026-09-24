@@ -39,8 +39,9 @@ interface ProductFormValues {
 
 export function CreateProductForm() {
   const { businessId, businessName } = useBusinessContext();
-  const { createProduct } = useProducts(businessId as string);
-  const { units, categories } = useCatalogOptions(businessId);
+  const businessIdStr = Array.isArray(businessId) ? businessId[0] : businessId;
+  const { createProduct } = useProducts(businessIdStr as string);
+  const { units, categories } = useCatalogOptions(businessIdStr ?? null);
 
   const {
     register,

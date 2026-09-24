@@ -67,11 +67,10 @@ export function AssetComposer({
   isPending = false,
 }: AssetComposerProps) {
   const { businessId } = useBusinessContext();
-  const { units, categories } = useCatalogOptions(businessId);
-
   const businessIdString = useMemo(() => {
     return (Array.isArray(businessId) ? businessId[0] : businessId) || "";
   }, [businessId]);
+  const { units, categories } = useCatalogOptions(businessIdString || null);
 
   // Stable memoization of form values to prevent object reference updates from wiping form edits
   const formValues = useMemo<ProductForm>(() => {
