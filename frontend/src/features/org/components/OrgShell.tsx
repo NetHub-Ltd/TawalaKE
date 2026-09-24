@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   LogOut,
   type LucideIcon,
-  Sparkles,
 } from "lucide-react";
 import {
   Permission,
@@ -61,13 +60,6 @@ const ORG_NAV: OrgNavItem[] = [
     href: (orgId) => `/org/${orgId}/billing`,
     icon: CreditCard,
     anyOf: [Permission.ORG_BILLING],
-  },
-  {
-    id: "updates",
-    label: "Updates",
-    href: (orgId) => `/org/${orgId}/updates`,
-    icon: Sparkles,
-    anyOf: [Permission.ORG_READ],
   },
   {
     id: "settings",
@@ -142,8 +134,6 @@ export function OrgShell({
                 ? pathname === href || pathname === `${href}/`
                 : item.id === "staff"
                   ? pathname.includes(`/org/${organizationId}/staff`)
-                  : item.id === "updates"
-                    ? pathname.includes(`/org/${organizationId}/updates`)
                   : pathname === href || pathname.startsWith(`${href}/`);
             const Icon = item.icon;
             return (

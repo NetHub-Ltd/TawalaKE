@@ -83,12 +83,6 @@ export default async function NotFound() {
             >
               Team
             </Link>
-            <Link
-              href={`/org/${orgId}/updates`}
-              className="hover:text-foreground hover:underline"
-            >
-              Updates
-            </Link>
           </div>
         ) : null}
 
