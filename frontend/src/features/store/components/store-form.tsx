@@ -264,10 +264,17 @@ export default function StoreForm({
     setBillingHref(null);
 
     try {
+      // UI collects percent (e.g. 16); API/DB store fraction (0.16)
+      const taxPercent = Number(data.tax_rate);
+      const taxFraction =
+        Number.isFinite(taxPercent) && taxPercent > 1
+          ? taxPercent / 100
+          : taxPercent;
+      const payload = { ...data, tax_rate: taxFraction };
       const response = await fetch("/api/v1/org/stores", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       const body = await response.json().catch(() => ({}));

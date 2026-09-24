@@ -58,7 +58,7 @@ class SaleReadWithRelations(BaseModel):
     total_amount: float
     created_at: datetime
     updated_at: datetime
-    service_amount: Optional[ServiceFee] = None
+    service_amount: Optional[Any] = None  # list[{description,amount}] or legacy object
 
     # Relational fields (selectinload)
     business: Optional[BusinessReadMinimal] = None

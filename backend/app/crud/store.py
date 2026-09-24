@@ -103,6 +103,9 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
         if tax_rate == 0.0 and getattr(business, "tax_rate", None) is not None:
             tax_rate = float(business.tax_rate or 0.0)
+        # Compat: legacy rows may store percent (16) instead of fraction (0.16)
+        if tax_rate > 1.0:
+            tax_rate = tax_rate / 100.0
 
         for item in payload.items:
             stmt = select(Product).where(Product.id == item.product_id)
@@ -176,15 +179,25 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         subtotal = max(0.0, subtotal - discount)
 
         tax_amount = round(subtotal * tax_rate, 2)
-        total_amount = subtotal + tax_amount
 
-        service = {}
-        payload_service = getattr(payload, "service", None)
-        if payload_service and getattr(payload_service, "amount", None) is not None:
-            service["amount"] = payload_service.amount
-        if payload_service and getattr(payload_service, "description", None) is not None:
-            service["description"] = payload_service.description
-        service = service or None
+        # Non-stock services (design, delivery, …): untaxed, never reduce stock
+        services_payload = list(getattr(payload, "services", None) or [])
+        legacy = getattr(payload, "service", None)
+        if legacy is not None and not services_payload:
+            services_payload = [legacy]
+        services_list = []
+        service_total = 0.0
+        for s in services_payload:
+            amt = float(getattr(s, "amount", None) or 0)
+            desc = (getattr(s, "description", None) or "").strip()
+            if amt <= 0 or not desc:
+                continue
+            services_list.append({"description": desc[:255], "amount": round(amt, 2)})
+            service_total += amt
+        service_total = round(service_total, 2)
+        service_amount = services_list if services_list else None
+
+        total_amount = round(subtotal + tax_amount + service_total, 2)
 
         sale = Sale(
             id=uuid4(),
@@ -200,7 +213,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             discount_applied=discount,
             total_amount=total_amount,
             items=sale_items,
-            service_amount=service,
+            service_amount=service_amount,
         )
 
         db.add(sale)

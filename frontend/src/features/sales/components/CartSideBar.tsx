@@ -123,9 +123,11 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const [mounted, setMounted] = useState(false);
   const [isAddingDiscount, setIsAddingDiscount] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  const [service, setService] = useState<{ amount: number; description: string } | null>(null);
+  type ServiceLine = { id: string; amount: number; description: string };
+  const [services, setServices] = useState<ServiceLine[]>([]);
   const [serviceAmountInput, setServiceAmountInput] = useState("");
   const [serviceDescInput, setServiceDescInput] = useState("");
+  const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -170,7 +172,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   }
 
   const { subtotal, taxAmount, grandTotal } = getFinancials();
-  const payableGrandTotal = Math.max(0, grandTotal + (service?.amount || 0));
+  const servicesTotal = services.reduce((sum, s) => sum + s.amount, 0);
+  const payableGrandTotal = Math.max(0, grandTotal + servicesTotal);
 
   const handleExpand = () => {
     if (resolvedBusinessId && resolvedOrgId) {
@@ -180,7 +183,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
   const handleClearCartWithFeedback = () => {
     clearCart();
-    setService(null);
+    setServices([]);
+    setEditingServiceId(null);
     toast.info("Cart Reset", {
       description: "All pending terminal items, discounts, and service fees cleared.",
     });
@@ -200,23 +204,41 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
     if (!cleanDesc) {
       toast.error("Description Required", {
-        description: "Please specify what this service fee covers.",
+        description: "Please specify what this service covers (e.g. design, delivery).",
       });
       return;
     }
 
-    setService({
-      amount: parsedAmount,
-      description: cleanDesc,
-    });
+    if (editingServiceId) {
+      setServices((prev) =>
+        prev.map((s) =>
+          s.id === editingServiceId
+            ? { ...s, amount: parsedAmount, description: cleanDesc }
+            : s,
+        ),
+      );
+      toast.success("Service updated");
+    } else {
+      setServices((prev) => [
+        ...prev,
+        {
+          id: `svc-${Date.now()}-${prev.length}`,
+          amount: parsedAmount,
+          description: cleanDesc,
+        },
+      ]);
+      toast.success("Service added", {
+        description: `KES ${parsedAmount.toLocaleString()} for "${cleanDesc}".`,
+      });
+    }
+    setEditingServiceId(null);
+    setServiceAmountInput("");
+    setServiceDescInput("");
     setIsServiceModalOpen(false);
-    toast.success("Service Fee Added", {
-      description: `Added KES ${parsedAmount.toLocaleString()} for "${cleanDesc}".`,
-    });
   };
 
   const handleCheckoutRedirect = async () => {
-    if (isCartEmpty || !resolvedBusinessId) return;
+    if ((!cart.length && !services.length) || !resolvedBusinessId) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -233,12 +255,10 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         quantity: item.qty,
       })),
       discount: discount || 0,
-      service: service
-        ? {
-            amount: service.amount,
-            description: service.description,
-          }
-        : null,
+      services: services.map((s) => ({
+        amount: s.amount,
+        description: s.description,
+      })),
     };
 
     try {
@@ -261,7 +281,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       });
 
       // Keep cart until finalize succeeds (CheckoutForm clears on success).
-      setService(null);
+      setServices([]);
       if (pendingSaleData?.id && resolvedBusinessId) {
         setStagedSaleId(resolvedBusinessId, pendingSaleData.id);
       }
@@ -314,7 +334,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
           >
             <Maximize2 size={15} aria-hidden="true" />
           </button>
-          {(!isCartEmpty || service || discount > 0) && (
+          {(!isCartEmpty || services.length > 0 || discount > 0) && (
             <button
               type="button"
               disabled={isSubmitting}
@@ -428,9 +448,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         <div className="grid grid-cols-2 gap-2">
           {/* DISCOUNT CONTROL */}
           <div
-            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between transition-opacity ${
-              isCartEmpty ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
-            }`}
+            className="min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between"
           >
             {isAddingDiscount ? (
               <div className="relative w-full flex items-center">
@@ -505,36 +523,32 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
           {/* ADD SERVICE FEE CONTROL */}
           <div
-            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between transition-opacity ${
-              isCartEmpty ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
-            }`}
+            className="min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between"
           >
             <div className="flex items-center justify-between w-full min-w-0">
               <button
                 type="button"
-                disabled={isSubmitting || isCartEmpty}
+                disabled={isSubmitting}
                 onClick={() => {
-                  if (service) {
-                    setServiceAmountInput(service.amount.toString());
-                    setServiceDescInput(service.description);
-                  } else {
-                    setServiceAmountInput("");
-                    setServiceDescInput("");
-                  }
+                  setEditingServiceId(null);
+                  setServiceAmountInput("");
+                  setServiceDescInput("");
                   setIsServiceModalOpen(true);
                 }}
                 className="text-xs font-semibold uppercase tracking-wider text-muted/80 hover:text-brand-primary flex items-center gap-1.5 transition-colors cursor-pointer disabled:cursor-not-allowed focus:outline-none truncate"
               >
                 <Wrench size={11} strokeWidth={2} aria-hidden="true" className="shrink-0" />
                 <span className="truncate">
-                  {service ? `+KES ${service.amount.toLocaleString()}` : "Add Service Fee"}
+                  {services.length
+                    ? `${services.length} service${services.length === 1 ? "" : "s"} · +KES ${servicesTotal.toLocaleString()}`
+                    : "Add service"}
                 </span>
               </button>
-              {service && !isSubmitting && (
+              {services.length > 0 && !isSubmitting && (
                 <button
                   type="button"
                   onClick={() => {
-                    setService(null);
+                    setServices([]);
                     toast.info("Service Fee Removed");
                   }}
                   className="text-muted/50 hover:text-brand-accent cursor-pointer px-0.5 shrink-0"
@@ -573,14 +587,37 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
             </div>
           )}
 
-          {service && (
-            <div className="flex justify-between items-center text-xs font-semibold text-brand-primary bg-brand-primary/5 p-1.5 rounded-md border border-brand-primary/15">
-              <span className="truncate pr-2">Service: {service.description}</span>
-              <span className="tabular-nums font-mono shrink-0">
-                +KES {service.amount.toLocaleString()}
+          {services.map((s) => (
+            <div key={s.id} className="flex items-center justify-between text-xs text-muted gap-2">
+              <button
+                type="button"
+                className="truncate pr-2 text-left hover:text-foreground underline-offset-2 hover:underline"
+                onClick={() => {
+                  setEditingServiceId(s.id);
+                  setServiceAmountInput(String(s.amount));
+                  setServiceDescInput(s.description);
+                  setIsServiceModalOpen(true);
+                }}
+              >
+                Service: {s.description}
+              </button>
+              <span className="shrink-0 font-medium text-foreground">
+                +KES {s.amount.toLocaleString()}
               </span>
+              <button
+                type="button"
+                className="shrink-0 text-muted hover:text-destructive"
+                title="Remove service"
+                aria-label={`Remove ${s.description}`}
+                onClick={() => {
+                  setServices((prev) => prev.filter((x) => x.id !== s.id));
+                  toast.info("Service removed");
+                }}
+              >
+                ×
+              </button>
             </div>
-          )}
+          ))}
 
           <div className="flex justify-between items-baseline pt-2 border-t border-dashed border-border/40">
             <span className="text-xs font-bold uppercase tracking-wider text-foreground">
@@ -637,7 +674,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   <Wrench size={14} aria-hidden="true" />
                 </div>
                 <h3 id="service-modal-title" className="text-xs font-bold uppercase tracking-wider text-foreground">
-                  {service ? "Edit Service Fee" : "Add Service Fee"}
+                  {editingServiceId ? "Edit service" : "Add service"}
                 </h3>
               </div>
               <button

@@ -192,7 +192,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
               Workspace verification failed. Re-authentication required for security.
             </p>
           </div>
-          <Link href="/terminal" className="w-full">
+          <Link href={organizationId ? `/org/${organizationId}` : "/org"} className="w-full">
             <button
               type="button"
               className="w-full min-h-[44px] bg-foreground text-background rounded-md font-bold uppercase tracking-wider text-xs hover:scale-[1.01] active:scale-[0.99] transition-all shadow-md cursor-pointer"

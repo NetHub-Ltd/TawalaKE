@@ -515,6 +515,8 @@ async def get_pos_config(
         raise HTTPException(status_code=404, detail="Business not found")
 
     tax_rate = float(getattr(biz, "tax_rate", None) or 0.0)
+    if tax_rate > 1.0:
+        tax_rate = tax_rate / 100.0
     # Enabled POS methods only — MPESA/CARD stay out until product ships
     methods = [
         PosPaymentMethodOut(
