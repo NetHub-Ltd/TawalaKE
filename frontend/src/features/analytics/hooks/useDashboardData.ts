@@ -77,7 +77,11 @@ export type ProductRow = {
   margin_pct?: number;
 };
 
-export type ProductsPayload = { items: ProductRow[] };
+export type ProductsPayload = {
+  items: ProductRow[];
+  /** Distinct SKUs with sales in the period (not capped by list limit). */
+  total_sku_count?: number;
+};
 
 export type StaffRow = {
   staff_id: string;
