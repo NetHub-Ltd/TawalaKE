@@ -940,9 +940,6 @@ class EmailService:
         )
 
 
-
-mailer = EmailService()
-
     @classmethod
     def send_grace_reminder(
         cls,
@@ -989,15 +986,24 @@ mailer = EmailService()
                 "only our platform team can extend grace."
             )
         )
-        html = cls._shell(
+        html = cls.render_shell(
             title=urgency,
             preheader=preheader,
+            eyebrow="Grace period",
             body_html=body,
         )
+        subject = (
+            f"Grace ends today · {org}"
+            if days <= 0
+            else f"Grace ends in {days} day{'s' if days != 1 else ''} · {org}"
+        )
         cls.send_transactional_email(
-            sender=settings.email_from,
+            sender=settings.email_from_billing,
             to_addresses=[to_email],
-            subject=f"{urgency} — {org}",
+            subject=subject,
             html_content=html,
         )
+
+
+mailer = EmailService()
 
