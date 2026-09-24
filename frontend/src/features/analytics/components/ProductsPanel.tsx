@@ -18,6 +18,10 @@ export function ProductsPanel({
   loading?: boolean;
 }) {
   const items = products?.items || [];
+  const skuCount =
+    products?.total_sku_count !== undefined && products?.total_sku_count !== null
+      ? products.total_sku_count
+      : items.length;
   const missingCost = dashboard?.summary?.missing_cost_line_count ?? 0;
   const totalRev = items.reduce((a, i) => a + (i.revenue || 0), 0);
   const topShare = totalRev > 0 && items[0] ? ((items[0].revenue || 0) / totalRev) * 100 : 0;
@@ -41,7 +45,7 @@ export function ProductsPanel({
   return (
     <div className="space-y-5">
       <KpiRow>
-        <KpiCard label="SKUs with sales" value={String(items.length)} hint="in period" />
+        <KpiCard label="SKUs with sales" value={String(skuCount)} hint="distinct in period" />
         <KpiCard
           label="Top SKU share"
           value={`${topShare.toFixed(0)}%`}
@@ -69,7 +73,7 @@ export function ProductsPanel({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <ListCard title="Best by gross profit">
-          {best.length === 0 && <EmptyRow />}
+          {best.length === 0 && <EmptyRow text="No product sales in this period — complete a sale to rank SKUs" />}
           {best.map((row) => (
             <div
               key={row.product_id}

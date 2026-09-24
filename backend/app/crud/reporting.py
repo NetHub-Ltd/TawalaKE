@@ -310,8 +310,11 @@ class ReportingCrud:
             "quantity_sold": lambda x: x.quantity_sold,
         }.get(order_by, lambda x: x.revenue)
         items.sort(key=key, reverse=True)
+        total_sku_count = len(items)
         return ProductsResponse(
-            window=ReportWindow(start=cs, end=ce), items=items[: max(1, min(limit, 100))]
+            window=ReportWindow(start=cs, end=ce),
+            items=items[: max(1, min(limit, 100))],
+            total_sku_count=total_sku_count,
         )
 
     async def staff(

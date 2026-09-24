@@ -89,11 +89,25 @@ async def apply_sale_to_rollups(
     sign: int = 1,
 ) -> Optional[Dict[str, Any]]:
     """
-    Increment (sign=+1) or reverse (sign=-1) rollups for a completed sale.
+    Increment (sign=+1) or reverse (sign=-1) rollups for a sale.
+
+    - sign=+1: only COMPLETED sales (normal completion path).
+    - sign=-1: COMPLETED, REFUNDED, or PARTIALLY_REFUNDED — reverses the prior
+      completion contribution and records refund_deductions_volume.
+
+    Call sign=-1 from refund flows so overview net revenue stays coherent.
     Returns event payload for WebSocket/Redis, or None if skipped.
     """
     sale, items = await _load_sale_bundle(db, sale_id)
-    if not sale or sale.status != SaleStatus.COMPLETED:
+    if not sale:
+        return None
+    if sign >= 0 and sale.status != SaleStatus.COMPLETED:
+        return None
+    if sign < 0 and sale.status not in (
+        SaleStatus.COMPLETED,
+        SaleStatus.REFUNDED,
+        SaleStatus.PARTIALLY_REFUNDED,
+    ):
         return None
 
     event_ts = sale_event_time(sale)
@@ -119,6 +133,8 @@ async def apply_sale_to_rollups(
     )
     net = float(sale.total_amount or 0)
     s = float(sign)
+    # Reversal: reduce net/orders and increase refund_deductions (always non-negative metric)
+    refund_vol = abs(net) if sign < 0 else 0.0
 
     # Payment mix from Payment rows (collected only)
     cash_vol = mpesa_vol = card_vol = other_vol = 0.0
@@ -144,7 +160,7 @@ async def apply_sale_to_rollups(
         "total_tax_collected": s * tax,
         "total_discounts_granted": s * discount,
         "net_revenue_collected": s * net,
-        "refund_deductions_volume": 0.0,
+        "refund_deductions_volume": refund_vol,
         "total_completed_orders_count": int(s * 1),
         "cogs_volume": s * total_cogs,
         "gross_profit": s * gross_profit,
@@ -166,6 +182,8 @@ async def apply_sale_to_rollups(
             + stmt.excluded.total_discounts_granted,
             "net_revenue_collected": SaleAnalyticsSummary.net_revenue_collected
             + stmt.excluded.net_revenue_collected,
+            "refund_deductions_volume": SaleAnalyticsSummary.refund_deductions_volume
+            + stmt.excluded.refund_deductions_volume,
             "total_completed_orders_count": SaleAnalyticsSummary.total_completed_orders_count
             + stmt.excluded.total_completed_orders_count,
             "cogs_volume": SaleAnalyticsSummary.cogs_volume + stmt.excluded.cogs_volume,
@@ -280,7 +298,22 @@ async def apply_sale_to_rollups(
         "hour": hour.isoformat(),
         "scopes": ["overview", "products", "staff", "hourly"],
         "sale_id": str(sale.id),
+        "sign": int(sign),
     }
+
+
+async def apply_refund_to_rollups(
+    db: AsyncSession,
+    sale_id: UUID,
+) -> Optional[Dict[str, Any]]:
+    """
+    Reverse a previously completed sale in analytics rollups.
+
+    Prefer calling this from refund completion handlers after the sale status
+    is REFUNDED / PARTIALLY_REFUNDED (or still COMPLETED during the transition).
+    Idempotency is the caller's responsibility (do not reverse twice).
+    """
+    return await apply_sale_to_rollups(db, sale_id, sign=-1)
 
 
 async def publish_rollup_event(redis: Any, payload: Dict[str, Any]) -> None:
