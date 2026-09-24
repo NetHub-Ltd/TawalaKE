@@ -11,30 +11,40 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function TerminalSidebar({ businessId }: { businessId: string }) {
+export function TerminalSidebar({
+  businessId,
+  organizationId,
+}: {
+  businessId: string;
+  organizationId?: string;
+}) {
   const pathname = usePathname();
+  // Prefer prop; else parse /org/{orgId}/{businessId}/...
+  const orgFromPath = pathname?.match(/^\/org\/([^/]+)/)?.[1];
+  const orgId = organizationId || orgFromPath || "";
+  const base = orgId ? `/org/${orgId}/${businessId}` : `/org`;
 
   const NAV_ITEMS = [
-    { icon: Building2, label: "Dashboard", href: `/terminal/${businessId}` },
+    { icon: Building2, label: "Dashboard", href: `${base}/terminal` },
     {
       icon: ShoppingCart,
       label: "Cart",
-      href: `/terminal/${businessId}/cart`,
+      href: `${base}/cart`,
     },
     {
       icon: Package,
       label: "Inventory",
-      href: `/terminal/${businessId}/inventory`,
+      href: `${base}/inventory`,
     },
     {
       icon: History,
       label: "History",
-      href: `/terminal/${businessId}/history`,
+      href: `${base}/sale-history`,
     },
     {
       icon: Settings,
       label: "Settings",
-      href: `/terminal/${businessId}/settings`,
+      href: `${base}/settings`,
     },
   ];
 

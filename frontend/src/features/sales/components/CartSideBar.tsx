@@ -240,7 +240,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   };
 
   const handleCheckoutRedirect = async () => {
-    if (isCartEmpty || !resolvedBusinessId) return;
+    if ((!cart.length && !services.length) || !resolvedBusinessId) return;
 
     setIsSubmitting(true);
     setSubmitError(null);
@@ -450,9 +450,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         <div className="grid grid-cols-2 gap-2">
           {/* DISCOUNT CONTROL */}
           <div
-            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between transition-opacity ${
-              isCartEmpty ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
-            }`}
+            className="min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between"
           >
             {isAddingDiscount ? (
               <div className="relative w-full flex items-center">
@@ -527,14 +525,12 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
           {/* ADD SERVICE FEE CONTROL */}
           <div
-            className={`min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between transition-opacity ${
-              isCartEmpty ? "opacity-40 cursor-not-allowed pointer-events-none" : ""
-            }`}
+            className="min-h-[38px] bg-surface/40 border border-border/30 rounded-md px-2.5 py-1 flex items-center justify-between"
           >
             <div className="flex items-center justify-between w-full min-w-0">
               <button
                 type="button"
-                disabled={isSubmitting || isCartEmpty}
+                disabled={isSubmitting}
                 onClick={() => {
                   setEditingServiceId(null);
                   setServiceAmountInput("");

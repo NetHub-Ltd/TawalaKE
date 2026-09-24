@@ -103,6 +103,9 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             )
         if tax_rate == 0.0 and getattr(business, "tax_rate", None) is not None:
             tax_rate = float(business.tax_rate or 0.0)
+        # Compat: legacy rows may store percent (16) instead of fraction (0.16)
+        if tax_rate > 1.0:
+            tax_rate = tax_rate / 100.0
 
         for item in payload.items:
             stmt = select(Product).where(Product.id == item.product_id)

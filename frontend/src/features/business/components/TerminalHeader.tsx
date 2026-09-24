@@ -29,7 +29,7 @@ export function TerminalHeader({ businessName }: TerminalHeaderProps) {
       <div className="flex items-center gap-8">
         {/* Workspace Switcher Button */}
         <button
-          onClick={() => router.push("/terminal")}
+          onClick={() => router.push("/org")}
           className="flex items-center gap-3 px-4 py-2.5 bg-muted/40 hover:bg-muted rounded-md transition-all group border border-border/20 shadow-sm"
           aria-label="Switch business context"
         >
