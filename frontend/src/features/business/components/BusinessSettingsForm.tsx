@@ -157,7 +157,7 @@ export function BusinessSettingsForm() {
       {!canEdit && (
         <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          You can view these settings but need manager access to edit them.
+          You can view these settings but need organization Owner or Admin access to edit them.
         </div>
       )}
 

@@ -75,6 +75,11 @@ const publicApiRoutes = [
   "/api/v1/auth/onboarding/set-password",
   "/api/v1/organizations/plans/public",
 
+  // Password recovery + invite accept (must work logged out)
+  "/api/v1/auth/forgot-password",
+  "/api/v1/auth/password-reset/confirm",
+  "/api/v1/auth/staff-invite/accept",
+
   // Platform operator auth — isolated from tenant NextAuth; must be reachable
   // without a staff session (BFF proxies to FastAPI platform JWT flow).
   "/api/v1/platform/auth/login",

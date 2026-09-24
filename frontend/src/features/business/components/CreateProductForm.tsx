@@ -16,6 +16,7 @@ import {
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { cn } from "@/lib/utils";
+import { useCatalogOptions } from "@/features/catalog/useCatalogOptions";
 
 /**
  * @Scribe_Audit
@@ -36,26 +37,11 @@ interface ProductFormValues {
   };
 }
 
-const CATEGORIES = [
-  "Raw Materials",
-  "Electronics",
-  "Hardware",
-  "Consumables",
-  "Furniture",
-  "Apparel",
-  "Food & Beverage",
-  "Services",
-];
-const UNITS = [
-  { val: "pcs", label: "Pieces (PCS)" },
-  { val: "kg", label: "Kilograms (KG)" },
-  { val: "l", label: "Liters (L)" },
-  { val: "box", label: "Box (BX)" },
-];
-
 export function CreateProductForm() {
   const { businessId, businessName } = useBusinessContext();
-  const { createProduct } = useProducts(businessId as string);
+  const businessIdStr = Array.isArray(businessId) ? businessId[0] : businessId;
+  const { createProduct } = useProducts(businessIdStr as string);
+  const { units, categories } = useCatalogOptions(businessIdStr ?? null);
 
   const {
     register,
@@ -70,7 +56,7 @@ export function CreateProductForm() {
       stock: 0,
       attributes: {
         unit_of_measure: "pcs",
-        category: "Hardware",
+        category: "hardware",
         unit_price: 0,
         sku: "",
       },
@@ -237,9 +223,9 @@ export function CreateProductForm() {
                       {...register("attributes.category")}
                       className="w-full bg-transparent text-sm font-bold outline-none appearance-none cursor-pointer"
                     >
-                      {CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
+                      {categories.map((cat) => (
+                        <option key={cat.code} value={cat.code}>
+                          {cat.name}
                         </option>
                       ))}
                     </select>
@@ -249,8 +235,8 @@ export function CreateProductForm() {
                       {...register("attributes.unit_of_measure")}
                       className="w-full bg-transparent text-sm font-bold outline-none appearance-none cursor-pointer"
                     >
-                      {UNITS.map((u) => (
-                        <option key={u.val} value={u.val}>
+                      {units.map((u) => (
+                        <option key={u.code} value={u.code}>
                           {u.label}
                         </option>
                       ))}

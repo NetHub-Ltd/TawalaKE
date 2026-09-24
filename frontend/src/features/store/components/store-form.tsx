@@ -6,28 +6,41 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
+  ArrowLeft,
   Building2,
-  Store,
-  Phone,
+  Laptop,
+  Loader2,
   MapPin,
   Percent,
+  Phone,
   Pill,
-  Utensils,
-  ShoppingBag,
-  Laptop,
-  Sparkles,
-  Loader2,
   ShieldAlert,
-  ArrowLeft,
+  ShoppingBag,
+  Sparkles,
+  Store,
+  Utensils,
 } from "lucide-react";
 
+/** Must match backend BusinessIndustry (app.schemas.enums). */
 const INDUSTRY_ENUM = [
   "GENERAL_RETAIL",
+  "GROCERY_FOOD",
   "PHARMACY",
-  "GROCERY_SUPERMARKET",
-  "RESTAURANT_HOSPITALITY",
-  "ELECTRONICS_HARDWARE",
-  "BEAUTY_WELLNESS",
+  "HARDWARE",
+  "ELECTRONICS",
+  "FASHION_APPAREL",
+  "BEAUTY_COSMETICS",
+  "RESTAURANT_CAFE",
+  "BAR_NIGHTLIFE",
+  "HEALTH_CLINIC",
+  "SALON_BARBER",
+  "AUTOMOTIVE",
+  "AGROVET",
+  "AGRICULTURE",
+  "PROFESSIONAL_SERVICES",
+  "EDUCATION",
+  "LOGISTICS",
+  "OTHER",
 ] as const;
 
 type IndustryType = (typeof INDUSTRY_ENUM)[number];
@@ -40,47 +53,136 @@ interface IndustryMeta {
   defaultTax: number;
 }
 
+const TAX16 =
+  "VAT default set to 16%. You can change tax anytime in branch settings.";
+const TAX0 =
+  "Tax default set to 0% (common for exempt lines). Adjust per branch if needed.";
+
 const INDUSTRY_CONFIGS: Record<IndustryType, IndustryMeta> = {
   GENERAL_RETAIL: {
-    label: "General Retail",
+    label: "General Retail / Minimart",
     icon: ShoppingBag,
     alertTitle: "Default tax",
-    alertMessage: "VAT default set to 16%. You can change tax anytime in branch settings.",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  GROCERY_FOOD: {
+    label: "Grocery & Fresh Food",
+    icon: ShoppingBag,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
     defaultTax: 16,
   },
   PHARMACY: {
-    label: "Pharmacy & Healthcare",
+    label: "Pharmacy / Chemist",
     icon: Pill,
     alertTitle: "Default tax",
-    alertMessage: "Tax default set to 0% (common for exempt lines). Adjust per branch if needed.",
+    alertMessage: TAX0,
     defaultTax: 0,
   },
-  GROCERY_SUPERMARKET: {
-    label: "Grocery & Supermarket",
-    icon: ShoppingBag,
-    alertTitle: "Default tax",
-    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
-    defaultTax: 16,
-  },
-  RESTAURANT_HOSPITALITY: {
-    label: "Restaurant & Hospitality",
-    icon: Utensils,
-    alertTitle: "Default tax",
-    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
-    defaultTax: 16,
-  },
-  ELECTRONICS_HARDWARE: {
-    label: "Electronics & Hardware",
+  HARDWARE: {
+    label: "Hardware & Building Materials",
     icon: Laptop,
     alertTitle: "Default tax",
-    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
+    alertMessage: TAX16,
     defaultTax: 16,
   },
-  BEAUTY_WELLNESS: {
-    label: "Beauty & Wellness",
+  ELECTRONICS: {
+    label: "Electronics & Appliances",
+    icon: Laptop,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  FASHION_APPAREL: {
+    label: "Fashion & Apparel",
+    icon: ShoppingBag,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  BEAUTY_COSMETICS: {
+    label: "Beauty & Cosmetics Retail",
     icon: Sparkles,
     alertTitle: "Default tax",
-    alertMessage: "VAT default set to 16%. Change in branch settings after create.",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  RESTAURANT_CAFE: {
+    label: "Restaurant & Café",
+    icon: Utensils,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  BAR_NIGHTLIFE: {
+    label: "Bar & Nightlife",
+    icon: Utensils,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  HEALTH_CLINIC: {
+    label: "Health Clinic",
+    icon: Pill,
+    alertTitle: "Default tax",
+    alertMessage: TAX0,
+    defaultTax: 0,
+  },
+  SALON_BARBER: {
+    label: "Salon & Barbershop",
+    icon: Sparkles,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  AUTOMOTIVE: {
+    label: "Automotive & Garage",
+    icon: Laptop,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  AGROVET: {
+    label: "Agrovet & Farm Inputs",
+    icon: ShoppingBag,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  AGRICULTURE: {
+    label: "Agriculture & Produce",
+    icon: ShoppingBag,
+    alertTitle: "Default tax",
+    alertMessage: TAX0,
+    defaultTax: 0,
+  },
+  PROFESSIONAL_SERVICES: {
+    label: "Professional Services",
+    icon: Building2,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  EDUCATION: {
+    label: "Education & Training",
+    icon: Building2,
+    alertTitle: "Default tax",
+    alertMessage: TAX0,
+    defaultTax: 0,
+  },
+  LOGISTICS: {
+    label: "Logistics & Courier",
+    icon: Building2,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
+    defaultTax: 16,
+  },
+  OTHER: {
+    label: "Other",
+    icon: Store,
+    alertTitle: "Default tax",
+    alertMessage: TAX16,
     defaultTax: 16,
   },
 };
@@ -194,7 +296,10 @@ export default function StoreForm({
       if (onSuccess) onSuccess(data);
       const createdId = body?.id || body?.data?.id;
       if (createdId) {
-        router.push(`/org/${organizationId}/${createdId}/overview`);
+        // Land on branch overview; inviteStaff=1 prompts Owner to assign staff next.
+        router.push(
+          `/org/${organizationId}/${createdId}/overview?inviteStaff=1`,
+        );
       } else {
         router.push(`/org/${organizationId}/stores`);
       }
