@@ -343,6 +343,18 @@ async def onboarding_set_password(
             start_s = sub.start_date.strftime("%Y-%m-%d") if sub.start_date else ""
             end_s = sub.end_date.strftime("%Y-%m-%d") if sub.end_date else ""
             frontend = settings.frontend_origin
+            inv = (
+                (sub.current_usage or {}).get("trial_invoice")
+                if isinstance(sub.current_usage, dict)
+                else None
+            )
+            if not inv:
+                inv = subscription_crud.build_trial_invoice(
+                    org=org,
+                    plan=plan,
+                    sub=sub,
+                    currency=getattr(plan, "currency", None) or "KES",
+                )
             background_tasks.add_task(
                 mailer.send_trial_invoice,
                 to_email=staff.email,
@@ -353,6 +365,7 @@ async def onboarding_set_password(
                 end_date=end_s,
                 currency=getattr(plan, "currency", None) or "KES",
                 dashboard_url=f"{frontend}/org",
+                invoice=inv,
             )
             logger.info(
                 f"Onboarding auto-trial NDOVU {trial_days}d for staff {staff.id} org {org_id}"

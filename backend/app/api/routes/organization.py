@@ -276,6 +276,11 @@ async def start_trial(
 
     start_s = sub.start_date.strftime("%Y-%m-%d") if sub.start_date else ""
     end_s = sub.end_date.strftime("%Y-%m-%d") if sub.end_date else ""
+    inv = (sub.current_usage or {}).get("trial_invoice") if isinstance(sub.current_usage, dict) else None
+    if not inv:
+        inv = subscription_crud.build_trial_invoice(
+            org=org, plan=plan, sub=sub, currency=plan.currency or "KES"
+        )
     background_tasks.add_task(
         mailer.send_trial_invoice,
         to_email=user.email or org.email,
@@ -285,6 +290,7 @@ async def start_trial(
         start_date=start_s,
         end_date=end_s,
         currency=plan.currency or "KES",
+        invoice=inv,
     )
     logger.info(f"Trial invoice queued for {user.email}")
 

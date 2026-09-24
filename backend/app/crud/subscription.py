@@ -177,6 +177,62 @@ async def _invalidate_org(org_id: UUID) -> None:
         logger.warning(f"paywall invalidate failed org={org_id}: {exc}")
 
 
+
+
+def build_trial_invoice(
+    *,
+    org: Organization,
+    plan: Plan,
+    sub: Subscription,
+    currency: str = "KES",
+) -> dict:
+    """
+    Zero-amount commercial invoice for self-serve trial activation.
+    Persisted on subscription.current_usage["trial_invoice"] and emailed to owner.
+    """
+    start = _as_utc(sub.start_date)
+    end = _as_utc(sub.end_date)
+    days = TRIAL_DAYS
+    if start and end:
+        days = max(1, (end.date() - start.date()).days)
+    inv_no = f"TRIAL-{start.strftime('%Y%m%d') if start else 'NA'}-{str(sub.id).replace('-', '')[:8].upper()}"
+    unit = 0.0
+    line_desc = f"{plan.name} — {days}-day free trial"
+    return {
+        "invoice_number": inv_no,
+        "status": "PAID",
+        "currency": currency or getattr(plan, "currency", None) or "KES",
+        "issue_date": (start or datetime.now(timezone.utc)).strftime("%Y-%m-%d"),
+        "due_date": (start or datetime.now(timezone.utc)).strftime("%Y-%m-%d"),
+        "bill_to": {
+            "name": (org.name or "").strip() or "Organization",
+            "email": (getattr(org, "email", None) or "").strip(),
+            "phone": (getattr(org, "phone", None) or "").strip() or None,
+            "address": (getattr(org, "address", None) or "").strip() or None,
+        },
+        "plan_code": plan.code,
+        "plan_name": plan.name,
+        "trial_days": days,
+        "trial_start": start.strftime("%Y-%m-%d") if start else None,
+        "trial_end": end.strftime("%Y-%m-%d") if end else None,
+        "subscription_id": str(sub.id),
+        "line_items": [
+            {
+                "description": line_desc,
+                "quantity": 1,
+                "unit_price": unit,
+                "amount": unit,
+            }
+        ],
+        "subtotal": 0.0,
+        "tax_amount": 0.0,
+        "total_amount": 0.0,
+        "amount_due": 0.0,
+        "amount_paid": 0.0,
+        "notes": "No payment required for the trial period. Upgrade before trial end to keep access without interruption.",
+    }
+
+
 async def start_plan_trial(
     db: AsyncSession, organization_id: UUID, plan_code: str = "NDOVU"
 ) -> Tuple[Subscription, Plan]:
@@ -227,6 +283,11 @@ async def start_plan_trial(
     if org is not None:
         org.trial_consumed_at = now
         db.add(org)
+        inv = build_trial_invoice(org=org, plan=plan, sub=sub, currency=plan.currency or "KES")
+        usage = dict(sub.current_usage or {})
+        usage["trial_invoice"] = inv
+        sub.current_usage = usage
+        db.add(sub)
 
     await db.commit()
     await db.refresh(sub)
