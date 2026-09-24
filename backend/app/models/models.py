@@ -413,6 +413,26 @@ class Business(BaseMixin, table=True):
 # 5. PRODUCTS, SERVICES & CATEGORIES
 # =========================================================
 
+class UnitOfMeasure(BaseMixin, table=True):
+    """
+    Catalog of product units of measure (backend source of truth for dropdowns).
+    System-wide by default; optional organization_id for custom org units later.
+    """
+    __tablename__ = "units_of_measure"
+
+    code: str = Field(index=True, max_length=32, unique=True, description="Stable code e.g. pcs, kg")
+    label: str = Field(max_length=100, description="Display label e.g. Pieces (PCS)")
+    sort_order: int = Field(default=0)
+    active: bool = Field(default=True, index=True)
+    organization_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+        description="Null = system-wide unit available to all orgs.",
+    )
+
+
 class Category(BaseMixin, table=True):
     """
     Proper category taxonomy.
@@ -434,6 +454,12 @@ class Category(BaseMixin, table=True):
     )
 
     name: str = Field(index=True, max_length=100)
+    code: Optional[str] = Field(
+        default=None,
+        index=True,
+        max_length=64,
+        description="Stable slug e.g. beverages — used by FE and product attributes.",
+    )
     parent_id: Optional[UUID] = Field(
         default=None,
         foreign_key="categories.id",

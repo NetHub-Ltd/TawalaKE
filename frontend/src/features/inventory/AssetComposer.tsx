@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { ProductCreate } from "@/lib/api/generated/models/productCreate";
 import { Loader2 } from "lucide-react";
+import { useCatalogOptions } from "@/features/catalog/useCatalogOptions";
 
 export type ProductCategory = ProductCreate["category"];
 
@@ -66,10 +67,10 @@ export function AssetComposer({
   isPending = false,
 }: AssetComposerProps) {
   const { businessId } = useBusinessContext();
-
   const businessIdString = useMemo(() => {
     return (Array.isArray(businessId) ? businessId[0] : businessId) || "";
   }, [businessId]);
+  const { units, categories } = useCatalogOptions(businessIdString || null);
 
   // Stable memoization of form values to prevent object reference updates from wiping form edits
   const formValues = useMemo<ProductForm>(() => {
@@ -225,9 +226,9 @@ export function AssetComposer({
                   {...register("category")}
                   className="h-11 px-3 border border-border/60 bg-background rounded-md text-xs font-semibold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all duration-150 cursor-pointer"
                 >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.label}
+                  {categories.map((cat) => (
+                    <option key={cat.code} value={cat.code}>
+                      {cat.name}
                     </option>
                   ))}
                 </select>
@@ -347,8 +348,8 @@ export function AssetComposer({
                   {...register("attributes.unit_of_measure")}
                   className="h-11 px-3 border border-border/60 bg-background rounded-md text-xs font-semibold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all duration-150 cursor-pointer"
                 >
-                  {UNITS.map((unit) => (
-                    <option key={unit.value} value={unit.value}>
+                  {units.map((unit) => (
+                    <option key={unit.code} value={unit.code}>
                       {unit.label}
                     </option>
                   ))}

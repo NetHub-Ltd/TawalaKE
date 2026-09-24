@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers, platform
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers, platform, catalog
 from app.core.config import settings
 
 from app.utils.logging import logger
@@ -78,6 +78,12 @@ api_router.include_router(
     products.router,
     prefix="/products",
     tags=["products"],
+    dependencies=_commerce_gate,
+)
+api_router.include_router(
+    catalog.router,
+    prefix="/catalog",
+    tags=["Catalog"],
     dependencies=_commerce_gate,
 )
 api_router.include_router(

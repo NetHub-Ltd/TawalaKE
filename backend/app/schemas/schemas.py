@@ -75,17 +75,50 @@ class BaseResponseSchema(BaseModel):
 # =========================================================
 class CategoryCreate(BaseModel):
     name: str
-    type: CategoryType
+    code: Optional[str] = None
+    business_id: Optional[UUID] = None
+    parent_id: Optional[UUID] = None
+    sort_order: int = 0
+    active: bool = True
 
 
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
-    type: Optional[CategoryType] = None
+    code: Optional[str] = None
+    parent_id: Optional[UUID] = None
+    sort_order: Optional[int] = None
+    active: Optional[bool] = None
 
 
 class CategoryResponse(BaseResponseSchema):
     name: str
-    type: CategoryType
+    code: Optional[str] = None
+    organization_id: Optional[UUID] = None
+    business_id: Optional[UUID] = None
+    parent_id: Optional[UUID] = None
+    sort_order: int = 0
+    active: bool = True
+
+
+class UnitOfMeasureCreate(BaseModel):
+    code: str
+    label: str
+    sort_order: int = 0
+    active: bool = True
+
+
+class UnitOfMeasureUpdate(BaseModel):
+    label: Optional[str] = None
+    sort_order: Optional[int] = None
+    active: Optional[bool] = None
+
+
+class UnitOfMeasureResponse(BaseResponseSchema):
+    code: str
+    label: str
+    sort_order: int = 0
+    active: bool = True
+    organization_id: Optional[UUID] = None
 
 
 # =========================================================
