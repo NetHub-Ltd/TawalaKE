@@ -1,17 +1,46 @@
-// app/org/OrgDecisionLoading.tsx
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { BrandLoader } from "@/lib/components/ui";
 
 const messages = [
   "Setting up your workspace…",
-  "Connecting your business data…",
-  "Preparing your supply opportunities…",
+  "Loading your organization…",
+  "Preparing branches and team…",
   "Almost ready…",
 ];
 
 const TIMEOUT_MS = 10_000;
 
+/** Neutral outline shell — no fills — visible through blur */
+function LayoutGhost() {
+  return (
+    <div
+      className="pointer-events-none absolute inset-0 select-none"
+      aria-hidden
+    >
+      <div className="h-14 border-b border-border/40" />
+      <div className="flex min-h-[calc(100vh-3.5rem)]">
+        <div className="hidden w-52 shrink-0 border-r border-border/35 md:block" />
+        <div className="flex-1 space-y-4 p-6 md:p-8">
+          <div className="h-7 w-44 rounded-lg border border-border/40" />
+          <div className="h-4 w-72 max-w-full rounded border border-border/30" />
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="h-28 rounded-xl border border-border/35" />
+            <div className="h-28 rounded-xl border border-border/35" />
+            <div className="h-28 rounded-xl border border-border/35" />
+          </div>
+          <div className="mt-4 h-40 rounded-xl border border-border/30" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * /org entry loader — frosted blur over layout outlines; logo light sweep + text shine.
+ */
 export function OrgDecisionLoading() {
   const [index, setIndex] = useState(0);
   const [timedOut, setTimedOut] = useState(false);
@@ -31,48 +60,40 @@ export function OrgDecisionLoading() {
 
   if (timedOut) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
-            <svg
-              className="h-7 w-7 text-amber-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-
+      <div className="relative flex min-h-screen items-center justify-center p-6">
+        <LayoutGhost />
+        <div className="relative z-10 w-full max-w-md space-y-6 rounded-2xl border border-border bg-card/80 p-8 text-center shadow-lift backdrop-blur-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.svg"
+            alt=""
+            width={40}
+            height={40}
+            className="mx-auto h-10 w-10 object-contain"
+          />
           <div className="space-y-2">
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground">
               This is taking longer than expected
             </h1>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              We’re having trouble loading your organization right now.
-              This can happen if the connection is slow or the session has expired.
+            <p className="text-sm leading-relaxed text-muted">
+              We couldn&apos;t load your organization in time. The connection may
+              be slow, or your session may have expired.
             </p>
           </div>
-
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3 pt-1">
             <button
+              type="button"
               onClick={() => window.location.reload()}
-              className="block w-full bg-brand-primary hover:opacity-90 text-white font-medium py-2.5 px-4 rounded-lg transition"
+              className="block w-full rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
             >
               Try again
             </button>
-
-            <a
+            <Link
               href="/login"
-              className="block w-full text-sm text-gray-500 hover:text-gray-800 underline underline-offset-2"
+              className="block w-full text-sm text-muted underline underline-offset-2 hover:text-foreground"
             >
-              Go to Login
-            </a>
+              Go to login
+            </Link>
           </div>
         </div>
       </div>
@@ -80,26 +101,14 @@ export function OrgDecisionLoading() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="max-w-md w-full text-center space-y-8">
-        <div className="flex justify-center">
-          <div className="relative">
-            <div className="h-16 w-16 rounded-full border-4 border-blue-100" />
-            <div className="absolute inset-0 h-16 w-16 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <h1 className="text-2xl font-semibold text-gray-900 tracking-tight">
-            Just a moment
-          </h1>
-          <p className="text-gray-600 h-6">{messages[index]}</p>
-        </div>
-
-        <p className="text-sm text-gray-400">
-          Tawala is preparing your personalized experience
-        </p>
-      </div>
+    <div className="relative min-h-screen">
+      <LayoutGhost />
+      <BrandLoader
+        overlay
+        size="lg"
+        label={messages[index]}
+        hint="Preparing your workspace"
+      />
     </div>
   );
 }

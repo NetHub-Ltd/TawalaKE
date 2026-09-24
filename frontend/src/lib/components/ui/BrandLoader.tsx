@@ -9,7 +9,12 @@ export interface BrandLoaderProps {
   className?: string;
   /** Optional secondary hint (keep short) */
   hint?: string;
-  /** Full-viewport centered layout */
+  /**
+   * Frosted glass over existing UI — blur only, no color wash.
+   * Lets layout outlines remain visible behind the loader.
+   */
+  overlay?: boolean;
+  /** @deprecated Use overlay — kept for callers that used fullScreen */
   fullScreen?: boolean;
 }
 
@@ -23,17 +28,19 @@ const sizeMap: Record<
 };
 
 /**
- * Brand pulse loader — soft scale + opacity on the Tawala mark.
- * Respects prefers-reduced-motion (static mark).
+ * Brand loader: light sweep on the logo + gradient sweep on label text.
+ * Optional frosted overlay (blur only — no tint) so app chrome stays visible.
  */
 export function BrandLoader({
   label = "Loading…",
   size = "md",
   className,
   hint,
+  overlay = false,
   fullScreen = false,
 }: BrandLoaderProps) {
   const s = sizeMap[size];
+  const asOverlay = overlay || fullScreen;
 
   const body = (
     <div
@@ -45,45 +52,66 @@ export function BrandLoader({
         className,
       )}
     >
+      {/* Logo + light sweep */}
       <div
         className={cn(
-          "relative flex items-center justify-center rounded-2xl",
+          "relative flex items-center justify-center overflow-hidden rounded-2xl",
           s.box,
         )}
       >
-        {/* Soft brand glow */}
-        <div
-          className="pointer-events-none absolute inset-0 rounded-2xl bg-brand-primary/10 blur-md animate-brand-pulse"
-          aria-hidden
-        />
         {/* eslint-disable-next-line @next/next/no-img-element -- static brand asset */}
         <img
           src="/logo.svg"
           alt=""
           width={64}
           height={64}
-          className={cn(
-            "relative object-contain animate-brand-pulse",
-            s.img,
-          )}
+          className={cn("relative z-0 object-contain", s.img)}
           draggable={false}
         />
+        {/* Neutral light band — no brand color */}
+        <div
+          className="pointer-events-none absolute inset-0 z-10 animate-logo-shine"
+          aria-hidden
+          style={{
+            background:
+              "linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.55) 50%, transparent 65%)",
+            backgroundSize: "200% 100%",
+          }}
+        />
       </div>
-      <div className="text-center space-y-1 max-w-xs px-2">
-        <p className={cn("font-semibold text-foreground tracking-tight", s.label)}>
+
+      <div className="max-w-xs space-y-1 px-2 text-center">
+        <p
+          className={cn(
+            "font-semibold tracking-tight animate-text-shine",
+            s.label,
+          )}
+          style={{
+            backgroundImage:
+              "linear-gradient(90deg, var(--foreground) 0%, var(--foreground) 40%, rgba(255,255,255,0.95) 50%, var(--foreground) 60%, var(--foreground) 100%)",
+            backgroundSize: "200% 100%",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            color: "transparent",
+          }}
+        >
           {label}
         </p>
         {hint ? (
-          <p className={cn("text-muted font-medium", s.hint)}>{hint}</p>
+          <p className={cn("font-medium text-muted", s.hint)}>{hint}</p>
         ) : null}
       </div>
       <span className="sr-only">{label}</span>
     </div>
   );
 
-  if (fullScreen) {
+  if (asOverlay) {
     return (
-      <div className="flex min-h-[50vh] w-full flex-1 items-center justify-center bg-background p-6">
+      <div
+        className="absolute inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-transparent"
+        aria-busy="true"
+        aria-live="polite"
+      >
         {body}
       </div>
     );
