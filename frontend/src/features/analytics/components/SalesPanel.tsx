@@ -117,6 +117,11 @@ export function SalesPanel({
   const profitProvisional =
     Boolean(s?.profit_is_provisional) || missingCosts > 0;
 
+  const expensesTotal = s?.expenses_total ?? 0;
+  const expensesCount = s?.expenses_count ?? 0;
+  const profitAfterExpenses = s?.profit_after_expenses;
+  const expensesAvailable = s?.expenses_available;
+
   const chartDeltaPct = (() => {
     if (metric === "orders") return pctChange(orders, prevOrders);
     if (metric === "revenue") return pctChange(rev, prevRev);
@@ -278,6 +283,47 @@ export function SalesPanel({
           {...profitProps}
         />
       </KpiRow>
+
+      {expensesAvailable === true ? (
+        <KpiRow className="lg:grid-cols-3">
+          <KpiCard
+            label="Expenses"
+            value={formatKES(expensesTotal)}
+            hint={
+              expensesCount > 0
+                ? `${expensesCount} entr${expensesCount === 1 ? "y" : "ies"} this period`
+                : "No expenses recorded this period"
+            }
+            tone={expensesTotal > 0 ? "default" : "muted"}
+          />
+          <KpiCard
+            label={profitProvisional ? "Gross profit (est.)" : "Gross profit"}
+            value={formatKES(gp)}
+            hint="Before operating expenses"
+          />
+          <KpiCard
+            label="Profit after expenses"
+            value={formatKES(
+              profitAfterExpenses !== undefined && profitAfterExpenses !== null
+                ? profitAfterExpenses
+                : gp - expensesTotal
+            )}
+            hint="Gross profit − period expenses"
+            tone={
+              (profitAfterExpenses ?? gp - expensesTotal) < 0 ? "bad" : "good"
+            }
+            emphasis
+          />
+        </KpiRow>
+      ) : expensesAvailable === false ? (
+        <p
+          className="rounded-md border border-border/40 bg-background px-3 py-2 text-xs text-muted"
+          role="note"
+        >
+          Operating expenses are not available for this window yet. Profit above
+          is gross margin from sales only — not profit after shop costs.
+        </p>
+      ) : null}
 
       <p
         className="rounded-md border border-border/40 bg-background px-3 py-2 text-xs text-muted"
