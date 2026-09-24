@@ -402,6 +402,10 @@ class Business(BaseMixin, table=True):
     industry: Optional[str] = Field(default="General", nullable=True)
     name: str = Field(index=True)
     tax_rate: Optional[float] = Field(default=0.0)
+    tax_enabled: bool = Field(
+        default=False,
+        description="When false, POS/checkout must not apply tax even if tax_rate is set.",
+    )
     address: Optional[str] = Field(default=None)
     phone: Optional[str] = Field(default=None)
     active: bool = Field(index=True, default=True)

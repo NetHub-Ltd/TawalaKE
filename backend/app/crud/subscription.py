@@ -315,6 +315,29 @@ async def start_ndovu_trial(
 
 
 
+
+
+async def list_orgs_in_grace(
+    db: AsyncSession,
+) -> List[Tuple[Subscription, Optional[Plan], Organization]]:
+    """Subscriptions currently in grace (trial ended, grace_end not passed)."""
+    now = datetime.now(timezone.utc)
+    stmt = (
+        select(Subscription)
+        .where(Subscription.active == True)  # noqa: E712
+        .order_by(Subscription.end_date.asc())
+    )
+    out: List[Tuple[Subscription, Optional[Plan], Organization]] = []
+    for sub in list(await db.exec(stmt)):
+        if access_phase_for(sub, now) != "grace":
+            continue
+        org = await db.get(Organization, sub.organization_id)
+        if org is None:
+            continue
+        plan = await db.get(Plan, sub.plan_id) if sub.plan_id else None
+        out.append((sub, plan, org))
+    return out
+
 async def deactivate_subscription(
     db: AsyncSession,
     organization_id: UUID,

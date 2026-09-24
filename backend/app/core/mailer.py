@@ -942,3 +942,62 @@ class EmailService:
 
 
 mailer = EmailService()
+
+    @classmethod
+    def send_grace_reminder(
+        cls,
+        to_email: str,
+        *,
+        org_name: str,
+        plan_name: str,
+        days_left: int,
+        grace_end_date: str,
+        billing_url: Optional[str] = None,
+        owner_name: Optional[str] = None,
+    ) -> None:
+        """Remind owner they are in the post-trial grace window before lock."""
+        name = (owner_name or "").strip() or "there"
+        org = (org_name or "").strip() or "your business"
+        plan = (plan_name or "").strip() or "your plan"
+        days = max(0, int(days_left))
+        if days <= 0:
+            urgency = "Your grace period ends today"
+            preheader = f"{org} · access locks today · {plan}"
+        elif days == 1:
+            urgency = "Your grace period ends tomorrow"
+            preheader = f"{org} · 1 day left before lock · {plan}"
+        else:
+            urgency = f"Your grace period ends in {days} days"
+            preheader = f"{org} · {days} days left before lock · {plan}"
+
+        open_url = (billing_url or "").strip() or f"{EMAIL_SITE}/org"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"<strong>{urgency}.</strong> "
+                f"The free trial for <strong>{org}</strong> has ended. "
+                f"Your team can still use Tawala until <strong>{grace_end_date}</strong>, "
+                f"then workspaces will lock until payment is completed."
+            )
+            + cls._p(
+                f"Please open billing and choose a plan for <strong>{plan}</strong> "
+                f"so staff are not locked out."
+            )
+            + cls._cta(open_url, "Open billing")
+            + cls._p(
+                "If you need a short extension, contact Tawala support — "
+                "only our platform team can extend grace."
+            )
+        )
+        html = cls._shell(
+            title=urgency,
+            preheader=preheader,
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from,
+            to_addresses=[to_email],
+            subject=f"{urgency} — {org}",
+            html_content=html,
+        )
+
