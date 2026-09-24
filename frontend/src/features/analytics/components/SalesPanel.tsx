@@ -25,6 +25,58 @@ function useHourlyGrain(period: AnalyticsRange) {
   return period === "today" || period === "yesterday" || period === "custom";
 }
 
+type MoneyCell = {
+  label: string;
+  value: number;
+  note?: string;
+  emphasize?: boolean;
+};
+
+function MoneyBlock({
+  title,
+  subtitle,
+  rows,
+  emptyNote,
+}: {
+  title: string;
+  subtitle?: string;
+  rows: MoneyCell[];
+  emptyNote?: string;
+}) {
+  return (
+    <div className="rounded-md border border-border/50 bg-card px-4 py-3 shadow-card">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-xs font-semibold tracking-wide text-muted">{title}</p>
+        {subtitle ? (
+          <p className="text-xs text-muted">{subtitle}</p>
+        ) : null}
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted">{emptyNote || "No amounts in this window"}</p>
+      ) : (
+        <div className="flex flex-wrap items-start gap-x-8 gap-y-3 text-sm">
+          {rows.map((row) => (
+            <div key={row.label} className="flex min-w-[7rem] flex-col gap-0.5">
+              <span className="text-xs text-muted">{row.label}</span>
+              <span
+                className={clsx(
+                  "font-mono text-sm font-semibold tabular-nums",
+                  row.emphasize ? "text-foreground" : "text-foreground"
+                )}
+              >
+                {formatKES(row.value)}
+              </span>
+              {row.note ? (
+                <span className="text-xs text-muted">{row.note}</span>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function SalesPanel({
   dashboard,
   hourly,
@@ -61,6 +113,7 @@ export function SalesPanel({
   const credit = s?.credit_outstanding ?? 0;
   const creditIssued = s?.credit_issued_period ?? 0;
   const creditCollected = s?.credit_collected_period ?? 0;
+  const openCreditCount = s?.open_credit_sales ?? 0;
   const profitProvisional =
     Boolean(s?.profit_is_provisional) || missingCosts > 0;
 
@@ -119,44 +172,50 @@ export function SalesPanel({
     });
   }, [hourlyGrain, hourly?.series, dashboard?.series, metric]);
 
-  // Settled mix (period) + credit activity (period) + open credit (all-time)
-  const settled = useMemo(() => {
-    const rows: { label: string; value: number; warn?: boolean; note?: string }[] =
-      [];
+  /** Period-scoped tender only — never mix with all-time open credit. */
+  const settledRows = useMemo(() => {
+    const rows: MoneyCell[] = [];
     if (cash > 0) rows.push({ label: "Cash", value: cash });
     if (mpesa > 0) rows.push({ label: "M-Pesa", value: mpesa });
     if (card > 0) rows.push({ label: "Card", value: card });
     if (other > 0) rows.push({ label: "Other", value: other });
-    rows.push({
-      label: "Credit issued",
-      value: creditIssued,
-      note: "In this period",
-    });
-    rows.push({
-      label: "Credit collected",
-      value: creditCollected,
-      note: "In this period",
-    });
-    rows.push({
-      label: "Open credit (outstanding)",
-      value: credit,
-      warn: credit > 0,
-      note: credit > 0 ? "All open balances" : "None open",
-    });
-    if (
-      cash + mpesa + card + other === 0 &&
-      rev > 0 &&
-      creditIssued === 0 &&
-      creditCollected === 0
-    ) {
-      rows.unshift({
+    if (rows.length === 0 && rev > 0) {
+      rows.push({
         label: "Collected mix",
         value: 0,
-        note: "No cash/M-Pesa/card in rollup for this window",
+        note: "No cash / M-Pesa / card lines in rollup for this window",
       });
     }
     return rows;
-  }, [cash, mpesa, card, other, credit, creditIssued, creditCollected, rev]);
+  }, [cash, mpesa, card, other, rev]);
+
+  /** Period credit activity + live outstanding (all open balances). */
+  const creditRows = useMemo(() => {
+    const rows: MoneyCell[] = [
+      {
+        label: "Issued",
+        value: creditIssued,
+        note: "In this period",
+      },
+      {
+        label: "Collected",
+        value: creditCollected,
+        note: "In this period",
+      },
+      {
+        label: "Outstanding",
+        value: credit,
+        emphasize: credit > 0,
+        note:
+          credit > 0
+            ? openCreditCount > 0
+              ? `Live · ${openCreditCount} open sale${openCreditCount === 1 ? "" : "s"} · all open balances`
+              : "Live · all open balances"
+            : "None open",
+      },
+    ];
+    return rows;
+  }, [creditIssued, creditCollected, credit, openCreditCount]);
 
   if (loading && !dashboard) {
     return <PanelSkeleton />;
@@ -192,6 +251,7 @@ export function SalesPanel({
           label="Net revenue"
           value={formatKES(rev)}
           {...delta(rev, prevRev)}
+          hint="Completed sales · includes tax"
           emphasis
         />
         <KpiCard
@@ -210,29 +270,26 @@ export function SalesPanel({
         />
       </KpiRow>
 
-      <div className="rounded-md border border-border/50 bg-card px-4 py-3 shadow-card">
-        <p className="mb-2 text-xs font-semibold tracking-wide text-muted">
-          Settled &amp; open
-        </p>
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
-          {settled.map((row) => (
-            <div key={row.label} className="flex min-w-[7rem] flex-col gap-0.5">
-              <span
-                className={
-                  row.warn ? "text-xs text-amber-600" : "text-xs text-muted"
-                }
-              >
-                {row.label}
-              </span>
-              <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
-                {formatKES(row.value)}
-              </span>
-              {row.note && (
-                <span className="text-xs text-muted">{row.note}</span>
-              )}
-            </div>
-          ))}
-        </div>
+      <p
+        className="rounded-md border border-border/40 bg-background px-3 py-2 text-xs text-muted"
+        role="note"
+      >
+        Completed sales only · amounts include tax · open credit is live (all
+        open balances), not limited to this period.
+      </p>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        <MoneyBlock
+          title="Settled this period"
+          subtitle="Cash collected in the selected window"
+          rows={settledRows}
+          emptyNote="No settled tender in this period"
+        />
+        <MoneyBlock
+          title="Credit"
+          subtitle="Issued & collected are period · outstanding is live"
+          rows={creditRows}
+        />
       </div>
 
       <div className="rounded-md border border-border/50 bg-card p-4 shadow-card">
@@ -287,7 +344,11 @@ function PanelSkeleton() {
           <div key={i} className="min-h-[88px] rounded-md bg-border/40" />
         ))}
       </div>
-      <div className="h-16 rounded-md bg-border/40" />
+      <div className="h-10 rounded-md bg-border/40" />
+      <div className="grid gap-3 lg:grid-cols-2">
+        <div className="h-24 rounded-md bg-border/40" />
+        <div className="h-24 rounded-md bg-border/40" />
+      </div>
       <div className="min-h-[280px] rounded-md bg-border/40" />
     </div>
   );
