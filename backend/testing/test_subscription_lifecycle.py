@@ -205,3 +205,21 @@ async def test_list_orgs_in_grace_filters():
     rows = await sub_crud.list_orgs_in_grace(db)
     assert len(rows) == 1
     assert rows[0][0] is grace_sub
+
+
+def test_build_trial_invoice_zero_total():
+    org = MagicMock()
+    org.name = "Acme"
+    org.email = "a@example.com"
+    org.phone = "0700"
+    org.address = "Nairobi"
+    plan = MagicMock()
+    plan.code = "NDOVU"
+    plan.name = "Ndovu"
+    plan.currency = "KES"
+    sub = _make_sub(is_trial=True, end_offset_days=14)
+    inv = sub_crud.build_trial_invoice(org=org, plan=plan, sub=sub)
+    assert inv["total_amount"] == 0.0
+    assert inv["amount_due"] == 0.0
+    assert inv["invoice_number"].startswith("TRIAL-")
+    assert len(inv["line_items"]) >= 1
