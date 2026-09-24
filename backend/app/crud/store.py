@@ -180,11 +180,13 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
         tax_amount = round(subtotal * tax_rate, 2)
 
-        # Non-stock services (design, delivery, …): untaxed, never reduce stock
+        # Non-stock service lines (design, delivery, etc.) — untaxed, never reduce stock.
+        # Prefer services[]; accept legacy single service for one release.
         services_payload = list(getattr(payload, "services", None) or [])
         legacy = getattr(payload, "service", None)
         if legacy is not None and not services_payload:
             services_payload = [legacy]
+
         services_list = []
         service_total = 0.0
         for s in services_payload:
@@ -195,6 +197,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             services_list.append({"description": desc[:255], "amount": round(amt, 2)})
             service_total += amt
         service_total = round(service_total, 2)
+        # Persist array (empty -> None). Readers accept array or legacy single object.
         service_amount = services_list if services_list else None
 
         total_amount = round(subtotal + tax_amount + service_total, 2)

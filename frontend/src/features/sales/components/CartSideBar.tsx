@@ -217,7 +217,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
             : s,
         ),
       );
-      toast.success("Service updated");
+      toast.success("Service updated", {
+        description: `KES ${parsedAmount.toLocaleString()} — ${cleanDesc}`,
+      });
     } else {
       setServices((prev) => [
         ...prev,

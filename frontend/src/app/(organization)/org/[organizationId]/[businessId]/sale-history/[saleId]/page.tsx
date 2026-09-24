@@ -143,6 +143,7 @@ export default function SaleDetailPage() {
   const total = toNumber(sale.total_amount);
   const lineItems = Array.isArray(sale.items) ? sale.items : [];
   const itemCount = getSaleItemCount(sale);
+  // service_amount: array preferred; legacy single object supported
   const rawServices = (sale as { service_amount?: unknown }).service_amount;
   const serviceLines: { description: string; amount: number }[] = (() => {
     if (!rawServices) return [];
@@ -314,6 +315,7 @@ export default function SaleDetailPage() {
             )}
           </section>
 
+          {/* Services (non-stock) */}
           {serviceLines.length > 0 && (
             <section>
               <h2 className="text-xs font-bold uppercase tracking-wider text-muted mb-3">
