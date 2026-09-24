@@ -204,7 +204,9 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     "total_items": len(items_snap),
                     "total_quantity": round(total_quantity, 4),
                     "total_tax_collected": round(total_item_tax, 2),
-                    "payment_count": len(payments_snap)
+                    "payment_count": len(payments_snap),
+                    # Non-stock services (array or legacy single object)
+                    "services": _normalize_sale_services(getattr(sale, "service_amount", None)),
                 }
             )
 

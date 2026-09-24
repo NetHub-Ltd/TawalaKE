@@ -176,15 +176,28 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         subtotal = max(0.0, subtotal - discount)
 
         tax_amount = round(subtotal * tax_rate, 2)
-        total_amount = subtotal + tax_amount
 
-        service = {}
-        payload_service = getattr(payload, "service", None)
-        if payload_service and getattr(payload_service, "amount", None) is not None:
-            service["amount"] = payload_service.amount
-        if payload_service and getattr(payload_service, "description", None) is not None:
-            service["description"] = payload_service.description
-        service = service or None
+        # Non-stock service lines (design, delivery, etc.) — untaxed, never reduce stock.
+        # Prefer services[]; accept legacy single service for one release.
+        services_payload = list(getattr(payload, "services", None) or [])
+        legacy = getattr(payload, "service", None)
+        if legacy is not None and not services_payload:
+            services_payload = [legacy]
+
+        services_list = []
+        service_total = 0.0
+        for s in services_payload:
+            amt = float(getattr(s, "amount", None) or 0)
+            desc = (getattr(s, "description", None) or "").strip()
+            if amt <= 0 or not desc:
+                continue
+            services_list.append({"description": desc[:255], "amount": round(amt, 2)})
+            service_total += amt
+        service_total = round(service_total, 2)
+        # Persist array (empty -> None). Readers accept array or legacy single object.
+        service_amount = services_list if services_list else None
+
+        total_amount = round(subtotal + tax_amount + service_total, 2)
 
         sale = Sale(
             id=uuid4(),
@@ -200,7 +213,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             discount_applied=discount,
             total_amount=total_amount,
             items=sale_items,
-            service_amount=service,
+            service_amount=service_amount,
         )
 
         db.add(sale)

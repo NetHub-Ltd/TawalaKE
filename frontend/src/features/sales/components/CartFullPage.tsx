@@ -110,7 +110,7 @@ export function CartFullPage({
             quantity: item.qty,
           })),
           discount: discount || 0,
-          service: null,
+          services: [],
         }),
       });
       if (!response.ok) {
