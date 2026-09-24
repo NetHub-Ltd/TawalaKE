@@ -671,6 +671,54 @@ async def update_platform_organization(
     return await _serialize_platform_org(db, org, include_stats=True)
 
 
+@router.post(
+    "/organizations/{organization_id}/extend-grace",
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.ORGS_WRITE))],
+)
+@limiter.limit("30/hour")
+async def extend_organization_grace(
+    request: Request,
+    organization_id: UUID,
+    db: SessionDep,
+    actor: PlatformAuthUser,
+    days: int = 7,
+):
+    """
+    Platform only: extend subscription grace by `days` (default 7).
+    Unlocks a locked org so the owner can arrange payment.
+    """
+    from app.crud import subscription as subscription_crud
+    from app.services.audit import record_platform_audit
+
+    sub = await subscription_crud.extend_grace_period(
+        db, organization_id, days=days or 7
+    )
+    await record_platform_audit(
+        db,
+        actor_id=actor.id,
+        action="platform.orgs.extend_grace",
+        resource_type="organization",
+        resource_id=organization_id,
+        meta={
+            "days": days or 7,
+            "grace_end_date": sub.grace_end_date.isoformat() if sub.grace_end_date else None,
+            "subscription_id": str(sub.id),
+        },
+        request_id=request.headers.get("x-request-id"),
+        independent=True,
+    )
+    return {
+        "status": True,
+        "message": f"Grace extended by {days or 7} days",
+        "data": {
+            "organization_id": str(organization_id),
+            "subscription_id": str(sub.id),
+            "grace_end_date": sub.grace_end_date.isoformat() if sub.grace_end_date else None,
+            "access_phase": subscription_crud.access_phase_for(sub),
+        },
+    }
+
+
 @router.delete(
     "/organizations/{organization_id}",
     response_model=PlatformOrgHardDeleteResponse,

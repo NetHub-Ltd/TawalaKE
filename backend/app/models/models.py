@@ -174,6 +174,12 @@ class Organization(BaseMixin, table=True):
     logo_url: Optional[str] = Field(default=None)
     active: bool = Field(index=True, default=True)
     onboarding: Optional[bool] = Field(default=False)
+    # One self-serve trial ever across all plans (set when trial starts)
+    trial_consumed_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="When this org consumed its single self-serve trial.",
+    )
 
     # ----- Soft-delete support (non-breaking) -----
     deleted_by: Optional[UUID] = Field(
@@ -268,6 +274,15 @@ class Subscription(BaseMixin, table=True):
     end_date: Optional[datetime] = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
+    is_trial: bool = Field(
+        default=False,
+        description="True when this subscription is the org's self-serve trial.",
+    )
+    grace_end_date: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="Access continues (read/write) until this time after end_date; then locked.",
     )
 
     # ----- Additive fields (non-breaking) -----
