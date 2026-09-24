@@ -117,6 +117,15 @@ export function SalesPanel({
   const profitProvisional =
     Boolean(s?.profit_is_provisional) || missingCosts > 0;
 
+  const chartDeltaPct = (() => {
+    if (metric === "orders") return pctChange(orders, prevOrders);
+    if (metric === "revenue") return pctChange(rev, prevRev);
+    if (metric === "profit") return pctChange(gp, prevGp);
+    const disc = s?.total_discounts_granted ?? 0;
+    const prevDisc = p?.total_discounts_granted ?? 0;
+    return pctChange(disc, prevDisc);
+  })();
+
   const delta = (cur: number, prev: number) => {
     const c = pctChange(cur, prev);
     return {
@@ -329,6 +338,12 @@ export function SalesPanel({
             points={chartPoints}
             height={240}
             emptyLabel="No completed sales in this period"
+            deltaPct={chartDeltaPct}
+            valueFormatter={
+              metric === "orders"
+                ? (n) => n.toLocaleString()
+                : (n) => formatKES(n)
+            }
           />
         </div>
       </div>
