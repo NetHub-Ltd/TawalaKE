@@ -547,3 +547,29 @@ p {
   background-repeat: no-repeat;
   background-size: cover;
 }
+
+
+/* Brand loader — soft breath (scale + opacity) */
+@keyframes brand-pulse {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.88;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@utility animate-brand-pulse {
+  animation: brand-pulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-brand-pulse,
+  .motion-safe\:animate-brand-pulse {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

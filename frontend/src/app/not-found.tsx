@@ -1,72 +1,104 @@
-// src/app/not-found.tsx
-"use client";
-
-import React from "react";
 import Link from "next/link";
-import { HelpCircle, ArrowLeft, Radio, Orbit } from "lucide-react";
+import { ArrowLeft, Home, LogIn } from "lucide-react";
+import { auth } from "@/auth";
 
-export default function NotFound() {
+/**
+ * Global 404 — orient and recover, no jargon.
+ */
+export default async function NotFound() {
+  const session = await auth().catch(() => null);
+  const signedIn = Boolean(session?.user && !session.error);
+  const orgId = session?.user?.organization_id as string | undefined;
+
+  const primaryHref = signedIn
+    ? orgId
+      ? `/org/${orgId}`
+      : "/org"
+    : "/login";
+  const primaryLabel = signedIn ? "Go to organization home" : "Sign in";
+  const PrimaryIcon = signedIn ? Home : LogIn;
+
   return (
-    <main className="min-h-screen bg-surface flex items-center justify-center p-6 select-none antialiased">
-      <div className="max-w-md w-full bg-card border border-border/60 rounded-4xl p-8 md:p-10 shadow-xl text-center relative overflow-hidden transition-all duration-300 hover:shadow-2xl hover:border-border/80 group">
-        
-        {/* Playful Background Decorative Ambient Rings */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-primary/5 rounded-full blur-xl pointer-events-none group-hover:bg-brand-primary/10 transition-colors" />
-        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-brand-accent/5 rounded-full blur-xl pointer-events-none group-hover:bg-brand-accent/10 transition-colors" />
+    <main className="flex min-h-screen items-center justify-center bg-background p-6 antialiased">
+      <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-lift sm:p-10">
+        <div
+          className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-brand-primary/5 blur-2xl"
+          aria-hidden
+        />
 
-        {/* Tactile/Dynamic Icon Stack */}
-        <div className="relative w-24 h-24 mx-auto mb-8 flex items-center justify-center">
-          {/* Animated Outer Pulse Ring */}
-          <div className="absolute inset-0 rounded-full bg-brand-primary/10 border border-brand-primary/20 animate-ping opacity-40 [animation-duration:3s]" />
-          
-          {/* Main Visual Frame Container */}
-          <div className="w-20 h-20 bg-background border-2 border-dashed border-border rounded-full flex items-center justify-center text-brand-primary relative shadow-md transition-transform duration-500 group-hover:rotate-12">
-            <Radio className="w-8 h-8 animate-pulse [animation-duration:2s]" />
-            <Orbit className="w-12 h-12 absolute text-brand-secondary/40 animate-spin [animation-duration:8s]" />
-          </div>
-          
-          {/* Little floating question mark badge */}
-          <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-brand-secondary text-background font-black rounded-xl flex items-center justify-center border-2 border-card text-xs shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12">
-            <HelpCircle className="w-4 h-4" />
-          </div>
+        <div className="relative mx-auto mb-6 flex h-16 w-16 items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.svg"
+            alt="Tawala"
+            width={48}
+            height={48}
+            className="h-12 w-12 object-contain opacity-90"
+          />
         </div>
 
-        {/* Semantic Typography Block Header */}
-        <div className="space-y-3 mb-8">
-          <span className="text-xs font-mono font-black text-brand-secondary bg-brand-secondary/10 px-3 py-1 rounded-full uppercase tracking-widest border border-brand-secondary/20 inline-block">
-            Error 404
-          </span>
-          <h1 className="text-2xl font-black tracking-tight text-foreground leading-tight">
-            Node Connection Lost
+        <div className="relative space-y-2 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">
+            404
+          </p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            This page isn&apos;t here
           </h1>
-          <p className="text-sm font-medium text-muted max-w-sm mx-auto leading-relaxed">
-            The operational ledger or pipeline view matrix path you requested could not be resolved by the network hub ecosystem context.
+          <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted">
+            The link may be wrong or out of date
+            {signedIn
+              ? ", or you might not have access to this area."
+              : ". Sign in if you have an account, or head home."}
           </p>
         </div>
 
-        {/* Action Controls Router Redirect Section */}
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-          <button
-            onClick={() => window.history.back()}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-bold uppercase tracking-wider rounded-xl border border-border bg-background text-foreground hover:bg-surface/50 active:scale-98 transition-all shadow-sm cursor-pointer"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Go Back
-          </button>
-          
+        <div className="relative mt-8 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
           <Link
-            href="/org"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 text-xs font-black uppercase tracking-wider rounded-xl bg-brand-primary text-background hover:scale-[1.02] active:scale-100 transition-all shadow-md shadow-brand-primary/10 cursor-pointer"
+            href={primaryHref}
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand-primary px-5 text-sm font-semibold text-white transition hover:opacity-95"
           >
-            Return to Hub
+            <PrimaryIcon className="h-4 w-4" aria-hidden />
+            {primaryLabel}
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-background px-5 text-sm font-medium text-foreground transition hover:bg-surface"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            Tawala home
           </Link>
         </div>
 
-        {/* Subtle Node Baseline Status Signature Footer */}
-        <div className="mt-8 pt-6 border-t border-dashed border-border/60 flex items-center justify-center gap-2 text-[10px] font-mono font-bold text-muted uppercase tracking-widest">
-          <span className="w-1.5 h-1.5 rounded-full bg-brand-secondary animate-pulse" />
-          Tawala Decentralized Registry
-        </div>
+        {signedIn && orgId ? (
+          <div className="relative mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t border-border/60 pt-5 text-center text-xs font-medium text-muted">
+            <Link
+              href={`/org/${orgId}/stores`}
+              className="hover:text-foreground hover:underline"
+            >
+              Branches
+            </Link>
+            <Link
+              href={`/org/${orgId}/staff`}
+              className="hover:text-foreground hover:underline"
+            >
+              Team
+            </Link>
+            <Link
+              href={`/org/${orgId}/updates`}
+              className="hover:text-foreground hover:underline"
+            >
+              Updates
+            </Link>
+          </div>
+        ) : null}
 
+        <p className="relative mt-6 text-center text-[11px] text-muted">
+          Need help? Contact your organization admin or{" "}
+          <Link href="/org/contact-us" className="text-brand-primary hover:underline">
+            support
+          </Link>
+          .
+        </p>
       </div>
     </main>
   );
