@@ -16,8 +16,8 @@ export type KpiCardProps = {
 const toneClass: Record<NonNullable<KpiCardProps["tone"]>, string> = {
   default: "text-muted",
   good: "text-brand-accent",
-  bad: "text-rose-600",
-  warn: "text-amber-600",
+  bad: "text-[color:var(--error)]",
+  warn: "text-brand-accent",
   muted: "text-muted",
 };
 

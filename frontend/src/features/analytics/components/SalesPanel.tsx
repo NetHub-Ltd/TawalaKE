@@ -219,7 +219,7 @@ export function SalesPanel({
             <div key={row.label} className="flex min-w-[7rem] flex-col gap-0.5">
               <span
                 className={
-                  row.warn ? "text-xs text-amber-600" : "text-xs text-muted"
+                  row.warn ? "text-xs text-brand-accent" : "text-xs text-muted"
                 }
               >
                 {row.label}

@@ -175,3 +175,25 @@ export function useStaffReport(
     staleTime: 30_000,
   });
 }
+
+/** Insights are advisory — do not block the primary Sales KPIs. */
+export function useInsightsReport(
+  businessId: string,
+  period: AnalyticsRange,
+  enabled: boolean,
+  date?: string
+) {
+  return useQuery({
+    queryKey: ["report", "insights", businessId, periodKey(period, date)],
+    queryFn: () =>
+      fetchReport<InsightsPayload>(businessId, "insights", period, {
+        ...(period === "custom" && date ? { date } : {}),
+      }),
+    enabled:
+      Boolean(businessId) &&
+      enabled &&
+      (period !== "custom" || Boolean(date)),
+    staleTime: 60_000,
+    retry: 1,
+  });
+}

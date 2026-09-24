@@ -1,4 +1,10 @@
-export type AnalyticsRange = "today" | "yesterday" | "3d" | "7d" | "custom";
+export type AnalyticsRange =
+  | "today"
+  | "yesterday"
+  | "3d"
+  | "7d"
+  | "month"
+  | "custom";
 export type ReportResource =
   | "dashboard"
   | "hourly"

@@ -8,11 +8,13 @@ import { PeriodPills } from "./PeriodPills";
 import { SalesPanel } from "./SalesPanel";
 import { ProductsPanel } from "./ProductsPanel";
 import { StaffPanel } from "./StaffPanel";
+import { InsightsStrip } from "./InsightsStrip";
 import {
   useSalesDashboard,
   useHourlyReport,
   useProductsReport,
   useStaffReport,
+  useInsightsReport,
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 
@@ -53,8 +55,15 @@ export function OverviewClient({
     tab === "staff",
     dateArg
   );
+  const insights = useInsightsReport(
+    normalizedBusinessId,
+    period,
+    tab === "sales",
+    dateArg
+  );
 
-  const anyError = dash.isError || hourly.isError || products.isError || staff.isError;
+  const anyError =
+    dash.isError || hourly.isError || products.isError || staff.isError;
   const errorMessage = useMemo(() => {
     const e =
       (dash.error as Error) ||
@@ -63,6 +72,14 @@ export function OverviewClient({
       (staff.error as Error);
     return e?.message || "Failed to load report";
   }, [dash.error, hourly.error, products.error, staff.error]);
+
+  const orders = dash.data?.summary?.total_completed_orders_count ?? 0;
+  const showFirstUse =
+    !dash.isLoading &&
+    !dash.isError &&
+    Boolean(dash.data) &&
+    orders === 0 &&
+    tab === "sales";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6 pt-2 sm:px-6">
@@ -85,6 +102,7 @@ export function OverviewClient({
               hourly.refetch();
               products.refetch();
               staff.refetch();
+              insights.refetch();
             }}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
@@ -99,7 +117,15 @@ export function OverviewClient({
       </div>
 
       {anyError && (
-        <div className="rounded-md border border-rose-200/80 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+        <div
+          className="rounded-md border px-4 py-3 text-sm"
+          style={{
+            borderColor: "var(--error)",
+            backgroundColor: "var(--error-container)",
+            color: "var(--error)",
+          }}
+          role="alert"
+        >
           {errorMessage}
           <button
             type="button"
@@ -111,18 +137,48 @@ export function OverviewClient({
         </div>
       )}
 
+      {showFirstUse && (
+        <div className="rounded-md border border-border/50 bg-card px-4 py-4 text-sm shadow-card">
+          <p className="font-medium text-foreground">No completed sales yet</p>
+          <p className="mt-1 text-muted">
+            This overview fills in after your first completed sale. Start on
+            the terminal, or review stock so the next sale is ready.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href={`/org/${normalizedOrgId}/${normalizedBusinessId}/terminal`}
+              className="rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-medium text-white hover:opacity-90"
+            >
+              Record first sale
+            </Link>
+            <Link
+              href={`/org/${normalizedOrgId}/${normalizedBusinessId}/inventory`}
+              className="rounded-lg border border-border/60 bg-background px-3 py-1.5 text-sm font-medium text-foreground hover:bg-card"
+            >
+              Check inventory
+            </Link>
+          </div>
+        </div>
+      )}
+
       <div
         role="tabpanel"
         aria-labelledby={`tab-${tab}`}
         className="min-h-[480px] flex-1"
       >
         {tab === "sales" && (
-          <SalesPanel
-            dashboard={dash.data}
-            hourly={hourly.data}
-            period={period}
-            loading={dash.isLoading || (hourlyGrain && hourly.isLoading)}
-          />
+          <div className="space-y-4">
+            <SalesPanel
+              dashboard={dash.data}
+              hourly={hourly.data}
+              period={period}
+              loading={dash.isLoading || (hourlyGrain && hourly.isLoading)}
+            />
+            <InsightsStrip
+              insights={insights.data?.insights}
+              loading={insights.isLoading}
+            />
+          </div>
         )}
         {tab === "products" && (
           <ProductsPanel
