@@ -13,6 +13,7 @@ import {
   Settings,
   ChevronLeft,
   LogOut,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -53,6 +54,13 @@ const ORG_NAV: OrgNavItem[] = [
     href: (orgId) => `/org/${orgId}/staff`,
     icon: Users,
     anyOf: [Permission.ORG_STAFF_MANAGE],
+  },
+  {
+    id: "updates",
+    label: "Updates",
+    href: (orgId) => `/org/${orgId}/updates`,
+    icon: Sparkles,
+    anyOf: [Permission.ORG_READ],
   },
   {
     id: "billing",
