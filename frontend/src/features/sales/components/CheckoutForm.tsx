@@ -227,6 +227,19 @@ export function CheckoutForm({
         </h2>
         <p className="mt-1 text-sm text-muted">
           Customer required — we record who paid or who took credit.
+          {paymentMethod !== "INVOICE" && (
+            <button
+              type="button"
+              className="ml-2 text-xs font-semibold text-brand-primary hover:underline"
+              onClick={() => {
+                setValue("customerName", "Walk-in customer", { shouldValidate: true });
+                setValue("customerPhone", "0700000000", { shouldValidate: true });
+                setCustomerQuery("");
+              }}
+            >
+              Use walk-in
+            </button>
+          )}
         </p>
       </div>
 

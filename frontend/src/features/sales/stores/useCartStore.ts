@@ -434,6 +434,8 @@ export interface CartItem {
   name: string;
   price: number;
   qty: number;
+  /** Max sellable when track_stock; omit for untracked */
+  stockMax?: number;
   category: string;
   sku?: string;
 }
@@ -548,24 +550,52 @@ export const useCartStore = create<CartState>()(
       addToCart: (product) => {
         triggerHaptic("light");
         set((state) => {
+          const track = Boolean(product.track_stock);
+          const available =
+            track && product.stock != null ? Math.max(0, Number(product.stock)) : Infinity;
           const existing = state.cart.find((item) => item.id === product.id);
-          const updatedCart = existing
-            ? state.cart.map((item) =>
-                item.id === product.id ? { ...item, qty: item.qty + 1 } : item
-              )
-            : [
-                ...state.cart,
-                {
-                  id: product.id,
-                  name: product.label || "Unnamed Product",
-                  price: product.selling_price || 0,
-                  category: String((product.attributes as Record<string, unknown> | undefined)?.category ?? "General"),
-                  sku: product.attributes?.sku || "",
-                  qty: 1,
-                },
-              ];
-
-          return { cart: updatedCart, isDirty: true };
+          if (existing) {
+            const nextQty = existing.qty + 1;
+            if (track && nextQty > available) {
+              // Cap at available — caller may toast via return value; state unchanged if already at max
+              if (existing.qty >= available) return state;
+              return {
+                cart: state.cart.map((item) =>
+                  item.id === product.id
+                    ? { ...item, qty: available, stockMax: available }
+                    : item,
+                ),
+                isDirty: true,
+              };
+            }
+            return {
+              cart: state.cart.map((item) =>
+                item.id === product.id
+                  ? { ...item, qty: nextQty, stockMax: track ? available : item.stockMax }
+                  : item,
+              ),
+              isDirty: true,
+            };
+          }
+          if (track && available <= 0) return state;
+          return {
+            cart: [
+              ...state.cart,
+              {
+                id: product.id,
+                name: product.label || "Unnamed Product",
+                price: product.selling_price || 0,
+                category: String(
+                  (product.attributes as Record<string, unknown> | undefined)?.category ??
+                    "General",
+                ),
+                sku: product.attributes?.sku || "",
+                qty: 1,
+                stockMax: track ? available : undefined,
+              },
+            ],
+            isDirty: true,
+          };
         });
       },
 
@@ -581,9 +611,12 @@ export const useCartStore = create<CartState>()(
         triggerHaptic("light");
         set((state) => ({
           cart: state.cart
-            .map((item) =>
-              item.id === id ? { ...item, qty: Math.max(0, item.qty + delta) } : item
-            )
+            .map((item) => {
+              if (item.id !== id) return item;
+              let next = Math.max(0, item.qty + delta);
+              if (item.stockMax != null && next > item.stockMax) next = item.stockMax;
+              return { ...item, qty: next };
+            })
             .filter((item) => item.qty > 0),
           isDirty: true,
         }));
@@ -601,7 +634,10 @@ export const useCartStore = create<CartState>()(
       },
 
       setTaxRate: (rate) => {
-        set({ taxRate: Math.max(0, Math.min(rate, 1)), isDirty: true });
+        let r = Number(rate) || 0;
+        // Compat: API/DB may still return percent (16) instead of fraction (0.16)
+        if (r > 1) r = r / 100;
+        set({ taxRate: Math.max(0, Math.min(r, 1)), isDirty: true });
       },
 
       clearCart: () => {

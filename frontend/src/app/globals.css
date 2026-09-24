@@ -547,3 +547,29 @@ p {
   background-repeat: no-repeat;
   background-size: cover;
 }
+
+/* Brand loader — light sweep on logo + text (no color overlay) */
+@keyframes logo-shine {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@keyframes text-shine {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@utility animate-logo-shine {
+  animation: logo-shine 1.8s ease-in-out infinite;
+}
+
+@utility animate-text-shine {
+  animation: text-shine 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-logo-shine,
+  .animate-text-shine {
+    animation: none !important;
+  }
+}

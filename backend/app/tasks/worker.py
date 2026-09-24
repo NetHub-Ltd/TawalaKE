@@ -18,6 +18,29 @@ from app.schemas.store import (
     BuyerSnapshot, FinancialsSnapshot, ItemSnapshot, PaymentSnapshot, DisputeAuditSnapshot
 )
 
+
+def _normalize_sale_services(raw):
+    if not raw:
+        return []
+    if isinstance(raw, dict):
+        amt = raw.get("amount")
+        desc = (raw.get("description") or "").strip()
+        if amt is None or not desc:
+            return []
+        return [{"description": desc, "amount": float(amt)}]
+    if isinstance(raw, list):
+        out = []
+        for s in raw:
+            if not isinstance(s, dict):
+                continue
+            amt = s.get("amount")
+            desc = (s.get("description") or "").strip()
+            if amt is None or not desc:
+                continue
+            out.append({"description": desc, "amount": float(amt)})
+        return out
+    return []
+
 async def async_process_document_generation(sale_id: UUID) -> str:
     """
     Background task: Generate financial document (Receipt/Invoice) snapshot only.
@@ -204,7 +227,9 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     "total_items": len(items_snap),
                     "total_quantity": round(total_quantity, 4),
                     "total_tax_collected": round(total_item_tax, 2),
-                    "payment_count": len(payments_snap)
+                    "payment_count": len(payments_snap),
+                    # Non-stock services (array or legacy single object)
+                    "services": _normalize_sale_services(getattr(sale, "service_amount", None)),
                 }
             )
 

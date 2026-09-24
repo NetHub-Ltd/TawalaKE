@@ -12,6 +12,8 @@ export { Badge } from "./Badge";
 export { Card, CardHeader, CardBody } from "./Card";
 export { Modal } from "./Modal";
 export { Spinner } from "./Spinner";
+export { BrandLoader } from "./BrandLoader";
+export type { BrandLoaderProps } from "./BrandLoader";
 export { Skeleton } from "./Skeleton";
 export { Calendar } from "./Calendar";
 export { BarChart } from "./BarChart";

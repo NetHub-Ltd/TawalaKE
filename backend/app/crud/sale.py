@@ -20,19 +20,26 @@ class CartItemIn(BaseModel):
     quantity: float = Field(gt=0, description="Quantity must be greater than zero")
 
 class ServiceFee(BaseModel):
-    amount: Optional[int | float | None] = None
-    description: Optional[str] = None
+    """Non-stock charge line (design, delivery, etc.)."""
+    amount: float = Field(gt=0, description="Service amount must be greater than zero")
+    description: str = Field(min_length=1, max_length=255)
+
 
 class InitializeCheckoutRequest(BaseModel):
     business_id: UUID
-    discount: float | int | None
+    discount: float | int | None = None
     items: List[CartItemIn]
+    # Preferred: multiple non-stock service lines
+    services: Optional[List[ServiceFee]] = None
+    # Legacy single fee — normalized into services[]
     service: Optional[ServiceFee] = None
+
 
 class InitializeCheckout(BaseModel):
     business_id: UUID
     cashier_id: UUID
     items: List[CartItemIn]
+    services: Optional[List[ServiceFee]] = None
     service: Optional[ServiceFee] = None
     discount: Optional[float] = None
 

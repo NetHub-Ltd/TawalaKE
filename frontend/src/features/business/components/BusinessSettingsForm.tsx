@@ -36,6 +36,7 @@ export function BusinessSettingsForm() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [taxRate, setTaxRate] = useState("0");
+  const [taxEnabled, setTaxEnabled] = useState(false);
   const [active, setActive] = useState(true);
   const [receiptFooter, setReceiptFooter] = useState("");
   const [showTax, setShowTax] = useState(true);
@@ -57,6 +58,7 @@ export function BusinessSettingsForm() {
           setPhone(b.phone || "");
           setAddress(b.address || "");
           setTaxRate(String(b.tax_rate ?? 0));
+          setTaxEnabled(Boolean((b as { tax_enabled?: boolean }).tax_enabled));
           setActive(b.active !== false);
           setReceiptFooter(b.config?.receipt_footer || "");
           setShowTax(b.config?.show_tax_on_receipt !== false);
@@ -109,6 +111,7 @@ export function BusinessSettingsForm() {
           phone: phone.trim() || null,
           address: address.trim() || null,
           tax_rate: tax,
+          tax_enabled: taxEnabled,
           active,
           config: {
             receipt_footer: receiptFooter.trim(),
@@ -185,7 +188,20 @@ export function BusinessSettingsForm() {
               className="w-full rounded-md border border-border px-3 py-2 text-sm disabled:opacity-60 dark:border-border dark:bg-background"
             />
           </div>
-          <div>
+          <div className="sm:col-span-2 space-y-2">
+            <label className="flex items-center gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                checked={taxEnabled}
+                onChange={(e) => setTaxEnabled(e.target.checked)}
+                disabled={!canEdit}
+                className="rounded border-border"
+              />
+              Enable tax on sales
+            </label>
+            <p className="text-[11px] text-muted">
+              Keep off until tax setup is complete. When off, POS will not charge tax.
+            </p>
             <label className="mb-1 block text-xs font-medium text-muted">
               Tax rate (%)
             </label>
@@ -196,7 +212,7 @@ export function BusinessSettingsForm() {
               max={100}
               value={taxRate}
               onChange={(e) => setTaxRate(e.target.value)}
-              disabled={!canEdit}
+              disabled={!canEdit || !taxEnabled}
               className="w-full rounded-md border border-border px-3 py-2 text-sm disabled:opacity-60 dark:border-border dark:bg-background"
             />
           </div>
