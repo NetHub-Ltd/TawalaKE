@@ -38,35 +38,51 @@ def _plan(*, code="BASIC", limits=None, features=None, trial_days=7):
     return p
 
 
-def _sub(*, plan_id=None, active=True, end_offset_days=7):
+def _sub(*, plan_id=None, active=True, end_offset_days=7, is_trial=False, grace_offset_days=None):
     s = MagicMock()
     s.id = uuid4()
     s.organization_id = uuid4()
     s.plan_id = plan_id
     s.active = active
+    s.is_trial = is_trial
     s.current_usage = {}
     now = datetime.now(timezone.utc)
     s.start_date = now - timedelta(days=1)
     s.end_date = now + timedelta(days=end_offset_days) if end_offset_days is not None else None
+    if grace_offset_days is not None:
+        s.grace_end_date = now + timedelta(days=grace_offset_days)
+    else:
+        s.grace_end_date = None
     return s
+
+
+def _empty_result():
+    """Mock db.exec result: empty iteration + one()=0 + all()=[]."""
+    return MagicMock(
+        __iter__=lambda self: iter([]),
+        one=lambda: 0,
+        all=lambda: [],
+        first=lambda: None,
+    )
+
+
+def _exec_pool(*first):
+    """Side-effect list that does not exhaust during resolve_from_db."""
+    items = list(first) if first else []
+    items.extend(_empty_result() for _ in range(16))
+    return items
 
 
 @pytest.mark.asyncio
 async def test_resolve_no_subscription():
     svc = PaywallService()
     db = AsyncMock()
-    db.exec = AsyncMock(
-        side_effect=[
-            MagicMock(__iter__=lambda self: iter([])),
-            MagicMock(one=lambda: 0),  # businesses
-            MagicMock(one=lambda: 0),  # staff
-            MagicMock(all=lambda: []),  # product biz ids
-            MagicMock(one=lambda: 0),  # products
-        ]
-    )
+    db.exec = AsyncMock(side_effect=_exec_pool())
+    db.get = AsyncMock(return_value=None)
     ent = await svc.resolve_from_db(db, uuid4())
     assert ent.active is False
     assert ent.plan_code == "NONE"
+    assert ent.access_phase == "none"
 
 
 @pytest.mark.asyncio
@@ -76,13 +92,13 @@ async def test_require_feature_denied():
     sub = _sub(plan_id=plan.id)
     db = AsyncMock()
     db.exec = AsyncMock(
-        side_effect=[
+        side_effect=_exec_pool(
             MagicMock(__iter__=lambda self: iter([sub])),
             MagicMock(one=lambda: 0),
             MagicMock(one=lambda: 0),
             MagicMock(all=lambda: []),
             MagicMock(one=lambda: 0),
-        ]
+        )
     )
     db.get = AsyncMock(return_value=plan)
     ent = await svc.resolve_from_db(db, sub.organization_id)
@@ -99,13 +115,13 @@ async def test_check_limit_blocks_at_cap():
     sub = _sub(plan_id=plan.id)
     db = AsyncMock()
     db.exec = AsyncMock(
-        side_effect=[
+        side_effect=_exec_pool(
             MagicMock(__iter__=lambda self: iter([sub])),
             MagicMock(one=lambda: 1),
             MagicMock(one=lambda: 0),
             MagicMock(all=lambda: []),
             MagicMock(one=lambda: 0),
-        ]
+        )
     )
     db.get = AsyncMock(return_value=plan)
     ent = await svc.resolve_from_db(db, sub.organization_id)
@@ -241,6 +257,8 @@ def _db_with_sub_plan(sub, plan, *, biz=0, staff=0, products=0, extra_product_co
     ]
     for _ in range(extra_product_counts):
         effects.extend(_product_count_effects(products))
+    # Pad so include_locked / extra resolve calls never exhaust
+    effects.extend(_empty_result() for _ in range(12))
     db = AsyncMock()
     db.exec = AsyncMock(side_effect=effects)
     db.get = AsyncMock(return_value=plan)
@@ -372,13 +390,13 @@ async def test_resolve_unknown_plan():
     sub = _sub(plan_id=uuid4())
     db = AsyncMock()
     db.exec = AsyncMock(
-        side_effect=[
+        side_effect=_exec_pool(
             MagicMock(__iter__=lambda self: iter([sub])),
             MagicMock(one=lambda: 0),
             MagicMock(one=lambda: 0),
             MagicMock(all=lambda: []),
             MagicMock(one=lambda: 0),
-        ]
+        )
     )
     db.get = AsyncMock(return_value=None)  # plan row missing
     ent = await svc.resolve_from_db(db, sub.organization_id)
@@ -574,3 +592,126 @@ async def test_count_products_org_id_only_when_no_branches():
     )
     n = await svc._count_products(db, uuid4())
     assert n == 7
+
+
+# ---------------------------------------------------------------------------
+# Access phase / grace / lock (trial lifecycle)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_resolve_locked_subscription():
+    svc = PaywallService()
+    plan = _plan()
+    # Ended 10 days ago, grace ended 3 days ago
+    sub = _sub(plan_id=plan.id, end_offset_days=-10, is_trial=True, grace_offset_days=-3)
+    db = AsyncMock()
+    # first load: active/grace miss; usage; second load include_locked returns sub
+    db.exec = AsyncMock(
+        side_effect=_exec_pool(
+            MagicMock(__iter__=lambda self: iter([sub])),  # first load - locked skipped
+            MagicMock(one=lambda: 0),
+            MagicMock(one=lambda: 0),
+            MagicMock(all=lambda: []),
+            MagicMock(one=lambda: 0),
+            MagicMock(__iter__=lambda self: iter([sub])),  # locked load
+        )
+    )
+    db.get = AsyncMock(return_value=plan)
+    ent = await svc.resolve_from_db(db, sub.organization_id)
+    assert ent.active is False
+    assert ent.access_phase == "locked"
+    assert ent.plan_code == plan.code
+
+
+@pytest.mark.asyncio
+async def test_resolve_grace_subscription_still_active():
+    svc = PaywallService()
+    plan = _plan()
+    # Trial ended yesterday; grace still open
+    sub = _sub(plan_id=plan.id, end_offset_days=-1, is_trial=True, grace_offset_days=5)
+    db = AsyncMock()
+    db.exec = AsyncMock(
+        side_effect=_exec_pool(
+            MagicMock(__iter__=lambda self: iter([sub])),
+            MagicMock(one=lambda: 0),
+            MagicMock(one=lambda: 0),
+            MagicMock(all=lambda: []),
+            MagicMock(one=lambda: 0),
+        )
+    )
+    db.get = AsyncMock(return_value=plan)
+    ent = await svc.resolve_from_db(db, sub.organization_id)
+    assert ent.active is True
+    assert ent.access_phase == "grace"
+
+
+def test_require_writable_blocks_locked():
+    svc = PaywallService()
+    ent = Entitlements(
+        organization_id=str(uuid4()),
+        subscription_id=None,
+        plan_id=None,
+        plan_code="EXPIRED",
+        plan_name="Expired",
+        active=False,
+        trial=True,
+        start_date=None,
+        end_date=None,
+        access_phase="locked",
+        limits={},
+        features={},
+        usage={},
+    )
+    with pytest.raises(HTTPException) as exc:
+        svc.require_writable(ent)
+    assert exc.value.status_code == 403
+    assert exc.value.detail["code"] == "SUBSCRIPTION_LOCKED"
+
+
+def test_require_writable_allows_grace():
+    svc = PaywallService()
+    ent = Entitlements(
+        organization_id=str(uuid4()),
+        subscription_id=str(uuid4()),
+        plan_id=None,
+        plan_code="NDOVU",
+        plan_name="Ndovu",
+        active=True,
+        trial=True,
+        start_date=None,
+        end_date=None,
+        access_phase="grace",
+        limits={"max_products": 100},
+        features={"basic_stock_tracking": True},
+        usage={},
+    )
+    assert svc.require_writable(ent) is ent
+
+
+def test_access_phase_helpers():
+    from app.crud.subscription import access_phase_for, _grace_end_for, GRACE_DAYS, build_access_status
+
+    now = datetime.now(timezone.utc)
+    sub = _sub(end_offset_days=5, is_trial=True)
+    assert access_phase_for(sub, now) == "active"
+
+    sub2 = _sub(end_offset_days=-1, is_trial=True, grace_offset_days=3)
+    assert access_phase_for(sub2, now) == "grace"
+
+    sub3 = _sub(end_offset_days=-10, is_trial=True, grace_offset_days=-2)
+    assert access_phase_for(sub3, now) == "locked"
+
+    assert access_phase_for(None, now) == "none"
+
+    # Default grace from is_trial when grace_end_date missing
+    sub4 = _sub(end_offset_days=-1, is_trial=True)
+    sub4.grace_end_date = None
+    g = _grace_end_for(sub4)
+    assert g is not None
+    assert g > sub4.end_date
+
+    status = build_access_status(sub2)
+    assert status["access_phase"] == "grace"
+    assert status["is_trial"] is True
+

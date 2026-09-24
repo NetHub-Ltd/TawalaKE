@@ -183,14 +183,22 @@ async def list_public_billing_plans(db: SessionDep):
 
 @router.get("/subscription", response_model=ApiResponse[dict])
 async def get_my_subscription(db: SessionDep, user: AuthUser):
+    """Subscription + access phase (active | grace | locked | none)."""
     org_id = user.organization_id or user.tenant_id
     if not org_id:
         raise HTTPException(status_code=400, detail="No organization on account")
-    sub = await subscription_crud.get_active_subscription(db, org_id)
+    org = await organization_crud.get_organization_by_id(db=db, org_id=org_id)
+    sub = await subscription_crud.get_latest_subscription(db, org_id)
+    access = subscription_crud.build_access_status(sub, org)
+
     if not sub:
         return ApiResponse(
-            status=True, status_code=200, message="No active subscription", data=None
+            status=True,
+            status_code=200,
+            message="No subscription",
+            data={**access, "id": None, "plan_code": None, "plan_name": None},
         )
+
     from app.models.models import Plan
 
     plan_code = plan_name = None
@@ -203,11 +211,12 @@ async def get_my_subscription(db: SessionDep, user: AuthUser):
         "organization_id": str(sub.organization_id),
         "plan_id": str(sub.plan_id) if sub.plan_id else None,
         "tier": str(sub.tier.value if hasattr(sub.tier, "value") else sub.tier),
-        "active": sub.active,
+        "active": access["access_phase"] in ("active", "grace"),
         "start_date": sub.start_date.isoformat() if sub.start_date else None,
         "end_date": sub.end_date.isoformat() if sub.end_date else None,
         "plan_code": plan_code,
         "plan_name": plan_name,
+        **access,
     }
     return ApiResponse(
         status=True, status_code=200, message="Subscription retrieved", data=data

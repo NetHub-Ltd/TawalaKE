@@ -153,6 +153,9 @@ class Entitlements:
     trial: bool
     start_date: Optional[str]
     end_date: Optional[str]
+    # active | grace | locked | none
+    access_phase: str = "none"
+    grace_end_date: Optional[str] = None
     limits: Dict[str, Any] = field(default_factory=dict)
     features: Dict[str, Any] = field(default_factory=dict)
     usage: Dict[str, int] = field(default_factory=dict)
@@ -350,7 +353,11 @@ class PaywallService:
         org_id: UUID,
         *,
         for_update: bool = False,
+        include_locked: bool = False,
     ) -> Optional[Subscription]:
+        """Prefer subscription still in plan period or grace. Optionally return locked row."""
+        from app.crud.subscription import access_phase_for, get_latest_subscription
+
         now = datetime.now(timezone.utc)
         stmt = (
             select(Subscription)
@@ -362,17 +369,44 @@ class PaywallService:
         )
         if for_update:
             stmt = stmt.with_for_update()
-        for sub in list(await db.exec(stmt)):
-            if not _is_expired(sub.end_date, now):
+        rows = list(await db.exec(stmt))
+        for sub in rows:
+            phase = access_phase_for(sub, now)
+            if phase in ("active", "grace"):
                 return sub
+        if include_locked and rows:
+            return rows[0]
         return None
 
     async def resolve_from_db(self, db: AsyncSession, org_id: UUID) -> Entitlements:
         """Build entitlements from Postgres (plans + subscription + live usage)."""
-        sub = await self._load_active_sub(db, org_id)
+        from app.crud.subscription import access_phase_for, _grace_end_for
+
+        sub = await self._load_active_sub(db, org_id, include_locked=False)
         usage = await self._live_usage(db, org_id)
+        now = datetime.now(timezone.utc)
 
         if sub is None:
+            locked = await self._load_active_sub(db, org_id, include_locked=True)
+            if locked is not None and access_phase_for(locked, now) == "locked":
+                plan = await db.get(Plan, locked.plan_id) if locked.plan_id else None
+                grace = _grace_end_for(locked)
+                return Entitlements(
+                    organization_id=str(org_id),
+                    subscription_id=str(locked.id),
+                    plan_id=str(locked.plan_id) if locked.plan_id else None,
+                    plan_code=(plan.code if plan else "EXPIRED"),
+                    plan_name=(plan.name if plan else "Expired"),
+                    active=False,
+                    trial=bool(getattr(locked, "is_trial", False)),
+                    start_date=_as_utc(locked.start_date).isoformat() if locked.start_date else None,
+                    end_date=_as_utc(locked.end_date).isoformat() if locked.end_date else None,
+                    access_phase="locked",
+                    grace_end_date=grace.isoformat() if grace else None,
+                    limits={},
+                    features={},
+                    usage=usage,
+                )
             return Entitlements(
                 organization_id=str(org_id),
                 subscription_id=None,
@@ -383,6 +417,8 @@ class PaywallService:
                 trial=False,
                 start_date=None,
                 end_date=None,
+                access_phase="none",
+                grace_end_date=None,
                 limits={},
                 features={},
                 usage=usage,
@@ -402,6 +438,11 @@ class PaywallService:
                 except (TypeError, ValueError):
                     pass
 
+        phase = access_phase_for(sub, now)
+        grace = _grace_end_for(sub)
+        grace_s = grace.isoformat() if grace else None
+        is_trial_flag = bool(getattr(sub, "is_trial", False))
+
         if plan is None:
             return Entitlements(
                 organization_id=str(org_id),
@@ -410,16 +451,18 @@ class PaywallService:
                 plan_code="UNKNOWN",
                 plan_name="Unknown plan",
                 active=True,
-                trial=False,
+                trial=is_trial_flag,
                 start_date=_as_utc(sub.start_date).isoformat() if sub.start_date else None,
                 end_date=_as_utc(sub.end_date).isoformat() if sub.end_date else None,
+                access_phase=phase,
+                grace_end_date=grace_s,
                 limits={},
                 features={},
                 usage=usage,
             )
 
-        trial = False
-        if plan.trial_days and sub.start_date and sub.end_date:
+        trial = is_trial_flag
+        if not trial and plan.trial_days and sub.start_date and sub.end_date:
             span = (_as_utc(sub.end_date) - _as_utc(sub.start_date)).days
             if 0 < span <= int(plan.trial_days) + 1:
                 trial = True
@@ -434,6 +477,8 @@ class PaywallService:
             trial=trial,
             start_date=_as_utc(sub.start_date).isoformat() if sub.start_date else None,
             end_date=_as_utc(sub.end_date).isoformat() if sub.end_date else None,
+            access_phase=phase,
+            grace_end_date=grace_s,
             limits=dict(plan.limits or {}),
             features=dict(plan.features or {}),
             usage=usage,
@@ -599,6 +644,24 @@ class PaywallService:
             )
         return ent
 
+
+    def require_writable(self, ent: Entitlements) -> Entitlements:
+        """Block mutations when subscription is locked or missing."""
+        phase = getattr(ent, "access_phase", None) or ("active" if ent.active else "none")
+        if phase == "locked" or (not ent.active and phase != "grace"):
+            if phase == "locked" or not ent.active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=_paywall_detail(
+                        "SUBSCRIPTION_LOCKED",
+                        "Your organization's access is locked. The owner must complete payment, "
+                        "or contact support to extend the grace period.",
+                        access_phase=phase,
+                        plan_code=ent.plan_code,
+                    ),
+                )
+        return ent
+
     async def enforce_create_business(
         self,
         db: AsyncSession,
@@ -606,6 +669,7 @@ class PaywallService:
         redis: Optional[AsyncRedis] = None,
     ) -> Entitlements:
         ent = await self.resolve(db, org_id, redis)
+        self.require_writable(ent)
         # multi_business is required beyond first store when plan says so
         live = await self._count_businesses(db, org_id)
         if live >= 1:
@@ -619,6 +683,7 @@ class PaywallService:
         redis: Optional[AsyncRedis] = None,
     ) -> Entitlements:
         ent = await self.resolve(db, org_id, redis)
+        self.require_writable(ent)
         live = await self._count_staff(db, org_id)
         return self.check_limit(ent, LIMIT_STAFF, current=live)
 
@@ -629,6 +694,7 @@ class PaywallService:
         redis: Optional[AsyncRedis] = None,
     ) -> Entitlements:
         ent = await self.resolve(db, org_id, redis)
+        self.require_writable(ent)
         self.require_feature(ent, "basic_stock_tracking")
         live = await self._count_products(db, org_id)
         return self.check_limit(ent, LIMIT_PRODUCTS, current=live)

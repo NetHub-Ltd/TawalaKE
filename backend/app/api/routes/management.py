@@ -149,3 +149,71 @@ async def job_trial_ending_reminders(
         "skipped": skipped,
     }
 
+
+@router.post("/jobs/grace-reminders")
+@limiter.limit("5/minute")
+async def job_grace_reminders(
+    request: Request,
+    db: SessionDep,
+    background_tasks: BackgroundTasks,
+):
+    """
+    Ops/cron: email owners whose org is in post-trial grace (before lock).
+    Schedule daily alongside trial-ending-reminders.
+    """
+    rows = await subscription_crud.list_orgs_in_grace(db)
+    queued = 0
+    skipped = 0
+    for sub, plan, org in rows:
+        to_email = (getattr(org, "email", None) or "").strip()
+        owner_name = None
+        if not to_email or "@" not in to_email:
+            try:
+                from app.models.models import Staff, StaffRole
+                owners = list(
+                    await db.exec(
+                        select(Staff).where(
+                            Staff.organization_id == org.id,
+                            Staff.role == StaffRole.OWNER,
+                        )
+                    )
+                )
+                for o in owners:
+                    em = (getattr(o, "email", None) or "").strip()
+                    if em and "@" in em:
+                        to_email = em
+                        owner_name = getattr(o, "full_name", None) or getattr(
+                            o, "name", None
+                        )
+                        break
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(f"owner lookup failed org={org.id}: {exc}")
+        if not to_email or "@" not in to_email:
+            skipped += 1
+            continue
+        from datetime import datetime, timezone as tz
+        now = datetime.now(tz.utc)
+        grace = subscription_crud._grace_end_for(sub)
+        if grace and grace.tzinfo is None:
+            grace = grace.replace(tzinfo=tz.utc)
+        days_left = max(0, (grace.date() - now.date()).days) if grace else 0
+        grace_s = grace.strftime("%Y-%m-%d") if grace else ""
+        billing_url = f"https://tawala.nethub.co.ke/org/{org.id}/billing"
+        background_tasks.add_task(
+            mailer.send_grace_reminder,
+            to_email,
+            org_name=getattr(org, "name", None) or "your business",
+            plan_name=getattr(plan, "name", None) or getattr(plan, "code", "Trial") if plan else "Trial",
+            days_left=days_left,
+            grace_end_date=grace_s,
+            billing_url=billing_url,
+            owner_name=owner_name,
+        )
+        queued += 1
+    logger.info(f"grace-reminders queued={queued} skipped={skipped}")
+    return {
+        "status": "accepted",
+        "queued": queued,
+        "skipped": skipped,
+    }
+

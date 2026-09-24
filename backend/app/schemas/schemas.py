@@ -295,6 +295,7 @@ class BusinessUpdate(BaseModel):
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_rate: Optional[float] = None
+    tax_enabled: Optional[bool] = None
     active: Optional[bool] = None
     config: Optional[dict] = None
 
@@ -308,6 +309,7 @@ class BusinessResponse(BusinessBase):
     phone: Optional[str] = None
     address: Optional[str] = None
     tax_rate: Optional[float] = None
+    tax_enabled: bool = False
     config: Optional[dict] = None
 
 class MiniStoreResponse(BaseModel):
