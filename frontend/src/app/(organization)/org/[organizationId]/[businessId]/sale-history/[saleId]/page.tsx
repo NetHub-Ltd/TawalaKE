@@ -143,6 +143,31 @@ export default function SaleDetailPage() {
   const total = toNumber(sale.total_amount);
   const lineItems = Array.isArray(sale.items) ? sale.items : [];
   const itemCount = getSaleItemCount(sale);
+  // service_amount: array preferred; legacy single object supported
+  const rawServices = (sale as { service_amount?: unknown }).service_amount;
+  const serviceLines: { description: string; amount: number }[] = (() => {
+    if (!rawServices) return [];
+    if (Array.isArray(rawServices)) {
+      return rawServices
+        .filter((s) => s && typeof s === "object")
+        .map((s) => {
+          const o = s as { description?: string; amount?: number };
+          return {
+            description: String(o.description || "").trim(),
+            amount: Number(o.amount) || 0,
+          };
+        })
+        .filter((s) => s.description && s.amount > 0);
+    }
+    if (typeof rawServices === "object") {
+      const o = rawServices as { description?: string; amount?: number };
+      const description = String(o.description || "").trim();
+      const amount = Number(o.amount) || 0;
+      return description && amount > 0 ? [{ description, amount }] : [];
+    }
+    return [];
+  })();
+  const servicesTotal = serviceLines.reduce((sum, s) => sum + s.amount, 0);
   const timestamp =
     (sale.updated_at as string | undefined) || sale.created_at;
   const cashierName = getSaleCashierName(sale);
@@ -290,6 +315,32 @@ export default function SaleDetailPage() {
             )}
           </section>
 
+          {/* Services (non-stock) */}
+          {serviceLines.length > 0 && (
+            <section>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted mb-3">
+                Services
+              </h2>
+              <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
+                <ul className="divide-y divide-border/30">
+                  {serviceLines.map((s, idx) => (
+                    <li
+                      key={`${s.description}-${idx}`}
+                      className="flex items-start justify-between gap-4 px-5 py-3.5"
+                    >
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {s.description}
+                      </p>
+                      <p className="text-sm font-semibold tabular-nums text-foreground shrink-0">
+                        {formatMoney(s.amount, currency)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </section>
+          )}
+
           {/* Totals */}
           <section className="rounded-xl border border-border/40 bg-card p-5 space-y-2.5 text-sm">
             <div className="flex justify-between">
@@ -310,6 +361,12 @@ export default function SaleDetailPage() {
                 <span className="tabular-nums">
                   −{formatMoney(discount, currency)}
                 </span>
+              </div>
+            )}
+            {servicesTotal > 0 && (
+              <div className="flex justify-between text-muted">
+                <span>Services</span>
+                <span className="tabular-nums">{formatMoney(servicesTotal, currency)}</span>
               </div>
             )}
             <div className="pt-3 border-t border-border/50 flex justify-between items-baseline">
