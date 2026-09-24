@@ -94,7 +94,7 @@ export function ProductsPanel({
               className="border-b border-border/40 py-2.5 text-sm last:border-0"
             >
               <p className="font-medium text-foreground">{row.name || row.sku}</p>
-              <p className="text-xs text-amber-600">
+              <p className="text-xs text-brand-accent">
                 Margin {(row.margin_pct ?? 0).toFixed(0)}% · {formatKES(row.revenue)} revenue
               </p>
             </div>
@@ -102,7 +102,9 @@ export function ProductsPanel({
           {missingCost > 0 && (
             <div className="py-2.5 text-sm">
               <p className="font-medium text-foreground">Unknown cost SKUs</p>
-              <p className="text-xs text-amber-600">{missingCost} lines missing cost in rollups</p>
+              <p className="text-xs text-brand-accent">
+                {missingCost} lines missing cost in rollups
+              </p>
             </div>
           )}
         </ListCard>
