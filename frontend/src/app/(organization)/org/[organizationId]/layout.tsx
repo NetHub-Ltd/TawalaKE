@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { notFound, redirect } from "next/navigation";
 import { orgMatchesSession } from "@/lib/auth/require-api-auth";
+import { SubscriptionAccessGate } from "@/features/org/components/SubscriptionAccessGate";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -28,5 +29,10 @@ export default async function OrganizationIdLayout({
     notFound();
   }
 
-  return children;
+  return (
+    <>
+      <SubscriptionAccessGate organizationId={organizationId} />
+      {children}
+    </>
+  );
 }

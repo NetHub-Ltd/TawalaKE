@@ -627,47 +627,93 @@ class EmailService:
         end_date: str,
         currency: str = "KES",
         dashboard_url: Optional[str] = None,
+        invoice: Optional[dict] = None,
     ) -> None:
-        """Confirm trial activation — amount due today is zero."""
+        """Email the generated trial invoice (zero amount) — not an empty notice."""
         open_url = (dashboard_url or "").strip() or f"{EMAIL_SITE}/org"
         org = (org_name or "").strip() or "your business"
+        inv = invoice or {}
+        inv_no = (inv.get("invoice_number") or "").strip() or "TRIAL-DRAFT"
+        cur = (inv.get("currency") or currency or "KES").strip()
+        issue = inv.get("issue_date") or start_date
+        bill = inv.get("bill_to") or {}
+        bill_name = (bill.get("name") or org).strip()
+        bill_email = (bill.get("email") or to_email or "").strip()
+        lines = inv.get("line_items") or [
+            {
+                "description": f"{plan_name} — {trial_days}-day free trial",
+                "quantity": 1,
+                "unit_price": 0,
+                "amount": 0,
+            }
+        ]
+        rows_html = ""
+        for li in lines:
+            desc = (li.get("description") or "Trial").strip()
+            amt = float(li.get("amount") or 0)
+            rows_html += (
+                f'<tr>'
+                f'<td style="padding:10px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_BODY};">{desc}</td>'
+                f'<td style="padding:10px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">'
+                f'{amt:,.2f} {cur}</td></tr>'
+            )
+        total = float(inv.get("total_amount") if inv.get("total_amount") is not None else 0)
+        notes = (inv.get("notes") or "").strip()
+
         body = (
             cls._p(f"Hello,")
             + cls._p(
-                f"<strong>{org}</strong> is on a <strong>{trial_days}-day free trial</strong> of "
-                f"<strong>{plan_name}</strong>. Amount due today: <strong>0 {currency}</strong> — no card required."
+                f"Here is your <strong>trial invoice</strong> for <strong>{org}</strong>. "
+                f"Amount due today is <strong>0 {cur}</strong> — no payment is required to start."
             )
             + (
-                f'<table width="100%" style="margin:20px 0 12px;border-collapse:collapse;font-size:13px;">'
-                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Plan</td>'
-                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};font-weight:600;">{plan_name}</td></tr>'
-                f'<tr><td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};color:{EMAIL_MUTED};">Trial window</td>'
-                f'<td style="padding:8px 0;border-bottom:1px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_BODY};">{start_date} → {end_date}</td></tr>'
-                f'<tr><td style="padding:8px 0;color:{EMAIL_MUTED};">Amount due today</td>'
-                f'<td style="padding:8px 0;text-align:right;color:{EMAIL_SUCCESS};font-weight:700;">0 {currency}</td></tr>'
+                f'<table width="100%" style="margin:8px 0 16px;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:4px 0;color:{EMAIL_MUTED};">Invoice</td>'
+                f'<td style="padding:4px 0;text-align:right;font-weight:700;color:{EMAIL_BODY};">{inv_no}</td></tr>'
+                f'<tr><td style="padding:4px 0;color:{EMAIL_MUTED};">Issue date</td>'
+                f'<td style="padding:4px 0;text-align:right;color:{EMAIL_BODY};">{issue}</td></tr>'
+                f'<tr><td style="padding:4px 0;color:{EMAIL_MUTED};">Bill to</td>'
+                f'<td style="padding:4px 0;text-align:right;color:{EMAIL_BODY};">{bill_name}<br/>{bill_email}</td></tr>'
+                f'<tr><td style="padding:4px 0;color:{EMAIL_MUTED};">Trial window</td>'
+                f'<td style="padding:4px 0;text-align:right;color:{EMAIL_BODY};">{start_date} → {end_date}</td></tr>'
                 f"</table>"
             )
+            + (
+                f'<table width="100%" style="margin:12px 0;border-collapse:collapse;font-size:13px;">'
+                f'<tr><td style="padding:8px 0;border-bottom:2px solid {EMAIL_BORDER};color:{EMAIL_MUTED};font-weight:600;">Description</td>'
+                f'<td style="padding:8px 0;border-bottom:2px solid {EMAIL_BORDER};text-align:right;color:{EMAIL_MUTED};font-weight:600;">Amount</td></tr>'
+                f"{rows_html}"
+                f'<tr><td style="padding:12px 0 4px;color:{EMAIL_MUTED};">Subtotal</td>'
+                f'<td style="padding:12px 0 4px;text-align:right;color:{EMAIL_BODY};">0.00 {cur}</td></tr>'
+                f'<tr><td style="padding:4px 0;color:{EMAIL_MUTED};">Tax</td>'
+                f'<td style="padding:4px 0;text-align:right;color:{EMAIL_BODY};">0.00 {cur}</td></tr>'
+                f'<tr><td style="padding:8px 0;font-weight:700;color:{EMAIL_BODY};">Total / amount due</td>'
+                f'<td style="padding:8px 0;text-align:right;font-weight:700;color:{EMAIL_SUCCESS};">{total:,.2f} {cur}</td></tr>'
+                f"</table>"
+            )
+            + (cls._p(notes) if notes else "")
             + cls._p(
-                "Get value in the next 10 minutes: confirm business details, add products, create a staff PIN."
+                "Next steps: confirm business details, add products, and create a staff PIN."
             )
             + cls._cta(open_url, "Open Tawala")
             + cls._muted(
-                f"You can upgrade or cancel before {end_date}. Local support is available when you need it."
+                f"Upgrade or cancel before {end_date}. Keep this invoice for your records."
             )
             + cls._raw_link(open_url)
         )
         html = cls.render_shell(
-            title="Your trial is active",
-            preheader=f"{trial_days}-day {plan_name} trial · 0 {currency} due today",
-            eyebrow="Trial · no charge today",
+            title=f"Trial invoice {inv_no}",
+            preheader=f"Invoice {inv_no} · 0 {cur} due · {trial_days}-day {plan_name} trial",
+            eyebrow="Trial invoice · no charge",
             body_html=body,
         )
         cls.send_transactional_email(
             sender=settings.email_from_billing,
             to_addresses=[to_email],
-            subject=f"Your {trial_days}-day {plan_name} trial is active — {currency} 0 today",
+            subject=f"Trial invoice {inv_no} · {org}",
             html_content=html,
         )
+
 
     @classmethod
     def send_testing(cls, to_email: str, metadata: Optional[dict] = None) -> None:
@@ -940,5 +986,70 @@ class EmailService:
         )
 
 
+    @classmethod
+    def send_grace_reminder(
+        cls,
+        to_email: str,
+        *,
+        org_name: str,
+        plan_name: str,
+        days_left: int,
+        grace_end_date: str,
+        billing_url: Optional[str] = None,
+        owner_name: Optional[str] = None,
+    ) -> None:
+        """Remind owner they are in the post-trial grace window before lock."""
+        name = (owner_name or "").strip() or "there"
+        org = (org_name or "").strip() or "your business"
+        plan = (plan_name or "").strip() or "your plan"
+        days = max(0, int(days_left))
+        if days <= 0:
+            urgency = "Your grace period ends today"
+            preheader = f"{org} · access locks today · {plan}"
+        elif days == 1:
+            urgency = "Your grace period ends tomorrow"
+            preheader = f"{org} · 1 day left before lock · {plan}"
+        else:
+            urgency = f"Your grace period ends in {days} days"
+            preheader = f"{org} · {days} days left before lock · {plan}"
+
+        open_url = (billing_url or "").strip() or f"{EMAIL_SITE}/org"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"<strong>{urgency}.</strong> "
+                f"The free trial for <strong>{org}</strong> has ended. "
+                f"Your team can still use Tawala until <strong>{grace_end_date}</strong>, "
+                f"then workspaces will lock until payment is completed."
+            )
+            + cls._p(
+                f"Please open billing and choose a plan for <strong>{plan}</strong> "
+                f"so staff are not locked out."
+            )
+            + cls._cta(open_url, "Open billing")
+            + cls._p(
+                "If you need a short extension, contact Tawala support — "
+                "only our platform team can extend grace."
+            )
+        )
+        html = cls.render_shell(
+            title=urgency,
+            preheader=preheader,
+            eyebrow="Grace period",
+            body_html=body,
+        )
+        subject = (
+            f"Grace ends today · {org}"
+            if days <= 0
+            else f"Grace ends in {days} day{'s' if days != 1 else ''} · {org}"
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_billing,
+            to_addresses=[to_email],
+            subject=subject,
+            html_content=html,
+        )
+
 
 mailer = EmailService()
+

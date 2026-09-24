@@ -3,6 +3,7 @@ name: Build & Push Backend to GHCR
 # Single pipeline:
 # 1) On push to main (backend/**): create next v0.0.N git tag
 # 2) Build & push image with that version (same run — no second workflow)
+# 3) Tag push triggers publish_release.yml → GitHub Release for /org updates
 # Tag-only pushes and PRs still supported.
 on:
   push:

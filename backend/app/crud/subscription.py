@@ -15,6 +15,7 @@ from app.services.paywall import paywall
 from app.core.redis_client import redis_manager
 
 TRIAL_DAYS = 14
+GRACE_DAYS = 7
 TRIAL_ELIGIBLE_CODES = {"BASIC", "NDOVU"}
 
 # Live Postgres subscription_tier_enum = FREE | BRONZE | SILVER | GOLD (issue #108).
@@ -43,21 +44,84 @@ def _legacy_tier_for_plan_code(code: str) -> SubscriptionTier:
     return _PLAN_CODE_TO_LEGACY_TIER.get((code or "").upper(), SubscriptionTier.FREE)
 
 
+def _grace_end_for(sub: Subscription) -> Optional[datetime]:
+    """Latest moment full access is allowed (trial paid period + grace)."""
+    explicit = _as_utc(getattr(sub, "grace_end_date", None))
+    if explicit is not None:
+        return explicit
+    end = _as_utc(sub.end_date)
+    if end is None:
+        return None
+    # Trials get a default grace window after plan end
+    if getattr(sub, "is_trial", False):
+        return end + timedelta(days=GRACE_DAYS)
+    return end
+
+
+def access_phase_for(sub: Optional[Subscription], now: Optional[datetime] = None) -> str:
+    """
+    active  — within subscription end_date
+    grace   — after end_date, before grace_end (reminders; full access)
+    locked  — after grace (login ok; product UI/API locked)
+    none    — no subscription row
+    """
+    now = now or datetime.now(timezone.utc)
+    if sub is None or not sub.active:
+        return "none"
+    end = _as_utc(sub.end_date)
+    grace = _grace_end_for(sub)
+    if end is None or now < end:
+        return "active"
+    if grace is not None and now < grace:
+        return "grace"
+    return "locked"
+
+
 async def get_active_subscription(
     db: AsyncSession, organization_id: UUID
 ) -> Optional[Subscription]:
+    """Return the active subscription if still in paid period OR grace window."""
     now = datetime.now(timezone.utc)
-    stmt = select(Subscription).where(
-        Subscription.organization_id == organization_id,
-        Subscription.active == True,  # noqa: E712
+    stmt = (
+        select(Subscription)
+        .where(
+            Subscription.organization_id == organization_id,
+            Subscription.active == True,  # noqa: E712
+        )
+        .order_by(Subscription.start_date.desc())
     )
     subs = list(await db.exec(stmt))
     for sub in subs:
-        end = _as_utc(sub.end_date)
-        if end is not None and end < now:
-            continue
-        return sub
+        phase = access_phase_for(sub, now)
+        if phase in ("active", "grace"):
+            return sub
     return None
+
+
+async def get_latest_subscription(
+    db: AsyncSession, organization_id: UUID
+) -> Optional[Subscription]:
+    """Latest active=True row even if locked (for status / lock UI)."""
+    stmt = (
+        select(Subscription)
+        .where(
+            Subscription.organization_id == organization_id,
+            Subscription.active == True,  # noqa: E712
+        )
+        .order_by(Subscription.start_date.desc())
+    )
+    return (await db.exec(stmt)).first()
+
+
+async def org_has_consumed_trial(db: AsyncSession, organization_id: UUID) -> bool:
+    org = await db.get(Organization, organization_id)
+    if org is not None and getattr(org, "trial_consumed_at", None) is not None:
+        return True
+    stmt = select(Subscription).where(
+        Subscription.organization_id == organization_id,
+        Subscription.is_trial == True,  # noqa: E712
+    )
+    return (await db.exec(stmt)).first() is not None
 
 
 async def get_plan_by_code(db: AsyncSession, code: str) -> Plan:
@@ -113,9 +177,69 @@ async def _invalidate_org(org_id: UUID) -> None:
         logger.warning(f"paywall invalidate failed org={org_id}: {exc}")
 
 
+
+
+def build_trial_invoice(
+    *,
+    org: Organization,
+    plan: Plan,
+    sub: Subscription,
+    currency: str = "KES",
+) -> dict:
+    """
+    Zero-amount commercial invoice for self-serve trial activation.
+    Persisted on subscription.current_usage["trial_invoice"] and emailed to owner.
+    """
+    start = _as_utc(sub.start_date)
+    end = _as_utc(sub.end_date)
+    days = TRIAL_DAYS
+    if start and end:
+        days = max(1, (end.date() - start.date()).days)
+    inv_no = f"TRIAL-{start.strftime('%Y%m%d') if start else 'NA'}-{str(sub.id).replace('-', '')[:8].upper()}"
+    unit = 0.0
+    line_desc = f"{plan.name} — {days}-day free trial"
+    return {
+        "invoice_number": inv_no,
+        "status": "PAID",
+        "currency": currency or getattr(plan, "currency", None) or "KES",
+        "issue_date": (start or datetime.now(timezone.utc)).strftime("%Y-%m-%d"),
+        "due_date": (start or datetime.now(timezone.utc)).strftime("%Y-%m-%d"),
+        "bill_to": {
+            "name": (org.name or "").strip() or "Organization",
+            "email": (getattr(org, "email", None) or "").strip(),
+            "phone": (getattr(org, "phone", None) or "").strip() or None,
+            "address": (getattr(org, "address", None) or "").strip() or None,
+        },
+        "plan_code": plan.code,
+        "plan_name": plan.name,
+        "trial_days": days,
+        "trial_start": start.strftime("%Y-%m-%d") if start else None,
+        "trial_end": end.strftime("%Y-%m-%d") if end else None,
+        "subscription_id": str(sub.id),
+        "line_items": [
+            {
+                "description": line_desc,
+                "quantity": 1,
+                "unit_price": unit,
+                "amount": unit,
+            }
+        ],
+        "subtotal": 0.0,
+        "tax_amount": 0.0,
+        "total_amount": 0.0,
+        "amount_due": 0.0,
+        "amount_paid": 0.0,
+        "notes": "No payment required for the trial period. Upgrade before trial end to keep access without interruption.",
+    }
+
+
 async def start_plan_trial(
     db: AsyncSession, organization_id: UUID, plan_code: str = "NDOVU"
 ) -> Tuple[Subscription, Plan]:
+    """
+    Start the org's single self-serve trial (all plans share one lifetime trial).
+    Sets grace_end_date = trial end + GRACE_DAYS.
+    """
     code = (plan_code or "NDOVU").upper()
     if code not in TRIAL_ELIGIBLE_CODES:
         raise HTTPException(
@@ -123,9 +247,16 @@ async def start_plan_trial(
             detail=f"Plan '{code}' is not available for self-serve trial. Contact sales.",
         )
 
+    if await org_has_consumed_trial(db, organization_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This organization has already used its free trial. Choose a paid plan to continue.",
+        )
+
     plan = await get_plan_by_code(db, code)
     existing = await get_active_subscription(db, organization_id)
     if existing:
+        # Still in trial/grace — do not create another
         return existing, plan
 
     days = TRIAL_DAYS
@@ -134,7 +265,8 @@ async def start_plan_trial(
 
     now = datetime.now(timezone.utc)
     end = now + timedelta(days=days)
-    # plan_id = product truth; tier = FREE only (valid on live subscription_tier_enum)
+    grace_end = end + timedelta(days=GRACE_DAYS)
+
     sub = Subscription(
         organization_id=organization_id,
         tier=_legacy_tier_for_trial(code),
@@ -142,16 +274,99 @@ async def start_plan_trial(
         start_date=now,
         end_date=end,
         plan_id=plan.id,
+        is_trial=True,
+        grace_end_date=grace_end,
     )
     db.add(sub)
+
+    org = await db.get(Organization, organization_id)
+    if org is not None:
+        org.trial_consumed_at = now
+        db.add(org)
+        inv = build_trial_invoice(org=org, plan=plan, sub=sub, currency=plan.currency or "KES")
+        usage = dict(sub.current_usage or {})
+        usage["trial_invoice"] = inv
+        sub.current_usage = usage
+        db.add(sub)
+
     await db.commit()
     await db.refresh(sub)
     await _invalidate_org(organization_id)
     logger.info(
         f"Started {days}-day {code} trial for org {organization_id} "
-        f"sub={sub.id} tier={sub.tier} plan_id={plan.id}"
+        f"sub={sub.id} grace_until={grace_end.isoformat()}"
     )
     return sub, plan
+
+
+async def extend_grace_period(
+    db: AsyncSession,
+    organization_id: UUID,
+    *,
+    days: int = GRACE_DAYS,
+) -> Subscription:
+    """
+    Platform-only: extend grace by `days` from max(now, current grace_end).
+    Unlocks a locked org for payment facilitation.
+    """
+    if days < 1 or days > 30:
+        raise HTTPException(status_code=400, detail="Grace extension must be 1–30 days")
+
+    sub = await get_latest_subscription(db, organization_id)
+    if sub is None:
+        raise HTTPException(status_code=404, detail="No subscription found for organization")
+
+    now = datetime.now(timezone.utc)
+    base = _grace_end_for(sub) or _as_utc(sub.end_date) or now
+    if base < now:
+        base = now
+    new_grace = base + timedelta(days=days)
+    sub.grace_end_date = new_grace
+    sub.active = True
+    db.add(sub)
+    await db.commit()
+    await db.refresh(sub)
+    await _invalidate_org(organization_id)
+    logger.info(
+        f"Extended grace for org={organization_id} sub={sub.id} until {new_grace.isoformat()}"
+    )
+    return sub
+
+
+def build_access_status(sub: Optional[Subscription], org: Optional[Organization] = None) -> dict:
+    now = datetime.now(timezone.utc)
+    phase = access_phase_for(sub, now)
+    trial_consumed = bool(
+        org is not None and getattr(org, "trial_consumed_at", None) is not None
+    )
+    if not trial_consumed and sub is not None and getattr(sub, "is_trial", False):
+        trial_consumed = True
+
+    out = {
+        "access_phase": phase,
+        "trial_consumed": trial_consumed,
+        "trial_eligible": not trial_consumed and phase in ("none",),
+        "is_trial": bool(sub and getattr(sub, "is_trial", False)),
+        "subscription_id": str(sub.id) if sub else None,
+        "start_date": sub.start_date.isoformat() if sub and sub.start_date else None,
+        "end_date": sub.end_date.isoformat() if sub and sub.end_date else None,
+        "grace_end_date": (
+            _grace_end_for(sub).isoformat() if sub and _grace_end_for(sub) else None
+        ),
+        "days_remaining": None,
+        "grace_days_remaining": None,
+    }
+    if sub is None:
+        return out
+    end = _as_utc(sub.end_date)
+    grace = _grace_end_for(sub)
+    if phase == "active" and end is not None:
+        out["days_remaining"] = max(0, (end - now).days)
+    if phase == "grace" and grace is not None:
+        out["grace_days_remaining"] = max(0, (grace - now).days + (1 if (grace - now).seconds else 0))
+        # more accurate:
+        out["grace_days_remaining"] = max(0, int((grace - now).total_seconds() // 86400))
+    return out
 
 
 async def start_ndovu_trial(
@@ -160,6 +375,29 @@ async def start_ndovu_trial(
     return await start_plan_trial(db, organization_id, "NDOVU")
 
 
+
+
+
+async def list_orgs_in_grace(
+    db: AsyncSession,
+) -> List[Tuple[Subscription, Optional[Plan], Organization]]:
+    """Subscriptions currently in grace (trial ended, grace_end not passed)."""
+    now = datetime.now(timezone.utc)
+    stmt = (
+        select(Subscription)
+        .where(Subscription.active == True)  # noqa: E712
+        .order_by(Subscription.end_date.asc())
+    )
+    out: List[Tuple[Subscription, Optional[Plan], Organization]] = []
+    for sub in list(await db.exec(stmt)):
+        if access_phase_for(sub, now) != "grace":
+            continue
+        org = await db.get(Organization, sub.organization_id)
+        if org is None:
+            continue
+        plan = await db.get(Plan, sub.plan_id) if sub.plan_id else None
+        out.append((sub, plan, org))
+    return out
 
 async def deactivate_subscription(
     db: AsyncSession,

@@ -287,13 +287,46 @@ export function useProducts(
     });
   };
 
+  /** Patch all cached product list pages for this business with an updater. */
+  const patchProductLists = (
+    updater: (products: ProductResponse[]) => ProductResponse[],
+  ) => {
+    const entries = queryClient.getQueriesData<PaginatedProxyResponse>({
+      queryKey: ["products", businessId],
+    });
+    for (const [key, value] of entries) {
+      if (!value || typeof value !== "object") continue;
+      if (Array.isArray((value as PaginatedProxyResponse).data)) {
+        const page = value as PaginatedProxyResponse;
+        const nextData = updater(page.data);
+        const delta = nextData.length - page.data.length;
+        queryClient.setQueryData(key, {
+          ...page,
+          data: nextData,
+          pagination: page.pagination
+            ? {
+                ...page.pagination,
+                total: Math.max(0, page.pagination.total + delta),
+              }
+            : page.pagination,
+        });
+      }
+    }
+  };
+
   const updateProduct = useMutation({
     mutationFn: async (update: Partial<ProductResponse>) => {
       const { data } = await axios.patch<ProductResponse>("/api/v1/products", update);
       return data;
     },
-    onSuccess: async () => {
-      await refresh();
+    onSuccess: async (data) => {
+      if (data?.id) {
+        queryClient.setQueryData(["products", businessId, "detail", data.id], data);
+        patchProductLists((list) =>
+          list.map((p) => (p.id === data.id ? { ...p, ...data } : p)),
+        );
+      }
+      void refresh();
       toast.success("Product updated successfully");
     },
     onError: (error) => {
@@ -309,8 +342,11 @@ export function useProducts(
       const { data } = await axios.post<ProductResponse>("/api/v1/products", newProduct);
       return data;
     },
-    onSuccess: async () => {
-      await refresh();
+    onSuccess: async (data) => {
+      if (data?.id) {
+        patchProductLists((list) => [data, ...list.filter((p) => p.id !== data.id)]);
+      }
+      void refresh();
       toast.success("Product created successfully");
     },
     onError: (error) => {
@@ -326,10 +362,17 @@ export function useProducts(
       const { data } = await axios.delete<{ success: boolean }>("/api/v1/products", {
         data: { product_id: targetId },
       });
-      return data;
+      return { ...data, targetId };
     },
-    onSuccess: async () => {
-      await refresh();
+    onSuccess: async (result) => {
+      const targetId = (result as { targetId?: string }).targetId;
+      if (targetId) {
+        queryClient.removeQueries({
+          queryKey: ["products", businessId, "detail", targetId],
+        });
+        patchProductLists((list) => list.filter((p) => p.id !== targetId));
+      }
+      void refresh();
       toast.success("Product removed successfully");
     },
     onError: (error) => {

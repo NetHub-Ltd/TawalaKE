@@ -548,28 +548,28 @@ p {
   background-size: cover;
 }
 
-
-/* Brand loader — soft breath (scale + opacity) */
-@keyframes brand-pulse {
-  0%, 100% {
-    transform: scale(0.96);
-    opacity: 0.88;
-  }
-  50% {
-    transform: scale(1);
-    opacity: 1;
-  }
+/* Brand loader — light sweep on logo + text (no color overlay) */
+@keyframes logo-shine {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
 }
 
-@utility animate-brand-pulse {
-  animation: brand-pulse 1.8s ease-in-out infinite;
+@keyframes text-shine {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+@utility animate-logo-shine {
+  animation: logo-shine 1.8s ease-in-out infinite;
+}
+
+@utility animate-text-shine {
+  animation: text-shine 2.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-brand-pulse,
-  .motion-safe\:animate-brand-pulse {
+  .animate-logo-shine,
+  .animate-text-shine {
     animation: none !important;
-    opacity: 1 !important;
-    transform: none !important;
   }
 }

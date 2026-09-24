@@ -517,6 +517,8 @@ async def get_pos_config(
     tax_rate = float(getattr(biz, "tax_rate", None) or 0.0)
     if tax_rate > 1.0:
         tax_rate = tax_rate / 100.0
+    if not bool(getattr(biz, "tax_enabled", False)):
+        tax_rate = 0.0
     # Enabled POS methods only — MPESA/CARD stay out until product ships
     methods = [
         PosPaymentMethodOut(

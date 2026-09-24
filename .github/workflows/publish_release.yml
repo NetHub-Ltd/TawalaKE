@@ -1,0 +1,74 @@
+name: Publish GitHub Release
+
+# When a version tag is pushed (including tags created by build_and_push on main),
+# create a published GitHub Release so /org/.../updates can list it.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create release if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "${TAG}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "Release ${TAG} already exists — skipping"
+            exit 0
+          fi
+
+          # Prefer previous v* tag for compare notes
+          PREV="$(git tag -l 'v*' --sort=v:refname | grep -Fvx "${TAG}" | tail -n 1 || true)"
+
+          NOTES_FILE="$(mktemp)"
+          {
+            echo "## What's new"
+            echo ""
+            echo "Shipped in **${TAG}**."
+            echo ""
+            if [ -n "${PREV}" ]; then
+              echo "Changes since \`${PREV}\`:"
+              echo ""
+              # Bullet list of commit subjects (no merge noise)
+              git log "${PREV}..${TAG}" --pretty=format:'- %s' --no-merges \
+                | sed 's/#\([0-9]\+\)//g' \
+                | head -n 40 || true
+              echo ""
+              echo ""
+              echo "## Improvements"
+              echo ""
+              echo "- Platform and product updates included in this version."
+            else
+              echo "## Improvements"
+              echo ""
+              echo "- Initial tagged release."
+            fi
+            echo ""
+            echo "_Customer-facing summary is generated from the release tag. Detailed engineering notes stay in the repository._"
+          } > "${NOTES_FILE}"
+
+          gh release create "${TAG}" \
+            --repo "${{ github.repository }}" \
+            --title "Tawala ${TAG}" \
+            --notes-file "${NOTES_FILE}" \
+            --latest
+
+          echo "Published GitHub Release ${TAG}"

@@ -39,8 +39,7 @@ function LayoutGhost() {
 }
 
 /**
- * /org entry loader — brand pulse + plain rotating status.
- * After TIMEOUT_MS shows recovery actions (reload / login).
+ * /org entry loader — frosted blur over layout outlines; logo light sweep + text shine.
  */
 export function OrgDecisionLoading() {
   const [index, setIndex] = useState(0);
@@ -113,4 +112,3 @@ export function OrgDecisionLoading() {
     </div>
   );
 }
-

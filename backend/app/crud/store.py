@@ -101,11 +101,14 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Business not found for checkout.",
             )
-        if tax_rate == 0.0 and getattr(business, "tax_rate", None) is not None:
+        # Tax only when explicitly enabled on the branch (incomplete integration stays off)
+        tax_on = bool(getattr(business, "tax_enabled", False))
+        if tax_on and tax_rate == 0.0 and getattr(business, "tax_rate", None) is not None:
             tax_rate = float(business.tax_rate or 0.0)
-        # Compat: legacy rows may store percent (16) instead of fraction (0.16)
         if tax_rate > 1.0:
             tax_rate = tax_rate / 100.0
+        if not tax_on:
+            tax_rate = 0.0
 
         for item in payload.items:
             stmt = select(Product).where(Product.id == item.product_id)
