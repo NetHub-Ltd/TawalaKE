@@ -1,20 +1,25 @@
 # Task
 
 ## Goal
-Platform operator dashboard home — KPIs + attention list (issue **#386**, parent epic **#385**).
+Platform Phase A operator console (epic **#385**) in **one PR**:
+- **#386** dashboard home — KPIs + attention list
+- **#387** organizations — filters + extend grace UI
+- **#388** operators (users) — list / invite / role
 
 ## Scope
-- Replace thin `/platform` summary with attention-first operator home
-- KPI row: orgs, active, inactive, businesses, staff (from existing list API)
-- Attention list: inactive orgs; orgs with grace ending ≤7d when subscription data present
-- Quick actions: Manage orgs; link toward users page (page lands in #388)
-- Expose `grace_end_date` + `access_phase` on platform org subscription serialize (needed for attention)
-- Clear empty/error/loading states; no tenant chrome leakage
+- `/platform` attention-first home
+- `/platform/orgs` status filters (all/active/inactive/grace) + extend-grace control
+- `/platform/users` list, invite, edit role/active/force password change
+- BFF proxies for users + extend-grace
+- Client helpers in `lib/platform/auth.ts`
+- Expose `grace_end_date` + `access_phase` on platform org subscription serialize
+- Shell nav: Overview · Organizations · Operators
+- Trackers updated
 
 ## Out of scope
-- Orgs filters + extend-grace UI (#387)
-- Operators users page (#388)
-- Plans/billing read views, audit stream, impersonation (Phase B/C)
+- Phase B plans/billing read, audit stream
+- Phase C impersonation / job runners
+- Soft-delete product path for orgs
 
 ## Branch
-feat/platform-dashboard-home → PR into **dev**
+feat/platform-dashboard-home → single PR into **dev** (covers #385 Phase A)

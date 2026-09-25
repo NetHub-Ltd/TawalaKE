@@ -1,7 +1,7 @@
 # Repository State
 
 - Branch: feat/platform-dashboard-home
-- Base: dev @ 6ede32e
+- Base: dev
 - Target PR base: **dev** (never main)
-- Issue: #386 (parent #385)
-- Sequential plan: #386 → #387 → #388
+- Issues: #385 (epic), #386, #387, #388 — combined in one PR
+- PR: update existing #401 body/title to reflect full Phase A
