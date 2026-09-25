@@ -425,6 +425,11 @@ import { ProductResponse } from "@/lib/api/generated/models";
 
 export const CHECKOUT_CONFIG = {
   DEFAULT_TAX_RATE: 0.0,
+  /**
+   * Tax is not fully productized (rates, invoices, compliance).
+   * Keep calculation paths, but force 0 until the feature ships.
+   */
+  TAX_FEATURE_ENABLED: false,
   CURRENCY_CODE: "KES",
   STORAGE_KEY: "terminal-cart-storage",
 };
@@ -653,6 +658,11 @@ export const useCartStore = create<CartState>()(
       },
 
       setTaxRate: (rate) => {
+        // Feature gated: ignore POS config until tax is fully implemented
+        if (!CHECKOUT_CONFIG.TAX_FEATURE_ENABLED) {
+          set({ taxRate: 0, isDirty: true });
+          return;
+        }
         let r = Number(rate) || 0;
         // Compat: API/DB may still return percent (16) instead of fraction (0.16)
         if (r > 1) r = r / 100;
@@ -722,14 +732,16 @@ export const useCartStore = create<CartState>()(
         const goodsSubtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
         const discountApplied = Math.min(Math.max(0, discount), goodsSubtotal);
         const netSubtotal = Math.max(0, goodsSubtotal - discountApplied);
-        const taxAmount = netSubtotal * taxRate;
+        // Tax feature incomplete — keep formula, force 0 for payable totals
+        const effectiveTaxRate = CHECKOUT_CONFIG.TAX_FEATURE_ENABLED ? taxRate : 0;
+        const taxAmount = netSubtotal * effectiveTaxRate;
         const servicesTotal = services.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
         const grandTotal = Math.max(0, netSubtotal + taxAmount + servicesTotal);
 
         return {
           goodsSubtotal,
           subtotal: goodsSubtotal,
-          taxRate,
+          taxRate: effectiveTaxRate,
           taxAmount,
           discountApplied,
           netSubtotal,

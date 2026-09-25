@@ -109,6 +109,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             tax_rate = tax_rate / 100.0
         if not tax_on:
             tax_rate = 0.0
+        # Feature gate: tax product not fully shipped — keep paths, force zero.
+        # Flip when rates, invoices, and compliance are ready end-to-end.
+        TAX_FEATURE_ENABLED = False
+        if not TAX_FEATURE_ENABLED:
+            tax_rate = 0.0
 
         for item in payload.items:
             stmt = select(Product).where(Product.id == item.product_id)
