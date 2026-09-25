@@ -5,7 +5,7 @@
  * Header (business + meta) · body (lines + totals) · footer (thanks + Tawala).
  * Screen preview matches the printed slip; print/PDF target 80mm thermal paper.
  */
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Printer, Download, Banknote } from "lucide-react";
@@ -249,35 +249,111 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
       ? `/org/${organizationId}/${businessId}/terminal`
       : "..";
 
+  const thermalPrintStyles = `
+    @page { size: ${THERMAL_MM}mm auto; margin: 2mm; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #000;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    img { max-width: 100%; }
+  `;
+
+  /** Dedicated print window — avoids blank preview from app-shell visibility hacks */
   const handlePrint = () => {
-    if (typeof window !== "undefined") window.print();
+    const node =
+      document.getElementById("sale-doc-capture") || printRef.current;
+    if (!node) return;
+
+    const win = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
+    if (!win) {
+      // Popup blocked — fall back to in-page print with safer CSS class
+      document.body.classList.add("receipt-printing");
+      window.print();
+      setTimeout(() => document.body.classList.remove("receipt-printing"), 500);
+      return;
+    }
+
+    const title = `${isInvoice ? "Invoice" : "Receipt"} ${
+      receipt.document_number || saleId.slice(0, 8)
+    }`;
+    win.document.open();
+    win.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${title.replace(/</g, "")}</title>
+  <style>${thermalPrintStyles}
+    body { width: ${THERMAL_MM}mm; max-width: 100%; margin: 0 auto; padding: 2mm; }
+  </style>
+</head>
+<body>${node.innerHTML}</body>
+</html>`);
+    win.document.close();
+    // Wait for layout then print
+    const trigger = () => {
+      try {
+        win.focus();
+        win.print();
+      } catch (e) {
+        console.error("Print failed", e);
+      }
+    };
+    if (win.document.readyState === "complete") {
+      setTimeout(trigger, 150);
+    } else {
+      win.onload = () => setTimeout(trigger, 150);
+      setTimeout(trigger, 400);
+    }
   };
 
   const handlePdf = async () => {
-    if (!printRef.current || isDownloading) return;
+    const node =
+      (document.getElementById("sale-doc-capture") as HTMLElement | null) ||
+      printRef.current;
+    if (!node || isDownloading) return;
     setIsDownloading(true);
     try {
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
-      const canvas = await html2canvas(printRef.current, {
-        scale: 3,
+      // Force layout size so capture is not 0×0
+      const prev = {
+        width: node.style.width,
+        maxWidth: node.style.maxWidth,
+        background: node.style.backgroundColor,
+        color: node.style.color,
+      };
+      node.style.width = `${THERMAL_PX}px`;
+      node.style.maxWidth = `${THERMAL_PX}px`;
+      node.style.backgroundColor = "#ffffff";
+      node.style.color = "#000000";
+
+      const canvas = await html2canvas(node, {
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        width: THERMAL_PX,
-        windowWidth: THERMAL_PX,
-        onclone: (doc) => {
-          const el = doc.getElementById("sale-doc-capture");
-          if (el) {
-            el.style.width = `${THERMAL_PX}px`;
-            el.style.maxWidth = `${THERMAL_PX}px`;
-            el.style.backgroundColor = "#ffffff";
-            el.style.color = "#000000";
-            el.style.fontFamily =
-              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
-          }
-        },
+        allowTaint: true,
+        foreignObjectRendering: false,
       });
+
+      node.style.width = prev.width;
+      node.style.maxWidth = prev.maxWidth;
+      node.style.backgroundColor = prev.background;
+      node.style.color = prev.color;
+
+      if (!canvas.width || !canvas.height) {
+        throw new Error("Could not capture receipt for PDF");
+      }
+
       const img = canvas.toDataURL("image/png", 1.0);
       const pageW = THERMAL_MM;
       const pageH = Math.max(40, (canvas.height * pageW) / canvas.width);
@@ -288,11 +364,18 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
         compress: true,
       });
       pdf.addImage(img, "PNG", 0, 0, pageW, pageH, undefined, "FAST");
-      pdf.save(
-        `${isInvoice ? "invoice" : "receipt"}_${receipt.document_number || saleId.slice(0, 8)}.pdf`,
-      );
+      const name = `${isInvoice ? "invoice" : "receipt"}_${
+        receipt.document_number || saleId.slice(0, 8)
+      }.pdf`;
+      pdf.save(name);
     } catch (e) {
       console.error("PDF export failed", e);
+      // Fallback: open print dialog so user can “Save as PDF”
+      alert(
+        e instanceof Error
+          ? `Download failed: ${e.message}. Try Print → Save as PDF.`
+          : "Download failed. Try Print → Save as PDF.",
+      );
     } finally {
       setIsDownloading(false);
     }
@@ -705,47 +788,28 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
         </p>
       </div>
 
+      {/* Fallback when popup is blocked: hide chrome, show slip only */}
       <style jsx global>{`
         @media print {
           @page {
-            size: ${THERMAL_MM}mm auto;
+            size: 80mm auto;
             margin: 2mm;
           }
           html,
           body {
             background: #fff !important;
             color: #000 !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
           }
-          body * {
-            visibility: hidden !important;
+          body.receipt-printing .print\:hidden,
+          body.receipt-printing [class*="print:hidden"] {
+            display: none !important;
           }
-          #sale-doc-print,
-          #sale-doc-print * {
-            visibility: visible !important;
-          }
-          #sale-doc-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: ${THERMAL_MM}mm !important;
-            max-width: ${THERMAL_MM}mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          body.receipt-printing #sale-doc-print {
+            position: static !important;
+            width: 80mm !important;
+            max-width: 80mm !important;
             box-shadow: none !important;
-            background: #fff !important;
-            color: #000 !important;
-          }
-          #sale-doc-capture {
-            width: 100% !important;
-            max-width: 100% !important;
-            padding: 1mm 2mm !important;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-              "Liberation Mono", "Courier New", monospace !important;
-            font-size: 10pt !important;
-            line-height: 1.35 !important;
-            color: #000 !important;
+            margin: 0 auto !important;
           }
         }
       `}</style>
