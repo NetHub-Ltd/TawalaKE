@@ -120,6 +120,28 @@ Status legend: `[x]` done · `[ ]` not started · `[~]` in progress
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | R.1 | Redesign receipt/invoice client view to canonical tokens + clear money hierarchy | [x] | 2026-09-14 — `ReceiptClientView.tsx` |
+| R.2 | Service fees on receipt/invoice snapshot + UI | [x] | 2026-09-25 — #396 enrich from sale + lines |
+| R.3 | Thermal-first layout (~80mm slip) | [x] | 2026-09-25 — #397 |
+| R.4 | Print/PDF via self-contained HTML + hidden iframe (not Tailwind clone) | [x] | 2026-09-26 — #399 |
+| R.5 | Collect credit from invoice view (no Customers detour) | [x] | 2026-09-25 — #398 |
+
+## Terminal / inventory (2026-09-25)
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| T.1 | Service fee + discount in staged `total_amount` | [x] | #390 #394 |
+| T.2 | FE/BE tax-after-discount parity; tax feature gated to 0 | [x] | #394 #395 |
+| T.3 | Stage lifecycle: clear cart, resume staged, cancel staged | [x] | #394 |
+| T.4 | Product settings: category + UoM catalog dropdowns | [x] | #398 |
+
+## Overview (2026-09-24)
+
+| ID | Task | Status | Notes |
+|----|------|--------|-------|
+| O.1 | Definition strip + settled vs open credit | [x] | #377 #369 |
+| O.2 | Smooth trend chart + comparison callout | [x] | #378 #370 |
+| O.3 | InsightsStrip, Month period, empty states | [x] | #379 |
+| O.4 | Expense-aware Sales KPIs + expenses UI | [x] | #380 #381 #372 #373 |
 
 ---
 

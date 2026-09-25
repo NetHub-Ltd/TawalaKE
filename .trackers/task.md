@@ -1,27 +1,30 @@
 # Task
 
-## Goal
-Platform login email MFA (issue **#298**).
+## Current focus
+Receipt thermal print reliability + sale/document integrity (post-merge on `dev`).
 
-## Scope
-- POST /api/v1/platform/auth/login → challenge only (no access token)
-- Redis MFA challenge + hashed 6-digit code
-- POST /api/v1/platform/auth/verify-code → platform JWT
-- POST /api/v1/platform/auth/resend-code (cooldown)
-- mailer.send_platform_login_code
-- Config: platform_mfa_code_ttl_sec, max_attempts, resend_cooldown_sec
-- Unit tests test_platform_mfa.py
-- Preserve platform user invite + bootstrap from dev (send_platform_user_invite, must_change_password)
+## Recently shipped (2026-09-25 → 2026-09-26)
 
-## Breaking change
-Password-only platform login no longer returns access_token. Clients must complete verify-code.
+| Area | PRs | Notes |
+|------|-----|--------|
+| Overview dashboard | #377–#382 | Smooth chart, credit split, expense KPIs, InsightsStrip, Month period |
+| Expenses frontend | #381 | List + add (plan-gated) |
+| Org hard-delete FK | #383 | Clear `sale_analytics_summaries` before businesses |
+| Terminal totals | #390 #394 #395 | Services + discount in totals; tax gated to **0** until tax feature ships |
+| Receipt / invoice | #396 #397 #399 | Services on document; thermal layout; **iframe + self-contained HTML print** |
+| Product settings | #398 | Category + UoM catalog dropdowns (same as create) |
+| Collect credit | #398 | Collect on invoice preview + sale history (no Customers detour) |
 
-## Roadmap
-1. #297 org hard-delete — done (merged #302)
-2. #298 MFA — this branch
-3. #299 /platform/login UI (largely on dev; activates when MFA ships)
-4. #300 orgs admin UI
-5. #301 cleanup runbook
+## Open / next candidates
+- Platform shell proper dashboard (issues filed earlier; not started)
+- Tax feature end-to-end (rates, invoices, compliance) — keep `TAX_FEATURE_ENABLED = false` until ready
+- Vercel deploy status noise on some PRs (lint/build gates are the merge bar)
 
-## Out of scope
-Trusted device skip; tenant/staff login changes.
+## Process rules
+- Working branch base: **`dev`**
+- All work via **PR → `dev`**; never push straight to `dev`/`main`
+- Frontend: `npm run lint` + build must pass CI before merge
+- Backend: framework tests for touched paths
+
+## Out of scope for trackers churn
+Production hotfixes without PR; changing `main` deploy pipeline without explicit approval.
