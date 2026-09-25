@@ -1,6 +1,5 @@
 # Rollback
 
-- Revert PR / restore prior platform_login that issued tokens on password success
-- No migration for MFA itself
-- In-flight MFA challenges expire via Redis TTL
-- Bootstrap/invite and BFF changes on dev are independent; do not revert those unless intended
+- Revert/close PR for feat/platform-dashboard-home
+- No migrations in this change; frontend + additive subscription fields only
+- Safe to leave grace_end_date/access_phase on schema if PR is reverted later (backward compatible)

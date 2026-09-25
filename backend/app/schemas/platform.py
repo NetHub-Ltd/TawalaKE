@@ -108,6 +108,8 @@ class PlatformOrgSubscriptionRead(BaseModel):
     plan_name: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    grace_end_date: Optional[datetime] = None
+    access_phase: Optional[str] = None
     current_usage: Optional[dict] = None
 
     model_config = {"from_attributes": True}

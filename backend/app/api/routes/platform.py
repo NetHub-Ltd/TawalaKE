@@ -874,6 +874,8 @@ async def _serialize_platform_org(
         if plan_ids:
             plans = list(await db.exec(select(Plan).where(Plan.id.in_(list(plan_ids)))))
             plan_map = {p.id: p for p in plans}
+        from app.crud import subscription as subscription_crud
+
         for s in sub_rows:
             plan = plan_map.get(s.plan_id) if s.plan_id else None
             tier_val = None
@@ -890,6 +892,8 @@ async def _serialize_platform_org(
                     plan_name=getattr(plan, "name", None) if plan else None,
                     start_date=s.start_date,
                     end_date=s.end_date,
+                    grace_end_date=getattr(s, "grace_end_date", None),
+                    access_phase=subscription_crud.access_phase_for(s),
                     current_usage=getattr(s, "current_usage", None) or {},
                 )
             )

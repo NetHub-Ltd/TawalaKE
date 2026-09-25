@@ -204,6 +204,10 @@ export type PlatformOrgSubscription = {
   plan_name?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  /** Present when platform list/detail includes subscription grace fields. */
+  grace_end_date?: string | null;
+  /** active | grace | locked | unknown — from subscription access phase. */
+  access_phase?: string | null;
   current_usage?: Record<string, unknown> | null;
 };
 
