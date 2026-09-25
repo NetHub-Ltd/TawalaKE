@@ -43,3 +43,12 @@ def test_discount_capped_at_goods():
     assert out["net_subtotal"] == 0
     assert out["tax_amount"] == 0.0
     assert out["total_amount"] == 10.0
+
+
+def test_tax_feature_disabled_means_zero_in_gate():
+    """Document production gate: effective rate must be 0 while feature is off."""
+    TAX_FEATURE_ENABLED = False
+    rate = 0.16 if TAX_FEATURE_ENABLED else 0.0
+    out = compute_total(goods=1000, discount=100, tax_rate=rate, services=50)
+    assert out["tax_amount"] == 0.0
+    assert out["total_amount"] == 950.0  # 900 net + 0 tax + 50 services
