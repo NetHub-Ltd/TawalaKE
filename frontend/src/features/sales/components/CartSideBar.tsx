@@ -21,7 +21,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { fetchPosConfig } from "@/features/sales/lib/posConfig";
-import { setStagedSaleId } from "@/features/sales/lib/stagedSale";
+import { setStagedSaleId, getStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
 interface EditableQuantityProps {
@@ -171,7 +171,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     );
   }
 
-  const { subtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
+  const { goodsSubtotal, subtotal, taxAmount, grandTotal, servicesTotal, discountApplied, netSubtotal } = getFinancials();
   const payableGrandTotal = grandTotal;
 
   const handleExpand = () => {
@@ -240,11 +240,23 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const handleCheckoutRedirect = async () => {
     if ((!cart.length && !services.length) || !resolvedBusinessId) return;
 
+    // Resume existing staged sale instead of creating a second pending row
+    const existingStaged = getStagedSaleId(resolvedBusinessId);
+    if (existingStaged && resolvedOrgId) {
+      toast.info("Resuming staged sale", {
+        description: "Finish or cancel the open checkout before starting another.",
+      });
+      router.push(
+        `/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${existingStaged}`,
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     const toastId = toast.loading("Staging transaction...", {
-      description: "Reserving stock allocations and generating transaction entry.",
+      description: "Creating pending sale with current totals.",
     });
 
     const payload = {
@@ -280,8 +292,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         description: `Sale ID: ${pendingSaleData.id.slice(0, 8)} • Total KES ${payableGrandTotal.toLocaleString()}`,
       });
 
-      // Keep cart until finalize succeeds (CheckoutForm clears on success).
-      setServices([]);
+      // Staged sale is source of truth on checkout — clear local cart fully.
+      clearCart();
       if (pendingSaleData?.id && resolvedBusinessId) {
         setStagedSaleId(resolvedBusinessId, pendingSaleData.id);
       }
@@ -565,9 +577,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         {/* BREAKDOWN LEDGER */}
         <div className="space-y-1.5 pt-0.5">
           <div className="flex justify-between text-xs font-medium text-muted/70">
-            <span>Subtotal</span>
+            <span>Items</span>
             <span className="text-foreground font-semibold tabular amount-md font-mono">
-              KES {subtotal.toLocaleString()}
+              KES {goodsSubtotal.toLocaleString()}
             </span>
           </div>
 

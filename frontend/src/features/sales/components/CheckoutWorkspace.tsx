@@ -4,10 +4,13 @@
  * Checkout workspace — order summary (left) + customer/payment form (right).
  * Presentational polish only; stage/finalize contracts unchanged.
  */
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Link from "next/link";
 import { AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { CheckoutForm } from "@/features/sales/components/CheckoutForm";
+import { clearStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { useSales, normalizeLineItems, getSaleItemCount } from "@/features/sales/hooks/useSales";
 
 interface CheckoutWorkspaceProps {
@@ -38,8 +41,35 @@ export function CheckoutWorkspace({
   const { sales, isLoading, error } = useSales({ businessId, saleId });
   const activeSale = sales[0] ?? null;
   const [itemsOpen, setItemsOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const router = useRouter();
 
   const terminalHref = `/org/${organizationId}/${businessId}/terminal`;
+
+  const cancelStagedAndReturn = useCallback(async () => {
+    if (!businessId || !saleId || cancelling) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(
+        `/api/v1/org/stores/sales/${saleId}/cancel-staged?businessId=${encodeURIComponent(businessId)}`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          (body as { detail?: string; error?: string })?.detail ||
+            (body as { error?: string })?.error ||
+            "Could not cancel staged sale",
+        );
+      }
+      clearStagedSaleId(businessId);
+      toast.success("Staged sale cancelled");
+      router.push(terminalHref);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Cancel failed");
+      setCancelling(false);
+    }
+  }, [businessId, saleId, cancelling, router, terminalHref]);
 
   if (isLoading) {
     return (
@@ -86,9 +116,12 @@ export function CheckoutWorkspace({
             (activeSale as { line_items?: unknown }).line_items,
         )) || [];
   const itemCount = Math.max(getSaleItemCount(activeSale), items.length);
-  const subtotal = Number(activeSale.subtotal) || 0;
+  // Backend stores subtotal post-discount; recover goods for honest labels
+  const netSubtotal = Number(activeSale.subtotal) || 0;
   const taxAmount = Number(activeSale.tax_amount) || 0;
   const discount = Number(activeSale.discount) || 0;
+  const goodsSubtotal = netSubtotal + discount;
+  const subtotal = goodsSubtotal;
   const grandTotal = Number(activeSale.total_amount) || 0;
   const rawServices = (activeSale as { service_amount?: unknown }).service_amount;
   const serviceLines: { description: string; amount: number }[] = (() => {
@@ -190,9 +223,9 @@ export function CheckoutWorkspace({
 
             <div className="mt-5 space-y-2 border-t border-border/60 pt-4 text-sm">
               <div className="flex justify-between text-muted">
-                <span>Subtotal</span>
+                <span>Items</span>
                 <span className="tabular-nums">
-                  {formatMoney(currency, subtotal)}
+                  {formatMoney(currency, goodsSubtotal)}
                 </span>
               </div>
               {discount > 0 && (
@@ -247,9 +280,19 @@ export function CheckoutWorkspace({
               organizationId={organizationId}
               businessId={businessId}
             />
-            <p className="mt-4 text-center text-xs text-muted">
-              Totals from staged sale · cart kept until this sale completes
-            </p>
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <button
+                type="button"
+                disabled={cancelling}
+                onClick={() => void cancelStagedAndReturn()}
+                className="text-xs font-medium text-muted underline-offset-2 hover:text-foreground hover:underline disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling…" : "Cancel staged sale & return to terminal"}
+              </button>
+              <p className="text-center text-xs text-muted">
+                Totals from staged sale · abandon cancels the pending sale
+              </p>
+            </div>
           </div>
         </section>
       </div>

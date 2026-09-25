@@ -137,8 +137,10 @@ export default function SaleDetailPage() {
 
   /* ---------- Derived values ---------- */
   const currency = (sale.currency as string) || "KES";
-  const subtotal = toNumber(sale.subtotal);
+  const netSubtotal = toNumber(sale.subtotal);
   const discount = toNumber(sale.discount);
+  const goodsSubtotal = netSubtotal + discount;
+  const subtotal = goodsSubtotal;
   const taxAmount = toNumber(sale.tax_amount);
   const total = toNumber(sale.total_amount);
   const lineItems = Array.isArray(sale.items) ? sale.items : [];
@@ -344,9 +346,9 @@ export default function SaleDetailPage() {
           {/* Totals */}
           <section className="rounded-xl border border-border/40 bg-card p-5 space-y-2.5 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted">Subtotal</span>
+              <span className="text-muted">Items</span>
               <span className="tabular-nums text-foreground">
-                {formatMoney(subtotal, currency)}
+                {formatMoney(goodsSubtotal, currency)}
               </span>
             </div>
             <div className="flex justify-between">

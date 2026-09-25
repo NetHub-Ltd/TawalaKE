@@ -375,9 +375,12 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
           {/* Totals */}
           <div className="space-y-1.5 py-4 text-sm">
             <div className="flex justify-between text-muted print:text-black/70">
-              <span>Subtotal</span>
+              <span>Items</span>
               <span className="tabular text-foreground print:text-black">
-                {currency} {money(fin.subtotal)}
+                {currency}{" "}
+                {money(
+                  Number(fin.subtotal) + Number(fin.discount_amount || 0),
+                )}
               </span>
             </div>
             {Number(fin.discount_amount) > 0 && (
@@ -392,7 +395,13 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
               <span>
                 Tax
                 {fin.tax_rate_applied
-                  ? ` (${fin.tax_rate_applied}%)`
+                  ? ` (${
+                      Number(fin.tax_rate_applied) <= 1
+                        ? (Number(fin.tax_rate_applied) * 100).toFixed(
+                            Number(fin.tax_rate_applied) * 100 % 1 === 0 ? 0 : 2,
+                          )
+                        : Number(fin.tax_rate_applied)
+                    }%)`
                   : ""}
               </span>
               <span className="tabular text-foreground print:text-black">

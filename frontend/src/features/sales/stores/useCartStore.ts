@@ -447,13 +447,18 @@ export interface ServiceLine {
 }
 
 export interface FinancialSummary {
+  /** Sum of line qty × price (before discount) */
+  goodsSubtotal: number;
+  /** Alias of goodsSubtotal for older callers */
   subtotal: number;
   taxRate: number;
   taxAmount: number;
   discountApplied: number;
+  /** goods − discount (tax base); matches backend stored subtotal */
+  netSubtotal: number;
   /** Sum of non-stock service fees */
   servicesTotal: number;
-  /** subtotal + tax − discount + services (payable) */
+  /** netSubtotal + tax + services — same as backend total_amount */
   grandTotal: number;
 }
 
@@ -638,10 +643,10 @@ export const useCartStore = create<CartState>()(
 
       setDiscount: (value) => {
         set((state) => {
-          const subtotal = state.cart.reduce((acc, item) => acc + item.price * item.qty, 0);
-          const maxAllowed = subtotal + subtotal * state.taxRate;
+          // Cap at goods only — tax is computed after discount (matches backend)
+          const goods = state.cart.reduce((acc, item) => acc + item.price * item.qty, 0);
           return {
-            discount: Math.min(Math.max(0, value), maxAllowed),
+            discount: Math.min(Math.max(0, value), goods),
             isDirty: true,
           };
         });
@@ -710,18 +715,24 @@ export const useCartStore = create<CartState>()(
       },
 
       // --- COMPUTED OUTPUTS ---
+      // Must match backend initialize_checkout:
+      // goods → discount → tax on net → + services
       getFinancials: () => {
         const { cart, discount, taxRate, services } = get();
-        const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
-        const taxAmount = subtotal * taxRate;
+        const goodsSubtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+        const discountApplied = Math.min(Math.max(0, discount), goodsSubtotal);
+        const netSubtotal = Math.max(0, goodsSubtotal - discountApplied);
+        const taxAmount = netSubtotal * taxRate;
         const servicesTotal = services.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
-        const grandTotal = Math.max(0, subtotal + taxAmount - discount + servicesTotal);
+        const grandTotal = Math.max(0, netSubtotal + taxAmount + servicesTotal);
 
         return {
-          subtotal,
+          goodsSubtotal,
+          subtotal: goodsSubtotal,
           taxRate,
           taxAmount,
-          discountApplied: discount,
+          discountApplied,
+          netSubtotal,
           servicesTotal,
           grandTotal,
         };

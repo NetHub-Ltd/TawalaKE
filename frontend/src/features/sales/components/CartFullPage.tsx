@@ -22,7 +22,7 @@ import {
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { fetchPosConfig } from "@/features/sales/lib/posConfig";
-import { setStagedSaleId } from "@/features/sales/lib/stagedSale";
+import { setStagedSaleId, getStagedSaleId } from "@/features/sales/lib/stagedSale";
 
 export function CartFullPage({
   organizationId: orgProp,
@@ -92,12 +92,22 @@ export function CartFullPage({
     );
   }
 
-  const { subtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
+  const { goodsSubtotal, subtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
   const terminalHref = `/org/${resolvedOrgId}/${resolvedBusinessId}/terminal`;
   const isEmpty = cart.length === 0 && services.length === 0;
 
   async function stageAndCheckout() {
     if (isEmpty || !resolvedBusinessId || !resolvedOrgId) return;
+
+    const existingStaged = getStagedSaleId(resolvedBusinessId);
+    if (existingStaged) {
+      toast.info("Resuming staged sale");
+      router.push(
+        `/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${existingStaged}`,
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     const toastId = toast.loading("Staging transaction…");
     try {
@@ -130,6 +140,7 @@ export function CartFullPage({
           servicesTotal > 0 ? " (incl. services)" : ""
         }`,
       });
+      clearCart();
       if (pendingSaleData?.id) {
         setStagedSaleId(resolvedBusinessId, pendingSaleData.id);
       }
@@ -283,9 +294,9 @@ export function CartFullPage({
             )}
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between text-muted">
-                <dt>Subtotal</dt>
+                <dt>Items</dt>
                 <dd className="tabular-nums">
-                  KES {subtotal.toLocaleString()}
+                  KES {goodsSubtotal.toLocaleString()}
                 </dd>
               </div>
               <div className="flex justify-between text-muted">
