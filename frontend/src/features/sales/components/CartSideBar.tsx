@@ -171,7 +171,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     );
   }
 
-  const { goodsSubtotal, subtotal, taxAmount, grandTotal, servicesTotal, discountApplied, netSubtotal } = getFinancials();
+  const { goodsSubtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
   const payableGrandTotal = grandTotal;
 
   const handleExpand = () => {
