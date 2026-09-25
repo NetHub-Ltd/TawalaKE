@@ -140,7 +140,6 @@ export default function SaleDetailPage() {
   const netSubtotal = toNumber(sale.subtotal);
   const discount = toNumber(sale.discount);
   const goodsSubtotal = netSubtotal + discount;
-  const subtotal = goodsSubtotal;
   const taxAmount = toNumber(sale.tax_amount);
   const total = toNumber(sale.total_amount);
   const lineItems = Array.isArray(sale.items) ? sale.items : [];

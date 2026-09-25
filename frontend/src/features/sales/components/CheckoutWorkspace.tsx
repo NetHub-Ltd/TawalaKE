@@ -121,7 +121,6 @@ export function CheckoutWorkspace({
   const taxAmount = Number(activeSale.tax_amount) || 0;
   const discount = Number(activeSale.discount) || 0;
   const goodsSubtotal = netSubtotal + discount;
-  const subtotal = goodsSubtotal;
   const grandTotal = Number(activeSale.total_amount) || 0;
   const rawServices = (activeSale as { service_amount?: unknown }).service_amount;
   const serviceLines: { description: string; amount: number }[] = (() => {

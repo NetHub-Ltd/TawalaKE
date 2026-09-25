@@ -92,7 +92,7 @@ export function CartFullPage({
     );
   }
 
-  const { goodsSubtotal, subtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
+  const { goodsSubtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
   const terminalHref = `/org/${resolvedOrgId}/${resolvedBusinessId}/terminal`;
   const isEmpty = cart.length === 0 && services.length === 0;
 
