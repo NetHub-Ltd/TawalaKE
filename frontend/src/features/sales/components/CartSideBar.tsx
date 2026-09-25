@@ -116,6 +116,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     getFinancials,
     discount,
     setDiscount,
+    services,
+    setServices,
     validateAndSetScope,
     setTaxRate,
   } = useCartStore();
@@ -123,8 +125,6 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const [mounted, setMounted] = useState(false);
   const [isAddingDiscount, setIsAddingDiscount] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  type ServiceLine = { id: string; amount: number; description: string };
-  const [services, setServices] = useState<ServiceLine[]>([]);
   const [serviceAmountInput, setServiceAmountInput] = useState("");
   const [serviceDescInput, setServiceDescInput] = useState("");
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
@@ -171,9 +171,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     );
   }
 
-  const { subtotal, taxAmount, grandTotal } = getFinancials();
-  const servicesTotal = services.reduce((sum, s) => sum + s.amount, 0);
-  const payableGrandTotal = Math.max(0, grandTotal + servicesTotal);
+  const { subtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
+  const payableGrandTotal = grandTotal;
 
   const handleExpand = () => {
     if (resolvedBusinessId && resolvedOrgId) {
@@ -183,7 +182,6 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
   const handleClearCartWithFeedback = () => {
     clearCart();
-    setServices([]);
     setEditingServiceId(null);
     toast.info("Cart Reset", {
       description: "All pending terminal items, discounts, and service fees cleared.",
@@ -210,8 +208,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     }
 
     if (editingServiceId) {
-      setServices((prev) =>
-        prev.map((s) =>
+      setServices(
+        services.map((s) =>
           s.id === editingServiceId
             ? { ...s, amount: parsedAmount, description: cleanDesc }
             : s,
@@ -221,10 +219,10 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         description: `KES ${parsedAmount.toLocaleString()} — ${cleanDesc}`,
       });
     } else {
-      setServices((prev) => [
-        ...prev,
+      setServices([
+        ...services,
         {
-          id: `svc-${Date.now()}-${prev.length}`,
+          id: `svc-${Date.now()}-${services.length}`,
           amount: parsedAmount,
           description: cleanDesc,
         },
@@ -612,7 +610,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                 title="Remove service"
                 aria-label={`Remove ${s.description}`}
                 onClick={() => {
-                  setServices((prev) => prev.filter((x) => x.id !== s.id));
+                  setServices(services.filter((x) => x.id !== s.id));
                   toast.info("Service removed");
                 }}
               >

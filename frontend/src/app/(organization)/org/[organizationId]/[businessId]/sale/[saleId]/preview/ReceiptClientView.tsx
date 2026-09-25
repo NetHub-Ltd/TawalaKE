@@ -399,6 +399,36 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
                 {currency} {money(fin.tax_amount)}
               </span>
             </div>
+            {(
+              (fin as { service_lines?: { description?: string; amount?: number }[] })
+                .service_lines || []
+            )
+              .filter((s) => s && Number(s.amount) > 0)
+              .map((s, i) => (
+                <div
+                  key={`svc-${i}-${s.description}`}
+                  className="flex justify-between text-muted print:text-black/70"
+                >
+                  <span className="truncate pr-2">
+                    {String(s.description || "Service").trim()}
+                  </span>
+                  <span className="tabular shrink-0 text-foreground print:text-black">
+                    {currency} {money(s.amount)}
+                  </span>
+                </div>
+              ))}
+            {Number((fin as { service_total?: number }).service_total) > 0 &&
+              !(
+                (fin as { service_lines?: unknown[] }).service_lines || []
+              ).length && (
+                <div className="flex justify-between text-muted print:text-black/70">
+                  <span>Services</span>
+                  <span className="tabular text-foreground print:text-black">
+                    {currency}{" "}
+                    {money((fin as { service_total?: number }).service_total)}
+                  </span>
+                </div>
+              )}
 
             <div className="mt-2 flex items-baseline justify-between border-t border-border pt-3 print:border-black/30">
               <span className="text-sm font-semibold text-foreground print:text-black">

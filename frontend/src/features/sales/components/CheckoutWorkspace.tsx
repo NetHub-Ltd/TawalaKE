@@ -90,6 +90,30 @@ export function CheckoutWorkspace({
   const taxAmount = Number(activeSale.tax_amount) || 0;
   const discount = Number(activeSale.discount) || 0;
   const grandTotal = Number(activeSale.total_amount) || 0;
+  const rawServices = (activeSale as { service_amount?: unknown }).service_amount;
+  const serviceLines: { description: string; amount: number }[] = (() => {
+    if (!rawServices) return [];
+    if (Array.isArray(rawServices)) {
+      return rawServices
+        .filter((s) => s && typeof s === "object")
+        .map((s) => {
+          const o = s as { description?: string; amount?: number };
+          return {
+            description: String(o.description || "").trim(),
+            amount: Number(o.amount) || 0,
+          };
+        })
+        .filter((s) => s.description && s.amount > 0);
+    }
+    if (typeof rawServices === "object") {
+      const o = rawServices as { description?: string; amount?: number };
+      const description = String(o.description || "").trim();
+      const amount = Number(o.amount) || 0;
+      return description && amount > 0 ? [{ description, amount }] : [];
+    }
+    return [];
+  })();
+  const servicesTotal = serviceLines.reduce((s, x) => s + x.amount, 0);
   return (
     <div className="flex min-h-0 w-full flex-1 flex-col bg-background">
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col lg:flex-row">
@@ -185,6 +209,25 @@ export function CheckoutWorkspace({
                   {formatMoney(currency, taxAmount)}
                 </span>
               </div>
+              {serviceLines.map((s) => (
+                <div
+                  key={`${s.description}-${s.amount}`}
+                  className="flex justify-between text-muted"
+                >
+                  <span className="truncate pr-2">{s.description}</span>
+                  <span className="tabular-nums shrink-0">
+                    +{formatMoney(currency, s.amount)}
+                  </span>
+                </div>
+              ))}
+              {servicesTotal > 0 && serviceLines.length === 0 ? (
+                <div className="flex justify-between text-muted">
+                  <span>Services</span>
+                  <span className="tabular-nums">
+                    +{formatMoney(currency, servicesTotal)}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex items-baseline justify-between border-t border-border/60 pt-3">
                 <span className="font-semibold text-foreground">Total</span>
                 <span className="font-mono text-lg font-bold tabular-nums text-foreground">

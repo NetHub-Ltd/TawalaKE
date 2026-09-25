@@ -363,10 +363,23 @@ export default function SaleDetailPage() {
                 </span>
               </div>
             )}
-            {servicesTotal > 0 && (
+            {serviceLines.map((s) => (
+              <div
+                key={`${s.description}-${s.amount}`}
+                className="flex justify-between text-muted"
+              >
+                <span className="truncate pr-2">{s.description}</span>
+                <span className="tabular-nums shrink-0">
+                  {formatMoney(s.amount, currency)}
+                </span>
+              </div>
+            ))}
+            {servicesTotal > 0 && serviceLines.length === 0 && (
               <div className="flex justify-between text-muted">
                 <span>Services</span>
-                <span className="tabular-nums">{formatMoney(servicesTotal, currency)}</span>
+                <span className="tabular-nums">
+                  {formatMoney(servicesTotal, currency)}
+                </span>
               </div>
             )}
             <div className="pt-3 border-t border-border/50 flex justify-between items-baseline">

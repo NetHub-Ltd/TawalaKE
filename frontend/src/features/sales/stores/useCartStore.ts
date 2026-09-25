@@ -440,11 +440,20 @@ export interface CartItem {
   sku?: string;
 }
 
+export interface ServiceLine {
+  id: string;
+  amount: number;
+  description: string;
+}
+
 export interface FinancialSummary {
   subtotal: number;
   taxRate: number;
   taxAmount: number;
   discountApplied: number;
+  /** Sum of non-stock service fees */
+  servicesTotal: number;
+  /** subtotal + tax − discount + services (payable) */
   grandTotal: number;
 }
 
@@ -468,7 +477,9 @@ interface CartState {
   cart: CartItem[];
   discount: number;
   taxRate: number;
-  
+  /** Non-stock service fees (design, delivery, …) */
+  services: ServiceLine[];
+
   // Local-First Sync Tracking Flags
   isDirty: boolean;
   lastSyncedAt: string | null;
@@ -476,13 +487,14 @@ interface CartState {
 
   // Scope & Validation Actions
   validateAndSetScope: (businessId: string, userId: string) => boolean;
-  
+
   // Core Mutators
   addToCart: (product: ProductResponse) => void;
   removeFromCart: (id: string) => void;
   updateQty: (id: string, delta: number) => void;
   setDiscount: (value: number) => void;
   setTaxRate: (rate: number) => void;
+  setServices: (services: ServiceLine[]) => void;
   clearCart: () => void;
 
   // Remote Sync Handlers
@@ -519,6 +531,7 @@ export const useCartStore = create<CartState>()(
       cart: [],
       discount: 0,
       taxRate: CHECKOUT_CONFIG.DEFAULT_TAX_RATE,
+      services: [],
       isDirty: false,
       lastSyncedAt: null,
       syncStatus: "idle",
@@ -539,6 +552,7 @@ export const useCartStore = create<CartState>()(
           cart: [],
           discount: 0,
           taxRate: CHECKOUT_CONFIG.DEFAULT_TAX_RATE,
+          services: [],
           isDirty: false,
           syncStatus: "idle",
         });
@@ -640,12 +654,26 @@ export const useCartStore = create<CartState>()(
         set({ taxRate: Math.max(0, Math.min(r, 1)), isDirty: true });
       },
 
+      setServices: (services) => {
+        set({
+          services: services
+            .filter((s) => s && Number(s.amount) > 0 && String(s.description || "").trim())
+            .map((s) => ({
+              id: s.id || `svc-${Date.now()}`,
+              amount: Number(s.amount),
+              description: String(s.description).trim(),
+            })),
+          isDirty: true,
+        });
+      },
+
       clearCart: () => {
         triggerHaptic("medium");
         set({
           cart: [],
           discount: 0,
           taxRate: CHECKOUT_CONFIG.DEFAULT_TAX_RATE,
+          services: [],
           isDirty: true,
         });
       },
@@ -683,16 +711,24 @@ export const useCartStore = create<CartState>()(
 
       // --- COMPUTED OUTPUTS ---
       getFinancials: () => {
-        const { cart, discount, taxRate } = get();
+        const { cart, discount, taxRate, services } = get();
         const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
         const taxAmount = subtotal * taxRate;
-        const grandTotal = Math.max(0, subtotal + taxAmount - discount);
+        const servicesTotal = services.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
+        const grandTotal = Math.max(0, subtotal + taxAmount - discount + servicesTotal);
 
-        return { subtotal, taxRate, taxAmount, discountApplied: discount, grandTotal };
+        return {
+          subtotal,
+          taxRate,
+          taxAmount,
+          discountApplied: discount,
+          servicesTotal,
+          grandTotal,
+        };
       },
 
       getReceiptPayload: (cashierId, paymentMethod = "CASH") => {
-        const { scope, cart, getFinancials } = get();
+        const { scope, cart, services, getFinancials } = get();
         const financials = getFinancials();
 
         return {
@@ -712,11 +748,16 @@ export const useCartStore = create<CartState>()(
             quantity: item.qty,
             subtotal: item.price * item.qty,
           })),
+          services: services.map((s) => ({
+            amount: s.amount,
+            description: s.description,
+          })),
           financials: {
             subtotal: financials.subtotal,
             tax_rate: financials.taxRate,
             tax_amount: financials.taxAmount,
             discount_applied: financials.discountApplied,
+            services_total: financials.servicesTotal,
             grand_total: financials.grandTotal,
           },
         };
