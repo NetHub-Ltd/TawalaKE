@@ -558,6 +558,25 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=500, detail="Failed to cancel staged sale."
             ) from e
 
+    @staticmethod
+    def _normalize_service_lines(raw: Any) -> list:
+        """Array preferred; legacy single {description, amount} supported."""
+        lines = []
+        if isinstance(raw, list):
+            for s in raw:
+                if not isinstance(s, dict):
+                    continue
+                desc = str(s.get("description") or "").strip()
+                amt = float(s.get("amount") or 0)
+                if desc and amt > 0:
+                    lines.append({"description": desc[:255], "amount": round(amt, 2)})
+        elif isinstance(raw, dict):
+            desc = str(raw.get("description") or "").strip()
+            amt = float(raw.get("amount") or 0)
+            if desc and amt > 0:
+                lines.append({"description": desc[:255], "amount": round(amt, 2)})
+        return lines
+
     async def get_financial_document_json(
         self,
         db: AsyncSession,
@@ -565,19 +584,45 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         sale_id: UUID
     ) -> Optional[Dict[str, Any]]:
         """
-        Queries a financial document by its primary key, builds the dictionary format,
-        and provides flat attributes satisfying test schemas.
+        Return document snapshot for receipt/invoice UI.
+
+        Enriches financials.service_lines from the live sale when the frozen
+        snapshot was generated before services were persisted.
         """
         stmt = select(FinancialDocument).where(FinancialDocument.sale_id == sale_id)
         res = await db.exec(stmt)
-        # Use one_or_none() directly on the SQLModel ScalarResult
-        # doc = res.one_or_none()
         doc = res.unique().one_or_none()
 
         if not doc:
             return None
 
-        return doc.document_snapshot
+        snapshot: Dict[str, Any] = dict(doc.document_snapshot or {})
+        financials: Dict[str, Any] = dict(snapshot.get("financials") or {})
+        summary: Dict[str, Any] = dict(snapshot.get("summary") or {})
+
+        existing_lines = self._normalize_service_lines(
+            financials.get("service_lines")
+        ) or self._normalize_service_lines(summary.get("services"))
+
+        if not existing_lines:
+            sale = (
+                await db.exec(select(Sale).where(Sale.id == sale_id))
+            ).one_or_none()
+            if sale is not None:
+                existing_lines = self._normalize_service_lines(
+                    getattr(sale, "service_amount", None)
+                )
+
+        if existing_lines:
+            financials["service_lines"] = existing_lines
+            financials["service_total"] = round(
+                sum(float(s["amount"]) for s in existing_lines), 2
+            )
+            summary["services"] = existing_lines
+            snapshot["financials"] = financials
+            snapshot["summary"] = summary
+
+        return snapshot
 
     async def list_business_financial_documents_json(
         self,
