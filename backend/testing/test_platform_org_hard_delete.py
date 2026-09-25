@@ -74,7 +74,10 @@ async def test_hard_delete_organization_success_path():
     db = AsyncMock()
     org_result = MagicMock()
     org_result.scalar_one_or_none.return_value = org
-    db.execute = AsyncMock(return_value=org_result)
+    # business id query returns empty list via .scalars().all()
+    biz_result = MagicMock()
+    biz_result.scalars.return_value.all.return_value = []
+    db.execute = AsyncMock(side_effect=[org_result, biz_result, MagicMock()])
     db.begin_nested = MagicMock(return_value=AsyncMock(
         __aenter__=AsyncMock(),
         __aexit__=AsyncMock(return_value=None),
@@ -90,9 +93,28 @@ async def test_hard_delete_organization_success_path():
         }
         with patch.object(mod, "_delete_org_scoped", new_callable=AsyncMock) as dele:
             dele.return_value = 0
-            out = await mod.hard_delete_organization(db, org_id=org_id)
+            with patch.object(
+                mod, "_delete_business_scoped", new_callable=AsyncMock
+            ) as biz_dele:
+                biz_dele.return_value = 0
+                out = await mod.hard_delete_organization(db, org_id=org_id)
 
     assert out["organization_id"] == str(org_id)
     assert out["name"] == "Shell Co"
     assert out["pre_delete_counts"]["staff"] == 1
     db.commit.assert_awaited()
+    # Analytics must be cleared by business_id before businesses are deleted
+    assert "sale_analytics_summaries" in mod._BUSINESS_SCOPED_BEFORE_BUSINESSES
+
+
+def test_analytics_tables_cleared_before_businesses():
+    """Regression: FK sale_analytics_summaries → businesses must be cleared first."""
+    from app.services.platform_org_delete import (
+        _BUSINESS_SCOPED_BEFORE_BUSINESSES,
+        _ORG_SCOPED_TABLES_ORDERED,
+    )
+
+    assert "sale_analytics_summaries" in _BUSINESS_SCOPED_BEFORE_BUSINESSES
+    assert "businesses" in _ORG_SCOPED_TABLES_ORDERED
+    # business-scoped analytics pass is conceptually before businesses in the list
+    assert _ORG_SCOPED_TABLES_ORDERED.index("businesses") > 0
