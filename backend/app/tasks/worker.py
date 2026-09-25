@@ -154,17 +154,40 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     is_walk_in=True
                 )
 
-            # Financials
+            # Financials (+ service lines for receipt/invoice honesty)
             total_paid = sum((p.amount for p in sale.payments), 0.0)
+            raw_services = getattr(sale, "service_amount", None)
+            service_lines: list = []
+            if isinstance(raw_services, list):
+                for s in raw_services:
+                    if not isinstance(s, dict):
+                        continue
+                    desc = str(s.get("description") or "").strip()
+                    amt = float(s.get("amount") or 0)
+                    if desc and amt > 0:
+                        service_lines.append(
+                            {"description": desc[:255], "amount": round(amt, 2)}
+                        )
+            elif isinstance(raw_services, dict):
+                desc = str(raw_services.get("description") or "").strip()
+                amt = float(raw_services.get("amount") or 0)
+                if desc and amt > 0:
+                    service_lines.append(
+                        {"description": desc[:255], "amount": round(amt, 2)}
+                    )
+            service_total = round(sum(s["amount"] for s in service_lines), 2)
+
             financials_snap = FinancialsSnapshot(
                 currency=sale.currency,
                 subtotal=round(float(sale.subtotal), 2),
-                discount_amount=round(float(getattr(sale, 'discount', 0.0)), 2),
-                tax_rate_applied=round(float(getattr(sale, 'tax_rate', 0.0)), 4),
-                tax_amount=round(float(getattr(sale, 'tax_amount', 0.0)), 2),
+                discount_amount=round(float(getattr(sale, "discount", 0.0) or 0.0), 2),
+                tax_rate_applied=round(float(getattr(sale, "tax_rate", 0.0) or 0.0), 4),
+                tax_amount=round(float(getattr(sale, "tax_amount", 0.0) or 0.0), 2),
                 total_amount=round(float(sale.total_amount), 2),
                 amount_paid=round(float(total_paid), 2),
-                balance_due=round(max(0.0, float(sale.total_amount) - total_paid), 2)
+                balance_due=round(max(0.0, float(sale.total_amount) - total_paid), 2),
+                service_lines=service_lines,
+                service_total=service_total,
             )
 
             # Items + Summary calculations

@@ -375,9 +375,12 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
           {/* Totals */}
           <div className="space-y-1.5 py-4 text-sm">
             <div className="flex justify-between text-muted print:text-black/70">
-              <span>Subtotal</span>
+              <span>Items</span>
               <span className="tabular text-foreground print:text-black">
-                {currency} {money(fin.subtotal)}
+                {currency}{" "}
+                {money(
+                  Number(fin.subtotal) + Number(fin.discount_amount || 0),
+                )}
               </span>
             </div>
             {Number(fin.discount_amount) > 0 && (
@@ -392,13 +395,49 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
               <span>
                 Tax
                 {fin.tax_rate_applied
-                  ? ` (${fin.tax_rate_applied}%)`
+                  ? ` (${
+                      Number(fin.tax_rate_applied) <= 1
+                        ? (Number(fin.tax_rate_applied) * 100).toFixed(
+                            Number(fin.tax_rate_applied) * 100 % 1 === 0 ? 0 : 2,
+                          )
+                        : Number(fin.tax_rate_applied)
+                    }%)`
                   : ""}
               </span>
               <span className="tabular text-foreground print:text-black">
                 {currency} {money(fin.tax_amount)}
               </span>
             </div>
+            {(
+              (fin as { service_lines?: { description?: string; amount?: number }[] })
+                .service_lines || []
+            )
+              .filter((s) => s && Number(s.amount) > 0)
+              .map((s, i) => (
+                <div
+                  key={`svc-${i}-${s.description}`}
+                  className="flex justify-between text-muted print:text-black/70"
+                >
+                  <span className="truncate pr-2">
+                    {String(s.description || "Service").trim()}
+                  </span>
+                  <span className="tabular shrink-0 text-foreground print:text-black">
+                    {currency} {money(Number(s.amount) || 0)}
+                  </span>
+                </div>
+              ))}
+            {Number((fin as { service_total?: number }).service_total) > 0 &&
+              !(
+                (fin as { service_lines?: unknown[] }).service_lines || []
+              ).length && (
+                <div className="flex justify-between text-muted print:text-black/70">
+                  <span>Services</span>
+                  <span className="tabular text-foreground print:text-black">
+                    {currency}{" "}
+                    {money(Number((fin as { service_total?: number }).service_total) || 0)}
+                  </span>
+                </div>
+              )}
 
             <div className="mt-2 flex items-baseline justify-between border-t border-border pt-3 print:border-black/30">
               <span className="text-sm font-semibold text-foreground print:text-black">
