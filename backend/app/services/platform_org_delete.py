@@ -37,7 +37,7 @@ _ORG_SCOPED_TABLES_ORDERED: tuple[str, ...] = (
     "product_sales_summaries",
     "staff_sales_summaries",
     "business_sales_hourly",
-    "sale_analytics_summaries",
+    "sale_analytics_summaries",  # no org_id column — cleaned in business pass below
     "sales",
     "stock_history",
     "products",
@@ -52,6 +52,18 @@ _ORG_SCOPED_TABLES_ORDERED: tuple[str, ...] = (
     "staff",
 )
 
+# Must run BEFORE deleting businesses. sale_analytics_summaries has no
+# organization_id (legacy table); other rollups may have null org_id rows.
+# Without this pass, DELETE FROM businesses hits FK:
+# sale_analytics_summaries_business_id_fkey (no ON DELETE CASCADE in older DBs).
+_BUSINESS_SCOPED_BEFORE_BUSINESSES: tuple[str, ...] = (
+    "analytics_outbox",
+    "product_sales_summaries",
+    "staff_sales_summaries",
+    "business_sales_hourly",
+    "sale_analytics_summaries",
+)
+
 # Second pass: rows that may only be keyed by business_id (legacy / partial org_id).
 _BUSINESS_SCOPED_TABLES: tuple[str, ...] = (
     "sale_items",
@@ -63,6 +75,11 @@ _BUSINESS_SCOPED_TABLES: tuple[str, ...] = (
     "categories",
     "expenses",
     "customers",
+    "analytics_outbox",
+    "product_sales_summaries",
+    "staff_sales_summaries",
+    "business_sales_hourly",
+    "sale_analytics_summaries",
 )
 
 
@@ -162,8 +179,18 @@ async def hard_delete_organization(
     business_ids = list(biz_rows)
 
     deleted_tables: dict[str, int] = {}
+
+    # Clear business-keyed analytics BEFORE businesses are removed (org-scoped
+    # DELETE by organization_id is a no-op on sale_analytics_summaries).
+    for table in _BUSINESS_SCOPED_BEFORE_BUSINESSES:
+        n = await _delete_business_scoped(db, table, business_ids)
+        if n:
+            deleted_tables[table] = deleted_tables.get(table, 0) + n
+
     for table in _ORG_SCOPED_TABLES_ORDERED:
-        deleted_tables[table] = await _delete_org_scoped(db, table, org_id)
+        deleted_tables[table] = deleted_tables.get(table, 0) + await _delete_org_scoped(
+            db, table, org_id
+        )
 
     # Sweep leftovers that only had business_id set.
     for table in _BUSINESS_SCOPED_TABLES:
