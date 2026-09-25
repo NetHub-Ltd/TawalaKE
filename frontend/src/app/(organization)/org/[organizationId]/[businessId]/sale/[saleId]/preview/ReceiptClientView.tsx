@@ -422,7 +422,7 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
                     {String(s.description || "Service").trim()}
                   </span>
                   <span className="tabular shrink-0 text-foreground print:text-black">
-                    {currency} {money(s.amount)}
+                    {currency} {money(Number(s.amount) || 0)}
                   </span>
                 </div>
               ))}
@@ -434,7 +434,7 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
                   <span>Services</span>
                   <span className="tabular text-foreground print:text-black">
                     {currency}{" "}
-                    {money((fin as { service_total?: number }).service_total)}
+                    {money(Number((fin as { service_total?: number }).service_total) || 0)}
                   </span>
                 </div>
               )}
