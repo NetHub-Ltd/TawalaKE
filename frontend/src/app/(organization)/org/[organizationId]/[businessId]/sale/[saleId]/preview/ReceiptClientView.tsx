@@ -1,9 +1,9 @@
 "use client";
 
 /**
- * Sale receipt / invoice — header (business + meta), body (lines + totals),
- * footer (thanks + powered by Tawala). Services resolved from financials,
- * summary, or enriched API snapshot.
+ * Sale receipt / invoice — thermal-first layout (≈80mm).
+ * Header (business + meta) · body (lines + totals) · footer (thanks + Tawala).
+ * Screen preview matches the printed slip; print/PDF target 80mm thermal paper.
  */
 import { useRef, useState } from "react";
 import Link from "next/link";
@@ -13,6 +13,10 @@ import { useReceipt } from "@/features/sales/hooks/useReceipts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { Spinner } from "@/lib/components/ui";
 import { cn } from "@/lib/utils";
+
+/** 80mm thermal width at 96dpi ≈ 302px; keep preview and print aligned */
+const THERMAL_MM = 80;
+const THERMAL_PX = 302;
 
 interface ReceiptClientViewProps {
   saleId: string;
@@ -124,7 +128,6 @@ function taxRateLabel(rate: number): string {
   return ` (${shown}%)`;
 }
 
-/** Prefer financials.service_lines, then summary.services, then service_total row. */
 function resolveServiceLines(receipt: ReceiptData): ServiceLine[] {
   const fromFin = receipt.financials?.service_lines;
   const fromSummary = receipt.summary?.services;
@@ -146,6 +149,27 @@ function resolveServiceLines(receipt: ReceiptData): ServiceLine[] {
     .filter((s) => s.description && s.amount > 0);
 }
 
+function DashRule({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "h-0 w-full border-t border-dashed border-neutral-400 print:border-black",
+        className,
+      )}
+      aria-hidden
+    />
+  );
+}
+
+function DoubleRule() {
+  return (
+    <div className="my-2 space-y-0.5" aria-hidden>
+      <div className="border-t-2 border-neutral-900 print:border-black" />
+      <div className="border-t border-neutral-900 print:border-black" />
+    </div>
+  );
+}
+
 export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
   const printRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -163,7 +187,7 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-border bg-card py-24">
+      <div className="flex flex-col items-center justify-center gap-3 py-24">
         <Spinner size="md" label="Loading document" />
         <p className="text-sm text-muted">Loading sale document…</p>
       </div>
@@ -172,7 +196,7 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
 
   if (error || !receipt) {
     return (
-      <div className="mx-auto max-w-md rounded-md border border-border bg-card px-6 py-12 text-center">
+      <div className="mx-auto max-w-sm rounded-lg border border-border bg-card px-6 py-12 text-center">
         <p className="text-sm font-semibold text-foreground">
           Could not load this document
         </p>
@@ -196,8 +220,8 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
   const isInvoice =
     balanceDue > 0.001 ||
     /invoice|credit/i.test(receipt.document_type || "");
-  const docLabel = isInvoice ? "Invoice" : "Receipt";
-  const totalLabel = isInvoice ? "Amount due" : "Total";
+  const docLabel = isInvoice ? "INVOICE" : "RECEIPT";
+  const totalLabel = isInvoice ? "AMOUNT DUE" : "TOTAL";
   const serviceLines = resolveServiceLines(receipt);
   const servicesTotal =
     serviceLines.reduce((a, s) => a + s.amount, 0) ||
@@ -207,6 +231,9 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
     Number(fin.subtotal) + Number(fin.discount_amount || 0);
   const taxAmount = Number(fin.tax_amount) || 0;
   const discountAmount = Number(fin.discount_amount) || 0;
+  const totalShown = isInvoice
+    ? balanceDue || Number(fin.total_amount)
+    : Number(fin.total_amount);
 
   const terminalHref =
     organizationId && businessId
@@ -228,26 +255,30 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
+        width: THERMAL_PX,
+        windowWidth: THERMAL_PX,
         onclone: (doc) => {
           const el = doc.getElementById("sale-doc-capture");
           if (el) {
+            el.style.width = `${THERMAL_PX}px`;
+            el.style.maxWidth = `${THERMAL_PX}px`;
             el.style.backgroundColor = "#ffffff";
-            el.style.color = "#121B1E";
-            el.querySelectorAll(".text-muted").forEach((n) => {
-              if (n instanceof HTMLElement) n.style.color = "#5A6468";
-            });
+            el.style.color = "#000000";
+            el.style.fontFamily =
+              "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace";
           }
         },
       });
       const img = canvas.toDataURL("image/png", 1.0);
-      const w = 80;
-      const h = (canvas.height * w) / canvas.width;
+      const pageW = THERMAL_MM;
+      const pageH = Math.max(40, (canvas.height * pageW) / canvas.width);
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
-        format: [w, h],
+        format: [pageW, pageH],
+        compress: true,
       });
-      pdf.addImage(img, "PNG", 0, 0, w, h, undefined, "FAST");
+      pdf.addImage(img, "PNG", 0, 0, pageW, pageH, undefined, "FAST");
       pdf.save(
         `${isInvoice ? "invoice" : "receipt"}_${receipt.document_number || saleId.slice(0, 8)}.pdf`,
       );
@@ -259,9 +290,9 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
   };
 
   return (
-    <div className="mx-auto max-w-lg">
-      {/* Screen chrome — not printed */}
-      <div className="print:hidden mb-4 flex items-center justify-between gap-2">
+    <div className="mx-auto flex w-full max-w-md flex-col items-center">
+      {/* Screen chrome */}
+      <div className="print:hidden mb-5 flex w-full max-w-[302px] items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => router.back()}
@@ -275,7 +306,8 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
             type="button"
             onClick={handlePrint}
             className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-register hover:text-foreground"
-            aria-label="Print"
+            aria-label="Print on thermal printer"
+            title="Print (80mm thermal)"
           >
             <Printer size={16} />
           </button>
@@ -284,227 +316,210 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
             onClick={() => void handlePdf()}
             disabled={isDownloading}
             className="inline-flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-register hover:text-foreground disabled:opacity-50"
-            aria-label="Download PDF"
+            aria-label="Download thermal PDF"
+            title="Download 80mm PDF"
           >
             {isDownloading ? <Spinner size="sm" /> : <Download size={16} />}
           </button>
         </div>
       </div>
 
-      {/* Document */}
+      {/* Paper slip — screen looks like thermal paper */}
       <div
         id="sale-doc-print"
         ref={printRef}
-        className="rounded-md border border-border bg-card p-5 shadow-none print:border-0 print:p-0"
+        className="receipt-thermal w-full bg-white text-black shadow-[0_8px_30px_rgba(0,0,0,0.08)] print:shadow-none"
+        style={{ maxWidth: THERMAL_PX }}
       >
-        <div id="sale-doc-capture" className="text-foreground">
-          {/* ========== HEADER: business + document meta ========== */}
-          <header className="border-b border-border pb-4 print:border-black/25">
-            <div className="text-center">
-              <h1 className="text-lg font-semibold tracking-tight print:text-black">
-                {receipt.seller.business_name}
-              </h1>
-              {(receipt.seller.address || receipt.seller.phone) && (
-                <p className="mt-1 text-xs leading-relaxed text-muted print:text-black/70">
-                  {[receipt.seller.address, receipt.seller.phone]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-              )}
-              {receipt.seller.tax_number && (
-                <p className="mt-0.5 text-xs text-muted print:text-black/70">
-                  PIN / Tax ID: {receipt.seller.tax_number}
-                </p>
-              )}
-            </div>
-
-            <div className="mt-4 flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted print:text-black/60">
-                {docLabel}
+        <div
+          id="sale-doc-capture"
+          className="receipt-thermal-inner px-3 py-4 font-mono text-[11px] leading-snug text-black"
+          style={{ width: "100%", maxWidth: THERMAL_PX }}
+        >
+          {/* ========== HEADER ========== */}
+          <header className="text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-600 print:text-black">
+              {docLabel}
+            </p>
+            <h1 className="mt-2 text-[15px] font-bold uppercase leading-tight tracking-wide text-black">
+              {receipt.seller.business_name}
+            </h1>
+            {(receipt.seller.address || receipt.seller.phone) && (
+              <p className="mt-1.5 text-[10px] leading-relaxed text-neutral-700 print:text-black">
+                {[receipt.seller.address, receipt.seller.phone]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
-              <p className="font-mono text-xs font-semibold tabular text-foreground print:text-black">
-                {receipt.document_number || saleId.slice(0, 8).toUpperCase()}
+            )}
+            {receipt.seller.tax_number && (
+              <p className="mt-0.5 text-[10px] text-neutral-700 print:text-black">
+                PIN {receipt.seller.tax_number}
               </p>
-            </div>
-
-            <dl className="mt-3 space-y-1 text-xs">
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted print:text-black/60">Date</dt>
-                <dd className="font-medium tabular print:text-black">
-                  {formatWhen(receipt.issued_at)}
-                </dd>
-              </div>
-              {receipt.seller.cashier?.name && (
-                <div className="flex justify-between gap-3">
-                  <dt className="text-muted print:text-black/60">Cashier</dt>
-                  <dd className="font-medium print:text-black">
-                    {receipt.seller.cashier.name}
-                  </dd>
-                </div>
-              )}
-              {receipt.dispute_and_audit?.parent_sale_id && (
-                <div className="flex justify-between gap-3">
-                  <dt className="text-muted print:text-black/60">Sale ref</dt>
-                  <dd className="max-w-[11rem] truncate font-mono text-[11px] print:text-black">
-                    {String(receipt.dispute_and_audit.parent_sale_id).slice(0, 8)}…
-                  </dd>
-                </div>
-              )}
-            </dl>
+            )}
           </header>
 
-          {/* ========== BODY: customer, lines, totals, payments ========== */}
+          <DoubleRule />
+
+          {/* Meta block */}
+          <section className="space-y-0.5 text-[10px]">
+            <div className="flex justify-between gap-2">
+              <span className="text-neutral-600 print:text-black">No.</span>
+              <span className="font-semibold tabular">
+                {receipt.document_number || saleId.slice(0, 8).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-neutral-600 print:text-black">Date</span>
+              <span className="tabular">{formatWhen(receipt.issued_at)}</span>
+            </div>
+            {receipt.seller.cashier?.name && (
+              <div className="flex justify-between gap-2">
+                <span className="text-neutral-600 print:text-black">Cashier</span>
+                <span className="max-w-[60%] truncate text-right">
+                  {receipt.seller.cashier.name}
+                </span>
+              </div>
+            )}
+          </section>
+
+          <DashRule className="my-2.5" />
+
+          {/* ========== BODY ========== */}
           <main>
             {(isInvoice ||
               (receipt.buyer?.name &&
                 !/^walk[-\s]?in/i.test(receipt.buyer.name))) && (
-              <section
-                className={cn(
-                  "border-b border-border py-4 text-sm print:border-black/20",
-                  isInvoice && "bg-register/40 -mx-5 px-5 print:bg-transparent",
-                )}
-              >
-                <p className="text-xs font-semibold tracking-wide text-muted print:text-black/60">
+              <section className="mb-2.5 text-[10px]">
+                <p className="font-semibold uppercase tracking-wide">
                   {isInvoice ? "Bill to" : "Customer"}
                 </p>
-                <p className="mt-1 font-semibold print:text-black">
+                <p className="mt-0.5 font-medium">
                   {receipt.buyer?.name || "—"}
                 </p>
                 {(receipt.buyer?.phone || receipt.buyer?.email) && (
-                  <p className="mt-0.5 text-xs text-muted print:text-black/70">
+                  <p className="text-neutral-700 print:text-black">
                     {[receipt.buyer.phone, receipt.buyer.email]
                       .filter(Boolean)
                       .join(" · ")}
                   </p>
                 )}
-                {isInvoice && balanceDue > 0 && (
-                  <p className="mt-2 text-xs font-semibold text-brand-secondary print:text-black">
-                    Payment terms: collect as agreed · balance open
-                  </p>
-                )}
               </section>
             )}
 
-            <section className="border-b border-dashed border-border py-4 print:border-black/40">
-              <div className="mb-2 flex justify-between text-xs font-semibold tracking-wide text-muted print:text-black/60">
+            <section>
+              <div className="mb-1 flex justify-between text-[9px] font-semibold uppercase tracking-wider text-neutral-600 print:text-black">
                 <span>Item</span>
                 <span>Amount</span>
               </div>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2">
                 {(receipt.items || []).map((item) => (
                   <li key={item.item_id || `${item.product_id}-${item.name}`}>
-                    <div className="flex justify-between gap-3 text-sm print:text-black">
-                      <span className="min-w-0 flex-1 truncate font-medium">
+                    <div className="flex justify-between gap-2 text-[11px]">
+                      <span className="min-w-0 flex-1 break-words font-medium uppercase">
                         {item.name}
                       </span>
                       <span className="shrink-0 tabular font-semibold">
                         {money(item.total_price)}
                       </span>
                     </div>
-                    <p className="text-xs text-muted print:text-black/60">
-                      {item.quantity} × {money(item.unit_price)}
-                      {item.sku ? ` · ${item.sku}` : ""}
+                    <p className="text-[10px] text-neutral-600 print:text-black">
+                      {item.quantity} x {money(item.unit_price)}
+                      {item.sku ? `  ${item.sku}` : ""}
                     </p>
                   </li>
                 ))}
                 {serviceLines.map((s, i) => (
-                  <li key={`svc-line-${i}-${s.description}`}>
-                    <div className="flex justify-between gap-3 text-sm print:text-black">
-                      <span className="min-w-0 flex-1 truncate font-medium">
+                  <li key={`svc-${i}-${s.description}`}>
+                    <div className="flex justify-between gap-2 text-[11px]">
+                      <span className="min-w-0 flex-1 break-words font-medium uppercase">
                         {s.description}
                       </span>
                       <span className="shrink-0 tabular font-semibold">
                         {money(s.amount)}
                       </span>
                     </div>
-                    <p className="text-xs text-muted print:text-black/60">
+                    <p className="text-[10px] text-neutral-600 print:text-black">
                       Service
                     </p>
                   </li>
                 ))}
-                {(receipt.items || []).length === 0 && serviceLines.length === 0 && (
-                  <li className="text-xs text-muted">No line items</li>
-                )}
+                {(receipt.items || []).length === 0 &&
+                  serviceLines.length === 0 && (
+                    <li className="text-[10px] text-neutral-600">No items</li>
+                  )}
               </ul>
             </section>
 
-            <section className="space-y-1.5 py-4 text-sm">
-              <div className="flex justify-between text-muted print:text-black/70">
+            <DashRule className="my-2.5" />
+
+            <section className="space-y-1 text-[11px]">
+              <div className="flex justify-between gap-2">
                 <span>Items</span>
-                <span className="tabular print:text-black">
+                <span className="tabular">
                   {currency} {money(goodsSubtotal)}
                 </span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex justify-between text-[var(--success)]">
+                <div className="flex justify-between gap-2">
                   <span>Discount</span>
                   <span className="tabular">
-                    −{currency} {money(discountAmount)}
+                    -{currency} {money(discountAmount)}
                   </span>
                 </div>
               )}
               {taxAmount > 0 && (
-                <div className="flex justify-between text-muted print:text-black/70">
+                <div className="flex justify-between gap-2">
                   <span>
                     Tax
                     {taxRateLabel(Number(fin.tax_rate_applied) || 0)}
                   </span>
-                  <span className="tabular print:text-black">
+                  <span className="tabular">
                     {currency} {money(taxAmount)}
                   </span>
                 </div>
               )}
               {servicesTotal > 0 && (
-                <div className="flex justify-between text-muted print:text-black/70">
+                <div className="flex justify-between gap-2">
                   <span>Services</span>
-                  <span className="tabular print:text-black">
-                    {currency} {money(servicesTotal)}
-                  </span>
-                </div>
-              )}
-
-              <div className="mt-2 flex items-baseline justify-between border-t border-border pt-3 print:border-black/30">
-                <span className="text-sm font-semibold print:text-black">
-                  {totalLabel}
-                </span>
-                <span
-                  className={cn(
-                    "text-base font-semibold tabular print:text-black",
-                    isInvoice && balanceDue > 0
-                      ? "text-brand-secondary"
-                      : "text-foreground",
-                  )}
-                >
-                  {currency}{" "}
-                  {money(
-                    isInvoice
-                      ? balanceDue || fin.total_amount
-                      : fin.total_amount,
-                  )}
-                </span>
-              </div>
-
-              {isInvoice && (
-                <div className="flex justify-between text-xs text-muted print:text-black/70">
-                  <span>Already paid</span>
                   <span className="tabular">
-                    {currency} {money(fin.amount_paid)}
+                    {currency} {money(servicesTotal)}
                   </span>
                 </div>
               )}
             </section>
 
+            <DoubleRule />
+
+            <div className="flex items-baseline justify-between gap-2 py-0.5">
+              <span className="text-[12px] font-bold tracking-wide">
+                {totalLabel}
+              </span>
+              <span className="text-[15px] font-bold tabular tracking-tight">
+                {currency} {money(totalShown)}
+              </span>
+            </div>
+
+            {isInvoice && (
+              <div className="mt-1 flex justify-between gap-2 text-[10px]">
+                <span>Paid</span>
+                <span className="tabular">
+                  {currency} {money(fin.amount_paid)}
+                </span>
+              </div>
+            )}
+
             {(receipt.payments || []).length > 0 && (
-              <section className="border-t border-border pt-3 space-y-1.5 text-xs print:border-black/20">
-                <p className="font-semibold text-muted print:text-black/60">
+              <section className="mt-2.5 space-y-1 text-[10px]">
+                <DashRule />
+                <p className="pt-1.5 font-semibold uppercase tracking-wide">
                   Payments
                 </p>
                 {receipt.payments.map((p) => (
                   <div
                     key={p.payment_id}
-                    className="flex justify-between gap-2 print:text-black"
+                    className="flex justify-between gap-2"
                   >
-                    <span className="min-w-0 truncate">
+                    <span className="min-w-0 truncate uppercase">
                       {p.method}
                       {p.reference ? ` · ${p.reference}` : ""}
                     </span>
@@ -518,43 +533,74 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
           </main>
 
           {/* ========== FOOTER ========== */}
-          <footer className="mt-5 border-t border-border pt-4 text-center print:border-black/25">
-            <p className="text-sm font-medium print:text-black">
+          <footer className="mt-4 text-center">
+            <DashRule className="mb-3" />
+            <p className="text-[11px] font-medium leading-relaxed">
               {isInvoice
                 ? "Thank you — balance due as agreed"
                 : "Thank you for shopping with us"}
             </p>
-            <p className="mt-2 text-[11px] tracking-wide text-muted print:text-black/55">
+            <p className="mt-2 text-[9px] uppercase tracking-[0.18em] text-neutral-500 print:text-black">
               Powered by Tawala
             </p>
+            {/* Tear edge hint — screen only */}
+            <div
+              className="print:hidden mx-auto mt-3 h-2 w-full bg-[repeating-linear-gradient(90deg,#e5e5e5_0_6px,transparent_6px_12px)] opacity-80"
+              aria-hidden
+            />
           </footer>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="print:hidden mt-6 flex flex-col gap-2.5 sm:flex-row">
-        <Link
-          href={terminalHref}
-          className="inline-flex h-12 flex-1 items-center justify-center rounded-md bg-brand-accent text-sm font-semibold text-white hover:opacity-90"
-        >
-          New sale
-        </Link>
+      <div className="print:hidden mt-6 flex w-full max-w-[302px] flex-col gap-2.5">
         <button
           type="button"
           onClick={handlePrint}
-          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-md border border-border bg-card text-sm font-semibold text-foreground hover:bg-register"
+          className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-accent text-sm font-semibold text-white hover:opacity-90"
         >
           <Printer size={16} aria-hidden />
-          Print
+          Print (80mm thermal)
         </button>
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={() => void handlePdf()}
+            disabled={isDownloading}
+            className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-md border border-border bg-card text-sm font-semibold text-foreground hover:bg-register disabled:opacity-50"
+          >
+            {isDownloading ? (
+              <Spinner size="sm" />
+            ) : (
+              <Download size={16} aria-hidden />
+            )}
+            Download PDF
+          </button>
+          <Link
+            href={terminalHref}
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-md border border-border bg-card text-sm font-semibold text-foreground hover:bg-register"
+          >
+            New sale
+          </Link>
+        </div>
+        <p className="text-center text-[11px] text-muted">
+          Designed for 80mm thermal printers · select that paper size when
+          printing
+        </p>
       </div>
 
       <style jsx global>{`
         @media print {
-          body,
-          html {
+          @page {
+            size: ${THERMAL_MM}mm auto;
+            margin: 2mm;
+          }
+          html,
+          body {
             background: #fff !important;
             color: #000 !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           body * {
             visibility: hidden !important;
@@ -567,9 +613,23 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
-            border: none !important;
+            width: ${THERMAL_MM}mm !important;
+            max-width: ${THERMAL_MM}mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
             box-shadow: none !important;
+            background: #fff !important;
+            color: #000 !important;
+          }
+          #sale-doc-capture {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 1mm 2mm !important;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+              "Liberation Mono", "Courier New", monospace !important;
+            font-size: 10pt !important;
+            line-height: 1.35 !important;
+            color: #000 !important;
           }
         }
       `}</style>

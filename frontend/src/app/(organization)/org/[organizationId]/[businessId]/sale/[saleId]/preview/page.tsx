@@ -24,8 +24,8 @@ export default async function ReceiptPreviewPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="mx-auto max-w-lg px-4">
+    <div className="min-h-screen bg-neutral-100 py-8 print:bg-white print:py-0">
+      <div className="mx-auto flex justify-center px-4 print:px-0">
         <ReceiptClientView saleId={saleId} />
       </div>
     </div>
