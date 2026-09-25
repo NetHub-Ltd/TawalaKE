@@ -128,6 +128,194 @@ function taxRateLabel(rate: number): string {
   return ` (${shown}%)`;
 }
 
+
+function escapeHtml(s: string) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Industry-standard thermal print: self-contained HTML (no Tailwind),
+ * printed via a hidden iframe — same pattern used by most web POS apps.
+ */
+function buildThermalDocumentHtml(opts: {
+  docLabel: string;
+  businessName: string;
+  addressPhone: string;
+  taxNumber: string;
+  docNumber: string;
+  issuedAt: string;
+  cashier: string;
+  buyerName: string;
+  buyerContact: string;
+  isInvoice: boolean;
+  items: { name: string; qty: string; amount: string }[];
+  services: { name: string; amount: string }[];
+  goodsSubtotal: string;
+  discount: string;
+  tax: string;
+  servicesTotal: string;
+  totalLabel: string;
+  total: string;
+  amountPaid: string;
+  payments: { label: string; amount: string }[];
+  currency: string;
+}): string {
+  const itemRows = opts.items
+    .map(
+      (it) => `
+      <div class="row">
+        <div class="left"><strong>${escapeHtml(it.name)}</strong><br/><span class="muted">${escapeHtml(it.qty)}</span></div>
+        <div class="right">${escapeHtml(it.amount)}</div>
+      </div>`,
+    )
+    .join("");
+  const serviceRows = opts.services
+    .map(
+      (s) => `
+      <div class="row">
+        <div class="left"><strong>${escapeHtml(s.name)}</strong><br/><span class="muted">Service</span></div>
+        <div class="right">${escapeHtml(s.amount)}</div>
+      </div>`,
+    )
+    .join("");
+  const paymentRows = opts.payments
+    .map(
+      (p) => `
+      <div class="row"><span>${escapeHtml(p.label)}</span><span>${escapeHtml(p.amount)}</span></div>`,
+    )
+    .join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>${escapeHtml(opts.docLabel)} ${escapeHtml(opts.docNumber)}</title>
+<style>
+  @page { size: 80mm auto; margin: 3mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Courier New", Courier, ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #000;
+    background: #fff;
+    width: 74mm;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 2mm;
+  }
+  .center { text-align: center; }
+  .muted { color: #333; font-size: 11px; }
+  .label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+  .biz { font-size: 15px; font-weight: 700; text-transform: uppercase; margin: 6px 0 4px; }
+  .rule { border-top: 1px dashed #000; margin: 8px 0; }
+  .rule-double { border-top: 2px solid #000; border-bottom: 1px solid #000; height: 4px; margin: 8px 0; }
+  .meta div, .row { display: flex; justify-content: space-between; gap: 8px; margin: 2px 0; }
+  .left { flex: 1; min-width: 0; word-break: break-word; }
+  .right { flex-shrink: 0; font-weight: 600; }
+  .total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; }
+  .total .t { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+  .total .a { font-size: 16px; font-weight: 700; }
+  .footer { text-align: center; margin-top: 12px; }
+  .footer .thanks { font-size: 12px; font-weight: 600; }
+  .footer .brand { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 8px; }
+</style>
+</head>
+<body>
+  <div class="center">
+    <div class="label">${escapeHtml(opts.docLabel)}</div>
+    <div class="biz">${escapeHtml(opts.businessName)}</div>
+    ${opts.addressPhone ? `<div class="muted">${escapeHtml(opts.addressPhone)}</div>` : ""}
+    ${opts.taxNumber ? `<div class="muted">PIN ${escapeHtml(opts.taxNumber)}</div>` : ""}
+  </div>
+  <div class="rule-double"></div>
+  <div class="meta">
+    <div><span class="muted">No.</span><strong>${escapeHtml(opts.docNumber)}</strong></div>
+    <div><span class="muted">Date</span><span>${escapeHtml(opts.issuedAt)}</span></div>
+    ${opts.cashier ? `<div><span class="muted">Cashier</span><span>${escapeHtml(opts.cashier)}</span></div>` : ""}
+  </div>
+  <div class="rule"></div>
+  ${
+    opts.buyerName
+      ? `<div style="margin-bottom:6px"><strong>${opts.isInvoice ? "Bill to" : "Customer"}</strong><br/>${escapeHtml(opts.buyerName)}${opts.buyerContact ? `<br/><span class="muted">${escapeHtml(opts.buyerContact)}</span>` : ""}</div><div class="rule"></div>`
+      : ""
+  }
+  ${itemRows}
+  ${serviceRows}
+  <div class="rule"></div>
+  <div class="row"><span>Items</span><span>${escapeHtml(opts.currency)} ${escapeHtml(opts.goodsSubtotal)}</span></div>
+  ${opts.discount !== "0.00" ? `<div class="row"><span>Discount</span><span>-${escapeHtml(opts.currency)} ${escapeHtml(opts.discount)}</span></div>` : ""}
+  ${opts.tax !== "0.00" ? `<div class="row"><span>Tax</span><span>${escapeHtml(opts.currency)} ${escapeHtml(opts.tax)}</span></div>` : ""}
+  ${opts.servicesTotal !== "0.00" ? `<div class="row"><span>Services</span><span>${escapeHtml(opts.currency)} ${escapeHtml(opts.servicesTotal)}</span></div>` : ""}
+  <div class="rule-double"></div>
+  <div class="total"><span class="t">${escapeHtml(opts.totalLabel)}</span><span class="a">${escapeHtml(opts.currency)} ${escapeHtml(opts.total)}</span></div>
+  ${opts.isInvoice ? `<div class="row muted" style="margin-top:4px"><span>Paid</span><span>${escapeHtml(opts.currency)} ${escapeHtml(opts.amountPaid)}</span></div>` : ""}
+  ${paymentRows ? `<div class="rule"></div><div class="muted" style="margin-bottom:2px">PAYMENTS</div>${paymentRows}` : ""}
+  <div class="footer">
+    <div class="rule"></div>
+    <div class="thanks">${opts.isInvoice ? "Thank you — balance due as agreed" : "Thank you for shopping with us"}</div>
+    <div class="brand">Powered by Tawala</div>
+  </div>
+</body>
+</html>`;
+}
+
+/** Print via hidden iframe (standard web POS pattern). */
+function printHtmlDocument(html: string) {
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", "Print receipt");
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+  document.body.appendChild(iframe);
+
+  const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!idoc || !iframe.contentWindow) {
+    document.body.removeChild(iframe);
+    throw new Error("Could not create print frame");
+  }
+
+  idoc.open();
+  idoc.write(html);
+  idoc.close();
+
+  const w = iframe.contentWindow;
+  const cleanup = () => {
+    try {
+      if (iframe.parentNode) document.body.removeChild(iframe);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const run = () => {
+    try {
+      w.focus();
+      w.print();
+    } finally {
+      // Keep iframe briefly so print dialog can read content
+      setTimeout(cleanup, 1000);
+    }
+  };
+
+  // Images/fonts: wait a tick for layout
+  if (idoc.readyState === "complete") {
+    setTimeout(run, 100);
+  } else {
+    iframe.onload = () => setTimeout(run, 100);
+    setTimeout(run, 300);
+  }
+}
+
 function resolveServiceLines(receipt: ReceiptData): ServiceLine[] {
   const fromFin = receipt.financials?.service_lines;
   const fromSummary = receipt.summary?.services;
@@ -249,106 +437,111 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
       ? `/org/${organizationId}/${businessId}/terminal`
       : "..";
 
-  const thermalPrintStyles = `
-    @page { size: ${THERMAL_MM}mm auto; margin: 2mm; }
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: #fff;
-      color: #000;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace;
-      font-size: 11px;
-      line-height: 1.35;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    img { max-width: 100%; }
-  `;
+  const buildPrintHtml = () =>
+    buildThermalDocumentHtml({
+      docLabel,
+      businessName: receipt.seller.business_name || "Business",
+      addressPhone: [receipt.seller.address, receipt.seller.phone]
+        .filter(Boolean)
+        .join(" · "),
+      taxNumber: receipt.seller.tax_number || "",
+      docNumber: receipt.document_number || saleId.slice(0, 8).toUpperCase(),
+      issuedAt: formatWhen(receipt.issued_at),
+      cashier: receipt.seller.cashier?.name || "",
+      buyerName:
+        receipt.buyer?.name && !/^walk[-\s]?in/i.test(receipt.buyer.name)
+          ? receipt.buyer.name
+          : isInvoice
+            ? receipt.buyer?.name || ""
+            : "",
+      buyerContact: [receipt.buyer?.phone, receipt.buyer?.email]
+        .filter(Boolean)
+        .join(" · "),
+      isInvoice,
+      items: (receipt.items || []).map((item) => ({
+        name: item.name,
+        qty: `${item.quantity} x ${money(item.unit_price)}`,
+        amount: money(item.total_price),
+      })),
+      services: serviceLines.map((s) => ({
+        name: s.description,
+        amount: money(s.amount),
+      })),
+      goodsSubtotal: money(goodsSubtotal),
+      discount: money(discountAmount),
+      tax: money(taxAmount),
+      servicesTotal: money(servicesTotal),
+      totalLabel,
+      total: money(totalShown),
+      amountPaid: money(fin.amount_paid),
+      payments: (receipt.payments || []).map((p) => ({
+        label: p.reference ? `${p.method} · ${p.reference}` : p.method,
+        amount: `${currency} ${money(p.amount)}`,
+      })),
+      currency,
+    });
 
-  /** Dedicated print window — avoids blank preview from app-shell visibility hacks */
+  /** Standard web POS: self-contained HTML → hidden iframe → print() */
   const handlePrint = () => {
-    const node =
-      document.getElementById("sale-doc-capture") || printRef.current;
-    if (!node) return;
-
-    const win = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
-    if (!win) {
-      // Popup blocked — fall back to in-page print with safer CSS class
-      document.body.classList.add("receipt-printing");
-      window.print();
-      setTimeout(() => document.body.classList.remove("receipt-printing"), 500);
-      return;
-    }
-
-    const title = `${isInvoice ? "Invoice" : "Receipt"} ${
-      receipt.document_number || saleId.slice(0, 8)
-    }`;
-    win.document.open();
-    win.document.write(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${title.replace(/</g, "")}</title>
-  <style>${thermalPrintStyles}
-    body { width: ${THERMAL_MM}mm; max-width: 100%; margin: 0 auto; padding: 2mm; }
-  </style>
-</head>
-<body>${node.innerHTML}</body>
-</html>`);
-    win.document.close();
-    // Wait for layout then print
-    const trigger = () => {
-      try {
-        win.focus();
-        win.print();
-      } catch (e) {
-        console.error("Print failed", e);
-      }
-    };
-    if (win.document.readyState === "complete") {
-      setTimeout(trigger, 150);
-    } else {
-      win.onload = () => setTimeout(trigger, 150);
-      setTimeout(trigger, 400);
+    try {
+      printHtmlDocument(buildPrintHtml());
+    } catch (e) {
+      console.error("Print failed", e);
+      alert(
+        e instanceof Error
+          ? e.message
+          : "Print failed. Allow popups or try again.",
+      );
     }
   };
 
   const handlePdf = async () => {
-    const node =
-      (document.getElementById("sale-doc-capture") as HTMLElement | null) ||
-      printRef.current;
-    if (!node || isDownloading) return;
+    if (isDownloading) return;
     setIsDownloading(true);
     try {
+      const html = buildPrintHtml();
+      // Render off-screen for capture
+      const host = document.createElement("div");
+      host.style.position = "fixed";
+      host.style.left = "-10000px";
+      host.style.top = "0";
+      host.style.width = `${THERMAL_PX}px`;
+      host.style.background = "#fff";
+      host.style.zIndex = "-1";
+      document.body.appendChild(host);
+
+      const iframe = document.createElement("iframe");
+      iframe.style.width = `${THERMAL_PX}px`;
+      iframe.style.height = "10px";
+      iframe.style.border = "0";
+      host.appendChild(iframe);
+
+      const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!idoc) throw new Error("Could not prepare PDF");
+
+      idoc.open();
+      idoc.write(html);
+      idoc.close();
+
+      await new Promise((r) => setTimeout(r, 200));
+
+      const body = idoc.body;
+      // Expand iframe to full content height
+      const h = Math.max(body.scrollHeight, body.offsetHeight, 200);
+      iframe.style.height = `${h}px`;
+
       const html2canvas = (await import("html2canvas")).default;
       const { jsPDF } = await import("jspdf");
-      // Force layout size so capture is not 0×0
-      const prev = {
-        width: node.style.width,
-        maxWidth: node.style.maxWidth,
-        background: node.style.backgroundColor,
-        color: node.style.color,
-      };
-      node.style.width = `${THERMAL_PX}px`;
-      node.style.maxWidth = `${THERMAL_PX}px`;
-      node.style.backgroundColor = "#ffffff";
-      node.style.color = "#000000";
-
-      const canvas = await html2canvas(node, {
+      const canvas = await html2canvas(body, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
-        allowTaint: true,
-        foreignObjectRendering: false,
+        width: THERMAL_PX,
+        windowWidth: THERMAL_PX,
       });
 
-      node.style.width = prev.width;
-      node.style.maxWidth = prev.maxWidth;
-      node.style.backgroundColor = prev.background;
-      node.style.color = prev.color;
+      document.body.removeChild(host);
 
       if (!canvas.width || !canvas.height) {
         throw new Error("Could not capture receipt for PDF");
@@ -364,18 +557,23 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
         compress: true,
       });
       pdf.addImage(img, "PNG", 0, 0, pageW, pageH, undefined, "FAST");
-      const name = `${isInvoice ? "invoice" : "receipt"}_${
-        receipt.document_number || saleId.slice(0, 8)
-      }.pdf`;
-      pdf.save(name);
+      pdf.save(
+        `${isInvoice ? "invoice" : "receipt"}_${
+          receipt.document_number || saleId.slice(0, 8)
+        }.pdf`,
+      );
     } catch (e) {
       console.error("PDF export failed", e);
-      // Fallback: open print dialog so user can “Save as PDF”
-      alert(
-        e instanceof Error
-          ? `Download failed: ${e.message}. Try Print → Save as PDF.`
-          : "Download failed. Try Print → Save as PDF.",
-      );
+      // Fallback: print dialog → user can Save as PDF
+      try {
+        printHtmlDocument(buildPrintHtml());
+      } catch {
+        alert(
+          e instanceof Error
+            ? `Download failed: ${e.message}`
+            : "Download failed. Use Print → Save as PDF.",
+        );
+      }
     } finally {
       setIsDownloading(false);
     }
@@ -787,32 +985,6 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
           printing
         </p>
       </div>
-
-      {/* Fallback when popup is blocked: hide chrome, show slip only */}
-      <style jsx global>{`
-        @media print {
-          @page {
-            size: 80mm auto;
-            margin: 2mm;
-          }
-          html,
-          body {
-            background: #fff !important;
-            color: #000 !important;
-          }
-          body.receipt-printing .print\:hidden,
-          body.receipt-printing [class*="print:hidden"] {
-            display: none !important;
-          }
-          body.receipt-printing #sale-doc-print {
-            position: static !important;
-            width: 80mm !important;
-            max-width: 80mm !important;
-            box-shadow: none !important;
-            margin: 0 auto !important;
-          }
-        }
-      `}</style>
-    </div>
+</div>
   );
 }
