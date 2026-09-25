@@ -5,10 +5,10 @@
  * Header (business + meta) · body (lines + totals) · footer (thanks + Tawala).
  * Screen preview matches the printed slip; print/PDF target 80mm thermal paper.
  */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Printer, Download } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Printer, Download, Banknote } from "lucide-react";
 import { useReceipt } from "@/features/sales/hooks/useReceipts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { Spinner } from "@/lib/components/ui";
@@ -184,6 +184,15 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
   const { data, isLoading, error } = useReceipt(saleId);
   const receipt = data as ReceiptData | undefined;
   const [isDownloading, setIsDownloading] = useState(false);
+  const searchParams = useSearchParams();
+  const [collectOpen, setCollectOpen] = useState(
+    () => searchParams?.get("collect") === "1",
+  );
+  const [collectMethod, setCollectMethod] = useState<"CASH" | "MPESA" | "CARD">("CASH");
+  const [collectRef, setCollectRef] = useState("");
+  const [collecting, setCollecting] = useState(false);
+  const [collectError, setCollectError] = useState<string | null>(null);
+  const [collectSuccess, setCollectSuccess] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -286,6 +295,41 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
       console.error("PDF export failed", e);
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const handleCollectCredit = async () => {
+    if (collecting) return;
+    setCollecting(true);
+    setCollectError(null);
+    setCollectSuccess(null);
+    try {
+      const res = await fetch(`/api/v1/org/stores/sales/${saleId}/collect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payment_method: collectMethod,
+          payment_reference: collectRef.trim() || null,
+          customer_name: receipt?.buyer?.name ?? null,
+          customer_phone: receipt?.buyer?.phone ?? null,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const d = body.error || body.detail || body.message;
+        throw new Error(
+          typeof d === "string" ? d : `Collection failed (${res.status})`,
+        );
+      }
+      setCollectSuccess("Payment collected — invoice settled.");
+      setTimeout(() => {
+        router.refresh();
+        window.location.reload();
+      }, 800);
+    } catch (e) {
+      setCollectError(e instanceof Error ? e.message : "Collection failed");
+    } finally {
+      setCollecting(false);
     }
   };
 
@@ -554,6 +598,78 @@ export default function ReceiptClientView({ saleId }: ReceiptClientViewProps) {
 
       {/* Actions */}
       <div className="print:hidden mt-6 flex w-full max-w-[302px] flex-col gap-2.5">
+        {isInvoice && balanceDue > 0.001 && !collectSuccess && (
+          <div className="rounded-md border border-brand-secondary/30 bg-card p-3 space-y-2.5">
+            {!collectOpen ? (
+              <button
+                type="button"
+                onClick={() => setCollectOpen(true)}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-secondary text-sm font-semibold text-white hover:opacity-90"
+              >
+                <Banknote size={16} aria-hidden />
+                Collect credit
+              </button>
+            ) : (
+              <>
+                <p className="text-xs font-semibold text-foreground">
+                  Collect {currency} {money(balanceDue || Number(fin.total_amount))}
+                </p>
+                <label className="block space-y-1">
+                  <span className="text-[11px] text-muted">Method</span>
+                  <select
+                    value={collectMethod}
+                    onChange={(e) =>
+                      setCollectMethod(e.target.value as "CASH" | "MPESA" | "CARD")
+                    }
+                    className="h-10 w-full rounded-md border border-border bg-background px-2 text-sm"
+                  >
+                    <option value="CASH">Cash</option>
+                    <option value="MPESA">M-Pesa</option>
+                    <option value="CARD">Card</option>
+                  </select>
+                </label>
+                {(collectMethod === "MPESA" || collectMethod === "CARD") && (
+                  <label className="block space-y-1">
+                    <span className="text-[11px] text-muted">Reference</span>
+                    <input
+                      value={collectRef}
+                      onChange={(e) => setCollectRef(e.target.value)}
+                      placeholder="Txn / receipt no."
+                      className="h-10 w-full rounded-md border border-border bg-background px-2 text-sm"
+                    />
+                  </label>
+                )}
+                {collectError && (
+                  <p className="text-xs text-[var(--error)]" role="alert">
+                    {collectError}
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={collecting}
+                    onClick={() => void handleCollectCredit()}
+                    className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-brand-secondary text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {collecting ? "Collecting…" : "Confirm collect"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCollectOpen(false)}
+                    className="inline-flex h-11 items-center rounded-md border border-border px-3 text-sm"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+        {collectSuccess && (
+          <p className="rounded-md border border-[var(--success-border)] bg-[var(--success-soft)] px-3 py-2 text-center text-xs text-[var(--success)]">
+            {collectSuccess}
+          </p>
+        )}
         <button
           type="button"
           onClick={handlePrint}

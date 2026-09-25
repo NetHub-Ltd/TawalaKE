@@ -19,7 +19,7 @@ import {
   User,
   AlertCircle,
   Loader2,
-  Receipt,
+  Receipt, Banknote,
   Building2,
   Phone,
   Hash,
@@ -415,6 +415,20 @@ export default function SaleDetailPage() {
                 {sale.status === "PENDING_PAYMENT"
                   ? "View invoice"
                   : "View receipt"}
+              </button>
+            )}
+            {sale.status === "PENDING_PAYMENT" && (
+              <button
+                type="button"
+                className="h-11 px-5 rounded-xl bg-brand-secondary text-white text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
+                onClick={() => {
+                  router.push(
+                    `/org/${organizationId}/${normalizedBusinessId}/sale/${sale.id}/preview?collect=1`,
+                  );
+                }}
+              >
+                <Banknote size={16} />
+                Collect credit
               </button>
             )}
           </div>
