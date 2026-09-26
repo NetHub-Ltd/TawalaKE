@@ -116,7 +116,7 @@ export function AcceptInviteForm() {
           </button>
         </div>
         {errors.password && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-[var(--error)]" role="alert">
             {errors.password.message}
           </p>
         )}
@@ -138,7 +138,7 @@ export function AcceptInviteForm() {
           {...register("confirmPassword")}
         />
         {errors.confirmPassword && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-sm text-[var(--error)]" role="alert">
             {errors.confirmPassword.message}
           </p>
         )}

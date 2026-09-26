@@ -140,7 +140,7 @@ export function PersonalDetailsForm() {
             {...register("firstName")}
           />
           {errors.firstName && (
-            <p className="text-sm text-red-600">{errors.firstName.message}</p>
+            <p className="text-sm text-[var(--error)]">{errors.firstName.message}</p>
           )}
         </div>
         <div className="space-y-1.5">
@@ -156,7 +156,7 @@ export function PersonalDetailsForm() {
             {...register("lastName")}
           />
           {errors.lastName && (
-            <p className="text-sm text-red-600">{errors.lastName.message}</p>
+            <p className="text-sm text-[var(--error)]">{errors.lastName.message}</p>
           )}
         </div>
       </div>
@@ -173,7 +173,7 @@ export function PersonalDetailsForm() {
           placeholder="you@company.com"
           {...register("email")}
         />
-        {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+        {errors.email && <p className="text-sm text-[var(--error)]">{errors.email.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -207,7 +207,7 @@ export function PersonalDetailsForm() {
           </label>
         </div>
         {errors.acceptTerms && (
-          <p className="text-sm text-red-600">{errors.acceptTerms.message}</p>
+          <p className="text-sm text-[var(--error)]">{errors.acceptTerms.message}</p>
         )}
       </div>
 

@@ -35,8 +35,8 @@ type CreateValues = z.infer<typeof createSchema>;
 function roleBadge(role: string) {
   const styles: Record<string, string> = {
     OWNER: "bg-brand-primary/10 text-brand-primary border-brand-primary/25",
-    ADMIN: "bg-sky-500/10 text-sky-700 border-sky-500/25",
-    MANAGER: "bg-amber-500/10 text-amber-700 border-amber-500/25",
+    ADMIN: "bg-brand-accent/10 text-brand-accent border-brand-accent/25",
+    MANAGER: "bg-brand-secondary/10 text-brand-secondary border-brand-secondary/25",
     CASHIER: "bg-register text-muted border-border",
   };
   return styles[role] || styles.CASHIER;
@@ -141,7 +141,7 @@ export default function TeamDirectory({
   if (!isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-12 text-center text-muted">
-        <AlertCircle className="h-8 w-8 text-amber-500" aria-hidden />
+        <AlertCircle className="h-8 w-8 text-brand-secondary" aria-hidden />
         <p className="text-sm font-medium text-foreground">Sign in required</p>
         <p className="max-w-md text-sm text-muted">
           Your session is not available yet. Refresh the page or sign in again.
@@ -154,7 +154,7 @@ export default function TeamDirectory({
     const roleLabel = actorRole ? String(actorRole) : "unknown";
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-12 text-center text-muted">
-        <AlertCircle className="h-8 w-8 text-amber-500" aria-hidden />
+        <AlertCircle className="h-8 w-8 text-brand-secondary" aria-hidden />
         <p className="text-sm font-medium text-foreground">
           You do not have permission to manage team members.
         </p>
@@ -258,7 +258,7 @@ export default function TeamDirectory({
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-border">
               {filtered.map((s) => (
                 <tr
                   key={s.id}
@@ -300,7 +300,7 @@ export default function TeamDirectory({
                       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                         s.active
                           ? "bg-[var(--success-soft)] text-[var(--success)]"
-                          : "bg-amber-50 text-amber-800"
+                          : "bg-brand-secondary/10 text-brand-secondary"
                       }`}
                     >
                       {s.active ? "Active" : "Pending invite"}
@@ -396,13 +396,13 @@ export default function TeamDirectory({
               </div>
               )}
               {createForm.formState.errors.business_ids && (
-                <p className="text-xs text-red-600">
+                <p className="text-xs text-[var(--error)]">
                   {createForm.formState.errors.business_ids.message}
                 </p>
               )}
               </div>
               {formError && (
-                <div className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-3 py-2 text-sm text-[var(--on-error-container)] dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+                <div className="rounded-md border border-[var(--error)]/30 bg-[var(--error-container)] px-3 py-2 text-sm text-[var(--on-error-container)]">
                   <p>{formError}</p>
                   {(formError.toLowerCase().includes("limit") ||
                     formError.toLowerCase().includes("plan")) &&

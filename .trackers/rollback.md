@@ -1,2 +1,2 @@
 # Rollback
-Revert PR; client-only permission gate change.
+Revert PR; className-only changes.

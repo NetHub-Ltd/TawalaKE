@@ -331,7 +331,7 @@ export function OrgCommandCenterClient({
                   </article>
                 ))}
 
-                <article className="group bg-register/40 dark:bg-card/40 border-2 border-dashed border-border dark:border-border rounded-md p-6 hover:border-blue-500 transition-all duration-200 flex flex-col justify-between space-y-6">
+                <article className="group bg-register/40 dark:bg-card/40 border-2 border-dashed border-border dark:border-border rounded-md p-6 hover:border-brand-primary transition-all duration-200 flex flex-col justify-between space-y-6">
                   <div className="space-y-4">
                     <div className="h-10 w-10 rounded-md bg-register text-muted border border-border/60 dark:border-border flex items-center justify-center shrink-0 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
                       <Plus size={20} strokeWidth={2} />
