@@ -57,7 +57,12 @@ export default function TeamDirectory({
   organizationId: string;
 }) {
   const router = useRouter();
-  const { can, role: actorRole } = usePermissions();
+  const {
+    can,
+    role: actorRole,
+    isLoading: sessionLoading,
+    isAuthenticated,
+  } = usePermissions();
   const canManage = can(Permission.ORG_STAFF_MANAGE);
 
   const [search, setSearch] = useState("");
@@ -120,6 +125,30 @@ export default function TeamDirectory({
       setFormError(e instanceof Error ? e.message : "Could not create staff");
     }
   });
+
+  // Wait for NextAuth session before evaluating RBAC. On slow networks the first
+  // paint has status=loading / role=null, which previously flashed a false deny
+  // ("Signed in as unknown") even for OWNER/ADMIN.
+  if (sessionLoading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-12 text-muted">
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        <p className="text-sm">Checking permissions…</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 p-12 text-center text-muted">
+        <AlertCircle className="h-8 w-8 text-amber-500" aria-hidden />
+        <p className="text-sm font-medium text-foreground">Sign in required</p>
+        <p className="max-w-md text-sm text-muted">
+          Your session is not available yet. Refresh the page or sign in again.
+        </p>
+      </div>
+    );
+  }
 
   if (!canManage) {
     const roleLabel = actorRole ? String(actorRole) : "unknown";

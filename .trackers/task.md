@@ -1,16 +1,12 @@
 # Task
 
 ## Goal
-Platform operator shell: header + collapsible sidebar + main window (replaces top-only nav).
+Fix false "no permission / Signed in as unknown" on Team when session is still hydrating.
 
-## Scope
-- Rewrite `PlatformShell` to match OrgShell layout pattern
-- Sidebar: Overview, Organizations, Operators, Plans, Audit
-- Sticky page header showing current section
-- Collapsible sidebar with edge control
-- Login route stays minimal (no sidebar)
-- Sign out in sidebar footer
+## Root cause
+`TeamDirectory` / `StaffMemberWorkspace` evaluated `can(ORG_STAFF_MANAGE)` before NextAuth finished loading. role=null → deny flash; refresh often worked because session was cached.
 
-## Out of scope
-- Mobile drawer (can follow if needed)
-- Phase C features
+## Fix
+- Wait for `isLoading` from `usePermissions` before deny UI
+- Distinguish unauthenticated vs forbidden
+- `RequirePermission` shows loading text instead of null
