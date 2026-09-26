@@ -1,2 +1,2 @@
 # Rollback
-Revert PR. No migration. Role matrix + API any-perm + UI only.
+Revert PR. No migration (permission codes are enum-only).

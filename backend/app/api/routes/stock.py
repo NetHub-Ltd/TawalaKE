@@ -145,7 +145,7 @@ def mutation_ok_from_data(
 async def receive_stock(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
+    current_staff: Staff = Depends(require_permissions(Permission.STOCK_RECEIVE)),
     redis_client: AsyncRedis = Depends(get_redis),
 ):
     product, before, after = await stock_crud.restock(

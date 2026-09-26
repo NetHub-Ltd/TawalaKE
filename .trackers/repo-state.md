@@ -1,2 +1,3 @@
 # Repository State
-- Branch: feat/cashier-ops-permissions-ui → **dev**
+- Branch: feat/rbac-full-resource-permissions → **dev**
+- Issues: #413 #414 #415

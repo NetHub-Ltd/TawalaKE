@@ -100,7 +100,7 @@ async def updates_organization(
     request: Request,
     organization_id: UUID,
     db: SessionDep,
-    user: AuthUser,
+    user: Staff = Depends(require_permissions(Permission.ORG_WRITE)),
     payload: OrgUpdate,
     redis_client: AsyncRedis = Depends(get_redis),
 ):
@@ -134,7 +134,7 @@ async def updates_organization(
 
 
 @router.get("/plans", response_model=ApiResponse[list])
-async def list_billing_plans(db: SessionDep, user: AuthUser):
+async def list_billing_plans(db: SessionDep, user: Staff = Depends(require_permissions(Permission.ORG_BILLING))):
     """Return public active plans from the database (seeded at startup)."""
     plans = await subscription_crud.list_public_plans(db)
     data = [
@@ -182,7 +182,7 @@ async def list_public_billing_plans(db: SessionDep):
 
 
 @router.get("/subscription", response_model=ApiResponse[dict])
-async def get_my_subscription(db: SessionDep, user: AuthUser):
+async def get_my_subscription(db: SessionDep, user: Staff = Depends(require_permissions(Permission.ORG_BILLING))):
     """Subscription + access phase (active | grace | locked | none)."""
     org_id = user.organization_id or user.tenant_id
     if not org_id:
@@ -224,7 +224,7 @@ async def get_my_subscription(db: SessionDep, user: AuthUser):
 
 
 @router.get("/onboarding-status", response_model=ApiResponse[dict])
-async def get_onboarding_status(db: SessionDep, user: AuthUser):
+async def get_onboarding_status(db: SessionDep, user: Staff = Depends(require_permissions(Permission.ORG_READ))):
     org_id = user.organization_id or user.tenant_id
     if not org_id:
         raise HTTPException(status_code=400, detail="No organization on account")
@@ -258,7 +258,7 @@ class TrialStartBody(BaseModel):
 @router.post("/trial/start", response_model=ApiResponse[dict])
 async def start_trial(
     db: SessionDep,
-    user: AuthUser,
+    user: Staff = Depends(require_permissions(Permission.ORG_BILLING)),
     background_tasks: BackgroundTasks,
     payload: Optional[TrialStartBody] = None,
 ):
@@ -312,7 +312,7 @@ async def start_trial(
 
 
 @router.post("/new-store", status_code=200, response_model=ApiResponse[StoreResponse])
-async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUser):
+async def register_new_store(db: SessionDep, payload: StoreCreate, user: Staff = Depends(require_permissions(Permission.ORG_WRITE))):
     from app.models.models import StaffRole
     role = effective_role(user)
     caller_org = user.organization_id or getattr(user, "tenant_id", None)
@@ -339,7 +339,7 @@ async def register_new_store(db: SessionDep, payload: StoreCreate, user: AuthUse
 
 
 @router.post("/subscription/cancel", response_model=ApiResponse[dict])
-async def cancel_subscription(db: SessionDep, user: AuthUser):
+async def cancel_subscription(db: SessionDep, user: Staff = Depends(require_permissions(Permission.ORG_BILLING))):
     """OWNER/billing: deactivate active subscription and invalidate paywall cache."""
     _require_owner(user)
     org_id = user.organization_id or getattr(user, "tenant_id", None)
@@ -360,7 +360,7 @@ async def cancel_subscription(db: SessionDep, user: AuthUser):
 @router.post("/subscription/activate", response_model=ApiResponse[dict])
 async def activate_subscription(
     db: SessionDep,
-    user: AuthUser,
+    user: Staff = Depends(require_permissions(Permission.ORG_BILLING)),
     plan_code: str = "NDOVU",
     days: int = 30,
 ):
@@ -393,7 +393,7 @@ async def activate_subscription(
 
 
 @router.get("/entitlements", response_model=ApiResponse[dict])
-async def get_org_entitlements(db: SessionDep, user: AuthUser):
+async def get_org_entitlements(db: SessionDep, user: Staff = Depends(require_permissions(Permission.ORG_BILLING))):
     """
     Current plan, limits, features, and live usage for the caller's organization.
     Used by billing UI and client-side soft gates.
@@ -418,7 +418,7 @@ async def get_org_entitlements(db: SessionDep, user: AuthUser):
 @router.get("/stores/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
 @cache(expire=CACHE_TTL_SEC, namespace="stores", key_builder=universal_key_builder)
 async def get_businesses_by_tenant(
-    organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
+    organization_id: UUID, db: SessionDep, user: Staff = Depends(require_permissions(Permission.STORE_READ)), active: bool = True
 ):
     caller_org = user.organization_id or getattr(user, "tenant_id", None)
     if caller_org is None or str(organization_id) != str(caller_org):
@@ -436,7 +436,7 @@ async def get_businesses_by_tenant(
 @router.get("/billing/{organization_id}", response_model=ApiResponse[List[BusinessResponse]])
 @cache(expire=CACHE_TTL_SEC, namespace="billing", key_builder=universal_key_builder)
 async def get_billing_by_tenant(
-    organization_id: UUID, db: SessionDep, user: AuthUser, active: bool = True
+    organization_id: UUID, db: SessionDep, user: Staff = Depends(require_permissions(Permission.ORG_BILLING)), active: bool = True
 ):
     caller_org = user.organization_id or getattr(user, "tenant_id", None)
     if caller_org is None or str(organization_id) != str(caller_org):
@@ -453,7 +453,7 @@ async def get_billing_by_tenant(
 # Parameterized catch-all for org by id — MUST remain after static paths
 @router.get("/{organization_id}", response_model=ApiResponse[OrganizationResponse])
 @cache(expire=CACHE_TTL_SEC, namespace="organizations", key_builder=universal_key_builder)
-async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: AuthUser):
+async def get_organization_by_id(organization_id: UUID, db: SessionDep, user: Staff = Depends(require_permissions(Permission.ORG_READ))):
     caller_org = user.organization_id or getattr(user, "tenant_id", None)
     if caller_org is None or str(organization_id) != str(caller_org):
         raise HTTPException(status_code=403, detail="Unathorized to perform this operation")

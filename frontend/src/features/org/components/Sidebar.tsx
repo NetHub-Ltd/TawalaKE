@@ -48,7 +48,7 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
   {
     label: "Overview",
     path: "/overview",
-    anyOf: [Permission.REPORTS_READ],
+    anyOf: [Permission.REPORTS_READ, Permission.SALES_READ_OWN],
     icon: LayoutDashboard,
   },
   {
@@ -63,6 +63,7 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     anyOf: [
       Permission.CATALOG_READ,
       Permission.STOCK_READ,
+      Permission.STOCK_RECEIVE,
       Permission.STOCK_ADJUST,
     ],
     icon: Package,
@@ -76,13 +77,13 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
   {
     label: "Customers",
     path: "/customers",
-    anyOf: [Permission.SALES_READ_BUSINESS, Permission.REPORTS_READ],
+    anyOf: [Permission.CUSTOMERS_READ, Permission.SALES_READ_BUSINESS],
     icon: Users,
   },
   {
     label: "Expenses",
     path: "/expenses",
-    anyOf: [Permission.REPORTS_READ],
+    anyOf: [Permission.EXPENSES_READ, Permission.REPORTS_READ],
     icon: Wallet,
   },
   {
