@@ -152,7 +152,13 @@ def _product_response(product) -> ProductResponse:
     return product_response(product)
 
 @router.patch('/update-business/{business_id}', response_model=ApiResponse[BusinessResponse])
-async def update_business(user: Staff = Depends(require_permissions(Permission.STORE_WRITE)), business_id:UUID, db: SessionDep, payload:BusinessUpdate, redis_client: AsyncRedis = Depends(get_redis)):
+async def update_business(
+    business_id: UUID,
+    payload: BusinessUpdate,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.STORE_WRITE)),
+    redis_client: AsyncRedis = Depends(get_redis),
+):
     """
     Updates the details of an existing business entity identified by its unique
     business ID. This function interacts with the database session to locate the
@@ -182,7 +188,12 @@ async def update_business(user: Staff = Depends(require_permissions(Permission.S
 #
 #
 @router.delete('/delete/{business_id}', status_code=200, response_model=ApiResponse)
-async def delete_client(user: Staff = Depends(require_permissions(Permission.STORE_WRITE)), db: SessionDep, business_id: UUID, redis_client: AsyncRedis = Depends(get_redis)):
+async def delete_client(
+    business_id: UUID,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.STORE_WRITE)),
+    redis_client: AsyncRedis = Depends(get_redis),
+):
     """
     Deletes a client business entity by its unique identifier. This endpoint removes
     the business entity from the database and returns a successful response if the

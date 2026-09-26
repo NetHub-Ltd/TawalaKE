@@ -99,9 +99,9 @@ async def create_tenant(
 async def updates_organization(
     request: Request,
     organization_id: UUID,
+    payload: OrgUpdate,
     db: SessionDep,
     user: Staff = Depends(require_permissions(Permission.ORG_WRITE)),
-    payload: OrgUpdate,
     redis_client: AsyncRedis = Depends(get_redis),
 ):
     from app.core.rbac import has_permission, Permission
@@ -258,8 +258,8 @@ class TrialStartBody(BaseModel):
 @router.post("/trial/start", response_model=ApiResponse[dict])
 async def start_trial(
     db: SessionDep,
-    user: Staff = Depends(require_permissions(Permission.ORG_BILLING)),
     background_tasks: BackgroundTasks,
+    user: Staff = Depends(require_permissions(Permission.ORG_BILLING)),
     payload: Optional[TrialStartBody] = None,
 ):
     """OWNER only: start a 14-day trial on BASIC or NDOVU; email zero-amount invoice."""
