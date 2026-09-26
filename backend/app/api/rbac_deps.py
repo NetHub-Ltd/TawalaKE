@@ -18,9 +18,16 @@ from app.core.rbac import (
     perms_cache_key,
     businesses_cache_key,
     effective_role,
+    org_deny_cache_key,
 )
 from app.core.config import settings
-from app.models.models import Staff, StaffBusinessAssignment, Business
+from app.models.models import (
+    Staff,
+    StaffBusinessAssignment,
+    Business,
+    OrganizationPermissionOverride,
+    StaffPermissionOverride,
+)
 from app.services.audit import record_audit
 from app.utils.logging import logger
 
@@ -29,9 +36,39 @@ def _cache_ttl() -> int:
     return int(getattr(settings, "rbac_cache_ttl_sec", 120) or 120)
 
 
+async def _load_org_denies(db: AsyncSession, organization_id: UUID | None) -> list[str]:
+    if not organization_id:
+        return []
+    rows = list(
+        await db.exec(
+            select(OrganizationPermissionOverride).where(
+                OrganizationPermissionOverride.organization_id == organization_id,
+                OrganizationPermissionOverride.deleted_at.is_(None),
+                OrganizationPermissionOverride.effect == "DENY",
+            )
+        )
+    )
+    return [r.permission_code for r in rows]
+
+
+async def _load_staff_effects(db: AsyncSession, staff_id: UUID) -> dict[str, str]:
+    rows = list(
+        await db.exec(
+            select(StaffPermissionOverride).where(
+                StaffPermissionOverride.staff_id == staff_id,
+                StaffPermissionOverride.deleted_at.is_(None),
+            )
+        )
+    )
+    return {r.permission_code: r.effect for r in rows}
+
+
 async def _cached_perm_values(
-    redis: AsyncRedis, staff: Staff
+    redis: AsyncRedis,
+    staff: Staff,
+    db: AsyncSession | None = None,
 ) -> list[str]:
+    """Effective permission codes (role ⊕ org/staff overrides), Redis-cached."""
     key = perms_cache_key(staff.id)
     try:
         raw = await redis.get(key)
@@ -42,7 +79,18 @@ async def _cached_perm_values(
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"rbac perms cache read failed: {exc}")
 
-    perms = [p.value for p in permissions_for(staff)]
+    org_denies: list[str] = []
+    staff_effects: dict[str, str] = {}
+    if db is not None:
+        org_denies = await _load_org_denies(db, getattr(staff, "organization_id", None))
+        staff_effects = await _load_staff_effects(db, staff.id)
+
+    perms = [
+        p.value
+        for p in permissions_for(
+            staff, org_denies=org_denies, staff_effects=staff_effects
+        )
+    ]
     try:
         await redis.set(key, json.dumps(perms), ex=_cache_ttl())
     except Exception as exc:  # noqa: BLE001
@@ -55,6 +103,24 @@ async def purge_staff_rbac_cache(redis: AsyncRedis, staff_id: UUID) -> None:
         await redis.delete(perms_cache_key(staff_id), businesses_cache_key(staff_id))
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"rbac cache purge failed for {staff_id}: {exc}")
+
+
+async def purge_org_rbac_cache(redis: AsyncRedis, organization_id: UUID, db: AsyncSession) -> None:
+    """Drop cached effective perms for all non-deleted staff in the org."""
+    try:
+        await redis.delete(org_deny_cache_key(organization_id))
+    except Exception:  # noqa: BLE001
+        pass
+    staff_ids = list(
+        await db.exec(
+            select(Staff.id).where(
+                Staff.organization_id == organization_id,
+                Staff.deleted_at.is_(None),
+            )
+        )
+    )
+    for sid in staff_ids:
+        await purge_staff_rbac_cache(redis, sid)
 
 
 def require_permissions(*required: Permission | str) -> Callable:
@@ -70,12 +136,9 @@ def require_permissions(*required: Permission | str) -> Callable:
         db: SessionDep,
         redis: AsyncRedis = Depends(get_redis),
     ) -> Staff:
-        ok = has_all_permissions(user, required_perms)
-        # Prefer cache for observability / future soft checks; matrix is DB-backed via Staff.role
-        try:
-            await _cached_perm_values(redis, user)
-        except Exception:  # noqa: BLE001
-            pass
+        effective = await _cached_perm_values(redis, user, db)
+        required_codes = {p.value for p in required_perms}
+        ok = required_codes.issubset(set(effective))
 
         if not ok:
             missing = [p.value for p in required_perms]
