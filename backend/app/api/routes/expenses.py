@@ -48,7 +48,7 @@ async def create_expense(
     payload: ExpenseCreate,
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
-    user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
+    user: Staff = Depends(require_permissions(Permission.EXPENSES_WRITE)),
 ):
     """Record a business operating expense."""
     await assert_business_access(db, user, payload.business_id, redis_client)
@@ -71,7 +71,7 @@ async def list_expenses(
     business_id: UUID,
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
-    user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
+    user: Staff = Depends(require_permissions(Permission.EXPENSES_READ)),
     start: Optional[str] = None,
     end: Optional[str] = None,
     category: Optional[ExpenseCategory] = None,
@@ -108,7 +108,7 @@ async def expense_summary(
     business_id: UUID,
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
-    user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
+    user: Staff = Depends(require_permissions(Permission.EXPENSES_READ)),
     start: str = Query(..., description="YYYY-MM-DD"),
     end: str = Query(..., description="YYYY-MM-DD exclusive end day or inclusive date"),
 ):
@@ -130,7 +130,7 @@ async def update_expense(
     payload: ExpenseUpdate,
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
-    user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
+    user: Staff = Depends(require_permissions(Permission.EXPENSES_WRITE)),
 ):
     await assert_business_access(db, user, business_id, redis_client)
     obj = await expense_crud.update_expense(
@@ -150,7 +150,7 @@ async def delete_expense(
     expense_id: UUID,
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
-    user: Staff = Depends(require_permissions(Permission.REPORTS_READ)),
+    user: Staff = Depends(require_permissions(Permission.EXPENSES_WRITE)),
 ):
     await assert_business_access(db, user, business_id, redis_client)
     await expense_crud.soft_delete_expense(

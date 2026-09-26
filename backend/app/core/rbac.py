@@ -18,13 +18,22 @@ class Permission(str, Enum):
     ORG_WRITE = "org:write"
     ORG_BILLING = "org:billing"
     ORG_STAFF_MANAGE = "org:staff:manage"
+    STORE_READ = "store:read"
+    STORE_WRITE = "store:write"
     CATALOG_READ = "catalog:read"
     CATALOG_WRITE = "catalog:write"
     STOCK_READ = "stock:read"
+    STOCK_RECEIVE = "stock:receive"
     STOCK_ADJUST = "stock:adjust"
     SALES_WRITE = "sales:write"
     SALES_READ_OWN = "sales:read:own"
     SALES_READ_BUSINESS = "sales:read:business"
+    CUSTOMERS_READ = "customers:read"
+    CUSTOMERS_WRITE = "customers:write"
+    CUSTOMERS_DELETE = "customers:delete"
+    EXPENSES_READ = "expenses:read"
+    EXPENSES_WRITE = "expenses:write"
+    DOCUMENTS_READ = "documents:read"
     REPORTS_READ = "reports:read"
 
 
@@ -33,7 +42,6 @@ class OverrideEffect(str, Enum):
     GRANT = "GRANT"
 
 
-# Codify current operational access + ADMIN as org operator without billing.
 ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
     StaffRole.OWNER: frozenset(Permission),
     StaffRole.ADMIN: frozenset(
@@ -41,128 +49,129 @@ ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
             Permission.ORG_READ,
             Permission.ORG_WRITE,
             Permission.ORG_STAFF_MANAGE,
+            Permission.STORE_READ,
+            Permission.STORE_WRITE,
             Permission.CATALOG_READ,
             Permission.CATALOG_WRITE,
             Permission.STOCK_READ,
+            Permission.STOCK_RECEIVE,
             Permission.STOCK_ADJUST,
             Permission.SALES_WRITE,
             Permission.SALES_READ_OWN,
             Permission.SALES_READ_BUSINESS,
+            Permission.CUSTOMERS_READ,
+            Permission.CUSTOMERS_WRITE,
+            Permission.CUSTOMERS_DELETE,
+            Permission.EXPENSES_READ,
+            Permission.EXPENSES_WRITE,
+            Permission.DOCUMENTS_READ,
             Permission.REPORTS_READ,
         }
     ),
     StaffRole.MANAGER: frozenset(
         {
             Permission.ORG_READ,
+            Permission.STORE_READ,
             Permission.CATALOG_READ,
             Permission.CATALOG_WRITE,
             Permission.STOCK_READ,
+            Permission.STOCK_RECEIVE,
             Permission.STOCK_ADJUST,
             Permission.SALES_WRITE,
             Permission.SALES_READ_OWN,
             Permission.SALES_READ_BUSINESS,
+            Permission.CUSTOMERS_READ,
+            Permission.CUSTOMERS_WRITE,
+            Permission.CUSTOMERS_DELETE,
+            Permission.EXPENSES_READ,
+            Permission.EXPENSES_WRITE,
+            Permission.DOCUMENTS_READ,
             Permission.REPORTS_READ,
         }
     ),
     StaffRole.CASHIER: frozenset(
         {
             Permission.ORG_READ,
+            Permission.STORE_READ,
             Permission.CATALOG_READ,
             Permission.STOCK_READ,
-            Permission.STOCK_ADJUST,  # take / receive stock on shift
+            Permission.STOCK_RECEIVE,
             Permission.SALES_WRITE,
-            Permission.SALES_READ_OWN,  # own history + scoped shift view
+            Permission.SALES_READ_OWN,
+            Permission.CUSTOMERS_READ,
+            Permission.CUSTOMERS_WRITE,
+            Permission.EXPENSES_READ,
+            Permission.EXPENSES_WRITE,
+            Permission.DOCUMENTS_READ,
         }
     ),
 }
 
 
-# Owner-facing catalog: plain language + resources affected.
 PERMISSION_CATALOG: list[dict] = [
-    {
-        "code": Permission.ORG_READ.value,
-        "group": "Organization",
-        "label": "View organization",
-        "description": "See organization home, branches list, and basic org profile. Does not allow changing settings.",
-        "resources": ["Organization home", "Branch list", "Org profile (read)"],
-    },
-    {
-        "code": Permission.ORG_WRITE.value,
-        "group": "Organization",
-        "label": "Edit organization",
-        "description": "Change organization name, contact details, and settings that affect the whole business.",
-        "resources": ["Org settings", "Branch create/edit"],
-    },
-    {
-        "code": Permission.ORG_BILLING.value,
-        "group": "Organization",
-        "label": "Billing & subscription",
-        "description": "View plans, manage subscription, and billing details. Typically Owner only.",
-        "resources": ["Billing page", "Plan changes", "Invoices"],
-    },
-    {
-        "code": Permission.ORG_STAFF_MANAGE.value,
-        "group": "Team",
-        "label": "Manage team",
-        "description": "Invite staff, change roles, assign branches, reset passwords, and deactivate members.",
-        "resources": ["Team directory", "Staff workspace", "Invites"],
-    },
-    {
-        "code": Permission.CATALOG_READ.value,
-        "group": "Catalog",
-        "label": "View products",
-        "description": "Browse the product catalog and product details.",
-        "resources": ["Product list", "Product detail"],
-    },
-    {
-        "code": Permission.CATALOG_WRITE.value,
-        "group": "Catalog",
-        "label": "Edit products",
-        "description": "Create and update products, prices, and catalog settings.",
-        "resources": ["Product create/edit", "Pricing"],
-    },
-    {
-        "code": Permission.STOCK_READ.value,
-        "group": "Inventory",
-        "label": "View stock",
-        "description": "See on-hand quantities and stock history.",
-        "resources": ["Stock levels", "Stock history"],
-    },
-    {
-        "code": Permission.STOCK_ADJUST.value,
-        "group": "Inventory",
-        "label": "Adjust stock",
-        "description": "Receive stock, take stock counts, write off, and change quantities. Cashiers use this for on-shift stock takes; managers for broader inventory control.",
-        "resources": ["Stock adjustments", "Receiving", "Inventory counts"],
-    },
-    {
-        "code": Permission.SALES_WRITE.value,
-        "group": "Sales",
-        "label": "Make sales",
-        "description": "Use the terminal to ring up sales and process checkouts.",
-        "resources": ["POS terminal", "Checkout"],
-    },
-    {
-        "code": Permission.SALES_READ_OWN.value,
-        "group": "Sales",
-        "label": "View own sales",
-        "description": "See sales history for transactions this person made.",
-        "resources": ["Own sale history"],
-    },
-    {
-        "code": Permission.SALES_READ_BUSINESS.value,
-        "group": "Sales",
-        "label": "View branch sales",
-        "description": "See sales for the whole branch or business, not only own transactions.",
-        "resources": ["Branch sale history", "Business sales lists"],
-    },
-    {
-        "code": Permission.REPORTS_READ.value,
-        "group": "Reports",
-        "label": "View reports",
-        "description": "Open dashboards and reports (sales, expenses, overview).",
-        "resources": ["Overview reports", "Expense reports", "Analytics"],
-    },
+    {"code": Permission.ORG_READ.value, "group": "Organization", "label": "View organization",
+     "description": "See organization home, branches list, and basic profile.",
+     "resources": ["Organization home", "Branch list"]},
+    {"code": Permission.ORG_WRITE.value, "group": "Organization", "label": "Edit organization",
+     "description": "Change organization settings and create branches.",
+     "resources": ["Org settings", "Branch create"]},
+    {"code": Permission.ORG_BILLING.value, "group": "Organization", "label": "Billing & subscription",
+     "description": "Manage plans, trial, and subscription. Owner only.",
+     "resources": ["Billing", "Subscription", "Trial"]},
+    {"code": Permission.ORG_STAFF_MANAGE.value, "group": "Team", "label": "Manage team",
+     "description": "Invite staff, change roles, assign branches.",
+     "resources": ["Team directory", "Invites"]},
+    {"code": Permission.STORE_READ.value, "group": "Stores", "label": "View stores",
+     "description": "See store/branch details.",
+     "resources": ["Store list", "Store profile"]},
+    {"code": Permission.STORE_WRITE.value, "group": "Stores", "label": "Edit stores",
+     "description": "Update or deactivate stores.",
+     "resources": ["Store settings"]},
+    {"code": Permission.CATALOG_READ.value, "group": "Catalog", "label": "View products",
+     "description": "Browse products, categories, and units.",
+     "resources": ["Product list"]},
+    {"code": Permission.CATALOG_WRITE.value, "group": "Catalog", "label": "Edit products",
+     "description": "Create and update products and pricing.",
+     "resources": ["Product edit"]},
+    {"code": Permission.STOCK_READ.value, "group": "Inventory", "label": "View stock",
+     "description": "See quantities and movement history.",
+     "resources": ["Stock levels", "History"]},
+    {"code": Permission.STOCK_RECEIVE.value, "group": "Inventory", "label": "Receive new stock",
+     "description": "Add inbound supply only. Cannot change existing stock arbitrarily.",
+     "resources": ["Stock receive"]},
+    {"code": Permission.STOCK_ADJUST.value, "group": "Inventory", "label": "Adjust existing stock",
+     "description": "Change existing quantities, physical counts, write-offs.",
+     "resources": ["Stock adjust", "Stock count"]},
+    {"code": Permission.SALES_WRITE.value, "group": "Sales", "label": "Make sales",
+     "description": "Complete checkouts on the terminal.",
+     "resources": ["POS", "Checkout"]},
+    {"code": Permission.SALES_READ_OWN.value, "group": "Sales", "label": "View own sales",
+     "description": "See sales this person completed.",
+     "resources": ["Own history", "My shift"]},
+    {"code": Permission.SALES_READ_BUSINESS.value, "group": "Sales", "label": "View branch sales",
+     "description": "See all sales for the branch.",
+     "resources": ["Branch history"]},
+    {"code": Permission.CUSTOMERS_READ.value, "group": "Customers", "label": "View customers",
+     "description": "Search and open customer records.",
+     "resources": ["Customer list"]},
+    {"code": Permission.CUSTOMERS_WRITE.value, "group": "Customers", "label": "Create/edit customers",
+     "description": "Add or update customers (e.g. during a sale).",
+     "resources": ["Customer create/edit"]},
+    {"code": Permission.CUSTOMERS_DELETE.value, "group": "Customers", "label": "Delete customers",
+     "description": "Remove customers. Not for cashiers.",
+     "resources": ["Customer delete"]},
+    {"code": Permission.EXPENSES_READ.value, "group": "Expenses", "label": "View expenses",
+     "description": "See recorded shop expenses.",
+     "resources": ["Expense list"]},
+    {"code": Permission.EXPENSES_WRITE.value, "group": "Expenses", "label": "Record expenses",
+     "description": "Add shop costs.",
+     "resources": ["Expense create"]},
+    {"code": Permission.DOCUMENTS_READ.value, "group": "Documents", "label": "View receipts",
+     "description": "Open sale receipts and related documents.",
+     "resources": ["Receipts"]},
+    {"code": Permission.REPORTS_READ.value, "group": "Reports", "label": "View branch reports",
+     "description": "Branch-wide dashboards and analytics.",
+     "resources": ["Overview", "Analytics"]},
 ]
 
 

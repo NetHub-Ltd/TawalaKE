@@ -5,14 +5,29 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.models import ExpenseCategory
+
+
+def _coerce_category(value: object) -> ExpenseCategory:
+    if isinstance(value, ExpenseCategory):
+        return value
+    raw = str(value or "OTHER").strip().upper().replace(" ", "_").replace("-", "_")
+    try:
+        return ExpenseCategory(raw)
+    except ValueError:
+        return ExpenseCategory.OTHER
 
 
 class ExpenseCreate(BaseModel):
     business_id: UUID
     category: ExpenseCategory = ExpenseCategory.OTHER
+
+    @field_validator("category", mode="before")
+    @classmethod
+    def normalize_category(cls, v: object) -> ExpenseCategory:
+        return _coerce_category(v)
     amount: float = Field(gt=0, description="Must be greater than zero")
     currency: str = Field(default="KES", max_length=3)
     incurred_on: datetime

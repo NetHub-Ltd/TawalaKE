@@ -48,6 +48,7 @@ export type CreateExpenseInput = {
   incurred_on: string;
   vendor?: string;
   notes?: string;
+  reference?: string;
 };
 
 export function useCreateExpense(businessId: string) {
