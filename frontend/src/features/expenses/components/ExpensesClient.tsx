@@ -7,6 +7,7 @@ import {
   useCreateExpense,
   useExpenseList,
 } from "@/features/expenses/hooks/useExpenses";
+import type { ExpenseCategory } from "@/features/expenses/types";
 import { formatKES } from "@/features/analytics/lib/format";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { Permission } from "@/lib/rbac";
@@ -70,7 +71,7 @@ export function ExpensesClient({
     try {
       await create.mutateAsync({
         business_id: businessId,
-        category: category.trim().toUpperCase().replace(/\s+/g, "_"),
+        category: category.trim().toUpperCase().replace(/\s+/g, "_") as ExpenseCategory,
         amount: value,
         incurred_on: incurredOn,
         vendor: vendor.trim() || undefined,
