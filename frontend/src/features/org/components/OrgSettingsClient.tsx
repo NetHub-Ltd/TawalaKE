@@ -173,10 +173,10 @@ export function OrgSettingsClient({
       {loadError && (
         <div
           role="alert"
-          className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+          className="rounded-md border border-[var(--error)]/40 bg-[var(--error)]/10 px-4 py-3 text-sm text-foreground"
         >
           <p className="font-medium">Could not load organization</p>
-          <p className="mt-1 text-red-700/90 dark:text-red-300/90">{loadError}</p>
+          <p className="mt-1 text-muted">{loadError}</p>
           <button
             type="button"
             onClick={() => void load()}
@@ -195,7 +195,7 @@ export function OrgSettingsClient({
           </p>
           <p className="mt-1 text-sm font-semibold text-foreground">
             {profile?.active === false ? (
-              <span className="text-amber-700">Inactive</span>
+              <span className="text-brand-secondary">Inactive</span>
             ) : (
               <span className="text-[var(--success)]">Active</span>
             )}
@@ -247,7 +247,7 @@ export function OrgSettingsClient({
               {...register("name")}
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
+              <p className="mt-1 text-xs text-[var(--error)]">{errors.name.message}</p>
             )}
           </div>
 
