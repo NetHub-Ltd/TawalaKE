@@ -491,13 +491,30 @@ async def collect_credit_sale(
 
 
 @router.get("/receipts/{sale_id}", status_code=200, response_model=FinancialDocumentSnapshotSchema)
-async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
+async def fetch_receipts(
+    sale_id: UUID,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.DOCUMENTS_READ)),
+):
     """
-    Fetches a list of receipts for a given business, with optional pagination.
+    View financial document snapshot (receipt/invoice) for a sale.
+    Generation is internal (Celery worker — no HTTP permission).
+    Viewing requires documents:read + same organization as the sale.
     """
-    receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
-    return receipt
+    sale = (await db.exec(select(Sale).where(Sale.id == sale_id))).one_or_none()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    org_id = getattr(user, "organization_id", None) or getattr(user, "tenant_id", None)
+    if org_id and sale.organization_id and sale.organization_id != org_id:
+        raise HTTPException(status_code=403, detail="Not authorized for this document")
 
+    receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
+    if receipt is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not ready yet — generation may still be queued",
+        )
+    return receipt
 
 
 
@@ -509,7 +526,7 @@ async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
 async def get_pos_config(
     business_id: UUID,
     db: SessionDep,
-    user: Staff = Depends(require_permissions(Permission.DOCUMENTS_READ)),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
     redis_client: AsyncRedis = Depends(get_redis),
 ):
     """

@@ -37,7 +37,8 @@ from app.crud.stock import stock_crud
 from sqlalchemy.orm import selectinload
 from app.schemas.schemas import StaffResponse
 
-from app.tasks.worker import async_process_document_generation,async_update_sales_analytics
+from app.tasks.worker import async_update_sales_analytics
+from app.tasks.document_tasks import enqueue_document_generation
 
 
 class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
@@ -395,7 +396,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             await db.commit()
 
             # Document: invoice for credit (amount_paid=0), receipt for paid
-            background_tasks.add_task(async_process_document_generation, sale.id)
+            task_id = enqueue_document_generation(sale.id)
+            if task_id is None:
+                # Broker unavailable — fall back so checkout still produces a document
+                from app.tasks.worker import async_process_document_generation
+                background_tasks.add_task(async_process_document_generation, sale.id)
+
             # Drain outbox soon after response (best-effort); durable row survives process death
             if sale.status == SaleStatus.COMPLETED:
                 background_tasks.add_task(async_update_sales_analytics, sale.id)
