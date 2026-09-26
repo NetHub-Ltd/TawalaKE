@@ -58,7 +58,12 @@ export default function StaffMemberWorkspace({
   const tabParam = (search.get("tab") as Tab) || "overview";
   const action = search.get("action");
 
-  const { can, role: actorRole } = usePermissions();
+  const {
+    can,
+    role: actorRole,
+    isLoading: sessionLoading,
+    isAuthenticated,
+  } = usePermissions();
   const canManage = can(Permission.ORG_STAFF_MANAGE);
 
   const { data: member, isLoading, isError, error, refetch } = useStaffMember(
@@ -102,10 +107,31 @@ export default function StaffMemberWorkspace({
     [member],
   );
 
+  if (sessionLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center gap-2 p-12 text-muted">
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        Checking permissions…
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
+        <AlertCircle className="h-8 w-8 text-amber-500" aria-hidden />
+        <p className="text-sm">Sign in required to view this team member.</p>
+        <Link href={`/org/${organizationId}/staff`} className="text-sm text-[var(--success)]">
+          Back to Team
+        </Link>
+      </div>
+    );
+  }
+
   if (!canManage) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
-        <AlertCircle className="h-8 w-8 text-amber-500" />
+        <AlertCircle className="h-8 w-8 text-amber-500" aria-hidden />
         <p className="text-sm">You do not have permission to view this team member.</p>
         <Link href={`/org/${organizationId}/staff`} className="text-sm text-[var(--success)]">
           Back to Team

@@ -1,5 +1,3 @@
 # Repository State
-
-- Branch: feat/platform-shell-sidebar
-- Base: dev
-- Target PR base: **dev**
+- Branch: fix/staff-permission-session-race
+- Target: **dev**

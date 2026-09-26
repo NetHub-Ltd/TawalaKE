@@ -16,7 +16,14 @@ export function RequirePermission({
   children: React.ReactNode;
 }) {
   const { can, canAny, isLoading } = usePermissions();
-  if (isLoading) return null;
+  // Avoid blank/deny flash while NextAuth session hydrates (slow networks).
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[8rem] items-center justify-center text-sm text-muted">
+        Checking permissions…
+      </div>
+    );
+  }
   const ok = permission
     ? can(permission)
     : anyOf

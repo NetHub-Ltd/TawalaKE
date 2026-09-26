@@ -1,3 +1,2 @@
 # Rollback
-
-- Revert PR; single-file shell change + trackers
+Revert PR; client-only permission gate change.
