@@ -18,7 +18,7 @@ export default async function OrgUpdatesPage() {
           Product updates
         </h1>
         <p className="mt-1 text-sm text-muted">
-          What&apos;s new in Tawala — published when we ship releases.
+          What&apos;s new in Tawala — features and fixes as they ship on main and development.
         </p>
       </div>
       <OrgUpdatesClient
