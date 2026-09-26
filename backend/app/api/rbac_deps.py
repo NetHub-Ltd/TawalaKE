@@ -170,6 +170,52 @@ def require_permissions(*required: Permission | str) -> Callable:
     return _dep
 
 
+
+def require_any_permissions(*required: Permission | str) -> Callable:
+    """Dependency factory: require at least one of the listed permissions or 403."""
+
+    required_perms = [
+        p if isinstance(p, Permission) else Permission(str(p)) for p in required
+    ]
+
+    async def _dep(
+        request: Request,
+        user: AuthUser,
+        db: SessionDep,
+        redis: AsyncRedis = Depends(get_redis),
+    ) -> Staff:
+        effective = set(await _cached_perm_values(redis, user, db))
+        codes = [p.value for p in required_perms]
+        ok = any(c in effective for c in codes)
+        if not ok:
+            await record_audit(
+                db,
+                actor=user,
+                action="rbac.denied",
+                outcome="denied",
+                resource_type="endpoint",
+                resource_id=str(request.url.path),
+                meta={
+                    "permissions_any": codes,
+                    "method": request.method,
+                    "role": (effective_role(user).value if effective_role(user) else None),
+                },
+                request_id=request.headers.get("x-request-id"),
+                independent=True,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "Insufficient permissions",
+                    "permissions_any": codes,
+                },
+            )
+        return user
+
+    return _dep
+
+
 async def load_assigned_business_ids(
     db: AsyncSession,
     staff: Staff,

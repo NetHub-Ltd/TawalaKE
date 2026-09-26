@@ -1,3 +1,2 @@
 # Rollback
-- Revert PR
-- alembic downgrade d4e5f6a7b8c9
+Revert PR. No migration. Role matrix + API any-perm + UI only.
