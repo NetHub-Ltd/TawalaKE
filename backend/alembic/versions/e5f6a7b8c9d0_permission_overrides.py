@@ -1,17 +1,18 @@
 """permission overrides org + staff
 
-Revision ID: d4e5f6a7b8c9
+Revision ID: e5f6a7b8c9d0
 Revises: c2d3e4f5a6b7
 Create Date: 2026-09-26
 
+Unique revision id (do not reuse d4e5f6a7b8c9 — already used by
+platform_user_must_change_password).
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
-revision: str = "d4e5f6a7b8c9"
+revision: str = "e5f6a7b8c9d0"
 down_revision: Union[str, Sequence[str], None] = "c2d3e4f5a6b7"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
