@@ -21,6 +21,7 @@ import {
 import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { cn } from "@/lib/utils";
+import { useCatalogOptions } from "@/features/catalog/useCatalogOptions";
 
 type Tab = "overview" | "history" | "settings";
 type Action = "receive" | "count" | "adjust" | null;
@@ -511,6 +512,7 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
             </p>
           </div>
           <ProductSettingsForm
+            businessId={businessId}
             product={product}
             isPending={updateProduct.isPending}
             onSave={handleUpdateMeta}
@@ -551,11 +553,13 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
 
 
 function ProductSettingsForm({
+  businessId,
   product,
   isPending,
   onSave,
   onCancel,
 }: {
+  businessId: string;
   product: {
     label: string;
     selling_price: number;
@@ -564,7 +568,7 @@ function ProductSettingsForm({
     active?: boolean;
     category?: string | null;
     last_stock_take?: string | null;
-    attributes?: { unit_of_measure?: string | null; buying_price?: number | null; sku?: string | null };
+    attributes?: { unit_of_measure?: string | null; buying_price?: number | null; sku?: string | null; category?: string | null };
     min_stock_level?: number | null;
     cost_price?: number | null;
   };
@@ -572,9 +576,14 @@ function ProductSettingsForm({
   onSave: (values: Record<string, unknown>) => Promise<void>;
   onCancel: () => void;
 }) {
+  const { units, categories } = useCatalogOptions(businessId);
   const attrs = product.attributes || {};
+  const initialCategory =
+    product.category ||
+    (attrs as { category?: string | null }).category ||
+    "other";
   const [label, setLabel] = useState(product.label);
-  const [category, setCategory] = useState(product.category || "other");
+  const [category, setCategory] = useState(initialCategory);
   const [uom, setUom] = useState(attrs.unit_of_measure || "pcs");
   const [buyingPrice, setBuyingPrice] = useState(
     String(attrs.buying_price ?? product.cost_price ?? "")
@@ -634,7 +643,22 @@ function ProductSettingsForm({
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-foreground">Category</span>
-          <input className={field} value={category} onChange={(e) => setCategory(e.target.value)} />
+          <select
+            className={field}
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            {/* Keep current value if not in catalog list */}
+            {category &&
+              !categories.some((c) => c.code === category) && (
+                <option value={category}>{category}</option>
+              )}
+            {categories.map((cat) => (
+              <option key={cat.code} value={cat.code}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-foreground">Cost / buying price (KES)</span>
@@ -671,7 +695,20 @@ function ProductSettingsForm({
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-foreground">Unit of measure</span>
-          <input className={field} value={uom} onChange={(e) => setUom(e.target.value)} />
+          <select
+            className={field}
+            value={uom}
+            onChange={(e) => setUom(e.target.value)}
+          >
+            {uom && !units.some((u) => u.code === uom) && (
+              <option value={uom}>{uom}</option>
+            )}
+            {units.map((u) => (
+              <option key={u.code} value={u.code}>
+                {u.label}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-foreground">Low-stock threshold</span>

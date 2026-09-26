@@ -425,6 +425,11 @@ import { ProductResponse } from "@/lib/api/generated/models";
 
 export const CHECKOUT_CONFIG = {
   DEFAULT_TAX_RATE: 0.0,
+  /**
+   * Tax is not fully productized (rates, invoices, compliance).
+   * Keep calculation paths, but force 0 until the feature ships.
+   */
+  TAX_FEATURE_ENABLED: false,
   CURRENCY_CODE: "KES",
   STORAGE_KEY: "terminal-cart-storage",
 };
@@ -440,11 +445,25 @@ export interface CartItem {
   sku?: string;
 }
 
+export interface ServiceLine {
+  id: string;
+  amount: number;
+  description: string;
+}
+
 export interface FinancialSummary {
+  /** Sum of line qty × price (before discount) */
+  goodsSubtotal: number;
+  /** Alias of goodsSubtotal for older callers */
   subtotal: number;
   taxRate: number;
   taxAmount: number;
   discountApplied: number;
+  /** goods − discount (tax base); matches backend stored subtotal */
+  netSubtotal: number;
+  /** Sum of non-stock service fees */
+  servicesTotal: number;
+  /** netSubtotal + tax + services — same as backend total_amount */
   grandTotal: number;
 }
 
@@ -468,7 +487,9 @@ interface CartState {
   cart: CartItem[];
   discount: number;
   taxRate: number;
-  
+  /** Non-stock service fees (design, delivery, …) */
+  services: ServiceLine[];
+
   // Local-First Sync Tracking Flags
   isDirty: boolean;
   lastSyncedAt: string | null;
@@ -476,13 +497,14 @@ interface CartState {
 
   // Scope & Validation Actions
   validateAndSetScope: (businessId: string, userId: string) => boolean;
-  
+
   // Core Mutators
   addToCart: (product: ProductResponse) => void;
   removeFromCart: (id: string) => void;
   updateQty: (id: string, delta: number) => void;
   setDiscount: (value: number) => void;
   setTaxRate: (rate: number) => void;
+  setServices: (services: ServiceLine[]) => void;
   clearCart: () => void;
 
   // Remote Sync Handlers
@@ -519,6 +541,7 @@ export const useCartStore = create<CartState>()(
       cart: [],
       discount: 0,
       taxRate: CHECKOUT_CONFIG.DEFAULT_TAX_RATE,
+      services: [],
       isDirty: false,
       lastSyncedAt: null,
       syncStatus: "idle",
@@ -539,6 +562,7 @@ export const useCartStore = create<CartState>()(
           cart: [],
           discount: 0,
           taxRate: CHECKOUT_CONFIG.DEFAULT_TAX_RATE,
+          services: [],
           isDirty: false,
           syncStatus: "idle",
         });
@@ -624,20 +648,38 @@ export const useCartStore = create<CartState>()(
 
       setDiscount: (value) => {
         set((state) => {
-          const subtotal = state.cart.reduce((acc, item) => acc + item.price * item.qty, 0);
-          const maxAllowed = subtotal + subtotal * state.taxRate;
+          // Cap at goods only — tax is computed after discount (matches backend)
+          const goods = state.cart.reduce((acc, item) => acc + item.price * item.qty, 0);
           return {
-            discount: Math.min(Math.max(0, value), maxAllowed),
+            discount: Math.min(Math.max(0, value), goods),
             isDirty: true,
           };
         });
       },
 
       setTaxRate: (rate) => {
+        // Feature gated: ignore POS config until tax is fully implemented
+        if (!CHECKOUT_CONFIG.TAX_FEATURE_ENABLED) {
+          set({ taxRate: 0, isDirty: true });
+          return;
+        }
         let r = Number(rate) || 0;
         // Compat: API/DB may still return percent (16) instead of fraction (0.16)
         if (r > 1) r = r / 100;
         set({ taxRate: Math.max(0, Math.min(r, 1)), isDirty: true });
+      },
+
+      setServices: (services) => {
+        set({
+          services: services
+            .filter((s) => s && Number(s.amount) > 0 && String(s.description || "").trim())
+            .map((s) => ({
+              id: s.id || `svc-${Date.now()}`,
+              amount: Number(s.amount),
+              description: String(s.description).trim(),
+            })),
+          isDirty: true,
+        });
       },
 
       clearCart: () => {
@@ -646,6 +688,7 @@ export const useCartStore = create<CartState>()(
           cart: [],
           discount: 0,
           taxRate: CHECKOUT_CONFIG.DEFAULT_TAX_RATE,
+          services: [],
           isDirty: true,
         });
       },
@@ -682,17 +725,33 @@ export const useCartStore = create<CartState>()(
       },
 
       // --- COMPUTED OUTPUTS ---
+      // Must match backend initialize_checkout:
+      // goods → discount → tax on net → + services
       getFinancials: () => {
-        const { cart, discount, taxRate } = get();
-        const subtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
-        const taxAmount = subtotal * taxRate;
-        const grandTotal = Math.max(0, subtotal + taxAmount - discount);
+        const { cart, discount, taxRate, services } = get();
+        const goodsSubtotal = cart.reduce((acc, item) => acc + item.price * item.qty, 0);
+        const discountApplied = Math.min(Math.max(0, discount), goodsSubtotal);
+        const netSubtotal = Math.max(0, goodsSubtotal - discountApplied);
+        // Tax feature incomplete — keep formula, force 0 for payable totals
+        const effectiveTaxRate = CHECKOUT_CONFIG.TAX_FEATURE_ENABLED ? taxRate : 0;
+        const taxAmount = netSubtotal * effectiveTaxRate;
+        const servicesTotal = services.reduce((acc, s) => acc + (Number(s.amount) || 0), 0);
+        const grandTotal = Math.max(0, netSubtotal + taxAmount + servicesTotal);
 
-        return { subtotal, taxRate, taxAmount, discountApplied: discount, grandTotal };
+        return {
+          goodsSubtotal,
+          subtotal: goodsSubtotal,
+          taxRate: effectiveTaxRate,
+          taxAmount,
+          discountApplied,
+          netSubtotal,
+          servicesTotal,
+          grandTotal,
+        };
       },
 
       getReceiptPayload: (cashierId, paymentMethod = "CASH") => {
-        const { scope, cart, getFinancials } = get();
+        const { scope, cart, services, getFinancials } = get();
         const financials = getFinancials();
 
         return {
@@ -712,11 +771,16 @@ export const useCartStore = create<CartState>()(
             quantity: item.qty,
             subtotal: item.price * item.qty,
           })),
+          services: services.map((s) => ({
+            amount: s.amount,
+            description: s.description,
+          })),
           financials: {
             subtotal: financials.subtotal,
             tax_rate: financials.taxRate,
             tax_amount: financials.taxAmount,
             discount_applied: financials.discountApplied,
+            services_total: financials.servicesTotal,
             grand_total: financials.grandTotal,
           },
         };

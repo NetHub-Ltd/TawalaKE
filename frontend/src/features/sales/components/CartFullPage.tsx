@@ -22,7 +22,7 @@ import {
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { fetchPosConfig } from "@/features/sales/lib/posConfig";
-import { setStagedSaleId } from "@/features/sales/lib/stagedSale";
+import { setStagedSaleId, getStagedSaleId } from "@/features/sales/lib/stagedSale";
 
 export function CartFullPage({
   organizationId: orgProp,
@@ -48,6 +48,7 @@ export function CartFullPage({
     getFinancials,
     discount,
     setDiscount,
+    services,
     validateAndSetScope,
     setTaxRate,
   } = useCartStore();
@@ -91,12 +92,22 @@ export function CartFullPage({
     );
   }
 
-  const { subtotal, taxAmount, grandTotal } = getFinancials();
+  const { goodsSubtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
   const terminalHref = `/org/${resolvedOrgId}/${resolvedBusinessId}/terminal`;
-  const isEmpty = cart.length === 0;
+  const isEmpty = cart.length === 0 && services.length === 0;
 
   async function stageAndCheckout() {
     if (isEmpty || !resolvedBusinessId || !resolvedOrgId) return;
+
+    const existingStaged = getStagedSaleId(resolvedBusinessId);
+    if (existingStaged) {
+      toast.info("Resuming staged sale");
+      router.push(
+        `/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${existingStaged}`,
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     const toastId = toast.loading("Staging transaction…");
     try {
@@ -110,7 +121,10 @@ export function CartFullPage({
             quantity: item.qty,
           })),
           discount: discount || 0,
-          services: [],
+          services: services.map((s) => ({
+            amount: s.amount,
+            description: s.description,
+          })),
         }),
       });
       if (!response.ok) {
@@ -122,8 +136,11 @@ export function CartFullPage({
       const pendingSaleData = await response.json();
       toast.success("Order staged", {
         id: toastId,
-        description: `KES ${grandTotal.toLocaleString()}`,
+        description: `KES ${grandTotal.toLocaleString()}${
+          servicesTotal > 0 ? " (incl. services)" : ""
+        }`,
       });
+      clearCart();
       if (pendingSaleData?.id) {
         setStagedSaleId(resolvedBusinessId, pendingSaleData.id);
       }
@@ -277,9 +294,9 @@ export function CartFullPage({
             )}
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between text-muted">
-                <dt>Subtotal</dt>
+                <dt>Items</dt>
                 <dd className="tabular-nums">
-                  KES {subtotal.toLocaleString()}
+                  KES {goodsSubtotal.toLocaleString()}
                 </dd>
               </div>
               <div className="flex justify-between text-muted">
@@ -293,6 +310,25 @@ export function CartFullPage({
                   <dt>Discount</dt>
                   <dd className="tabular-nums">
                     −KES {discount.toLocaleString()}
+                  </dd>
+                </div>
+              )}
+              {services.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex justify-between text-muted"
+                >
+                  <dt className="truncate pr-2">{s.description}</dt>
+                  <dd className="tabular-nums shrink-0">
+                    +KES {s.amount.toLocaleString()}
+                  </dd>
+                </div>
+              ))}
+              {servicesTotal > 0 && services.length === 0 && (
+                <div className="flex justify-between text-muted">
+                  <dt>Services</dt>
+                  <dd className="tabular-nums">
+                    +KES {servicesTotal.toLocaleString()}
                   </dd>
                 </div>
               )}

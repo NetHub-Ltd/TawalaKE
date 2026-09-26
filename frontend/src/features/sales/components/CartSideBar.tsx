@@ -21,7 +21,7 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { fetchPosConfig } from "@/features/sales/lib/posConfig";
-import { setStagedSaleId } from "@/features/sales/lib/stagedSale";
+import { setStagedSaleId, getStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 
 interface EditableQuantityProps {
@@ -116,6 +116,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     getFinancials,
     discount,
     setDiscount,
+    services,
+    setServices,
     validateAndSetScope,
     setTaxRate,
   } = useCartStore();
@@ -123,8 +125,6 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const [mounted, setMounted] = useState(false);
   const [isAddingDiscount, setIsAddingDiscount] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
-  type ServiceLine = { id: string; amount: number; description: string };
-  const [services, setServices] = useState<ServiceLine[]>([]);
   const [serviceAmountInput, setServiceAmountInput] = useState("");
   const [serviceDescInput, setServiceDescInput] = useState("");
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
@@ -171,9 +171,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     );
   }
 
-  const { subtotal, taxAmount, grandTotal } = getFinancials();
-  const servicesTotal = services.reduce((sum, s) => sum + s.amount, 0);
-  const payableGrandTotal = Math.max(0, grandTotal + servicesTotal);
+  const { goodsSubtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
+  const payableGrandTotal = grandTotal;
 
   const handleExpand = () => {
     if (resolvedBusinessId && resolvedOrgId) {
@@ -183,7 +182,6 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
   const handleClearCartWithFeedback = () => {
     clearCart();
-    setServices([]);
     setEditingServiceId(null);
     toast.info("Cart Reset", {
       description: "All pending terminal items, discounts, and service fees cleared.",
@@ -210,8 +208,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     }
 
     if (editingServiceId) {
-      setServices((prev) =>
-        prev.map((s) =>
+      setServices(
+        services.map((s) =>
           s.id === editingServiceId
             ? { ...s, amount: parsedAmount, description: cleanDesc }
             : s,
@@ -221,10 +219,10 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         description: `KES ${parsedAmount.toLocaleString()} — ${cleanDesc}`,
       });
     } else {
-      setServices((prev) => [
-        ...prev,
+      setServices([
+        ...services,
         {
-          id: `svc-${Date.now()}-${prev.length}`,
+          id: `svc-${Date.now()}-${services.length}`,
           amount: parsedAmount,
           description: cleanDesc,
         },
@@ -242,11 +240,23 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const handleCheckoutRedirect = async () => {
     if ((!cart.length && !services.length) || !resolvedBusinessId) return;
 
+    // Resume existing staged sale instead of creating a second pending row
+    const existingStaged = getStagedSaleId(resolvedBusinessId);
+    if (existingStaged && resolvedOrgId) {
+      toast.info("Resuming staged sale", {
+        description: "Finish or cancel the open checkout before starting another.",
+      });
+      router.push(
+        `/org/${resolvedOrgId}/${resolvedBusinessId}/checkout?sale_id=${existingStaged}`,
+      );
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     const toastId = toast.loading("Staging transaction...", {
-      description: "Reserving stock allocations and generating transaction entry.",
+      description: "Creating pending sale with current totals.",
     });
 
     const payload = {
@@ -282,8 +292,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         description: `Sale ID: ${pendingSaleData.id.slice(0, 8)} • Total KES ${payableGrandTotal.toLocaleString()}`,
       });
 
-      // Keep cart until finalize succeeds (CheckoutForm clears on success).
-      setServices([]);
+      // Staged sale is source of truth on checkout — clear local cart fully.
+      clearCart();
       if (pendingSaleData?.id && resolvedBusinessId) {
         setStagedSaleId(resolvedBusinessId, pendingSaleData.id);
       }
@@ -567,9 +577,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         {/* BREAKDOWN LEDGER */}
         <div className="space-y-1.5 pt-0.5">
           <div className="flex justify-between text-xs font-medium text-muted/70">
-            <span>Subtotal</span>
+            <span>Items</span>
             <span className="text-foreground font-semibold tabular amount-md font-mono">
-              KES {subtotal.toLocaleString()}
+              KES {goodsSubtotal.toLocaleString()}
             </span>
           </div>
 
@@ -612,7 +622,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                 title="Remove service"
                 aria-label={`Remove ${s.description}`}
                 onClick={() => {
-                  setServices((prev) => prev.filter((x) => x.id !== s.id));
+                  setServices(services.filter((x) => x.id !== s.id));
                   toast.info("Service removed");
                 }}
               >

@@ -423,3 +423,49 @@ def test_aggregate_rows_includes_card_and_provisional():
     assert out["card_volume"] == 9
     assert out["profit_is_provisional"] is True
     assert out["missing_cost_line_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_apply_sale_to_rollups_skips_non_completed_on_positive_sign():
+    db = AsyncMock()
+    sale = MagicMock()
+    sale.status = SaleStatus.REFUNDED
+    sale.id = uuid4()
+    with patch(
+        "app.services.analytics_rollup._load_sale_bundle",
+        new=AsyncMock(return_value=(sale, [])),
+    ):
+        out = await apply_sale_to_rollups(db, sale.id, sign=1)
+    assert out is None
+
+
+@pytest.mark.asyncio
+async def test_apply_refund_passes_status_gate_for_refunded():
+    """sign=-1 must proceed past the status gate when sale is REFUNDED."""
+    from app.services.analytics_rollup import apply_refund_to_rollups
+
+    db = AsyncMock()
+    sale = MagicMock()
+    sale.status = SaleStatus.REFUNDED
+    sale.id = uuid4()
+    sale.business_id = uuid4()
+    sale.organization_id = None
+    sale.total_amount = 100.0
+    sale.subtotal = 100.0
+    sale.tax_amount = 0
+    sale.discount_applied = 0
+    sale.updated_at = datetime(2026, 9, 5, 12, 0, tzinfo=timezone.utc)
+    sale.created_at = sale.updated_at
+
+    pay_result = MagicMock()
+    pay_result.all.return_value = []
+    db.exec = AsyncMock(return_value=pay_result)
+
+    with patch(
+        "app.services.analytics_rollup._load_sale_bundle",
+        new=AsyncMock(return_value=(sale, [])),
+    ):
+        await apply_refund_to_rollups(db, sale.id)
+
+    # Payment query runs only after status gate — proves REFUNDED is allowed for sign=-1
+    assert db.exec.await_count >= 1

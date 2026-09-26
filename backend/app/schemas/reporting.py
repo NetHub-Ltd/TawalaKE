@@ -80,6 +80,8 @@ class ProductRow(BaseModel):
 class ProductsResponse(BaseModel):
     window: ReportWindow
     items: List[ProductRow] = Field(default_factory=list)
+    """Distinct product IDs with sales in the window (not capped by limit)."""
+    total_sku_count: int = 0
 
 
 class StaffRow(BaseModel):

@@ -52,7 +52,15 @@ export function StaffPanel({
         <KpiCard
           label="Top seller"
           value={top ? formatKES(top.revenue) : "—"}
-          hint={top?.full_name}
+          hint={
+            top
+              ? `${top.full_name || "Staff"}${
+                  top.revenue_share_pct != null
+                    ? ` · ${Number(top.revenue_share_pct).toFixed(0)}% of store`
+                    : ""
+                }`
+              : "No sales yet"
+          }
         />
         <KpiCard label="Avg ticket" value={formatKES(avgTicket)} />
         <KpiCard
@@ -76,7 +84,10 @@ export function StaffPanel({
           </p>
           <div className="mt-2">
             {active.length === 0 && (
-              <p className="py-8 text-center text-sm text-muted">No staff sales in this period</p>
+              <p className="py-8 text-center text-sm text-muted">
+                No staff sales in this period. Assign cashiers on Staff, then
+                complete sales on the terminal to see the leaderboard.
+              </p>
             )}
             {active.map((row) => (
               <div

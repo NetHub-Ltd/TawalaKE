@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
-from typing import List, Optional
+from typing import Any, List, Optional
 from enum import Enum
 from pydantic import BaseModel
 from uuid import UUID
@@ -92,14 +92,24 @@ class CartItemIn(BaseModel):
     quantity: float = Field(gt=0, description="Quantity must be greater than zero")
 
 class InitializeCheckoutRequest(BaseModel):
+    """Body for POST /stores/new-sale (and BFF /org/stores/sales)."""
+
     business_id: UUID
-    # cashier_id: Optional[UUID] = None
-    items: List[CartItemIn]
+    items: List[CartItemIn] = Field(default_factory=list)
+    discount: float = 0.0
+    # Preferred: multiple non-stock service lines (design, delivery, etc.)
+    services: List[ServiceFee] = Field(default_factory=list)
+    # Legacy single service (one release compat)
+    service: Optional[ServiceFee] = None
+
 
 class InitializeCheckout(BaseModel):
     business_id: UUID
     cashier_id: UUID
-    items: List[CartItemIn]
+    items: List[CartItemIn] = Field(default_factory=list)
+    discount: float = 0.0
+    services: List[ServiceFee] = Field(default_factory=list)
+    service: Optional[ServiceFee] = None
 
 class FinalizeCheckoutIn(BaseModel):
     sale_id: UUID
@@ -110,13 +120,17 @@ class FinalizeCheckoutIn(BaseModel):
 
 
 class SaleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     status: SaleStatus
     subtotal: float
-    discount: float
-    tax_rate: float
-    tax_amount: float
+    discount: float = 0.0
+    tax_rate: float = 0.0
+    tax_amount: float = 0.0
     total_amount: float
+    # Array of {description, amount} or legacy single object
+    service_amount: Optional[Any] = None
     created_at: datetime
 
 
@@ -154,6 +168,9 @@ class FinancialsSnapshot(BaseModel):
     total_amount: float
     amount_paid: float
     balance_due: float
+    # Non-stock service lines on the sale (design, delivery, …)
+    service_lines: List[Dict[str, Any]] = Field(default_factory=list)
+    service_total: float = 0.0
 
 class ItemSnapshot(BaseModel):
     item_id: UUID

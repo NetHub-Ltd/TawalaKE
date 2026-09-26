@@ -77,7 +77,11 @@ export type ProductRow = {
   margin_pct?: number;
 };
 
-export type ProductsPayload = { items: ProductRow[] };
+export type ProductsPayload = {
+  items: ProductRow[];
+  /** Distinct SKUs with sales in the period (not capped by list limit). */
+  total_sku_count?: number;
+};
 
 export type StaffRow = {
   staff_id: string;
@@ -173,5 +177,27 @@ export function useStaffReport(
       }),
     enabled: Boolean(businessId) && enabled && (period !== "custom" || Boolean(date)),
     staleTime: 30_000,
+  });
+}
+
+/** Insights are advisory — do not block the primary Sales KPIs. */
+export function useInsightsReport(
+  businessId: string,
+  period: AnalyticsRange,
+  enabled: boolean,
+  date?: string
+) {
+  return useQuery({
+    queryKey: ["report", "insights", businessId, periodKey(period, date)],
+    queryFn: () =>
+      fetchReport<InsightsPayload>(businessId, "insights", period, {
+        ...(period === "custom" && date ? { date } : {}),
+      }),
+    enabled:
+      Boolean(businessId) &&
+      enabled &&
+      (period !== "custom" || Boolean(date)),
+    staleTime: 60_000,
+    retry: 1,
   });
 }

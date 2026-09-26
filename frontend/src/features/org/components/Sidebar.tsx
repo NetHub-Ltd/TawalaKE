@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Users,
   Settings,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { BusinessSwitcher } from "@/features/business/components/BusinessSwitcher";
@@ -77,6 +78,12 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     path: "/customers",
     anyOf: [Permission.SALES_READ_BUSINESS, Permission.REPORTS_READ],
     icon: Users,
+  },
+  {
+    label: "Expenses",
+    path: "/expenses",
+    anyOf: [Permission.REPORTS_READ],
+    icon: Wallet,
   },
   {
     label: "Settings",

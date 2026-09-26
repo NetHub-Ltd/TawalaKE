@@ -82,6 +82,10 @@ def period_windows(
         - yesterday  → vs the day before yesterday
         - 3d / 7d    → vs the immediately preceding equal-length window
         - month      → vs previous calendar month
+
+    Timezone: windows use UTC calendar days. Kenya (Africa/Nairobi) late-evening
+    sales may appear under the next UTC day. Switching to EAT requires an
+    approved migration — see docs/reporting-metrics.md.
     """
     now = now or datetime.now(timezone.utc)
 

@@ -9,6 +9,7 @@ const OPTIONS: { value: AnalyticsRange; label: string }[] = [
   { value: "yesterday", label: "Yesterday" },
   { value: "3d", label: "3d" },
   { value: "7d", label: "7d" },
+  { value: "month", label: "Month" },
   { value: "custom", label: "Custom" },
 ];
 
