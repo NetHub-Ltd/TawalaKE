@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers, platform, catalog
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers, platform, catalog, org_permissions
 from app.core.config import settings
 
 from app.utils.logging import logger
@@ -23,6 +23,11 @@ api_router.include_router(
     organization.router,
     prefix="/organizations",
     tags=["Organization Management"],
+)
+api_router.include_router(
+    org_permissions.router,
+    prefix="/organizations",
+    tags=["Organization Permissions"],
 )
 # Root feature combo (≥3): POS + stock + invoicing — core commerce surface
 _commerce_gate = [

@@ -404,19 +404,21 @@ async def get_current_user_info(current_user: CurrentStaff):
 async def get_current_permissions(
     current_user: CurrentStaff,
     redis: RedisDep,
+    db: SessionDep,
 ):
     """
     Dedicated RBAC snapshot for UI gating.
 
     Not stored in the NextAuth session (keeps hydration lean).
     Permission list is Redis-cached (same key as require_permissions).
+    Includes org/staff overrides (role remains ceiling).
     """
     from app.api.rbac_deps import _cached_perm_values
     from app.core.rbac import effective_role, is_org_wide_role
 
     role = effective_role(current_user)
     org_id = current_user.organization_id or current_user.tenant_id
-    perms = await _cached_perm_values(redis, current_user)
+    perms = await _cached_perm_values(redis, current_user, db)
     return PermissionsResponse(
         staff_id=str(current_user.id),
         organization_id=str(org_id) if org_id else None,

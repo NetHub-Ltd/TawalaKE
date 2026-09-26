@@ -13,6 +13,7 @@ import {
 } from "@/features/staff/hooks/useStaff";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { StaffPermissionOverrides } from "@/features/staff/components/StaffPermissionOverrides";
 import { Permission, StaffRoleName } from "@/lib/rbac";
 import {
   ArrowLeft,
@@ -441,6 +442,15 @@ export default function StaffMemberWorkspace({
               </button>
             </section>
           )}
+        </div>
+      )}
+
+      {tabParam === "access" && !action && (
+        <div className="border-t border-border pt-6">
+          <StaffPermissionOverrides
+            organizationId={organizationId}
+            staffId={staffId}
+          />
         </div>
       )}
 
