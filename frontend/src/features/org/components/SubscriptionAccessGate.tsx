@@ -64,7 +64,7 @@ export function SubscriptionAccessGate({
         aria-labelledby="grace-title"
       >
         <div className="w-full max-w-md space-y-4 rounded-2xl border border-border bg-card p-6 shadow-lift">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-secondary">
             Grace period
           </p>
           <h2 id="grace-title" className="text-lg font-semibold text-foreground">

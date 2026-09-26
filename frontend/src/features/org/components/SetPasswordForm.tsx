@@ -135,7 +135,7 @@ export function SetPasswordForm() {
             {showPassword ? "Hide" : "Show"}
           </button>
         </div>
-        {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
+        {errors.password && <p className="text-sm text-[var(--error)]">{errors.password.message}</p>}
       </div>
 
       <div className="space-y-1.5">
@@ -150,7 +150,7 @@ export function SetPasswordForm() {
           {...register("confirmPassword")}
         />
         {errors.confirmPassword && (
-          <p className="text-sm text-red-600">{errors.confirmPassword.message}</p>
+          <p className="text-sm text-[var(--error)]">{errors.confirmPassword.message}</p>
         )}
       </div>
 
