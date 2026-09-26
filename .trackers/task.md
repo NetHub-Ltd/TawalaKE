@@ -1,25 +1,20 @@
 # Task
 
 ## Goal
-Platform Phase A operator console (epic **#385**) in **one PR**:
-- **#386** dashboard home — KPIs + attention list
-- **#387** organizations — filters + extend grace UI
-- **#388** operators (users) — list / invite / role
+Platform Phase B — plans/billing read views + audit log stream (epic **#385**).
 
 ## Scope
-- `/platform` attention-first home
-- `/platform/orgs` status filters (all/active/inactive/grace) + extend-grace control
-- `/platform/users` list, invite, edit role/active/force password change
-- BFF proxies for users + extend-grace
-- Client helpers in `lib/platform/auth.ts`
-- Expose `grace_end_date` + `access_phase` on platform org subscription serialize
-- Shell nav: Overview · Organizations · Operators
-- Trackers updated
+- GET /api/v1/platform/plans (PLANS_READ) — full catalogue including non-public
+- GET /api/v1/platform/audit-events (AUDIT_READ) — paginated stream with filters
+- UI: /platform/plans, /platform/audit
+- BFF proxies + client helpers
+- Shell nav links
+- Fix pre-existing extend_grace audit kwargs (actor_id → actor)
 
 ## Out of scope
-- Phase B plans/billing read, audit stream
+- Plan write / price editing
 - Phase C impersonation / job runners
-- Soft-delete product path for orgs
+- Soft-delete product path
 
 ## Branch
-feat/platform-dashboard-home → single PR into **dev** (covers #385 Phase A)
+feat/platform-phase-b-plans-audit → PR into **dev**

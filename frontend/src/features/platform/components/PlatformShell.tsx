@@ -54,6 +54,18 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
                 >
                   Operators
                 </NavLink>
+                <NavLink
+                  href="/platform/plans"
+                  active={Boolean(pathname?.startsWith("/platform/plans"))}
+                >
+                  Plans
+                </NavLink>
+                <NavLink
+                  href="/platform/audit"
+                  active={Boolean(pathname?.startsWith("/platform/audit"))}
+                >
+                  Audit
+                </NavLink>
               </nav>
             ) : null}
           </div>
