@@ -181,3 +181,55 @@ class PlatformOrgHardDeleteResponse(BaseModel):
     email: Optional[str] = None
     pre_delete_counts: dict[str, int]
     deleted_table_rows: dict[str, int]
+
+
+# ---------------------------------------------------------------------------
+# Phase B — plans read + audit stream
+# ---------------------------------------------------------------------------
+
+
+class PlatformPlanRead(BaseModel):
+    """Plan catalogue entry for platform operators (includes non-public)."""
+
+    id: UUID
+    code: str
+    name: str
+    description: Optional[str] = None
+    price_monthly: float = 0.0
+    price_yearly: Optional[float] = None
+    currency: str = "KES"
+    is_active: bool = True
+    is_public: bool = True
+    trial_days: int = 14
+    sort_order: int = 0
+    features: Optional[dict] = None
+    limits: Optional[dict] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PlatformAuditEventRead(BaseModel):
+    """Platform / tenant audit event row for operator stream."""
+
+    id: UUID
+    action: str
+    outcome: str = "success"
+    resource_type: Optional[str] = None
+    resource_id: Optional[str] = None
+    organization_id: Optional[UUID] = None
+    actor_email: Optional[str] = None
+    actor_role: Optional[str] = None
+    request_id: Optional[str] = None
+    meta: Optional[dict] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class PlatformAuditEventList(BaseModel):
+    items: list[PlatformAuditEventRead]
+    total: int
+    limit: int
+    offset: int
