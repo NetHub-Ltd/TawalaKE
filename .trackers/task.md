@@ -1,20 +1,16 @@
 # Task
 
 ## Goal
-Platform Phase B — plans/billing read views + audit log stream (epic **#385**).
+Platform operator shell: header + collapsible sidebar + main window (replaces top-only nav).
 
 ## Scope
-- GET /api/v1/platform/plans (PLANS_READ) — full catalogue including non-public
-- GET /api/v1/platform/audit-events (AUDIT_READ) — paginated stream with filters
-- UI: /platform/plans, /platform/audit
-- BFF proxies + client helpers
-- Shell nav links
-- Fix pre-existing extend_grace audit kwargs (actor_id → actor)
+- Rewrite `PlatformShell` to match OrgShell layout pattern
+- Sidebar: Overview, Organizations, Operators, Plans, Audit
+- Sticky page header showing current section
+- Collapsible sidebar with edge control
+- Login route stays minimal (no sidebar)
+- Sign out in sidebar footer
 
 ## Out of scope
-- Plan write / price editing
-- Phase C impersonation / job runners
-- Soft-delete product path
-
-## Branch
-feat/platform-phase-b-plans-audit → PR into **dev**
+- Mobile drawer (can follow if needed)
+- Phase C features
