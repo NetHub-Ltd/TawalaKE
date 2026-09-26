@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from app.api.deps import SessionDep, get_redis, AsyncRedis
-from app.api.rbac_deps import require_permissions, assert_business_access
+from app.api.rbac_deps import require_permissions, require_any_permissions, assert_business_access
 from app.core.rbac import Permission
 from app.crud.customer import customer_crud
 from app.models.models import Staff
@@ -31,7 +31,7 @@ async def list_customers(
     business_id: UUID,
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
-    user: Staff = Depends(require_permissions(Permission.SALES_READ_BUSINESS)),
+    user: Staff = Depends(require_any_permissions(Permission.SALES_READ_BUSINESS, Permission.SALES_READ_OWN, Permission.SALES_WRITE)),
     q: Optional[str] = Query(None, description="Search name, phone, email"),
     has_open_credit: Optional[bool] = Query(None),
     skip: int = Query(0, ge=0),
@@ -63,7 +63,7 @@ async def get_customer(
     customer_id: UUID,
     db: SessionDep,
     redis_client: AsyncRedis = Depends(get_redis),
-    user: Staff = Depends(require_permissions(Permission.SALES_READ_BUSINESS)),
+    user: Staff = Depends(require_any_permissions(Permission.SALES_READ_BUSINESS, Permission.SALES_READ_OWN, Permission.SALES_WRITE)),
 ):
     await assert_business_access(db, user, business_id, redis_client)
     detail = await customer_crud.get_detail(

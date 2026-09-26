@@ -17,6 +17,10 @@ import {
   useInsightsReport,
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
+import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { Permission } from "@/lib/rbac";
+import { MyShiftOverview } from "@/features/analytics/components/MyShiftOverview";
+import { Spinner } from "@/lib/components/ui";
 
 export function OverviewClient({
   organizationId,
@@ -28,6 +32,10 @@ export function OverviewClient({
   const normalizedOrgId = organizationId;
   const normalizedBusinessId = businessId;
 
+  const { can, isLoading: sessionLoading } = usePermissions();
+  const canReports = can(Permission.REPORTS_READ);
+  const canOwnSales = can(Permission.SALES_READ_OWN);
+
   const [tab, setTab] = useState<DashboardTab>("sales");
   const [period, setPeriod] = useState<AnalyticsRange>("today");
   const [customDate, setCustomDate] = useState<string | undefined>();
@@ -36,29 +44,34 @@ export function OverviewClient({
   const hourlyGrain =
     period === "today" || period === "yesterday" || period === "custom";
 
-  const dash = useSalesDashboard(normalizedBusinessId, period, dateArg);
+  const dash = useSalesDashboard(
+    normalizedBusinessId,
+    period,
+    dateArg,
+    canReports
+  );
   const hourly = useHourlyReport(
     normalizedBusinessId,
     period,
-    tab === "sales" && hourlyGrain,
+    canReports && tab === "sales" && hourlyGrain,
     dateArg
   );
   const products = useProductsReport(
     normalizedBusinessId,
     period,
-    tab === "products",
+    canReports && tab === "products",
     dateArg
   );
   const staff = useStaffReport(
     normalizedBusinessId,
     period,
-    tab === "staff",
+    canReports && tab === "staff",
     dateArg
   );
   const insights = useInsightsReport(
     normalizedBusinessId,
     period,
-    tab === "sales",
+    canReports && tab === "sales",
     dateArg
   );
 
@@ -80,6 +93,34 @@ export function OverviewClient({
     Boolean(dash.data) &&
     orders === 0 &&
     tab === "sales";
+
+  if (sessionLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center gap-2 p-10 text-muted">
+        <Spinner /> Loading…
+      </div>
+    );
+  }
+
+  if (!canReports && canOwnSales) {
+    return (
+      <MyShiftOverview
+        organizationId={normalizedOrgId}
+        businessId={normalizedBusinessId}
+      />
+    );
+  }
+
+  if (!canReports) {
+    return (
+      <div className="mx-auto max-w-md p-10 text-center text-sm text-muted">
+        <p className="font-medium text-foreground">Overview not available</p>
+        <p className="mt-2">
+          You do not have permission to view branch reports.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6 pt-2 sm:px-6">

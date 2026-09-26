@@ -69,8 +69,9 @@ ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
             Permission.ORG_READ,
             Permission.CATALOG_READ,
             Permission.STOCK_READ,
+            Permission.STOCK_ADJUST,  # take / receive stock on shift
             Permission.SALES_WRITE,
-            Permission.SALES_READ_OWN,
+            Permission.SALES_READ_OWN,  # own history + scoped shift view
         }
     ),
 }
@@ -131,8 +132,8 @@ PERMISSION_CATALOG: list[dict] = [
         "code": Permission.STOCK_ADJUST.value,
         "group": "Inventory",
         "label": "Adjust stock",
-        "description": "Receive stock, write off, and change quantities. High impact on inventory accuracy.",
-        "resources": ["Stock adjustments", "Receiving"],
+        "description": "Receive stock, take stock counts, write off, and change quantities. Cashiers use this for on-shift stock takes; managers for broader inventory control.",
+        "resources": ["Stock adjustments", "Receiving", "Inventory counts"],
     },
     {
         "code": Permission.SALES_WRITE.value,
