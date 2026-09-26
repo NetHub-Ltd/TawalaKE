@@ -59,7 +59,15 @@ class PlatformUserUpdate(BaseModel):
     role: Optional[PlatformRole] = None
     active: Optional[bool] = None
     # Optional admin reset; when set, must_change_password is forced True.
+    # Prefer force_password_change so the client never invents or transmits a password.
     password: Optional[str] = Field(default=None, min_length=12, max_length=128)
+    force_password_change: Optional[bool] = Field(
+        default=None,
+        description=(
+            "When true, server generates a temporary password, sets must_change_password, "
+            "and does not return the plaintext. Client must not supply password."
+        ),
+    )
 
 
 class PlatformUserRead(BaseModel):
@@ -108,6 +116,8 @@ class PlatformOrgSubscriptionRead(BaseModel):
     plan_name: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+    grace_end_date: Optional[datetime] = None
+    access_phase: Optional[str] = None
     current_usage: Optional[dict] = None
 
     model_config = {"from_attributes": True}

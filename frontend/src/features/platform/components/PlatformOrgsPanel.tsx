@@ -13,6 +13,7 @@ import {
 import {
   clearPlatformSession,
   createPlatformOrganization,
+  extendPlatformOrgGrace,
   getPlatformAccessToken,
   hardDeletePlatformOrganization,
   listPlatformOrganizations,
@@ -29,6 +30,10 @@ export function PlatformOrgsPanel() {
   const [loading, setLoading] = useState(false);
   const [orgs, setOrgs] = useState<PlatformOrg[]>([]);
   const [query, setQuery] = useState("");
+  /** all | active | inactive | grace — client-side for grace; active hits API when possible */
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive" | "grace"
+  >("all");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -49,13 +54,21 @@ export function PlatformOrgsPanel() {
   const [reason, setReason] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  const [graceTarget, setGraceTarget] = useState<PlatformOrg | null>(null);
+  const [graceDays, setGraceDays] = useState(7);
+  const [extendingGrace, setExtendingGrace] = useState(false);
+
   const load = useCallback(
-    async (q?: string) => {
+    async (q?: string, filter?: typeof statusFilter) => {
       setLoading(true);
       setError(null);
+      const f = filter ?? statusFilter;
       try {
         const rows = await listPlatformOrganizations({
           q: q?.trim() || undefined,
+          // Server supports active only; grace is filtered client-side
+          active:
+            f === "active" ? true : f === "inactive" ? false : undefined,
           limit: 200,
         });
         setOrgs(rows);
@@ -73,7 +86,7 @@ export function PlatformOrgsPanel() {
         setLoading(false);
       }
     },
-    [router]
+    [router, statusFilter]
   );
 
   useEffect(() => {
@@ -193,10 +206,68 @@ export function PlatformOrgsPanel() {
     }
   };
 
+  const visibleOrgs = useMemo(() => {
+    if (statusFilter !== "grace") return orgs;
+    return orgs.filter((org) =>
+      (org.subscriptions ?? []).some((s) => {
+        const phase = (s.access_phase || "").toLowerCase();
+        if (phase === "grace") return true;
+        if (!s.grace_end_date) return false;
+        const t = Date.parse(s.grace_end_date);
+        if (Number.isNaN(t)) return false;
+        const days = Math.ceil((t - Date.now()) / (24 * 60 * 60 * 1000));
+        return days >= 0 && days <= 14;
+      })
+    );
+  }, [orgs, statusFilter]);
+
   const filteredHint = useMemo(() => {
-    if (!query.trim()) return `${orgs.length} organizations`;
-    return `${orgs.length} match${orgs.length === 1 ? "" : "es"}`;
-  }, [orgs.length, query]);
+    const n = visibleOrgs.length;
+    const base = `${n} organization${n === 1 ? "" : "s"}`;
+    if (statusFilter === "all" && !query.trim()) return base;
+    return `${base} (filtered)`;
+  }, [visibleOrgs.length, statusFilter, query]);
+
+  const onExtendGrace = async () => {
+    if (!graceTarget) return;
+    if (graceDays < 1 || graceDays > 90) {
+      setError("Grace days must be between 1 and 90");
+      return;
+    }
+    const targetId = graceTarget.id;
+    const targetName = graceTarget.name;
+    setExtendingGrace(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const result = await extendPlatformOrgGrace(targetId, graceDays);
+      setSuccess(
+        result.message ||
+          `Grace extended for ${targetName} by ${graceDays} days`
+      );
+      setGraceTarget(null);
+      await load(query);
+      if (detail?.id === targetId) {
+        try {
+          const refreshed = await listPlatformOrganizations({ limit: 200 });
+          const match = refreshed.find((o) => o.id === targetId);
+          if (match) setDetail(match);
+        } catch {
+          /* list refresh best-effort */
+        }
+      }
+    } catch (err) {
+      const status = (err as { status?: number })?.status;
+      if (status === 401) {
+        clearPlatformSession();
+        router.replace("/platform/login");
+        return;
+      }
+      setError(err instanceof Error ? err.message : "Extend grace failed");
+    } finally {
+      setExtendingGrace(false);
+    }
+  };
 
   if (!ready) {
     return (
@@ -236,6 +307,32 @@ export function PlatformOrgsPanel() {
               if (e.key === "Enter") void load(query);
             }}
           />
+        </div>
+        <div className="flex flex-wrap items-center gap-1 rounded-md border border-border/60 p-0.5">
+          {(
+            [
+              ["all", "All"],
+              ["active", "Active"],
+              ["inactive", "Inactive"],
+              ["grace", "Grace"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={
+                statusFilter === value
+                  ? "rounded px-2.5 py-1 text-xs font-semibold bg-brand-primary/10 text-brand-primary"
+                  : "rounded px-2.5 py-1 text-xs font-medium text-muted hover:text-foreground"
+              }
+              onClick={() => {
+                setStatusFilter(value);
+                void load(query, value);
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
         <Button
           type="button"
@@ -293,7 +390,7 @@ export function PlatformOrgsPanel() {
                   </td>
                 </tr>
               ) : (
-                orgs.map((org) => {
+                visibleOrgs.map((org) => {
                   const sub = org.subscriptions?.[0];
                   const subLabel =
                     sub?.plan_name ||
@@ -466,6 +563,16 @@ export function PlatformOrgsPanel() {
                   type="button"
                   variant="outline"
                   onClick={() => {
+                    setGraceDays(7);
+                    setGraceTarget(detail);
+                  }}
+                >
+                  Extend grace
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
                     openEdit(detail);
                     setDetail(null);
                   }}
@@ -542,12 +649,79 @@ export function PlatformOrgsPanel() {
                         {s.end_date
                           ? ` · Until ${new Date(s.end_date).toLocaleDateString("en-KE")}`
                           : ""}
+                        {s.grace_end_date
+                          ? ` · Grace until ${new Date(s.grace_end_date).toLocaleDateString("en-KE")}`
+                          : ""}
+                        {s.access_phase ? ` · Phase: ${s.access_phase}` : ""}
                       </p>
                     </li>
                   ))}
                 </ul>
               )}
             </div>
+          </div>
+        ) : null}
+      </Modal>
+
+      {/* Extend grace */}
+      <Modal
+        open={Boolean(graceTarget)}
+        onClose={() => {
+          if (!extendingGrace) setGraceTarget(null);
+        }}
+        title={
+          graceTarget
+            ? `Extend grace — ${graceTarget.name}`
+            : "Extend grace"
+        }
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setGraceTarget(null)}
+              disabled={extendingGrace}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              isLoading={extendingGrace}
+              disabled={extendingGrace}
+              onClick={() => void onExtendGrace()}
+            >
+              Extend grace
+            </Button>
+          </>
+        }
+      >
+        {graceTarget ? (
+          <div className="space-y-3 text-sm">
+            <p className="text-muted">
+              Extends the subscription grace window so the organization can
+              keep access while payment is arranged. Audited on the server.
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="grace-days">Days to add (1–90)</Label>
+              <Input
+                id="grace-days"
+                type="number"
+                min={1}
+                max={90}
+                value={graceDays}
+                onChange={(e) => setGraceDays(Number(e.target.value) || 7)}
+                disabled={extendingGrace}
+              />
+            </div>
+            {graceTarget.subscriptions?.[0]?.grace_end_date ? (
+              <p className="text-xs text-muted">
+                Current grace end:{" "}
+                {new Date(
+                  graceTarget.subscriptions[0].grace_end_date
+                ).toLocaleString("en-KE")}
+              </p>
+            ) : null}
           </div>
         ) : null}
       </Modal>

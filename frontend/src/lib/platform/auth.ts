@@ -204,6 +204,10 @@ export type PlatformOrgSubscription = {
   plan_name?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  /** Present when platform list/detail includes subscription grace fields. */
+  grace_end_date?: string | null;
+  /** active | grace | locked | unknown — from subscription access phase. */
+  access_phase?: string | null;
   current_usage?: Record<string, unknown> | null;
 };
 
@@ -310,4 +314,97 @@ export async function hardDeletePlatformOrganization(
     );
   }
   return data as PlatformOrgHardDeleteResult;
+}
+
+
+// ---------------------------------------------------------------------------
+// Platform users (operators) — issue #388
+// ---------------------------------------------------------------------------
+
+export type PlatformRole = "SUPER_ADMIN" | "SUPPORT" | "BILLING" | "AUDITOR";
+
+export type PlatformUser = {
+  id: string;
+  email: string;
+  full_name: string;
+  role: PlatformRole;
+  active: boolean;
+  must_change_password: boolean;
+  last_login_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export async function listPlatformUsers(): Promise<PlatformUser[]> {
+  const res = await platformFetch("/users");
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throwPlatformError(data, res.status, "Could not load operators");
+  return data as PlatformUser[];
+}
+
+export async function createPlatformUser(body: {
+  email: string;
+  full_name: string;
+  role?: PlatformRole;
+  active?: boolean;
+}): Promise<PlatformUser> {
+  const res = await platformFetch("/users", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not invite operator");
+  return data as PlatformUser;
+}
+
+export async function updatePlatformUser(
+  userId: string,
+  body: {
+    full_name?: string;
+    role?: PlatformRole;
+    active?: boolean;
+    /**
+     * When true, server generates a temporary password and sets
+     * must_change_password. Client must not invent or send a password.
+     */
+    force_password_change?: boolean;
+  }
+): Promise<PlatformUser> {
+  const res = await platformFetch(`/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not update operator");
+  return data as PlatformUser;
+}
+
+// ---------------------------------------------------------------------------
+// Organization grace — issue #387
+// ---------------------------------------------------------------------------
+
+export type PlatformExtendGraceResult = {
+  status: boolean;
+  message: string;
+  data: {
+    organization_id: string;
+    subscription_id: string;
+    grace_end_date?: string | null;
+    access_phase?: string | null;
+  };
+};
+
+export async function extendPlatformOrgGrace(
+  organizationId: string,
+  days = 7
+): Promise<PlatformExtendGraceResult> {
+  const sp = new URLSearchParams();
+  sp.set("days", String(days));
+  const res = await platformFetch(
+    `/organizations/${organizationId}/extend-grace?${sp.toString()}`,
+    { method: "POST" }
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not extend grace");
+  return data as PlatformExtendGraceResult;
 }

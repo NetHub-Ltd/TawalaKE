@@ -1,27 +1,25 @@
 # Task
 
 ## Goal
-Platform login email MFA (issue **#298**).
+Platform Phase A operator console (epic **#385**) in **one PR**:
+- **#386** dashboard home — KPIs + attention list
+- **#387** organizations — filters + extend grace UI
+- **#388** operators (users) — list / invite / role
 
 ## Scope
-- POST /api/v1/platform/auth/login → challenge only (no access token)
-- Redis MFA challenge + hashed 6-digit code
-- POST /api/v1/platform/auth/verify-code → platform JWT
-- POST /api/v1/platform/auth/resend-code (cooldown)
-- mailer.send_platform_login_code
-- Config: platform_mfa_code_ttl_sec, max_attempts, resend_cooldown_sec
-- Unit tests test_platform_mfa.py
-- Preserve platform user invite + bootstrap from dev (send_platform_user_invite, must_change_password)
-
-## Breaking change
-Password-only platform login no longer returns access_token. Clients must complete verify-code.
-
-## Roadmap
-1. #297 org hard-delete — done (merged #302)
-2. #298 MFA — this branch
-3. #299 /platform/login UI (largely on dev; activates when MFA ships)
-4. #300 orgs admin UI
-5. #301 cleanup runbook
+- `/platform` attention-first home
+- `/platform/orgs` status filters (all/active/inactive/grace) + extend-grace control
+- `/platform/users` list, invite, edit role/active/force password change
+- BFF proxies for users + extend-grace
+- Client helpers in `lib/platform/auth.ts`
+- Expose `grace_end_date` + `access_phase` on platform org subscription serialize
+- Shell nav: Overview · Organizations · Operators
+- Trackers updated
 
 ## Out of scope
-Trusted device skip; tenant/staff login changes.
+- Phase B plans/billing read, audit stream
+- Phase C impersonation / job runners
+- Soft-delete product path for orgs
+
+## Branch
+feat/platform-dashboard-home → single PR into **dev** (covers #385 Phase A)
