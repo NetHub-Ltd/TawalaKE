@@ -48,6 +48,12 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
                 >
                   Organizations
                 </NavLink>
+                <NavLink
+                  href="/platform/users"
+                  active={Boolean(pathname?.startsWith("/platform/users"))}
+                >
+                  Operators
+                </NavLink>
               </nav>
             ) : null}
           </div>
