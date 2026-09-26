@@ -16,7 +16,7 @@ type Effect = "DEFAULT" | "DENY" | "GRANT";
  * Per-staff revoke/restore within role ceiling. Owner only for writes.
  */
 export function StaffPermissionOverrides({
-  organizationId,
+  organizationId: _organizationId,
   staffId,
 }: {
   organizationId: string;
