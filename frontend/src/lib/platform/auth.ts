@@ -363,8 +363,11 @@ export async function updatePlatformUser(
     full_name?: string;
     role?: PlatformRole;
     active?: boolean;
-    /** When set, forces must_change_password on the target. */
-    password?: string;
+    /**
+     * When true, server generates a temporary password and sets
+     * must_change_password. Client must not invent or send a password.
+     */
+    force_password_change?: boolean;
   }
 ): Promise<PlatformUser> {
   const res = await platformFetch(`/users/${userId}`, {

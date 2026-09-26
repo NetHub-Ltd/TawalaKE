@@ -149,22 +149,13 @@ export function PlatformUsersPanel() {
     setError(null);
     setSuccess(null);
     try {
-      const body: {
-        full_name: string;
-        role: PlatformRole;
-        active: boolean;
-        password?: string;
-      } = {
+      await updatePlatformUser(editUser.id, {
         full_name: editName.trim(),
         role: editRole,
         active: editActive,
-      };
-      // Server forces must_change_password when password is set; generate a
-      // temporary one only when the operator explicitly requests a force-reset.
-      if (editForcePw) {
-        body.password = `Tmp!${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-      }
-      await updatePlatformUser(editUser.id, body);
+        // Server generates temp password; never invent one in the browser.
+        ...(editForcePw ? { force_password_change: true } : {}),
+      });
       setSuccess(
         editForcePw
           ? `Updated ${editName.trim()} and forced password change.`
@@ -448,8 +439,9 @@ export function PlatformUsersPanel() {
               Force password change on next login
             </label>
             <p className="text-xs text-muted">
-              Force password change sets a new temporary password server-side
-              and requires the operator to change it after sign-in.
+              Force password change is applied entirely on the server. No
+              password is generated or shown in the browser; the operator must
+              change it on next sign-in (coordinate access out-of-band if needed).
             </p>
           </div>
         ) : null}

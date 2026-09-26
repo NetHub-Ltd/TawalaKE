@@ -484,13 +484,30 @@ async def update_platform_user(
         target.role = data["role"]
     if "active" in data and data["active"] is not None:
         target.active = data["active"]
-    if "password" in data and data["password"]:
-        target.hashed_password = security.hash_password(data["password"])
+
+    # Password reset: prefer server-side generation (force_password_change).
+    # Never log or return plaintext. Client-supplied password remains supported
+    # for compatibility but is not used by the platform UI.
+    force_reset = bool(data.get("force_password_change"))
+    supplied_password = data.get("password")
+    if force_reset:
+        temporary_password = secrets.token_urlsafe(18)
+        target.hashed_password = security.hash_password(temporary_password)
+        target.must_change_password = True
+        # temporary_password intentionally discarded — operator coordinates out-of-band
+        # or user uses forgot/reset flows; plaintext must not leave this scope.
+        del temporary_password
+    elif supplied_password:
+        target.hashed_password = security.hash_password(supplied_password)
         target.must_change_password = True
 
     db.add(target)
     await db.commit()
     await db.refresh(target)
+
+    audit_fields = sorted(k for k in data.keys() if k != "password")
+    if force_reset or supplied_password:
+        audit_fields = sorted(set(audit_fields) | {"password_reset"})
 
     await record_platform_audit(
         db,
@@ -499,7 +516,7 @@ async def update_platform_user(
         outcome="success",
         resource_type="platform_user",
         resource_id=target.id,
-        meta={"fields": sorted(data.keys())},
+        meta={"fields": audit_fields},
         request_id=request.headers.get("x-request-id"),
     )
     return PlatformUserRead.model_validate(target)
