@@ -1,15 +1,23 @@
 "use client";
 
 /**
- * Finalize sale: customer required for every method (who paid / who took credit).
- * Payment methods loaded from backend POS config (Cash + Credit today).
+ * Two-step finish flow:
+ * 1) Customer — who is paying / taking credit
+ * 2) Payment — Cash / M-Pesa / Credit + amount received + M-Pesa code
  */
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Check, Search, ChevronDown } from "lucide-react";
+import {
+  Loader2,
+  Check,
+  Search,
+  ChevronDown,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import {
@@ -17,7 +25,10 @@ import {
   POS_METHODS_FALLBACK,
   type PosPaymentMethod,
 } from "@/features/sales/lib/posConfig";
-import { normalizeKenyanPhone, isValidKenyanPhone } from "@/features/sales/lib/phone";
+import {
+  normalizeKenyanPhone,
+  isValidKenyanPhone,
+} from "@/features/sales/lib/phone";
 import { clearStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { Spinner } from "@/lib/components/ui";
 
@@ -28,25 +39,29 @@ interface CheckoutFormProps {
   businessId: string;
 }
 
-const schema = z
+type Step = "customer" | "payment";
+
+const customerSchema = z.object({
+  customerName: z
+    .string()
+    .min(2, "Customer name is required")
+    .max(80, "Name is too long"),
+  customerPhone: z
+    .string()
+    .transform((val) => normalizeKenyanPhone(val))
+    .refine((val) => isValidKenyanPhone(val), {
+      message: "Use a valid Kenyan number (07xxxxxxxx, 01xxxxxxxx, or +254…)",
+    }),
+});
+
+const paymentSchema = z
   .object({
-    customerName: z
-      .string()
-      .min(2, "Customer name is required")
-      .max(80, "Name is too long"),
-    customerPhone: z
-      .string()
-      .transform((val) => normalizeKenyanPhone(val))
-      .refine((val) => isValidKenyanPhone(val), {
-        message: "Use a valid Kenyan number (07xxxxxxxx, 01xxxxxxxx, or +254…)",
-      }),
     paymentMethod: z.string().min(1, "Select a payment method"),
     amountGiven: z.string().optional(),
     paymentReference: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    const method = data.paymentMethod;
-    if (method === "INVOICE") return;
+    if (data.paymentMethod === "INVOICE") return;
     const given = Number(data.amountGiven);
     if (!data.amountGiven || !Number.isFinite(given) || given <= 0) {
       ctx.addIssue({
@@ -55,7 +70,10 @@ const schema = z
         path: ["amountGiven"],
       });
     }
-    if (method === "MPESA" && !(data.paymentReference || "").trim()) {
+    if (
+      data.paymentMethod === "MPESA" &&
+      !(data.paymentReference || "").trim()
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "M-Pesa confirmation code is required",
@@ -64,7 +82,8 @@ const schema = z
     }
   });
 
-type FormValues = z.infer<typeof schema>;
+type CustomerValues = z.infer<typeof customerSchema>;
+type PaymentValues = z.infer<typeof paymentSchema>;
 
 function extractErrorMessage(payload: unknown, fallback: string): string {
   if (!payload || typeof payload !== "object") return fallback;
@@ -79,11 +98,7 @@ function extractErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-type CustomerHit = {
-  id: string;
-  name: string;
-  phone?: string | null;
-};
+type CustomerHit = { id: string; name: string; phone?: string | null };
 
 export function CheckoutForm({
   saleId,
@@ -95,52 +110,44 @@ export function CheckoutForm({
   const clearCart = useCartStore((s) => s.clearCart);
   const setTaxRate = useCartStore((s) => s.setTaxRate);
 
-  const [methods, setMethods] = useState<PosPaymentMethod[]>(POS_METHODS_FALLBACK);
+  const [step, setStep] = useState<Step>("customer");
+  const [customer, setCustomer] = useState<CustomerValues | null>(null);
+  const [methods, setMethods] =
+    useState<PosPaymentMethod[]>(POS_METHODS_FALLBACK);
   const [configLoading, setConfigLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerHits, setCustomerHits] = useState<CustomerHit[]>([]);
   const [searchingCustomers, setSearchingCustomers] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const customerForm = useForm<CustomerValues>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: { customerName: "", customerPhone: "" },
+  });
+
+  const paymentForm = useForm<PaymentValues>({
+    resolver: zodResolver(paymentSchema),
     defaultValues: {
-      customerName: "",
-      customerPhone: "",
       paymentMethod: "CASH",
-      amountGiven: "",
+      amountGiven: grandTotal > 0 ? grandTotal.toFixed(2) : "",
       paymentReference: "",
     },
   });
 
-  const paymentMethod = watch("paymentMethod");
-
-  useEffect(() => {
-    if (paymentMethod === "INVOICE") return;
-    const current = watch("amountGiven");
-    if (!current) {
-      setValue("amountGiven", grandTotal > 0 ? grandTotal.toFixed(2) : "");
-    }
-  }, [paymentMethod, grandTotal, setValue, watch]);
-
-  const selectedMeta = methods.find((m) => m.code === paymentMethod);
+  const paymentMethod = paymentForm.watch("paymentMethod");
+  const amountGivenWatch = paymentForm.watch("amountGiven");
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setConfigLoading(true);
       try {
         const cfg = await fetchPosConfig(businessId);
         if (cancelled) return;
         setMethods(cfg.payment_methods);
         setTaxRate(cfg.tax_rate);
         if (cfg.payment_methods[0]?.code) {
-          setValue("paymentMethod", cfg.payment_methods[0].code);
+          paymentForm.setValue("paymentMethod", cfg.payment_methods[0].code);
         }
       } catch {
         if (!cancelled) setMethods(POS_METHODS_FALLBACK);
@@ -151,57 +158,72 @@ export function CheckoutForm({
     return () => {
       cancelled = true;
     };
-  }, [businessId, setTaxRate, setValue]);
+  }, [businessId, setTaxRate, paymentForm]);
 
-  // Debounced customer search for typeahead
+  useEffect(() => {
+    if (paymentMethod === "INVOICE") return;
+    const cur = paymentForm.getValues("amountGiven");
+    if (!cur) {
+      paymentForm.setValue(
+        "amountGiven",
+        grandTotal > 0 ? grandTotal.toFixed(2) : "",
+      );
+    }
+  }, [paymentMethod, grandTotal, paymentForm]);
+
   useEffect(() => {
     const q = customerQuery.trim();
     if (q.length < 2) {
       setCustomerHits([]);
       return;
     }
-    const t = window.setTimeout(async () => {
+    let cancelled = false;
+    const t = setTimeout(async () => {
       setSearchingCustomers(true);
       try {
-        const params = new URLSearchParams({
-          businessId,
-          q,
-          limit: "8",
-        });
-        const res = await fetch(`/api/v1/customers?${params}`, {
-          cache: "no-store",
-        });
+        const res = await fetch(
+          `/api/v1/org/customers?business_id=${encodeURIComponent(businessId)}&q=${encodeURIComponent(q)}`,
+          { credentials: "include" },
+        );
         const body = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setCustomerHits([]);
-          return;
+        const list = Array.isArray(body)
+          ? body
+          : Array.isArray(body?.data)
+            ? body.data
+            : [];
+        if (!cancelled) {
+          setCustomerHits(
+            list.slice(0, 8).map((c: CustomerHit) => ({
+              id: String(c.id),
+              name: String(c.name || ""),
+              phone: c.phone,
+            })),
+          );
         }
-        const data = body.data ?? body;
-        const items = (data.items || []) as CustomerHit[];
-        setCustomerHits(items);
       } catch {
-        setCustomerHits([]);
+        if (!cancelled) setCustomerHits([]);
       } finally {
-        setSearchingCustomers(false);
+        if (!cancelled) setSearchingCustomers(false);
       }
     }, 280);
-    return () => window.clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [customerQuery, businessId]);
 
-  function pickCustomer(c: CustomerHit) {
-    setValue("customerName", c.name, { shouldValidate: true });
-    if (c.phone) {
-      setValue("customerPhone", c.phone.replace(/\s+/g, ""), {
-        shouldValidate: true,
-      });
+  const onCustomerNext = customerForm.handleSubmit((data) => {
+    setCustomer(data);
+    setStep("payment");
+  });
+
+  const onPay = paymentForm.handleSubmit(async (data) => {
+    if (!customer) {
+      setStep("customer");
+      return;
     }
-    setCustomerQuery("");
-    setCustomerHits([]);
-  }
-
-  const onSubmit = async (data: FormValues) => {
-    const toastId = toast.loading("Completing sale...");
-
+    setSubmitting(true);
+    const toastId = toast.loading("Completing sale…");
     const isCredit = data.paymentMethod === "INVOICE";
     const amountGiven = isCredit ? undefined : Number(data.amountGiven);
     const payload = {
@@ -211,8 +233,8 @@ export function CheckoutForm({
         ? undefined
         : (data.paymentReference || "").trim() || undefined,
       amount_given: amountGiven,
-      customer_name: data.customerName.trim(),
-      customer_phone: data.customerPhone,
+      customer_name: customer.customerName.trim(),
+      customer_phone: customer.customerPhone,
     };
 
     try {
@@ -221,312 +243,313 @@ export function CheckoutForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const body = await response.json().catch(() => ({}));
-
       if (!response.ok) {
-        throw new Error(
-          extractErrorMessage(body, "Could not complete the sale")
-        );
+        throw new Error(extractErrorMessage(body, "Could not complete sale"));
       }
-
-      // Clear cart only after successful finalize
       clearCart();
       clearStagedSaleId(businessId);
-
-      const isCredit = data.paymentMethod === "INVOICE";
-      toast.success(isCredit ? "Credit sale recorded" : "Sale completed", {
-        id: toastId,
-        description: isCredit
-          ? `Credit · ${data.customerName} · KES ${grandTotal.toLocaleString()}`
-          : `${data.customerName} · KES ${grandTotal.toLocaleString()}`,
-      });
-
-      router.push(
-        `/org/${organizationId}/${businessId}/complete-sale?saleId=${encodeURIComponent(saleId)}`
+      toast.success(
+        isCredit
+          ? "Credit sale recorded"
+          : amountGiven != null && amountGiven < grandTotal - 0.001
+            ? "Partial payment recorded"
+            : "Sale completed",
+        { id: toastId },
       );
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Please try again";
-      const stockIssue = /stock|insufficient/i.test(msg);
-      toast.error(stockIssue ? "Not enough stock" : "Could not complete sale", {
+      router.push(
+        `/org/${organizationId}/${businessId}/sale/${saleId}/preview`,
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Checkout failed", {
         id: toastId,
-        description: stockIssue
-          ? `${msg} Go back to the terminal and reduce quantities.`
-          : msg,
       });
+      setSubmitting(false);
     }
-  };
+  });
+
+  const given = Number(amountGivenWatch || 0);
+  const changeDue =
+    paymentMethod !== "INVOICE" && given > grandTotal + 0.001
+      ? given - grandTotal
+      : 0;
+  const isPartial =
+    paymentMethod !== "INVOICE" && given > 0 && given < grandTotal - 0.001;
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">
-          Finish this sale
-        </h2>
-        <p className="mt-1 text-sm text-muted">
-          Customer required — we record who paid or who took credit.
-          {paymentMethod !== "INVOICE" && (
+    <div className="mx-auto w-full max-w-md">
+      <div className="mb-5 flex items-center gap-2 text-xs font-medium">
+        <span
+          className={
+            step === "customer" ? "text-brand-primary" : "text-muted"
+          }
+        >
+          1 · Customer
+        </span>
+        <span className="text-muted">→</span>
+        <span
+          className={step === "payment" ? "text-brand-primary" : "text-muted"}
+        >
+          2 · Payment
+        </span>
+      </div>
+
+      {step === "customer" && (
+        <form onSubmit={onCustomerNext} className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              Customer
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Who is paying or taking credit? Required for every sale.
+            </p>
             <button
               type="button"
-              className="ml-2 text-xs font-semibold text-brand-primary hover:underline"
+              className="mt-2 text-xs font-semibold text-brand-primary hover:underline"
               onClick={() => {
-                setValue("customerName", "Walk-in customer", { shouldValidate: true });
-                setValue("customerPhone", "0700000000", { shouldValidate: true });
-                setCustomerQuery("");
+                customerForm.setValue("customerName", "Walk-in customer", {
+                  shouldValidate: true,
+                });
+                customerForm.setValue("customerPhone", "0700000000", {
+                  shouldValidate: true,
+                });
               }}
             >
               Use walk-in
             </button>
-          )}
-        </p>
-      </div>
-
-      {/* Lookup — visually separate from the form fields below */}
-      <div className="relative mb-5 rounded-md border border-dashed border-brand-primary/25 bg-brand-primary/[0.04] p-3.5">
-        <div className="mb-2 flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-primary/10 text-brand-primary">
-            <Search size={13} aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-xs font-semibold text-foreground">
-              Look up customer
-            </p>
-            <p className="text-xs text-muted">
-              Optional — pick someone to fill name and phone
-            </p>
           </div>
-        </div>
-        <div className="relative">
-          <input
-            id="customer-search"
-            value={customerQuery}
-            onChange={(e) => setCustomerQuery(e.target.value)}
-            placeholder="Type name or phone…"
-            className="h-10 w-full rounded-md border border-border/50 bg-card pl-3 pr-9 text-sm shadow-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-            autoComplete="off"
-          />
-          {searchingCustomers && (
-            <Loader2
-              size={14}
-              className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted"
+
+          <div className="relative rounded-md border border-dashed border-brand-primary/25 bg-brand-primary/[0.04] p-3.5">
+            <div className="mb-2 flex items-center gap-2">
+              <Search size={13} className="text-brand-primary" />
+              <p className="text-xs font-semibold text-foreground">
+                Look up customer
+              </p>
+            </div>
+            <input
+              value={customerQuery}
+              onChange={(e) => setCustomerQuery(e.target.value)}
+              placeholder="Type name or phone…"
+              className="h-10 w-full rounded-md border border-border/50 bg-card px-3 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+              autoComplete="off"
             />
-          )}
-          {customerHits.length > 0 && (
-            <ul className="absolute z-20 mt-1.5 max-h-48 w-full overflow-auto rounded-md border border-border bg-card py-1 shadow-lg">
-              {customerHits.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => pickCustomer(c)}
-                    className="flex w-full flex-col items-start px-3 py-2.5 text-left text-sm hover:bg-brand-primary/5"
-                  >
-                    <span className="font-medium text-foreground">{c.name}</span>
-                    <span className="text-xs text-muted">
-                      {c.phone || "No phone"}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
-        <div>
-          <label
-            htmlFor="customerName"
-            className="block text-sm font-medium text-foreground mb-1.5"
-          >
-            Customer name <span className="text-rose-600">*</span>
-          </label>
-          <input
-            id="customerName"
-            {...register("customerName")}
-            disabled={isSubmitting}
-            className="w-full h-11 px-3.5 rounded-md border border-border bg-background text-sm
-                       focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
-                       disabled:opacity-50"
-            placeholder="Who is paying / taking credit?"
-            autoComplete="name"
-          />
-          {errors.customerName && (
-            <p className="mt-1.5 text-sm text-[var(--error)]">
-              {errors.customerName.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="customerPhone"
-            className="block text-sm font-medium text-foreground mb-1.5"
-          >
-            Customer phone <span className="text-rose-600">*</span>
-          </label>
-          <input
-            id="customerPhone"
-            {...register("customerPhone")}
-            disabled={isSubmitting}
-            className="w-full h-11 px-3.5 rounded-md border border-border bg-background text-sm
-                       focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary
-                       disabled:opacity-50"
-            placeholder="07xxxxxxxx"
-            inputMode="tel"
-            autoComplete="tel"
-          />
-          {errors.customerPhone && (
-            <p className="mt-1.5 text-sm text-[var(--error)]">
-              {errors.customerPhone.message}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label
-            htmlFor="paymentMethod"
-            className="mb-1.5 block text-sm font-medium text-foreground"
-          >
-            Payment method
-          </label>
-          <div className="relative">
-            <select
-              id="paymentMethod"
-              {...register("paymentMethod")}
-              disabled={isSubmitting || configLoading}
-              className="h-11 w-full cursor-pointer appearance-none rounded-md border border-border bg-card pl-3.5 pr-10 text-sm outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30 disabled:opacity-50"
-            >
-              {methods.map((m) => (
-                <option key={m.code} value={m.code}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={16}
-              className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
-            />
+            {searchingCustomers && (
+              <Loader2
+                size={14}
+                className="absolute right-5 top-12 animate-spin text-muted"
+              />
+            )}
+            {customerHits.length > 0 && (
+              <ul className="absolute z-20 mt-1 max-h-48 w-[calc(100%-1.75rem)] overflow-auto rounded-md border border-border bg-card py-1 shadow-lg">
+                {customerHits.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-register"
+                      onClick={() => {
+                        customerForm.setValue("customerName", c.name, {
+                          shouldValidate: true,
+                        });
+                        if (c.phone) {
+                          customerForm.setValue(
+                            "customerPhone",
+                            c.phone.replace(/\s+/g, ""),
+                            { shouldValidate: true },
+                          );
+                        }
+                        setCustomerQuery("");
+                        setCustomerHits([]);
+                      }}
+                    >
+                      <span className="font-medium">{c.name}</span>
+                      {c.phone ? (
+                        <span className="ml-2 text-xs text-muted">
+                          {c.phone}
+                        </span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          {selectedMeta && !selectedMeta.collects_money && (
-            <p className="mt-1.5 text-xs text-muted">
-              Goods leave now · stock reduced · collect payment later
-            </p>
-          )}
-          {errors.paymentMethod && (
-            <p className="mt-1.5 text-sm text-[var(--error)]">
-              {errors.paymentMethod.message}
-            </p>
-          )}
-        </div>
 
-        {paymentMethod !== "INVOICE" && (
           <div>
-            <label
-              htmlFor="amountGiven"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Amount received
+            <label className="mb-1.5 block text-sm font-medium">
+              Customer name *
             </label>
             <input
-              id="amountGiven"
-              type="number"
-              step="0.01"
-              min={0}
-              inputMode="decimal"
-              {...register("amountGiven")}
-              placeholder={String(grandTotal.toFixed(2))}
-              disabled={isSubmitting}
+              {...customerForm.register("customerName")}
               className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+              placeholder="Who is paying / taking credit?"
             />
-            {errors.amountGiven && (
-              <p className="mt-1.5 text-sm text-[var(--error)]">
-                {errors.amountGiven.message}
+            {customerForm.formState.errors.customerName && (
+              <p className="mt-1 text-sm text-[var(--error)]">
+                {customerForm.formState.errors.customerName.message}
               </p>
             )}
-            {(() => {
-              const given = Number(watch("amountGiven") || 0);
-              if (!given || given <= 0) return null;
-              if (given > grandTotal + 0.001) {
-                const change = given - grandTotal;
-                return (
-                  <p className="mt-1.5 text-sm font-medium text-foreground">
-                    Change due:{" "}
-                    <span className="text-brand-primary">
-                      {change.toLocaleString("en-KE", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </p>
-                );
-              }
-              if (given < grandTotal - 0.001) {
-                const bal = grandTotal - given;
-                return (
-                  <p className="mt-1.5 text-sm text-amber-700">
-                    Partial payment — balance remaining{" "}
-                    {bal.toLocaleString("en-KE", {
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Customer phone *
+            </label>
+            <input
+              {...customerForm.register("customerPhone")}
+              className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+              placeholder="07xxxxxxxx"
+            />
+            {customerForm.formState.errors.customerPhone && (
+              <p className="mt-1 text-sm text-[var(--error)]">
+                {customerForm.formState.errors.customerPhone.message}
+              </p>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-primary text-sm font-semibold text-white"
+          >
+            Continue to payment
+            <ArrowRight size={16} />
+          </button>
+        </form>
+      )}
+
+      {step === "payment" && customer && (
+        <form onSubmit={onPay} className="space-y-4">
+          <div>
+            <button
+              type="button"
+              onClick={() => setStep("customer")}
+              className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-foreground"
+            >
+              <ArrowLeft size={14} />
+              Edit customer
+            </button>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground">
+              Payment
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              {customer.customerName} · {customer.customerPhone}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-foreground">
+              Amount due:{" "}
+              {grandTotal.toLocaleString("en-KE", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}{" "}
+              KES
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">
+              Payment method
+            </label>
+            <div className="relative">
+              <select
+                {...paymentForm.register("paymentMethod")}
+                disabled={submitting || configLoading}
+                className="h-11 w-full cursor-pointer appearance-none rounded-md border border-border bg-card pl-3.5 pr-10 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+              >
+                {methods.map((m) => (
+                  <option key={m.code} value={m.code}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted"
+              />
+            </div>
+            {paymentMethod === "INVOICE" && (
+              <p className="mt-1.5 text-xs text-muted">
+                Goods leave now · collect payment later · invoice
+              </p>
+            )}
+          </div>
+
+          {paymentMethod !== "INVOICE" && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">
+                Amount received
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min={0}
+                inputMode="decimal"
+                {...paymentForm.register("amountGiven")}
+                disabled={submitting}
+                className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+              />
+              {paymentForm.formState.errors.amountGiven && (
+                <p className="mt-1 text-sm text-[var(--error)]">
+                  {paymentForm.formState.errors.amountGiven.message}
+                </p>
+              )}
+              {changeDue > 0 && (
+                <p className="mt-1.5 text-sm font-medium">
+                  Change due:{" "}
+                  <span className="text-brand-primary">
+                    {changeDue.toLocaleString("en-KE", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
-                    })}{" "}
-                    (invoice)
-                  </p>
-                );
-              }
-              return (
-                <p className="mt-1.5 text-xs text-muted">
-                  Full payment — receipt
+                    })}
+                  </span>
                 </p>
-              );
-            })()}
-          </div>
-        )}
-
-        {paymentMethod === "MPESA" && (
-          <div>
-            <label
-              htmlFor="paymentReference"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              M-Pesa confirmation code
-            </label>
-            <input
-              id="paymentReference"
-              {...register("paymentReference")}
-              placeholder="e.g. QH12ABCDE"
-              disabled={isSubmitting}
-              className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm uppercase outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
-            />
-            {errors.paymentReference && (
-              <p className="mt-1.5 text-sm text-[var(--error)]">
-                {errors.paymentReference.message}
-              </p>
-            )}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting || configLoading}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-accent text-sm font-semibold text-white shadow-sm transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSubmitting ? (
-            <>
-              <Spinner size="sm" />
-              Completing...
-            </>
-          ) : (
-            <>
-              <Check size={16} />
-              {paymentMethod === "INVOICE"
-                ? "Complete credit sale"
-                : paymentMethod === "MPESA"
-                  ? "Complete M-Pesa sale"
-                  : "Complete sale"}
-            </>
+              )}
+              {isPartial && (
+                <p className="mt-1.5 text-sm text-amber-700">
+                  Partial payment — balance remaining will stay on invoice
+                </p>
+              )}
+            </div>
           )}
-        </button>
-      </form>
+
+          {paymentMethod === "MPESA" && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">
+                M-Pesa confirmation code
+              </label>
+              <input
+                {...paymentForm.register("paymentReference")}
+                placeholder="e.g. QH12ABCDE"
+                disabled={submitting}
+                className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm uppercase outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+              />
+              {paymentForm.formState.errors.paymentReference && (
+                <p className="mt-1 text-sm text-[var(--error)]">
+                  {paymentForm.formState.errors.paymentReference.message}
+                </p>
+              )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting || configLoading}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-accent text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <Spinner size="sm" /> Completing…
+              </>
+            ) : (
+              <>
+                <Check size={16} />
+                {paymentMethod === "INVOICE"
+                  ? "Complete credit sale"
+                  : paymentMethod === "MPESA"
+                    ? "Complete M-Pesa sale"
+                    : "Complete sale"}
+              </>
+            )}
+          </button>
+        </form>
+      )}
     </div>
   );
 }
