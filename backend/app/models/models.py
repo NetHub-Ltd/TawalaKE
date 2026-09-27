@@ -715,6 +715,79 @@ class ProductSalesSummary(BaseMixin, table=True):
 
 
 
+
+class BusinessDashboardDay(BaseMixin, table=True):
+    """
+    Dedicated daily dashboard row per branch (UTC day).
+    Honest shop metrics — no tax. Powered by sale finalize + Celery backfill.
+    gross_profit = product_profit + service_revenue - discounts_granted
+    """
+    __tablename__ = "business_dashboard_days"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "day",
+            name="uq_business_dashboard_day",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    # Calendar day (UTC midnight)
+    day: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+
+    orders_count: int = Field(default=0)
+    product_sales: float = Field(default=0.0, description="Sum of product line selling amounts")
+    service_revenue: float = Field(default=0.0, description="Sum of service fees")
+    discounts_granted: float = Field(default=0.0)
+    cogs: float = Field(default=0.0, description="Buying cost of products sold")
+    product_profit: float = Field(default=0.0, description="product_sales - cogs")
+    gross_profit: float = Field(
+        default=0.0,
+        description="product_profit + service_revenue - discounts_granted",
+    )
+    amount_collected: float = Field(
+        default=0.0, description="Sum of Payment.amount on completed sales"
+    )
+    cash_collected: float = Field(default=0.0)
+    mpesa_collected: float = Field(default=0.0)
+    card_collected: float = Field(default=0.0)
+    other_collected: float = Field(default=0.0)
+    missing_cost_line_count: int = Field(
+        default=0, description="Product lines sold without cost_price_at_sale"
+    )
+
+
+class ProductDashboardDay(BaseMixin, table=True):
+    """Per-product daily profit for a branch (UTC day). No tax."""
+    __tablename__ = "product_dashboard_days"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "business_id",
+            "day",
+            "product_id",
+            name="uq_product_dashboard_day",
+        ),
+    )
+
+    business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
+    organization_id: Optional[UUID] = Field(
+        default=None, foreign_key="organizations.id", index=True, ondelete="CASCADE"
+    )
+    day: datetime = Field(sa_column=Column(DateTime(timezone=True), index=True))
+    product_id: UUID = Field(index=True)
+    sku: str = Field(default="", max_length=50)
+    name: str = Field(default="", max_length=150)
+
+    quantity_sold: float = Field(default=0.0)
+    product_sales: float = Field(default=0.0)
+    cogs: float = Field(default=0.0)
+    profit: float = Field(default=0.0)
+    missing_cost: bool = Field(default=False)
+
+
 class OrganizationPermissionOverride(BaseMixin, table=True):
     """Org-level permission policy. DENY removes the perm for non-OWNER staff (within role)."""
 
