@@ -547,21 +547,33 @@ async def get_pos_config(
         tax_rate = tax_rate / 100.0
     if not bool(getattr(biz, "tax_enabled", False)):
         tax_rate = 0.0
-    # Enabled POS methods only — MPESA/CARD stay out until product ships
+
+    from app.models.models import Organization
+    from app.core.payment_methods import enabled_pos_methods
+
+    org = None
+    if getattr(biz, "organization_id", None):
+        org = (
+            await db.exec(
+                select(Organization).where(Organization.id == biz.organization_id)
+            )
+        ).one_or_none()
+    org_cfg = getattr(org, "config", None) if org else None
+    biz_cfg = getattr(biz, "config", None)
+    effective = enabled_pos_methods(org_cfg, biz_cfg)
     methods = [
         PosPaymentMethodOut(
-            code="CASH",
-            label="Cash (paid now)",
-            collects_money=True,
-            requires_customer=True,
-        ),
-        PosPaymentMethodOut(
-            code="INVOICE",
-            label="Credit (pay later)",
-            collects_money=False,
-            requires_customer=True,
-        ),
+            code=m["api_method"],  # CASH / MPESA / INVOICE for finalize API
+            label=m["label"],
+            collects_money=m["collects_money"],
+            requires_customer=m.get("requires_customer", True),
+            requires_reference=m.get("requires_reference", False),
+            requires_amount_given=m.get("requires_amount_given", False),
+            supports_change=m.get("supports_change", False),
+        )
+        for m in effective
     ]
+    # Attach extended flags for frontend (PosPaymentMethodOut may ignore extras if strict)
     data = PosConfigOut(
         business_id=business_id,
         tax_rate=tax_rate,

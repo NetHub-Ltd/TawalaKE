@@ -174,6 +174,11 @@ class Organization(BaseMixin, table=True):
     logo_url: Optional[str] = Field(default=None)
     active: bool = Field(index=True, default=True)
     onboarding: Optional[bool] = Field(default=False)
+    config: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB),
+        description="Org settings e.g. payment_methods enablement.",
+    )
     # One self-serve trial ever across all plans (set when trial starts)
     trial_consumed_at: Optional[datetime] = Field(
         default=None,
@@ -882,7 +887,14 @@ class Payment(BaseMixin, table=True):
 
     business_id: UUID = Field(foreign_key="businesses.id", index=True, ondelete="CASCADE")
     sale_id: UUID = Field(foreign_key="sales.id", index=True, ondelete="CASCADE")
+    # Amount applied to the sale (reduces balance due)
     amount: float
+    # What the customer tendered (cash in hand / M-Pesa amount entered)
+    amount_given: Optional[float] = Field(default=None)
+    # Balance due on the sale before this payment
+    amount_due_at_payment: Optional[float] = Field(default=None)
+    # max(0, amount_given - amount) for cash overpay
+    change_due: Optional[float] = Field(default=None)
     organization_id: Optional[UUID] = Field(
         foreign_key="organizations.id",
         index=True,

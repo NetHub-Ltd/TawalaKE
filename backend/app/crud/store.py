@@ -312,24 +312,50 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Customer phone is required to complete a sale.",
             )
 
-        # 2. Status: credit remains outstanding; paid methods complete
-        sale.status = (
-            SaleStatus.PENDING_PAYMENT if is_credit else SaleStatus.COMPLETED
-        )
-        db.add(sale)
+        # 2–3. Payment + status (partial → PENDING_PAYMENT + invoice path)
+        from app.core.payment_methods import compute_payment_amounts
 
-        # 3. Payment only when money was collected (not credit)
-        if not is_credit:
+        if is_credit:
+            sale.status = SaleStatus.PENDING_PAYMENT
+            db.add(sale)
+        else:
+            amount_due = float(sale.total_amount or 0)
+            raw_given = getattr(payload, "amount_given", None)
+            if raw_given is None:
+                # Back-compat: treat as full pay
+                raw_given = amount_due
+            if payload.payment_method == PaymentMethod.MPESA:
+                ref = (payload.payment_reference or "").strip()
+                if not ref:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="M-Pesa confirmation code is required.",
+                    )
+            if float(raw_given) <= 0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Amount given must be greater than zero.",
+                )
+            calc = compute_payment_amounts(
+                amount_due=amount_due, amount_given=float(raw_given)
+            )
             payment = Payment(
                 organization_id=sale.organization_id,
                 business_id=sale.business_id,
                 sale_id=sale.id,
-                amount=sale.total_amount,
+                amount=calc["amount"],
+                amount_given=calc["amount_given"],
+                amount_due_at_payment=calc["amount_due_at_payment"],
+                change_due=calc["change_due"],
                 method=payload.payment_method,
                 reference=payload.payment_reference
                 or f"TXN-{uuid4().hex[:8].upper()}",
             )
             db.add(payment)
+            sale.status = (
+                SaleStatus.COMPLETED if calc["is_full"] else SaleStatus.PENDING_PAYMENT
+            )
+            db.add(sale)
 
         # 4. Customer: reuse by phone within business when possible; never pass removed sale_id
         customer = None
@@ -464,19 +490,55 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Collection requires CASH or MPESA (not another invoice).",
             )
+        if payload.payment_method == PaymentMethod.MPESA:
+            ref = (payload.payment_reference or "").strip()
+            if not ref:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="M-Pesa confirmation code is required.",
+                )
 
-        sale.status = SaleStatus.COMPLETED
-        db.add(sale)
+        from app.core.payment_methods import compute_payment_amounts
+
+        already_paid = sum(float(p.amount or 0) for p in (sale.payments or []))
+        amount_due = max(0.0, round(float(sale.total_amount or 0) - already_paid, 2))
+        if amount_due <= 0.001:
+            sale.status = SaleStatus.COMPLETED
+            db.add(sale)
+            await db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Sale is already fully paid.",
+            )
+
+        raw_given = getattr(payload, "amount_given", None)
+        if raw_given is None:
+            raw_given = amount_due
+        if float(raw_given) <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Amount given must be greater than zero.",
+            )
+        calc = compute_payment_amounts(
+            amount_due=amount_due, amount_given=float(raw_given)
+        )
         payment = Payment(
             organization_id=sale.organization_id,
             business_id=sale.business_id,
             sale_id=sale.id,
-            amount=sale.total_amount,
+            amount=calc["amount"],
+            amount_given=calc["amount_given"],
+            amount_due_at_payment=calc["amount_due_at_payment"],
+            change_due=calc["change_due"],
             method=payload.payment_method,
             reference=payload.payment_reference
             or f"COLLECT-{uuid4().hex[:8].upper()}",
         )
         db.add(payment)
+        sale.status = (
+            SaleStatus.COMPLETED if calc["is_full"] else SaleStatus.PENDING_PAYMENT
+        )
+        db.add(sale)
 
         from app.services.analytics_outbox import enqueue_analytics_outbox
         await enqueue_analytics_outbox(
