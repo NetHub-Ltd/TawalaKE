@@ -115,8 +115,17 @@ class FinalizeCheckoutIn(BaseModel):
     sale_id: UUID
     payment_method: PaymentMethod
     payment_reference: Optional[str] = None
+    # What the customer tendered (required for CASH/MPESA). Applied amount is min(given, due).
+    amount_given: Optional[float] = Field(default=None, ge=0)
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
+
+
+class CollectPaymentIn(BaseModel):
+    """Collect (full or partial) on a PENDING_PAYMENT sale."""
+    payment_method: PaymentMethod
+    payment_reference: Optional[str] = None
+    amount_given: float = Field(..., ge=0, description="Amount tendered by customer")
 
 
 class SaleResponse(BaseModel):
@@ -251,6 +260,9 @@ class PosPaymentMethodOut(BaseModel):
     label: str
     collects_money: bool
     requires_customer: bool = True
+    requires_reference: bool = False
+    requires_amount_given: bool = False
+    supports_change: bool = False
 
 
 class PosConfigOut(BaseModel):

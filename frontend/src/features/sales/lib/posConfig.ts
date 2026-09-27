@@ -7,6 +7,9 @@ export type PosPaymentMethod = {
   label: string;
   collects_money: boolean;
   requires_customer: boolean;
+  requires_reference?: boolean;
+  requires_amount_given?: boolean;
+  supports_change?: boolean;
 };
 
 export type PosConfig = {
@@ -19,9 +22,19 @@ export type PosConfig = {
 export const POS_METHODS_FALLBACK: PosPaymentMethod[] = [
   {
     code: "CASH",
-    label: "Cash (paid now)",
+    label: "Cash",
     collects_money: true,
     requires_customer: true,
+    requires_amount_given: true,
+    supports_change: true,
+  },
+  {
+    code: "MPESA",
+    label: "M-Pesa",
+    collects_money: true,
+    requires_customer: true,
+    requires_reference: true,
+    requires_amount_given: true,
   },
   {
     code: "INVOICE",
@@ -45,12 +58,15 @@ export async function fetchPosConfig(businessId: string): Promise<PosConfig> {
 
   const res = await fetch(`/api/v1/org/stores/${businessId}/pos-config`, {
     cache: "no-store",
+    credentials: "include",
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new Error(body.error || body.detail || "Failed to load POS config");
+    throw new Error(
+      body.error || body.detail || body.message || "Failed to load POS config",
+    );
   }
-  const data = body as PosConfig;
+  const data = (body?.data || body) as PosConfig;
   const config: PosConfig = {
     business_id: data.business_id || businessId,
     tax_rate: Number(data.tax_rate ?? 0),
