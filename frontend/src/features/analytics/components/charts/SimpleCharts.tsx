@@ -484,3 +484,214 @@ function EmptyChart({ label, height }: { label: string; height: number }) {
     </div>
   );
 }
+
+export type MultiSeriesPoint = {
+  label: string;
+  revenue: number;
+  profit: number;
+  discounts: number;
+  orders: number;
+};
+
+const SERIES_META = [
+  { key: "revenue" as const, label: "Revenue", color: "var(--brand-primary, #0d6b5c)" },
+  { key: "profit" as const, label: "Profit", color: "var(--success, #2a9d6e)" },
+  { key: "discounts" as const, label: "Discounts", color: "#e07a3d" },
+  { key: "orders" as const, label: "Orders", color: "#6b7cff", axis: "right" as const },
+];
+
+/**
+ * Multi-series trend (Recharts-style look) without external chart lib.
+ * Money series share left scale; orders use a right scale so counts don't collapse.
+ * Fixed height + 100% width so the card never overflows the viewport.
+ */
+export function MultiSeriesTrendChart({
+  points,
+  height = 220,
+  emptyLabel = "No completed sales in this period",
+  moneyFormatter,
+}: {
+  points: MultiSeriesPoint[];
+  height?: number;
+  emptyLabel?: string;
+  moneyFormatter?: (n: number) => string;
+}) {
+  const fmt =
+    moneyFormatter ??
+    ((n: number) =>
+      n.toLocaleString(undefined, { maximumFractionDigits: 0 }));
+
+  const geometry = useMemo(() => {
+    const w = 720;
+    const h = height;
+    const padT = 18;
+    const padB = 28;
+    const padL = 8;
+    const padR = 8;
+    const n = points.length;
+    const moneyVals = points.flatMap((p) => [p.revenue, p.profit, p.discounts]);
+    const orderVals = points.map((p) => p.orders);
+    const maxMoney = Math.max(...moneyVals, 1);
+    const maxOrders = Math.max(...orderVals, 1);
+    const hasData =
+      moneyVals.some((v) => v > 0) || orderVals.some((v) => v > 0);
+
+    const xAt = (i: number) =>
+      n <= 1 ? w / 2 : padL + (i / (n - 1)) * (w - padL - padR);
+    const yMoney = (v: number) =>
+      padT + (h - padT - padB) * (1 - v / maxMoney);
+    const yOrders = (v: number) =>
+      padT + (h - padT - padB) * (1 - v / maxOrders);
+
+    const seriesPaths = SERIES_META.map((s) => {
+      const coords = points.map((p, i) => ({
+        x: xAt(i),
+        y: s.key === "orders" ? yOrders(p[s.key]) : yMoney(p[s.key]),
+      }));
+      return { ...s, path: smoothPath(coords), coords };
+    });
+
+    return {
+      w,
+      h,
+      hasData,
+      seriesPaths,
+      labels: points.map((p, i) => ({ x: xAt(i), label: p.label })),
+      maxMoney,
+      maxOrders,
+    };
+  }, [points, height]);
+
+  if (!points.length || !geometry.hasData) {
+    return (
+      <div
+        className="flex items-center justify-center text-sm text-muted"
+        style={{ height }}
+      >
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full" style={{ height }}>
+      {/* Legend */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 px-1">
+        {SERIES_META.map((s) => (
+          <span
+            key={s.key}
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted"
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: s.color }}
+              aria-hidden
+            />
+            {s.label}
+          </span>
+        ))}
+      </div>
+      <svg
+        viewBox={`0 0 ${geometry.w} ${geometry.h}`}
+        className="h-full w-full max-h-full"
+        preserveAspectRatio="xMidYMid meet"
+        role="img"
+        aria-label="Sales trend: revenue, profit, discounts, and orders"
+      >
+        {/* horizontal guides */}
+        {[0.25, 0.5, 0.75].map((t) => {
+          const y = 18 + (geometry.h - 18 - 28) * t;
+          return (
+            <line
+              key={t}
+              x1={8}
+              x2={geometry.w - 8}
+              y1={y}
+              y2={y}
+              stroke="currentColor"
+              className="text-border"
+              strokeWidth={1}
+              strokeDasharray="4 4"
+              opacity={0.5}
+            />
+          );
+        })}
+        {geometry.seriesPaths.map((s) => (
+          <path
+            key={s.key}
+            d={s.path}
+            fill="none"
+            stroke={s.color}
+            strokeWidth={2.25}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+        {/* end dots */}
+        {geometry.seriesPaths.map((s) => {
+          const last = s.coords[s.coords.length - 1];
+          if (!last) return null;
+          return (
+            <circle
+              key={`${s.key}-dot`}
+              cx={last.x}
+              cy={last.y}
+              r={3.5}
+              fill={s.color}
+            />
+          );
+        })}
+        {/* x labels — sparse to avoid clutter */}
+        {geometry.labels.map((l, i) => {
+          const show =
+            geometry.labels.length <= 8 ||
+            i === 0 ||
+            i === geometry.labels.length - 1 ||
+            i % Math.ceil(geometry.labels.length / 6) === 0;
+          if (!show) return null;
+          return (
+            <text
+              key={`${l.label}-${i}`}
+              x={l.x}
+              y={geometry.h - 8}
+              textAnchor="middle"
+              className="fill-muted"
+              fontSize={10}
+            >
+              {l.label}
+            </text>
+          );
+        })}
+      </svg>
+      {/* end values callout */}
+      <div className="mt-1 flex flex-wrap justify-end gap-x-3 gap-y-0.5 px-1 text-[11px] text-muted">
+        {(() => {
+          const last = points[points.length - 1];
+          if (!last) return null;
+          return (
+            <>
+              <span>
+                Rev{" "}
+                <span className="font-mono font-medium text-foreground">
+                  {fmt(last.revenue)}
+                </span>
+              </span>
+              <span>
+                Profit{" "}
+                <span className="font-mono font-medium text-foreground">
+                  {fmt(last.profit)}
+                </span>
+              </span>
+              <span>
+                Orders{" "}
+                <span className="font-mono font-medium text-foreground">
+                  {last.orders}
+                </span>
+              </span>
+            </>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
