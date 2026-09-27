@@ -235,12 +235,6 @@ export function CheckoutWorkspace({
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-muted">
-                <span>Tax</span>
-                <span className="tabular-nums">
-                  {formatMoney(currency, taxAmount)}
-                </span>
-              </div>
               {serviceLines.map((s) => (
                 <div
                   key={`${s.description}-${s.amount}`}
