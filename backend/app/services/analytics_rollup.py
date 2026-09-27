@@ -290,6 +290,14 @@ async def apply_sale_to_rollups(
 
     await db.flush()
 
+    # Dedicated dashboard day model (no tax) — practical profit breakdown
+    try:
+        from app.services.dashboard_daily import apply_completed_sale
+        if sign >= 0:
+            await apply_completed_sale(db, sale_id)
+    except Exception as e:
+        logger.warning("dashboard_daily apply failed sale_id={}: {}", sale_id, e)
+
     return {
         "type": "analytics.rollup.updated",
         "business_id": str(sale.business_id),

@@ -13,6 +13,7 @@ class OrgUpdate(BaseModel):
     address: Optional[str] = None
     tax_number: Optional[str] = None      # KRA PIN
     logo_url: Optional[str] = None
+    config: Optional[dict] = None
 
 
 class OrgResponse(OrgCreate):

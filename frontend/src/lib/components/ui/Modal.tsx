@@ -31,7 +31,7 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
         <h2 id="ui-modal-title" className="text-h3">
           {title}
         </h2>
-        <div className="mt-2 text-sm text-muted">{children}</div>
+        <div className="mt-3 text-sm text-foreground">{children}</div>
         {footer ? <div className="mt-6 flex justify-end gap-3">{footer}</div> : null}
       </div>
     </div>

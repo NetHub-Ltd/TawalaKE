@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { clsx } from "clsx";
 import { KpiCard, KpiRow } from "./KpiCard";
-import { MetricLineChart } from "./charts/SimpleCharts";
+import { MetricLineChart, MultiSeriesTrendChart } from "./charts/SimpleCharts";
 import { formatKES, formatPct, pctChange } from "@/features/analytics/lib/format";
 import type {
   DashboardPayload,
@@ -11,7 +11,7 @@ import type {
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 
-type ChartMetric = "orders" | "revenue" | "profit" | "discounts";
+type ChartMetric = "all" | "orders" | "revenue" | "profit" | "discounts";
 
 const METRIC_TABS: { id: ChartMetric; label: string }[] = [
   { id: "orders", label: "Orders" },
@@ -88,7 +88,7 @@ export function SalesPanel({
   period: AnalyticsRange;
   loading?: boolean;
 }) {
-  const [metric, setMetric] = useState<ChartMetric>("revenue");
+  const [metric, setMetric] = useState<ChartMetric>("all");
   const hourlyGrain = useHourlyGrain(period);
 
   const s = dashboard?.summary;
@@ -123,8 +123,8 @@ export function SalesPanel({
   const expensesAvailable = s?.expenses_available;
 
   const chartDeltaPct = (() => {
+    if (metric === "all" || metric === "revenue") return pctChange(rev, prevRev);
     if (metric === "orders") return pctChange(orders, prevOrders);
-    if (metric === "revenue") return pctChange(rev, prevRev);
     if (metric === "profit") return pctChange(gp, prevGp);
     const disc = s?.total_discounts_granted ?? 0;
     const prevDisc = p?.total_discounts_granted ?? 0;
@@ -154,7 +154,7 @@ export function SalesPanel({
         const value =
           metric === "orders"
             ? Number(pt.orders ?? 0)
-            : metric === "revenue"
+            : metric === "revenue" || metric === "all"
               ? Number(pt.net_revenue ?? 0)
               : metric === "profit"
                 ? Number(pt.gross_profit ?? 0)
@@ -177,7 +177,7 @@ export function SalesPanel({
       const value =
         metric === "orders"
           ? Number(pt.total_completed_orders_count ?? 0)
-          : metric === "revenue"
+          : metric === "revenue" || metric === "all"
             ? Number(pt.net_revenue_collected ?? pt.gross_sales_volume ?? 0)
             : metric === "profit"
               ? Number(pt.gross_profit ?? 0)
@@ -185,6 +185,49 @@ export function SalesPanel({
       return { label, value };
     });
   }, [hourlyGrain, hourly?.series, dashboard?.series, metric]);
+
+  const multiSeriesPoints = useMemo(() => {
+    if (hourlyGrain) {
+      return (hourly?.series || []).map((pt, i) => {
+        const raw = pt.hour || String(i);
+        let label = raw;
+        const d = new Date(raw);
+        if (!Number.isNaN(d.getTime())) {
+          label = d.toLocaleTimeString("en-KE", {
+            hour: "2-digit",
+            hour12: false,
+          });
+        }
+        return {
+          label,
+          revenue: Number(pt.net_revenue ?? 0),
+          profit: Number(pt.gross_profit ?? 0),
+          discounts: Number(pt.total_discounts_granted ?? 0),
+          orders: Number(pt.orders ?? 0),
+        };
+      });
+    }
+    return (dashboard?.series || []).map((pt) => {
+      const raw = pt.date || "";
+      let label = raw;
+      const d = new Date(raw);
+      if (!Number.isNaN(d.getTime())) {
+        label = d.toLocaleDateString("en-KE", {
+          weekday: "short",
+          day: "numeric",
+        });
+      } else if (raw.length >= 10) {
+        label = raw.slice(5);
+      }
+      return {
+        label,
+        revenue: Number(pt.net_revenue_collected ?? pt.gross_sales_volume ?? 0),
+        profit: Number(pt.gross_profit ?? 0),
+        discounts: Number(pt.total_discounts_granted ?? 0),
+        orders: Number(pt.total_completed_orders_count ?? 0),
+      };
+    });
+  }, [hourlyGrain, hourly?.series, dashboard?.series]);
 
   /** Period-scoped tender only — never mix with all-time open credit. */
   const settledRows = useMemo(() => {
@@ -357,9 +400,23 @@ export function SalesPanel({
           </p>
           <div
             role="tablist"
-            aria-label="Chart metric"
+            aria-label="Chart view"
             className="inline-flex gap-1 rounded-full border border-border/60 bg-background p-0.5"
           >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={metric === "all"}
+              onClick={() => setMetric("all")}
+              className={clsx(
+                "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                metric === "all"
+                  ? "bg-brand-primary text-white"
+                  : "text-muted hover:text-foreground"
+              )}
+            >
+              All
+            </button>
             {METRIC_TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -379,18 +436,29 @@ export function SalesPanel({
             ))}
           </div>
         </div>
-        <div className="mt-3 min-h-[240px]">
-          <MetricLineChart
-            points={chartPoints}
-            height={240}
-            emptyLabel="No completed sales in this period"
-            deltaPct={chartDeltaPct}
-            valueFormatter={
-              metric === "orders"
-                ? (n) => n.toLocaleString()
-                : (n) => formatKES(n)
-            }
-          />
+        <div className="mt-2 w-full max-w-full overflow-hidden">
+          {metric === "all" ? (
+            <MultiSeriesTrendChart
+              points={multiSeriesPoints}
+              height={220}
+              emptyLabel="No completed sales in this period"
+              moneyFormatter={(n) => formatKES(n)}
+            />
+          ) : (
+            <div className="min-h-[220px]">
+              <MetricLineChart
+                points={chartPoints}
+                height={220}
+                emptyLabel="No completed sales in this period"
+                deltaPct={chartDeltaPct}
+                valueFormatter={
+                  metric === "orders"
+                    ? (n) => n.toLocaleString()
+                    : (n) => formatKES(n)
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
