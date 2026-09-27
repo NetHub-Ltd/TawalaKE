@@ -106,7 +106,6 @@ export function CheckoutForm({
     handleSubmit,
     watch,
     setValue,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
