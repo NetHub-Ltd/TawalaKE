@@ -17,6 +17,13 @@ def _period_credit_zero():
     return r
 
 
+def _empty_dashboard_days():
+    """BusinessDashboardDay query — no rows so reporting keeps rollup summary."""
+    r = MagicMock()
+    r.all.return_value = []
+    return r
+
+
 def _rollup_day_in_7d_window() -> datetime:
     """UTC midnight today — always inside AnalyticsPeriod.DAYS_7 current window."""
     now = datetime.now(timezone.utc)
@@ -67,6 +74,7 @@ async def test_dashboard_from_rollups(mock_session):
     mock_session.exec = AsyncMock(
         side_effect=[
             rollup_result,
+            _empty_dashboard_days(),  # sum_business_days (prefer daily model when present)
             credit_result,
             issued_open,
             issued_collected,
@@ -131,8 +139,10 @@ async def test_dashboard_provisional_profit_and_expense_failure(mock_session):
         if calls["n"] == 1:
             return rollup_result
         if calls["n"] == 2:
+            return _empty_dashboard_days()
+        if calls["n"] == 3:
             return credit_result
-        if calls["n"] <= 6:
+        if calls["n"] <= 7:
             return z
         raise RuntimeError("expense db down")
 

@@ -517,6 +517,35 @@ class ReportingCrud:
         previous_rows = [r for r in all_rows if prev_start <= r.date_dimension < prev_end]
 
         summary = aggregate_rows(current_rows)
+        # Prefer dedicated dashboard day model when rows exist (no tax, honest profit)
+        try:
+            from app.services.dashboard_daily import sum_business_days
+            dd = await sum_business_days(
+                db, business_id=business_id, start=cur_start, end=cur_end
+            )
+            if dd.get("orders_count", 0) > 0 or dd.get("product_sales", 0) > 0:
+                summary = {
+                    **summary,
+                    "net_revenue": dd.get("amount_collected") or dd.get("product_sales"),
+                    "net_revenue_collected": dd.get("amount_collected"),
+                    "product_sales": dd["product_sales"],
+                    "service_revenue": dd["service_revenue"],
+                    "discounts_granted": dd["discounts_granted"],
+                    "cogs": dd["cogs"],
+                    "product_profit": dd["product_profit"],
+                    "gross_profit": dd["gross_profit"],
+                    "orders": dd["orders_count"],
+                    "cash_volume": dd["cash_collected"],
+                    "mpesa_volume": dd["mpesa_collected"],
+                    "card_volume": dd["card_collected"],
+                    "other_volume": dd["other_collected"],
+                    "missing_cost_line_count": dd["missing_cost_line_count"],
+                    "dashboard_source": "business_dashboard_days",
+                }
+        except Exception:
+            from loguru import logger
+            logger.exception("dashboard day sum failed business_id={}", business_id)
+
         credit = await self.credit_outstanding(db, business_id=business_id)
         period_credit = await self.credit_period_metrics(
             db, business_id=business_id, start=cur_start, end=cur_end

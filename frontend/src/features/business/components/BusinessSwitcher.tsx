@@ -1,64 +1,101 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Building2, ChevronsUpDown, Check, Store } from "lucide-react";
+import { Building2, ChevronsUpDown, Check, Loader2 } from "lucide-react";
 
-/* =========================================================
-   TYPES & INTERFACES
-   ========================================================= */
 export interface AssignedBusiness {
   id: string;
   name: string;
 }
 
 export interface BusinessSwitcherProps {
-  /** Controls compact layout when sidebar is minimized */
   isCollapsed: boolean;
 }
 
-/* =========================================================
-   COMPONENT IMPLEMENTATION
-   ========================================================= */
+/**
+ * Branch switcher for org shell.
+ * Loads businesses from GET /api/v1/org/stores (not NextAuth session —
+ * assigned_businesses are not on the client session).
+ * OWNER/ADMIN see all org branches; cashiers still get the list the API returns
+ * for their token (backend scopes if applicable).
+ */
 export function BusinessSwitcher({ isCollapsed }: BusinessSwitcherProps) {
   const { data: session, status } = useSession();
   const params = useParams();
   const router = useRouter();
   const pathname = usePathname();
 
-  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [businesses, setBusinesses] = useState<AssignedBusiness[]>([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Authorization and role extraction
   const rawRole = session?.user?.role;
   const userRole = rawRole ? rawRole.toUpperCase() : "CASHIER";
   const isAuthorized = ["OWNER", "ADMIN", "MANAGER"].includes(userRole);
-
-  // Business Context Extraction
-  const assignedBusinesses: AssignedBusiness[] =
-    (session?.user as unknown as { assigned_businesses?: AssignedBusiness[] })
-      ?.assigned_businesses ?? [];
 
   const currentOrganizationId =
     (params?.organizationId as string) || session?.user?.organization_id;
   const currentBusinessId = params?.businessId as string;
 
-  // Active Business Resolution
+  const loadBusinesses = useCallback(async () => {
+    setLoadingList(true);
+    setLoadError(null);
+    try {
+      const res = await fetch("/api/v1/org/stores", {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(
+          (body as { error?: string }).error ||
+            (body as { message?: string }).message ||
+            "Could not load branches",
+        );
+      }
+      const list = Array.isArray(body)
+        ? body
+        : Array.isArray((body as { data?: unknown }).data)
+          ? (body as { data: unknown[] }).data
+          : [];
+      const mapped: AssignedBusiness[] = list
+        .map((b: { id?: string; name?: string }) => ({
+          id: String(b.id || ""),
+          name: String(b.name || "Branch"),
+        }))
+        .filter((b) => b.id);
+      setBusinesses(mapped);
+    } catch (e) {
+      setLoadError(e instanceof Error ? e.message : "Failed to load branches");
+      setBusinesses([]);
+    } finally {
+      setLoadingList(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      void loadBusinesses();
+    }
+    if (status === "unauthenticated") {
+      setLoadingList(false);
+      setBusinesses([]);
+    }
+  }, [status, loadBusinesses]);
+
   const activeBusiness =
-    assignedBusinesses.find((b) => b.id === currentBusinessId) ||
-    assignedBusinesses[0] || {
-      id: currentBusinessId || "default",
-      name: "Select Business",
+    businesses.find((b) => b.id === currentBusinessId) ||
+    businesses[0] || {
+      id: currentBusinessId || "",
+      name: loadingList ? "Loading…" : "Select branch",
     };
 
-  /* =========================================================
-     EVENT HANDLERS & ACCESSIBILITY HOOKS
-     ========================================================= */
-
-  // Close menu when clicking outside component bounds
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -72,22 +109,17 @@ export function BusinessSwitcher({ isCollapsed }: BusinessSwitcherProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Keyboard navigation listener (Escape key dismissal)
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
+      if (event.key === "Escape") setIsOpen(false);
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Safe dynamic path replacement across tenant routes
   const handleSelectBusiness = useCallback(
     (targetBusinessId: string) => {
       setIsOpen(false);
-
       if (!currentOrganizationId || targetBusinessId === currentBusinessId) {
         return;
       }
@@ -95,111 +127,98 @@ export function BusinessSwitcher({ isCollapsed }: BusinessSwitcherProps) {
       const pathSegments = pathname.split("/");
       const orgIndex = pathSegments.indexOf("org");
 
-      // Verify layout pattern: /org/[orgId]/[businessId]/...
+      // /org/[orgId]/[businessId]/...
       if (orgIndex !== -1 && pathSegments.length > orgIndex + 2) {
         pathSegments[orgIndex + 2] = targetBusinessId;
         router.push(pathSegments.join("/"));
-      } else {
-        // Fallback default routing if outside standard tenant hierarchy
-        router.push(`/org/${currentOrganizationId}/${targetBusinessId}/overview`);
+        return;
       }
+      router.push(
+        `/org/${currentOrganizationId}/${targetBusinessId}/overview`,
+      );
     },
-    [currentOrganizationId, currentBusinessId, pathname, router]
+    [currentOrganizationId, currentBusinessId, pathname, router],
   );
 
-  /* =========================================================
-     RENDER STATE 1: HYDRATION / LOADING (SKELETON)
-     ========================================================= */
   if (status === "loading") {
     return (
       <div
-        className={`aria-busy:true animate-pulse bg-register rounded-md border border-border p-2 flex items-center gap-2.5 pointer-events-none select-none transition-all ${
+        className={`animate-pulse rounded-md border border-border bg-register p-2 flex items-center gap-2.5 ${
           isCollapsed ? "h-12 w-12 mx-auto justify-center" : "h-14 w-full"
         }`}
         aria-busy="true"
         aria-label="Loading business context"
       >
-        <div className="h-9 w-9 rounded-md bg-register shrink-0" />
+        <div className="h-9 w-9 shrink-0 rounded-md bg-register" />
         {!isCollapsed && (
-          <div className="flex-1 space-y-2 min-w-0">
-            <div className="h-3.5 bg-register rounded-md w-28" />
-            <div className="h-2.5 bg-register rounded-md w-16" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-3.5 w-28 rounded-md bg-register" />
+            <div className="h-2.5 w-16 rounded-md bg-register" />
           </div>
         )}
       </div>
     );
   }
 
-  /* =========================================================
-     RENDER STATE 2: UNAUTHORIZED / CASHIER (READ-ONLY BRANDING)
-     ========================================================= */
+  // Cashiers: show current branch name only (no switch)
   if (!isAuthorized) {
     return (
       <div
-        className={`rounded-md border border-border bg-register/50 flex items-center transition-all ${
-          isCollapsed ? "h-12 w-12 mx-auto justify-center p-2" : "p-2 gap-2.5 h-14"
+        className={`flex items-center gap-2.5 rounded-md border border-border bg-card p-2 ${
+          isCollapsed ? "h-12 w-12 mx-auto justify-center" : "h-14 w-full"
         }`}
+        title={activeBusiness.name}
       >
-        <div className="relative h-9 w-9 shrink-0 flex items-center justify-center rounded-md bg-card border border-border shadow-xs">
-          <Image
-            src="/logo.svg"
-            alt="Tawala Logo"
-            width={22}
-            height={22}
-            className="object-contain"
-            priority
-          />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-primary/10 text-brand-primary">
+          <Building2 size={18} />
         </div>
         {!isCollapsed && (
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-semibold text-foreground truncate leading-snug">
-              Tawala
-            </span>
-            <span className="text-xs font-medium text-muted truncate">
-              POS Terminal
-            </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {activeBusiness.name}
+            </p>
+            <p className="text-[11px] text-muted">Your branch</p>
           </div>
         )}
       </div>
     );
   }
 
-  /* =========================================================
-     RENDER STATE 3: AUTHORIZED MANAGER / OWNER SWITCHER MENU
-     ========================================================= */
   return (
     <div ref={containerRef} className="relative w-full">
-      {/* Dropdown Trigger Button */}
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setIsOpen((o) => !o)}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
-        aria-label="Switch business context"
-        className={`w-full rounded-md border border-border bg-register/60 hover:bg-register transition-all duration-200 flex items-center min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 ${
-          isCollapsed ? "h-12 w-12 mx-auto justify-center p-2" : "p-2 gap-2.5 h-14"
+        className={`flex w-full items-center gap-2.5 rounded-md border border-border bg-card p-2 text-left transition hover:bg-register focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+          isCollapsed ? "h-12 w-12 mx-auto justify-center" : "h-14"
         }`}
       >
-        <div className="h-9 w-9 rounded-md bg-brand-primary/10 text-brand-primary border border-brand-primary/20 flex items-center justify-center shrink-0">
-          <Store size={18} strokeWidth={2} />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-primary/10 text-brand-primary">
+          {loadingList ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <Building2 size={18} />
+          )}
         </div>
-
         {!isCollapsed && (
           <>
-            <div className="flex flex-col min-w-0 text-left flex-1">
-              <span className="text-sm font-semibold text-foreground truncate leading-snug">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">
                 {activeBusiness.name}
-              </span>
-              <span className="text-xs font-medium text-muted truncate capitalize">
-                {userRole.toLowerCase()} Mode
-              </span>
+              </p>
+              <p className="text-[11px] text-muted">
+                {userRole === "OWNER"
+                  ? "Owner · switch branch"
+                  : "Switch branch"}
+              </p>
             </div>
-            <ChevronsUpDown size={16} className="text-muted shrink-0 ml-1" />
+            <ChevronsUpDown size={16} className="shrink-0 text-muted" />
           </>
         )}
       </button>
 
-      {/* Animated Dropdown Menu Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -207,45 +226,63 @@ export function BusinessSwitcher({ isCollapsed }: BusinessSwitcherProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -6 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className={`absolute z-50 mt-2 bg-card border border-border rounded-md shadow-xl p-1.5 space-y-1 overflow-hidden ${
+            className={`absolute z-50 mt-2 space-y-1 overflow-hidden rounded-md border border-border bg-card p-1.5 shadow-xl ${
               isCollapsed ? "left-14 top-0 w-56" : "left-0 right-0 w-full"
             }`}
             role="listbox"
-            aria-label="Assigned Businesses"
+            aria-label="Branches"
           >
-            <div className="px-2 py-1.5 text-xs font-semibold tracking-wider text-muted uppercase">
-              Assigned Businesses
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted">
+                Branches
+              </span>
+              <button
+                type="button"
+                onClick={() => void loadBusinesses()}
+                className="text-[10px] font-medium text-brand-primary hover:underline"
+              >
+                Refresh
+              </button>
             </div>
 
-            <div className="max-h-56 overflow-y-auto space-y-0.5">
-              {assignedBusinesses.map((business) => {
-                const isSelected = business.id === activeBusiness.id;
-                return (
-                  <button
-                    key={business.id}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => handleSelectBusiness(business.id)}
-                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-md text-xs font-medium transition-colors min-h-[40px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      isSelected
-                        ? "bg-brand-primary/10 text-brand-primary"
-                        : "text-muted hover:bg-register"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <Building2 size={15} className="shrink-0 text-muted" />
-                      <span className="truncate">{business.name}</span>
-                    </div>
-                    {isSelected && (
-                      <Check
-                        size={15}
-                        className="shrink-0 text-brand-primary dark:text-brand-primary"
-                      />
-                    )}
-                  </button>
-                );
-              })}
+            <div className="max-h-56 space-y-0.5 overflow-y-auto">
+              {loadingList && businesses.length === 0 ? (
+                <p className="px-2.5 py-3 text-xs text-muted">Loading…</p>
+              ) : loadError ? (
+                <p className="px-2.5 py-3 text-xs text-[var(--error)]">
+                  {loadError}
+                </p>
+              ) : businesses.length === 0 ? (
+                <p className="px-2.5 py-3 text-xs text-muted">
+                  No branches found for this organization.
+                </p>
+              ) : (
+                businesses.map((business) => {
+                  const isSelected = business.id === currentBusinessId;
+                  return (
+                    <button
+                      key={business.id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => handleSelectBusiness(business.id)}
+                      className={`flex min-h-[40px] w-full items-center justify-between rounded-md px-2.5 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary ${
+                        isSelected
+                          ? "bg-brand-primary/10 text-brand-primary"
+                          : "text-muted hover:bg-register hover:text-foreground"
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-center gap-2 truncate">
+                        <Building2 size={15} className="shrink-0 text-muted" />
+                        <span className="truncate">{business.name}</span>
+                      </div>
+                      {isSelected && (
+                        <Check size={15} className="shrink-0 text-brand-primary" />
+                      )}
+                    </button>
+                  );
+                })
+              )}
             </div>
           </motion.div>
         )}

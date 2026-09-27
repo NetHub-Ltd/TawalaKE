@@ -68,6 +68,11 @@ export function BusinessSettingsForm() {
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [paperSize, setPaperSize] = useState<"A5" | "A4">("A5");
   const [applyToExisting, setApplyToExisting] = useState(false);
+  const [pmCash, setPmCash] = useState(true);
+  const [pmMpesa, setPmMpesa] = useState(true);
+  const [pmCredit, setPmCredit] = useState(true);
+  const [pmCard, setPmCard] = useState(false);
+
   const [rawConfig, setRawConfig] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
@@ -109,6 +114,22 @@ export function BusinessSettingsForm() {
           setTerms(fd?.terms_and_conditions || DEFAULT_TERMS);
           setPaperSize(fd?.paper_size === "A4" ? "A4" : "A5");
           setApplyToExisting(Boolean(fd?.apply_to_existing));
+          const pm = (cfg as { payment_methods?: Record<string, { enabled?: boolean } | boolean> })
+            ?.payment_methods;
+          if (pm && typeof pm === "object") {
+            const en = (code: string, def: boolean) => {
+              const v = pm[code];
+              if (typeof v === "boolean") return v;
+              if (v && typeof v === "object" && "enabled" in v)
+                return Boolean(v.enabled);
+              return def;
+            };
+            setPmCash(en("CASH", true));
+            setPmMpesa(en("MPESA", true));
+            setPmCredit(en("CREDIT", true));
+            setPmCard(en("CARD", false));
+          }
+
         } else {
           setError("Could not load branch settings");
         }
@@ -156,6 +177,13 @@ export function BusinessSettingsForm() {
             ...rawConfig,
             receipt_footer: receiptFooter.trim(),
             show_tax_on_receipt: showTax,
+            payment_methods: {
+              CASH: { enabled: pmCash },
+              MPESA: { enabled: pmMpesa },
+              CREDIT: { enabled: pmCredit },
+              CARD: { enabled: pmCard },
+              STK_PUSH: { enabled: false },
+            },
             financial_documents: {
               logo_url: logoUrl.trim() || DEFAULT_LOGO,
               display_name: displayName.trim() || null,
@@ -470,6 +498,39 @@ export function BusinessSettingsForm() {
             />
             Show tax line on documents
           </label>
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-border bg-card p-5">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">
+              Payment methods (this branch)
+            </h2>
+            <p className="mt-1 text-xs text-muted">
+              Only enabled methods appear at checkout. Card / STK stay off until ready.
+            </p>
+          </div>
+          {(
+            [
+              ["Cash", pmCash, setPmCash],
+              ["M-Pesa", pmMpesa, setPmMpesa],
+              ["Credit (pay later)", pmCredit, setPmCredit],
+              ["Card (coming soon)", pmCard, setPmCard],
+            ] as const
+          ).map(([label, val, set]) => (
+            <label
+              key={label}
+              className="flex items-center gap-2 text-sm text-muted"
+            >
+              <input
+                type="checkbox"
+                checked={val}
+                onChange={(e) => set(e.target.checked)}
+                disabled={!canEdit}
+                className="rounded border-border"
+              />
+              <span className="text-foreground">{label}</span>
+            </label>
+          ))}
         </section>
 
         {error && (

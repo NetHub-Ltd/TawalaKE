@@ -68,21 +68,6 @@ export async function fetchPosConfig(businessId: string): Promise<PosConfig> {
     );
   }
   const data = (body?.data || body) as PosConfig;
-  let methods =
-    Array.isArray(data.payment_methods) && data.payment_methods.length > 0
-      ? data.payment_methods
-      : POS_METHODS_FALLBACK;
-
-  // Ensure M-Pesa appears if API only returned Cash + Credit (legacy hard-code)
-  const codes = new Set(methods.map((m) => m.code.toUpperCase()));
-  if (!codes.has("MPESA")) {
-    methods = [
-      ...methods.filter((m) => m.code !== "INVOICE"),
-      POS_METHODS_FALLBACK[1],
-      ...methods.filter((m) => m.code === "INVOICE"),
-    ];
-  }
-
   const config: PosConfig = {
     business_id: data.business_id || businessId,
     tax_rate: Number(data.tax_rate ?? 0),
