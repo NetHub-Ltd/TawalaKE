@@ -48,3 +48,45 @@ def test_contribution_products_services_discount_no_tax():
     assert c["cash_collected"] == 500
     assert c["mpesa_collected"] == 500
     assert "tax" not in c
+
+
+def test_service_total_and_discount_helpers_via_contribution():
+    from types import SimpleNamespace
+    from app.services.dashboard_daily import contribution_from_sale
+
+    sale = SimpleNamespace(
+        service_amount={"description": "Fee", "amount": 25},
+        discount_applied=None,
+        discount=10,
+        updated_at=None,
+        created_at=None,
+    )
+    items = [
+        SimpleNamespace(
+            product_id="x",
+            sku="X",
+            name="X",
+            quantity=1,
+            unit_price=50,
+            subtotal=0,  # fall back to unit_price * qty
+            cost_price_at_sale=20,
+        )
+    ]
+    c = contribution_from_sale(sale, items, [])
+    assert c["product_sales"] == 50
+    assert c["cogs"] == 20
+    assert c["service_revenue"] == 25
+    assert c["discounts_granted"] == 10
+    assert c["gross_profit"] == 45  # 30 + 25 - 10
+
+
+def test_enqueue_dashboard_backfill_handles_broker_failure():
+    from uuid import uuid4
+    from unittest.mock import patch
+    from app.tasks.dashboard_tasks import enqueue_dashboard_backfill
+
+    with patch(
+        "app.tasks.dashboard_tasks.backfill_business_dashboard_days.delay",
+        side_effect=Exception("no broker"),
+    ):
+        assert enqueue_dashboard_backfill(uuid4()) is None
