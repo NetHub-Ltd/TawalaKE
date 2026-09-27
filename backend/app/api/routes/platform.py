@@ -28,7 +28,11 @@ from app.core.platform_rbac import (
 )
 from app.core.security import security
 from app.models.models import Organization, Plan, PlatformRole, PlatformUser, Subscription
+from app.models.audit import AuditEvent
 from app.schemas.platform import (
+    PlatformAuditEventList,
+    PlatformAuditEventRead,
+    PlatformPlanRead,
     PlatformLoginRequest,
     PlatformMeResponse,
     PlatformMfaChallengeResponse,
@@ -712,10 +716,12 @@ async def extend_organization_grace(
     )
     await record_platform_audit(
         db,
-        actor_id=actor.id,
+        actor=actor,
         action="platform.orgs.extend_grace",
+        outcome="success",
         resource_type="organization",
         resource_id=organization_id,
+        organization_id=organization_id,
         meta={
             "days": days or 7,
             "grace_end_date": sub.grace_end_date.isoformat() if sub.grace_end_date else None,
@@ -917,3 +923,77 @@ async def _serialize_platform_org(
     except Exception as exc:
         logger.warning("platform org subscriptions serialize failed: %s", exc)
     return base.model_copy(update={"stats": stats, "subscriptions": subs_out})
+
+
+# ---------------------------------------------------------------------------
+# Phase B — Plans (read) + Audit stream
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/plans",
+    response_model=List[PlatformPlanRead],
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.PLANS_READ))],
+)
+async def list_platform_plans(
+    db: SessionDep,
+    active_only: bool = False,
+) -> List[PlatformPlanRead]:
+    """List subscription plans for operators (includes non-public catalogue rows)."""
+    stmt = select(Plan).order_by(Plan.sort_order, Plan.code)
+    if active_only:
+        stmt = stmt.where(Plan.is_active == True)  # noqa: E712
+    rows = list(await db.exec(stmt))
+    return [PlatformPlanRead.model_validate(p) for p in rows]
+
+
+@router.get(
+    "/audit-events",
+    response_model=PlatformAuditEventList,
+    dependencies=[Depends(require_platform_permissions(PlatformPermission.AUDIT_READ))],
+)
+async def list_platform_audit_events(
+    db: SessionDep,
+    limit: int = 50,
+    offset: int = 0,
+    action: str | None = None,
+    organization_id: UUID | None = None,
+    actor_email: str | None = None,
+) -> PlatformAuditEventList:
+    """
+    Recent audit_events stream for platform operators.
+
+    Includes platform actor events (meta.actor_kind=PLATFORM_USER) and
+    optionally tenant-scoped rows when organization_id is set.
+    """
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+
+    filters = []
+    if action:
+        filters.append(AuditEvent.action == action.strip())
+    if organization_id is not None:
+        filters.append(AuditEvent.organization_id == organization_id)
+    if actor_email:
+        filters.append(AuditEvent.actor_email == actor_email.strip().lower())
+
+    from sqlalchemy import func
+
+    count_stmt = select(func.count()).select_from(AuditEvent)
+    list_stmt = select(AuditEvent)
+    for f in filters:
+        count_stmt = count_stmt.where(f)
+        list_stmt = list_stmt.where(f)
+
+    total_n = int((await db.exec(count_stmt)).one() or 0)
+
+    list_stmt = (
+        list_stmt.order_by(AuditEvent.created_at.desc())  # type: ignore[attr-defined]
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = list(await db.exec(list_stmt))
+    items = [PlatformAuditEventRead.model_validate(r) for r in rows]
+    return PlatformAuditEventList(
+        items=items, total=total_n, limit=limit, offset=offset
+    )

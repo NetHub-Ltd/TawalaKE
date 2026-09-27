@@ -70,8 +70,8 @@ export function TerminalSidebar({
               className={cn(
                 "w-[80%] aspect-square rounded-md transition-all duration-200 group relative flex flex-col items-center justify-center gap-1.5 text-center px-1",
                 isActive
-                  ? "bg-primary text-white shadow-lg shadow-primary/30"
-                  : "text-secondary hover:bg-muted hover:text-foreground",
+                  ? "bg-brand-primary text-white shadow-sm"
+                  : "text-muted hover:bg-register hover:text-foreground",
               )}
             >
               {/* Dynamic Icon */}
@@ -80,13 +80,13 @@ export function TerminalSidebar({
               {/* CLEAR VISIBLE TEXT LABEL */}
               <span className={cn(
                 "text-xs font-bold tracking-tight transition-colors line-clamp-1",
-                isActive ? "text-white" : "text-muted-foreground group-hover:text-foreground"
+                isActive ? "text-white" : "text-muted group-hover:text-foreground"
               )}>
                 {item.label}
               </span>
 
               {/* PERSISTENT HOVER TOOLTIP (Kept for premium styling context) */}
-              <span className="absolute left-full ml-4 bg-foreground text-background text-xs font-semibold uppercase tracking-widest px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-all translate-x-[-10px] group-hover:translate-x-0 whitespace-nowrap z-[70] shadow-2xl border border-border">
+              <span className="absolute left-full ml-4 z-[70] whitespace-nowrap rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground opacity-0 shadow-sm transition-all group-hover:translate-x-0 group-hover:opacity-100 pointer-events-none -translate-x-1">
                 {item.label}
               </span>
             </Link>

@@ -22,7 +22,7 @@ from enum import Enum
 from typing import Optional, List, Dict, Any
 from uuid import UUID
 
-from sqlalchemy import Column, Enum as SAEnum
+from sqlalchemy import Column, Enum as SAEnum, Index
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel, DateTime
 import sqlalchemy as sa
@@ -707,6 +707,63 @@ class ProductSalesSummary(BaseMixin, table=True):
     gross_profit: float = Field(default=0.0)
     discount_amount: float = Field(default=0.0)
     line_count: int = Field(default=0)
+
+
+
+class OrganizationPermissionOverride(BaseMixin, table=True):
+    """Org-level permission policy. DENY removes the perm for non-OWNER staff (within role)."""
+
+    __tablename__ = "organization_permission_overrides"
+    __table_args__ = (
+        Index(
+            "ix_org_perm_override_unique",
+            "organization_id",
+            "permission_code",
+            unique=True,
+        ),
+    )
+
+    organization_id: UUID = Field(
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    permission_code: str = Field(max_length=64, index=True)
+    effect: str = Field(
+        default="DENY",
+        max_length=16,
+        description="DENY only at org level in v1 (GRANT reserved)",
+    )
+
+
+class StaffPermissionOverride(BaseMixin, table=True):
+    """Per-staff DENY or GRANT. GRANT only restores within role ceiling after a deny."""
+
+    __tablename__ = "staff_permission_overrides"
+    __table_args__ = (
+        Index(
+            "ix_staff_perm_override_unique",
+            "staff_id",
+            "permission_code",
+            unique=True,
+        ),
+    )
+
+    staff_id: UUID = Field(
+        foreign_key="staff.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    organization_id: UUID = Field(
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    permission_code: str = Field(max_length=64, index=True)
+    effect: str = Field(
+        max_length=16,
+        description="DENY or GRANT",
+    )
 
 
 class StaffSalesSummary(BaseMixin, table=True):

@@ -11,6 +11,7 @@ import {
   Users,
   CreditCard,
   Settings,
+  Shield,
   ChevronLeft,
   LogOut,
   Sparkles,
@@ -75,6 +76,13 @@ const ORG_NAV: OrgNavItem[] = [
     href: (orgId) => `/org/${orgId}/settings`,
     icon: Settings,
     anyOf: [Permission.ORG_WRITE],
+  },
+  {
+    id: "permissions",
+    label: "Permissions",
+    href: (orgId) => `/org/${orgId}/permissions`,
+    icon: Shield,
+    anyOf: [Permission.ORG_STAFF_MANAGE],
   },
 ];
 

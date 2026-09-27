@@ -4,7 +4,7 @@ import Link from "next/link";
 export function OrgNoSession() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+      <div className="max-w-md w-full bg-card rounded-2xl border border-border shadow-sm p-8 text-center space-y-6">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-register">
           <svg
             className="h-7 w-7 text-brand-primary"
@@ -22,10 +22,10 @@ export function OrgNoSession() {
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className="text-xl font-semibold text-foreground">
             Session expired or not found
           </h1>
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="text-sm text-muted leading-relaxed">
             Please sign in again to continue to your workspace.
           </p>
         </div>

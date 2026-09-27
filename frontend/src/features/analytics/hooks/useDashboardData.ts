@@ -113,7 +113,8 @@ function periodKey(period: AnalyticsRange, date?: string) {
 export function useSalesDashboard(
   businessId: string,
   period: AnalyticsRange,
-  date?: string
+  date?: string,
+  enabled: boolean = true,
 ) {
   return useQuery({
     queryKey: ["report", "dashboard", businessId, periodKey(period, date)],
@@ -121,7 +122,10 @@ export function useSalesDashboard(
       fetchReport<DashboardPayload>(businessId, "dashboard", period, {
         ...(period === "custom" && date ? { date } : {}),
       }),
-    enabled: Boolean(businessId) && (period !== "custom" || Boolean(date)),
+    enabled:
+      enabled &&
+      Boolean(businessId) &&
+      (period !== "custom" || Boolean(date)),
     staleTime: 30_000,
   });
 }

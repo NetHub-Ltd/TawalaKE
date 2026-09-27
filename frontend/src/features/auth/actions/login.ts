@@ -1,4 +1,3 @@
-// src/features/auth/actions/login.ts
 "use server";
 
 import { signIn } from "@/auth";
@@ -9,12 +8,24 @@ export type LoginState = {
   code?: string;
 };
 
+/** Relative path only — blocks open redirects. */
+function safeCallbackUrl(raw: FormDataEntryValue | null): string {
+  if (typeof raw !== "string" || !raw.trim()) return "/org";
+  const url = raw.trim();
+  if (url.startsWith("/") && !url.startsWith("//") && !url.includes("://")) {
+    // Disallow protocol-relative and absolute URLs
+    return url.slice(0, 2048);
+  }
+  return "/org";
+}
+
 export async function loginAction(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
+  const redirectTo = safeCallbackUrl(formData.get("callbackUrl"));
 
   if (!email || !password) {
     return { error: "Email and password are required", code: "invalid_credentials" };
@@ -24,24 +35,28 @@ export async function loginAction(
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/org",
+      redirectTo,
     });
 
-    // If we reach here, signIn redirected successfully
     return {};
   } catch (error) {
-    // Auth.js throws a special redirect error on success – rethrow it
     if (error instanceof Error && error.message === "NEXT_REDIRECT") {
       throw error;
     }
+    // Next.js redirect() throws; rethrow so the browser follows callbackUrl
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      String((error as { digest?: string }).digest || "").startsWith("NEXT_REDIRECT")
+    ) {
+      throw error;
+    }
 
-    // Handle our custom CredentialsSignin errors
     if (error instanceof AuthError) {
       switch (error.type) {
-        case "CredentialsSignin":
-          // The `code` we set on the custom error classes is available here
+        case "CredentialsSignin": {
           const code = (error as { code?: string }).code as string | undefined;
-
           switch (code) {
             case "invalid_credentials":
               return {
@@ -70,6 +85,7 @@ export async function loginAction(
                 code: "invalid_credentials",
               };
           }
+        }
         default:
           return {
             error: "Something went wrong while signing in. Please try again.",

@@ -13,6 +13,7 @@ import {
 } from "@/features/staff/hooks/useStaff";
 import { useBusiness } from "@/features/business/hooks/useBusiness";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { StaffPermissionOverrides } from "@/features/staff/components/StaffPermissionOverrides";
 import { Permission, StaffRoleName } from "@/lib/rbac";
 import {
   ArrowLeft,
@@ -29,8 +30,8 @@ import {
 function roleBadge(role: string) {
   const styles: Record<string, string> = {
     OWNER: "bg-brand-primary/10 text-brand-primary border-brand-primary/25",
-    ADMIN: "bg-sky-500/10 text-sky-700 border-sky-500/25",
-    MANAGER: "bg-amber-500/10 text-amber-700 border-amber-500/25",
+    ADMIN: "bg-brand-accent/10 text-brand-accent border-brand-accent/25",
+    MANAGER: "bg-brand-secondary/10 text-brand-secondary border-brand-secondary/25",
     CASHIER: "bg-register text-muted border-border",
   };
   return styles[role] || styles.CASHIER;
@@ -58,7 +59,12 @@ export default function StaffMemberWorkspace({
   const tabParam = (search.get("tab") as Tab) || "overview";
   const action = search.get("action");
 
-  const { can, role: actorRole } = usePermissions();
+  const {
+    can,
+    role: actorRole,
+    isLoading: sessionLoading,
+    isAuthenticated,
+  } = usePermissions();
   const canManage = can(Permission.ORG_STAFF_MANAGE);
 
   const { data: member, isLoading, isError, error, refetch } = useStaffMember(
@@ -102,10 +108,31 @@ export default function StaffMemberWorkspace({
     [member],
   );
 
+  if (sessionLoading) {
+    return (
+      <div className="flex flex-1 items-center justify-center gap-2 p-12 text-muted">
+        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+        Checking permissions…
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
+        <AlertCircle className="h-8 w-8 text-brand-secondary" aria-hidden />
+        <p className="text-sm">Sign in required to view this team member.</p>
+        <Link href={`/org/${organizationId}/staff`} className="text-sm text-[var(--success)]">
+          Back to Team
+        </Link>
+      </div>
+    );
+  }
+
   if (!canManage) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 p-12 text-muted">
-        <AlertCircle className="h-8 w-8 text-amber-500" />
+        <AlertCircle className="h-8 w-8 text-brand-secondary" aria-hidden />
         <p className="text-sm">You do not have permission to view this team member.</p>
         <Link href={`/org/${organizationId}/staff`} className="text-sm text-[var(--success)]">
           Back to Team
@@ -132,7 +159,7 @@ export default function StaffMemberWorkspace({
         >
           <ArrowLeft className="h-4 w-4" /> Back to Team
         </Link>
-        <p className="mt-4 text-sm text-red-600">
+        <p className="mt-4 text-sm text-[var(--error)]">
           {error instanceof Error ? error.message : "Staff not found"}
         </p>
       </div>
@@ -335,7 +362,7 @@ export default function StaffMemberWorkspace({
               className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-register dark:border-border"
             >
               {member.active ? (
-                <UserX className="h-4 w-4 text-amber-600" />
+                <UserX className="h-4 w-4 text-brand-secondary" />
               ) : (
                 <UserCheck className="h-4 w-4 text-[var(--success)]" />
               )}
@@ -355,7 +382,7 @@ export default function StaffMemberWorkspace({
             <section className="rounded-md border border-border p-4 dark:border-border">
               <h2 className="font-semibold">Change role</h2>
               {role === "OWNER" && (
-                <p className="mt-1 text-xs text-amber-700">
+                <p className="mt-1 text-xs text-brand-secondary">
                   This account is the organization owner (set at signup). Role cannot be changed to or from Owner here.
                 </p>
               )}
@@ -418,6 +445,15 @@ export default function StaffMemberWorkspace({
         </div>
       )}
 
+      {tabParam === "access" && !action && (
+        <div className="border-t border-border pt-6">
+          <StaffPermissionOverrides
+            organizationId={organizationId}
+            staffId={staffId}
+          />
+        </div>
+      )}
+
       {(tabParam === "security" || action === "reset-password") && (
         <section className="max-w-lg space-y-6 rounded-md border border-border p-4 dark:border-border">
           {member && !member.active && (
@@ -475,7 +511,7 @@ export default function StaffMemberWorkspace({
           ) : activity.length === 0 ? (
             <p className="mt-4 text-sm text-foreground0">No recorded actions yet.</p>
           ) : (
-            <ul className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+            <ul className="mt-4 divide-y divide-border">
               {activity.map((a) => (
                 <li key={a.id} className="flex flex-col gap-0.5 py-3 text-sm">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">

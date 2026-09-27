@@ -15,7 +15,8 @@ from app.core.session import AsyncSessionLocal
 from app.models.models import Sale, SaleStatus, DocumentType, FinancialDocument, SaleAnalyticsSummary
 from app.schemas.store import (
     FinancialDocumentSnapshotSchema, SellerSnapshot, CashierSnapshot,
-    BuyerSnapshot, FinancialsSnapshot, ItemSnapshot, PaymentSnapshot, DisputeAuditSnapshot
+    BuyerSnapshot, FinancialsSnapshot, ItemSnapshot, PaymentSnapshot, DisputeAuditSnapshot,
+    DocumentBrandingSnapshot
 )
 
 
@@ -127,9 +128,21 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                 name=sale.cashier.full_name,
                 role=sale.cashier.role.value if hasattr(sale.cashier.role, "value") else str(sale.cashier.role)
             )
+            from app.core.financial_docs_config import get_financial_documents_from_business_config
+            fd_cfg = get_financial_documents_from_business_config(
+                getattr(sale.business, "config", None) or {}
+            )
+            display_name = fd_cfg.get("display_name") or sale.business.name
+            branding_snap = DocumentBrandingSnapshot(
+                logo_url=fd_cfg.get("logo_url") or "https://tawala.nethub.co.ke/logo.svg",
+                display_name=fd_cfg.get("display_name"),
+                payment_fields=list(fd_cfg.get("payment_fields") or []),
+                terms_and_conditions=fd_cfg.get("terms_and_conditions") or "",
+                paper_size=fd_cfg.get("paper_size") or "A5",
+            )
             seller_snap = SellerSnapshot(
                 business_id=sale.business.id,
-                business_name=sale.business.name,
+                business_name=display_name,
                 address=sale.business.address,
                 phone=sale.business.phone,
                 tax_number=getattr(sale.business, 'tax_number', None),
@@ -142,16 +155,14 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     customer_id=sale.customer.id,
                     name=sale.customer.name,
                     phone=sale.customer.phone,
-                    email=sale.customer.email,
-                    is_walk_in=False
+                    email=sale.customer.email
                 )
             else:
                 buyer_snap = BuyerSnapshot(
                     customer_id=None,
                     name="Walk-in Customer",
                     phone=None,
-                    email=None,
-                    is_walk_in=True
+                    email=None
                 )
 
             # Financials (+ service lines for receipt/invoice honesty)
@@ -235,6 +246,7 @@ async def async_process_document_generation(sale_id: UUID) -> str:
 
             # Final Snapshot
             snapshot_data = FinancialDocumentSnapshotSchema(
+                branding=branding_snap,
                 document_id=financial_document.id,
                 document_number=financial_document.document_number,
                 document_type=financial_document.document_type,
@@ -251,8 +263,13 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     "total_quantity": round(total_quantity, 4),
                     "total_tax_collected": round(total_item_tax, 2),
                     "payment_count": len(payments_snap),
-                    # Non-stock services (array or legacy single object)
-                    "services": _normalize_sale_services(getattr(sale, "service_amount", None)),
+                    # Everything that affects the total for print/download
+                    "services": service_lines,
+                    "service_total": service_total,
+                    "discount_amount": round(float(getattr(sale, "discount", 0.0) or 0.0), 2),
+                    "tax_amount": round(float(getattr(sale, "tax_amount", 0.0) or 0.0), 2),
+                    "subtotal": round(float(sale.subtotal), 2),
+                    "total_amount": round(float(sale.total_amount), 2),
                 }
             )
 

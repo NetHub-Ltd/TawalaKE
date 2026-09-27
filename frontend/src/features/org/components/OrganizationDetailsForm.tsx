@@ -68,7 +68,7 @@ export function OrganizationDetailsForm({ prefill }: { prefill: Prefill }) {
           className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none ring-brand-primary/30 focus:ring-2"
           {...register("name")}
         />
-        {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
+        {errors.name && <p className="text-sm text-[var(--error)]">{errors.name.message}</p>}
       </div>
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-foreground" htmlFor="phone">
@@ -79,7 +79,7 @@ export function OrganizationDetailsForm({ prefill }: { prefill: Prefill }) {
           className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none ring-brand-primary/30 focus:ring-2"
           {...register("phone")}
         />
-        {errors.phone && <p className="text-sm text-red-600">{errors.phone.message}</p>}
+        {errors.phone && <p className="text-sm text-[var(--error)]">{errors.phone.message}</p>}
       </div>
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-foreground" htmlFor="address">
@@ -90,7 +90,7 @@ export function OrganizationDetailsForm({ prefill }: { prefill: Prefill }) {
           className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none ring-brand-primary/30 focus:ring-2"
           {...register("address")}
         />
-        {errors.address && <p className="text-sm text-red-600">{errors.address.message}</p>}
+        {errors.address && <p className="text-sm text-[var(--error)]">{errors.address.message}</p>}
       </div>
       <div className="space-y-1.5">
         <label className="block text-sm font-medium text-foreground" htmlFor="tax_number">

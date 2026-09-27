@@ -408,3 +408,78 @@ export async function extendPlatformOrgGrace(
   if (!res.ok) throwPlatformError(data, res.status, "Could not extend grace");
   return data as PlatformExtendGraceResult;
 }
+
+// ---------------------------------------------------------------------------
+// Phase B — plans + audit stream
+// ---------------------------------------------------------------------------
+
+export type PlatformPlan = {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  price_monthly: number;
+  price_yearly?: number | null;
+  currency: string;
+  is_active: boolean;
+  is_public: boolean;
+  trial_days: number;
+  sort_order: number;
+  features?: Record<string, unknown> | null;
+  limits?: Record<string, unknown> | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type PlatformAuditEvent = {
+  id: string;
+  action: string;
+  outcome: string;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  organization_id?: string | null;
+  actor_email?: string | null;
+  actor_role?: string | null;
+  request_id?: string | null;
+  meta?: Record<string, unknown> | null;
+  created_at?: string | null;
+};
+
+export type PlatformAuditEventList = {
+  items: PlatformAuditEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export async function listPlatformPlans(params?: {
+  active_only?: boolean;
+}): Promise<PlatformPlan[]> {
+  const sp = new URLSearchParams();
+  if (params?.active_only) sp.set("active_only", "true");
+  const qs = sp.toString();
+  const res = await platformFetch(`/plans${qs ? `?${qs}` : ""}`);
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throwPlatformError(data, res.status, "Could not load plans");
+  return data as PlatformPlan[];
+}
+
+export async function listPlatformAuditEvents(params?: {
+  limit?: number;
+  offset?: number;
+  action?: string;
+  organization_id?: string;
+  actor_email?: string;
+}): Promise<PlatformAuditEventList> {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set("limit", String(params.limit));
+  if (params?.offset != null) sp.set("offset", String(params.offset));
+  if (params?.action) sp.set("action", params.action);
+  if (params?.organization_id) sp.set("organization_id", params.organization_id);
+  if (params?.actor_email) sp.set("actor_email", params.actor_email);
+  const qs = sp.toString();
+  const res = await platformFetch(`/audit-events${qs ? `?${qs}` : ""}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throwPlatformError(data, res.status, "Could not load audit events");
+  return data as PlatformAuditEventList;
+}

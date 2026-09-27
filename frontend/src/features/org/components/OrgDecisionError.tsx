@@ -7,7 +7,7 @@
 //       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
 //         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
 //           <svg
-//             className="h-7 w-7 text-amber-600"
+//             className="h-7 w-7 text-brand-secondary"
 //             fill="none"
 //             viewBox="0 0 24 24"
 //             stroke="currentColor"
@@ -76,9 +76,9 @@ export function OrgDecisionError({
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-card border border-border/40 rounded-2xl shadow-lift p-8 text-center space-y-6">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-secondary/10">
           <svg
-            className="h-7 w-7 text-amber-600"
+            className="h-7 w-7 text-brand-secondary"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

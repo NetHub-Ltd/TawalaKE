@@ -152,7 +152,13 @@ def _product_response(product) -> ProductResponse:
     return product_response(product)
 
 @router.patch('/update-business/{business_id}', response_model=ApiResponse[BusinessResponse])
-async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payload:BusinessUpdate, redis_client: AsyncRedis = Depends(get_redis)):
+async def update_business(
+    business_id: UUID,
+    payload: BusinessUpdate,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.STORE_WRITE)),
+    redis_client: AsyncRedis = Depends(get_redis),
+):
     """
     Updates the details of an existing business entity identified by its unique
     business ID. This function interacts with the database session to locate the
@@ -182,7 +188,12 @@ async def update_business(user: AuthUser, business_id:UUID, db: SessionDep, payl
 #
 #
 @router.delete('/delete/{business_id}', status_code=200, response_model=ApiResponse)
-async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis_client: AsyncRedis = Depends(get_redis)):
+async def delete_client(
+    business_id: UUID,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.STORE_WRITE)),
+    redis_client: AsyncRedis = Depends(get_redis),
+):
     """
     Deletes a client business entity by its unique identifier. This endpoint removes
     the business entity from the database and returns a successful response if the
@@ -214,7 +225,7 @@ async def delete_client(user: AuthUser, db: SessionDep, business_id: UUID, redis
 async def restock_product(
     payload: ProductRestockRequest,
     db: SessionDep,
-    current_staff: Staff = Depends(require_permissions(Permission.STOCK_ADJUST)),
+    current_staff: Staff = Depends(require_permissions(Permission.STOCK_RECEIVE)),
     redis_client: AsyncRedis = Depends(get_redis),
 ):
     """
@@ -480,13 +491,30 @@ async def collect_credit_sale(
 
 
 @router.get("/receipts/{sale_id}", status_code=200, response_model=FinancialDocumentSnapshotSchema)
-async def fetch_receipts(db: SessionDep, user: AuthUser, sale_id: UUID):
+async def fetch_receipts(
+    sale_id: UUID,
+    db: SessionDep,
+    user: Staff = Depends(require_permissions(Permission.DOCUMENTS_READ)),
+):
     """
-    Fetches a list of receipts for a given business, with optional pagination.
+    View financial document snapshot (receipt/invoice) for a sale.
+    Generation is internal (Celery worker — no HTTP permission).
+    Viewing requires documents:read + same organization as the sale.
     """
-    receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
-    return receipt
+    sale = (await db.exec(select(Sale).where(Sale.id == sale_id))).one_or_none()
+    if not sale:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    org_id = getattr(user, "organization_id", None) or getattr(user, "tenant_id", None)
+    if org_id and sale.organization_id and sale.organization_id != org_id:
+        raise HTTPException(status_code=403, detail="Not authorized for this document")
 
+    receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
+    if receipt is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not ready yet — generation may still be queued",
+        )
+    return receipt
 
 
 

@@ -9,17 +9,17 @@ const typeMeta: Record<
 > = {
   feature: {
     label: "New",
-    className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/25",
+    className: "bg-[var(--success-soft)] text-[var(--success)] border-[var(--success)]/25",
     Icon: Sparkles,
   },
   fix: {
     label: "Fix",
-    className: "bg-amber-500/10 text-amber-800 border-amber-500/25",
+    className: "bg-brand-secondary/10 text-brand-secondary border-brand-secondary/25",
     Icon: Bug,
   },
   improvement: {
     label: "Improved",
-    className: "bg-sky-500/10 text-sky-800 border-sky-500/25",
+    className: "bg-brand-accent/10 text-brand-accent border-brand-accent/25",
     Icon: Wrench,
   },
 };
