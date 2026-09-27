@@ -198,6 +198,16 @@ class DisputeAuditSnapshot(BaseModel):
     original_document_hash: Optional[str] = None
     notes: Optional[str] = None
 
+
+class DocumentBrandingSnapshot(BaseModel):
+    """From Business.config.financial_documents at generation time."""
+    logo_url: str = "https://tawala.nethub.co.ke/logo.svg"
+    display_name: Optional[str] = None
+    payment_fields: List[Dict[str, str]] = Field(default_factory=list)
+    terms_and_conditions: str = ""
+    paper_size: str = "A5"
+
+
 # This is the master validator schema for the JSONB snapshot
 class FinancialDocumentSnapshotSchema(BaseModel):
     document_id: UUID
@@ -214,6 +224,7 @@ class FinancialDocumentSnapshotSchema(BaseModel):
     
     # New professional summary
     summary: dict = Field(default_factory=dict)
+    branding: Optional[DocumentBrandingSnapshot] = None
     
     dispute_and_audit: DisputeAuditSnapshot
 
