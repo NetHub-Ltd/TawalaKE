@@ -13,7 +13,7 @@ celery_app = Celery(
     "tawala",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.tasks.document_tasks"],
+    include=["app.tasks.document_tasks", "app.tasks.dashboard_tasks"],
 )
 
 celery_app.conf.update(
@@ -28,5 +28,6 @@ celery_app.conf.update(
     task_default_queue="tawala.default",
     task_routes={
         "documents.generate_financial_document": {"queue": "tawala.documents"},
+        "dashboard.backfill_business_days": {"queue": "tawala.default"},
     },
 )

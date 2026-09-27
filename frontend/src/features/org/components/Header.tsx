@@ -14,14 +14,12 @@ function pageLabel(pathname: string, businessId?: string): string {
     overview: "Overview",
     terminal: "Terminal",
     checkout: "Checkout",
-    "complete-sale": "Sale complete",
     stock: "Stock",
     sales: "Sales history",
     customers: "Customers",
     expenses: "Expenses",
     settings: "Settings",
-    sale: "Document",
-    cart: "Cart",
+    sale: "Sale document",
   };
   return map[seg] || seg.replace(/-/g, " ");
 }
@@ -36,7 +34,7 @@ export function Header() {
   const organizationId = String(params?.organizationId || ctxOrg || "");
 
   const [branchName, setBranchName] = useState(
-    ctxName && ctxName !== "Terminal Node" ? String(ctxName) : "Branch",
+    ctxName && ctxName !== "Terminal Node" ? ctxName : "Branch",
   );
 
   useEffect(() => {
@@ -69,38 +67,38 @@ export function Header() {
       : "#";
 
   return (
-    <header className="relative z-40 flex h-14 w-full shrink-0 items-center justify-between border-b border-border/50 bg-card px-5">
+    <header className="relative z-40 mb-1 flex h-16 w-full shrink-0 items-center justify-between border-b border-border/60 bg-card px-5">
       <div className="min-w-0">
-        <p className="truncate text-[13px] font-semibold tracking-tight text-foreground">
+        <h1 className="truncate text-sm font-bold tracking-tight text-foreground">
           {branchName}
-        </p>
-        <p className="truncate text-[11px] text-muted">{label}</p>
+        </h1>
+        <p className="mt-0.5 text-xs font-medium text-muted">{label}</p>
       </div>
 
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center gap-1">
         <button
           type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-register hover:text-foreground"
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-register hover:text-foreground"
           title="Notifications"
           aria-label="Notifications"
         >
-          <Bell size={15} />
+          <Bell size={16} />
         </button>
         <button
           type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-register hover:text-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-register hover:text-foreground"
           title="Help"
           aria-label="Help"
         >
-          <HelpCircle size={15} />
+          <HelpCircle size={16} />
         </button>
         <Link
           href={settingsHref}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-register hover:text-foreground"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-register hover:text-foreground"
           title="Branch settings"
           aria-label="Branch settings"
         >
-          <Settings size={15} />
+          <Settings size={16} />
         </Link>
       </div>
     </header>
