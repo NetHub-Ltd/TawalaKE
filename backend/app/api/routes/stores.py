@@ -497,9 +497,9 @@ async def fetch_receipts(
     user: Staff = Depends(require_permissions(Permission.DOCUMENTS_READ)),
 ):
     """
-    View financial document snapshot (receipt/invoice).
-    Generation is internal; viewing requires documents:read + org match.
-    Legacy snapshots without branding still return successfully.
+    View financial document snapshot (receipt/invoice) for a sale.
+    Generation is internal (Celery worker — no HTTP permission).
+    Viewing requires documents:read + same organization as the sale.
     """
     sale = (await db.exec(select(Sale).where(Sale.id == sale_id))).one_or_none()
     if not sale:

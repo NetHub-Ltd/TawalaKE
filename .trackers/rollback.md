@@ -1,2 +1,2 @@
 # Rollback
-Revert PR. No migration (permission codes are enum-only).
+Revert PR. Ensure any BackgroundTasks path still available if needed.
