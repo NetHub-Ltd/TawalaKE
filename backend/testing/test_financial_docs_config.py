@@ -19,6 +19,7 @@ def test_default_financial_documents_shape():
     assert d["payment_fields"] == []
     assert d["terms_and_conditions"] == DEFAULT_TERMS
     assert d["paper_size"] == DEFAULT_PAPER_SIZE
+    assert d["apply_to_existing"] is False
     # fresh dict each call
     assert default_financial_documents() is not d
 
@@ -138,3 +139,9 @@ def test_merge_business_config_normalizes_existing_fd():
     )
     assert merged["financial_documents"]["paper_size"] == "A4"
     assert merged["financial_documents"]["logo_url"] == "https://z"
+
+
+def test_normalize_apply_to_existing_flag():
+    assert normalize_financial_documents({}).get("apply_to_existing") is False
+    assert normalize_financial_documents({"apply_to_existing": True})["apply_to_existing"] is True
+    assert normalize_financial_documents({"apply_to_existing": 1})["apply_to_existing"] is True

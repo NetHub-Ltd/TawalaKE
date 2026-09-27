@@ -30,6 +30,7 @@ type BranchProfile = {
       payment_fields?: PaymentField[];
       terms_and_conditions?: string;
       paper_size?: string;
+      apply_to_existing?: boolean;
     };
   } | null;
 };
@@ -66,6 +67,7 @@ export function BusinessSettingsForm() {
   ]);
   const [terms, setTerms] = useState(DEFAULT_TERMS);
   const [paperSize, setPaperSize] = useState<"A5" | "A4">("A5");
+  const [applyToExisting, setApplyToExisting] = useState(false);
   const [rawConfig, setRawConfig] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
@@ -106,6 +108,7 @@ export function BusinessSettingsForm() {
           );
           setTerms(fd?.terms_and_conditions || DEFAULT_TERMS);
           setPaperSize(fd?.paper_size === "A4" ? "A4" : "A5");
+          setApplyToExisting(Boolean(fd?.apply_to_existing));
         } else {
           setError("Could not load branch settings");
         }
@@ -138,7 +141,7 @@ export function BusinessSettingsForm() {
       .slice(0, 3);
 
     try {
-      const res = await fetch(`/api/v1/org/stores/update-business/${businessId}`, {
+      const res = await fetch(`/api/v1/org/stores/${businessId}`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -159,6 +162,7 @@ export function BusinessSettingsForm() {
               payment_fields: cleanedFields,
               terms_and_conditions: terms.trim() || DEFAULT_TERMS,
               paper_size: paperSize,
+              apply_to_existing: applyToExisting,
             },
           },
         }),
@@ -184,6 +188,7 @@ export function BusinessSettingsForm() {
           payment_fields: cleanedFields,
           terms_and_conditions: terms.trim() || DEFAULT_TERMS,
           paper_size: paperSize,
+          apply_to_existing: applyToExisting,
         },
       }));
     } catch (err) {
@@ -411,6 +416,22 @@ export function BusinessSettingsForm() {
               </div>
             ))}
           </div>
+
+          <label className="flex items-start gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={applyToExisting}
+              onChange={(e) => setApplyToExisting(e.target.checked)}
+              disabled={!canEdit}
+              className="mt-0.5 rounded border-border"
+            />
+            <span>
+              <span className="font-medium text-foreground">Apply payment details & branding to existing invoices</span>
+              <span className="mt-0.5 block text-xs">
+                Off (default): only new sales get these payment fields. On: opening any past invoice refreshes logo, payment details, and terms from this settings page.
+              </span>
+            </span>
+          </label>
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted">
