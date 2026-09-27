@@ -75,6 +75,7 @@ import { orgMatchesSession } from "@/lib/auth/require-api-auth";
 import { BusinessProvider } from "@/features/business/components/BusinessProvider";
 import { Sidebar } from "@/features/org/components/Sidebar";
 import { Header } from "@/features/org/components/Header";
+import { AppContextMenu } from "@/features/shell/components/AppContextMenu";
 
 export const metadata: Metadata = {
   title: "Terminal | Sales Hub",
@@ -167,9 +168,11 @@ export default async function TerminalLayout({
           <Header />
 
           <main id="terminal-main" className="relative min-h-0 min-w-0 flex-1">
-            <div className="absolute inset-0 overflow-y-auto overscroll-contain px-0 sm:px-1 focus:outline-none">
-              {children}
-            </div>
+            <AppContextMenu>
+              <div className="absolute inset-0 overflow-y-auto overscroll-contain px-0 sm:px-1 focus:outline-none">
+                {children}
+              </div>
+            </AppContextMenu>
           </main>
         </div>
       </div>

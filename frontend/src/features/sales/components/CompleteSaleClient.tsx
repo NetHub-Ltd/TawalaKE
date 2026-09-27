@@ -4,7 +4,7 @@
  * Post-finalize confirmation — professional success card.
  * Presentational polish only; data from existing useSales.
  */
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSales, SaleResponse } from "@/features/sales/hooks/useSales";
@@ -121,6 +121,19 @@ export default function CompleteSaleClient({
   const sale = useMemo(() => sales[0] ?? null, [sales]);
   const terminalHref = `/org/${organizationId}/${businessId}/terminal`;
   const previewHref = `/org/${organizationId}/${businessId}/sale/${saleId}/preview`;
+
+  // Prevent Back from reopening checkout (double-pay risk)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const successUrl = window.location.href;
+    window.history.replaceState({ saleSuccess: true, saleId }, "", successUrl);
+    const onPop = () => {
+      window.history.pushState({ saleSuccess: true, saleId }, "", successUrl);
+      router.replace(terminalHref);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [saleId, terminalHref, router]);
 
   if (isLoading) {
     return (
@@ -283,7 +296,7 @@ export default function CompleteSaleClient({
             className="inline-flex h-12 flex-[1.2] items-center justify-center gap-2 rounded-md bg-brand-primary text-sm font-semibold text-white transition hover:opacity-90"
           >
             <Zap size={16} />
-            Quick sale
+            New sale
           </button>
           <Link
             href={previewHref}
