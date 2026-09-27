@@ -3,7 +3,6 @@
 // import { BusinessProvider } from "@/features/business/components/BusinessProvider";
 // import { Sidebar } from "@/features/org/components/Sidebar";
 // import { Header } from "@/features/org/components/Header";
-import { AppContextMenu } from "@/features/shell/components/AppContextMenu";
 
 // export const metadata: Metadata = {
 //   title: "Terminal | Sales Hub",
