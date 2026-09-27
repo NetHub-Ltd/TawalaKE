@@ -24,6 +24,8 @@ def default_financial_documents() -> dict[str, Any]:
         "payment_fields": [],  # [{label, value}, ...] max 3
         "terms_and_conditions": DEFAULT_TERMS,
         "paper_size": DEFAULT_PAPER_SIZE,  # A5 | A4
+        # When true, invoice UI overlays live payment/branding on old snapshots
+        "apply_to_existing": False,
     }
 
 
@@ -65,6 +67,7 @@ def normalize_financial_documents(raw: Any) -> dict[str, Any]:
             if label or value:
                 fields.append({"label": label or "Detail", "value": value})
     base["payment_fields"] = fields
+    base["apply_to_existing"] = bool(raw.get("apply_to_existing"))
     return base
 
 
