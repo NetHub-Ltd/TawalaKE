@@ -3,14 +3,21 @@
 /**
  * Two-step finish flow:
  * 1) Customer — who is paying / taking credit
- * 2) Checkout — Cash / M-Pesa / Credit + amount received + M-Pesa code
+ * 2) Payment — Cash / M-Pesa / Credit + amount received + M-Pesa code
  */
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Check, Search, ChevronDown, ArrowLeft, ArrowRight } from "lucide-react";
+import {
+  Loader2,
+  Check,
+  Search,
+  ChevronDown,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useCartStore } from "@/features/sales/stores/useCartStore";
 import {
@@ -18,7 +25,10 @@ import {
   POS_METHODS_FALLBACK,
   type PosPaymentMethod,
 } from "@/features/sales/lib/posConfig";
-import { normalizeKenyanPhone, isValidKenyanPhone } from "@/features/sales/lib/phone";
+import {
+  normalizeKenyanPhone,
+  isValidKenyanPhone,
+} from "@/features/sales/lib/phone";
 import { clearStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { Spinner } from "@/lib/components/ui";
 
@@ -29,41 +39,20 @@ interface CheckoutFormProps {
   businessId: string;
 }
 
-const schema = z
-  .object({
-    customerName: z
-      .string()
-      .min(2, "Customer name is required")
-      .max(80, "Name is too long"),
-    customerPhone: z
-      .string()
-      .transform((val) => normalizeKenyanPhone(val))
-      .refine((val) => isValidKenyanPhone(val), {
-        message: "Use a valid Kenyan number (07xxxxxxxx, 01xxxxxxxx, or +254…)",
-      }),
-    paymentMethod: z.string().min(1, "Select a payment method"),
-    amountGiven: z.string().optional(),
-    paymentReference: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const method = data.paymentMethod;
-    if (method === "INVOICE") return;
-    const given = Number(data.amountGiven);
-    if (!data.amountGiven || !Number.isFinite(given) || given <= 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Enter the amount received",
-        path: ["amountGiven"],
-      });
-    }
-    if (method === "MPESA" && !(data.paymentReference || "").trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "M-Pesa confirmation code is required",
-        path: ["paymentReference"],
-      });
-    }
-  });
+type Step = "customer" | "payment";
+
+const customerSchema = z.object({
+  customerName: z
+    .string()
+    .min(2, "Customer name is required")
+    .max(80, "Name is too long"),
+  customerPhone: z
+    .string()
+    .transform((val) => normalizeKenyanPhone(val))
+    .refine((val) => isValidKenyanPhone(val), {
+      message: "Use a valid Kenyan number (07xxxxxxxx, 01xxxxxxxx, or +254…)",
+    }),
+});
 
 const paymentSchema = z
   .object({
@@ -81,7 +70,10 @@ const paymentSchema = z
         path: ["amountGiven"],
       });
     }
-    if (data.paymentMethod === "MPESA" && !(data.paymentReference || "").trim()) {
+    if (
+      data.paymentMethod === "MPESA" &&
+      !(data.paymentReference || "").trim()
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "M-Pesa confirmation code is required",
@@ -120,7 +112,8 @@ export function CheckoutForm({
 
   const [step, setStep] = useState<Step>("customer");
   const [customer, setCustomer] = useState<CustomerValues | null>(null);
-  const [methods, setMethods] = useState<PosPaymentMethod[]>(POS_METHODS_FALLBACK);
+  const [methods, setMethods] =
+    useState<PosPaymentMethod[]>(POS_METHODS_FALLBACK);
   const [configLoading, setConfigLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -137,22 +130,13 @@ export function CheckoutForm({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       paymentMethod: "CASH",
-      amountGiven: "",
+      amountGiven: grandTotal > 0 ? grandTotal.toFixed(2) : "",
       paymentReference: "",
     },
   });
 
-  const paymentMethod = watch("paymentMethod");
-
-  useEffect(() => {
-    if (paymentMethod === "INVOICE") return;
-    const current = watch("amountGiven");
-    if (!current) {
-      setValue("amountGiven", grandTotal > 0 ? grandTotal.toFixed(2) : "");
-    }
-  }, [paymentMethod, grandTotal, setValue, watch]);
-
-  const selectedMeta = methods.find((m) => m.code === paymentMethod);
+  const paymentMethod = paymentForm.watch("paymentMethod");
+  const amountGivenWatch = paymentForm.watch("amountGiven");
 
   useEffect(() => {
     let cancelled = false;
@@ -187,7 +171,6 @@ export function CheckoutForm({
     }
   }, [paymentMethod, grandTotal, paymentForm]);
 
-  // Customer search
   useEffect(() => {
     const q = customerQuery.trim();
     if (q.length < 2) {
@@ -234,6 +217,13 @@ export function CheckoutForm({
     setStep("payment");
   });
 
+  const onPay = paymentForm.handleSubmit(async (data) => {
+    if (!customer) {
+      setStep("customer");
+      return;
+    }
+    setSubmitting(true);
+    const toastId = toast.loading("Completing sale…");
     const isCredit = data.paymentMethod === "INVOICE";
     const amountGiven = isCredit ? undefined : Number(data.amountGiven);
     const payload = {
@@ -243,8 +233,8 @@ export function CheckoutForm({
         ? undefined
         : (data.paymentReference || "").trim() || undefined,
       amount_given: amountGiven,
-      customer_name: data.customerName.trim(),
-      customer_phone: data.customerPhone,
+      customer_name: customer.customerName.trim(),
+      customer_phone: customer.customerPhone,
     };
 
     try {
@@ -284,28 +274,21 @@ export function CheckoutForm({
       ? given - grandTotal
       : 0;
   const isPartial =
-    paymentMethod !== "INVOICE" &&
-    given > 0 &&
-    given < grandTotal - 0.001;
+    paymentMethod !== "INVOICE" && given > 0 && given < grandTotal - 0.001;
 
   return (
     <div className="mx-auto w-full max-w-md">
-      {/* Step indicator */}
       <div className="mb-5 flex items-center gap-2 text-xs font-medium">
         <span
           className={
-            step === "customer"
-              ? "text-brand-primary"
-              : "text-muted"
+            step === "customer" ? "text-brand-primary" : "text-muted"
           }
         >
           1 · Customer
         </span>
         <span className="text-muted">→</span>
         <span
-          className={
-            step === "payment" ? "text-brand-primary" : "text-muted"
-          }
+          className={step === "payment" ? "text-brand-primary" : "text-muted"}
         >
           2 · Payment
         </span>
@@ -380,7 +363,9 @@ export function CheckoutForm({
                     >
                       <span className="font-medium">{c.name}</span>
                       {c.phone ? (
-                        <span className="ml-2 text-xs text-muted">{c.phone}</span>
+                        <span className="ml-2 text-xs text-muted">
+                          {c.phone}
+                        </span>
                       ) : null}
                     </button>
                   </li>
@@ -524,111 +509,23 @@ export function CheckoutForm({
             </div>
           )}
 
-        {paymentMethod !== "INVOICE" && (
-          <div>
-            <label
-              htmlFor="amountGiven"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              Amount received
-            </label>
-            <input
-              id="amountGiven"
-              type="number"
-              step="0.01"
-              min={0}
-              inputMode="decimal"
-              {...register("amountGiven")}
-              placeholder={String(grandTotal.toFixed(2))}
-              disabled={isSubmitting}
-              className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
-            />
-            {errors.amountGiven && (
-              <p className="mt-1.5 text-sm text-[var(--error)]">
-                {errors.amountGiven.message}
-              </p>
-            )}
-            {(() => {
-              const given = Number(watch("amountGiven") || 0);
-              if (!given || given <= 0) return null;
-              if (given > grandTotal + 0.001) {
-                const change = given - grandTotal;
-                return (
-                  <p className="mt-1.5 text-sm font-medium text-foreground">
-                    Change due:{" "}
-                    <span className="text-brand-primary">
-                      {change.toLocaleString("en-KE", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
-                    </span>
-                  </p>
-                );
-              }
-              if (given < grandTotal - 0.001) {
-                const bal = grandTotal - given;
-                return (
-                  <p className="mt-1.5 text-sm text-amber-700">
-                    Partial payment — balance remaining{" "}
-                    {bal.toLocaleString("en-KE", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    (invoice)
-                  </p>
-                );
-              }
-              return (
-                <p className="mt-1.5 text-xs text-muted">
-                  Full payment — receipt
+          {paymentMethod === "MPESA" && (
+            <div>
+              <label className="mb-1.5 block text-sm font-medium">
+                M-Pesa confirmation code
+              </label>
+              <input
+                {...paymentForm.register("paymentReference")}
+                placeholder="e.g. QH12ABCDE"
+                disabled={submitting}
+                className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm uppercase outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
+              />
+              {paymentForm.formState.errors.paymentReference && (
+                <p className="mt-1 text-sm text-[var(--error)]">
+                  {paymentForm.formState.errors.paymentReference.message}
                 </p>
-              );
-            })()}
-          </div>
-        )}
-
-        {paymentMethod === "MPESA" && (
-          <div>
-            <label
-              htmlFor="paymentReference"
-              className="mb-1.5 block text-sm font-medium text-foreground"
-            >
-              M-Pesa confirmation code
-            </label>
-            <input
-              id="paymentReference"
-              {...register("paymentReference")}
-              placeholder="e.g. QH12ABCDE"
-              disabled={isSubmitting}
-              className="h-11 w-full rounded-md border border-border bg-card px-3.5 text-sm uppercase outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/30"
-            />
-            {errors.paymentReference && (
-              <p className="mt-1.5 text-sm text-[var(--error)]">
-                {errors.paymentReference.message}
-              </p>
-            )}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={isSubmitting || configLoading}
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand-accent text-sm font-semibold text-white shadow-sm transition hover:opacity-90 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSubmitting ? (
-            <>
-              <Spinner size="sm" />
-              Completing...
-            </>
-          ) : (
-            <>
-              <Check size={16} />
-              {paymentMethod === "INVOICE"
-                ? "Complete credit sale"
-                : paymentMethod === "MPESA"
-                  ? "Complete M-Pesa sale"
-                  : "Complete sale"}
-            </>
+              )}
+            </div>
           )}
 
           <button

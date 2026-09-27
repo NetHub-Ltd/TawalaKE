@@ -118,7 +118,6 @@ export function CheckoutWorkspace({
   const itemCount = Math.max(getSaleItemCount(activeSale), items.length);
   // Backend stores subtotal post-discount; recover goods for honest labels
   const netSubtotal = Number(activeSale.subtotal) || 0;
-  const taxAmount = Number(activeSale.tax_amount) || 0;
   const discount = Number(activeSale.discount) || 0;
   const goodsSubtotal = netSubtotal + discount;
   const grandTotal = Number(activeSale.total_amount) || 0;
