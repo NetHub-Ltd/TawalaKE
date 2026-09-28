@@ -22,10 +22,10 @@ export function PlatformJobsPage() {
     setToken(t);
   }, [router]);
 
-  const headers = useMemo(
-    () => (token ? { Authorization: `Bearer ${token}` } : {}),
-    [token],
-  );
+  const headers = useMemo((): Record<string, string> => {
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  }, [token]);
 
   if (!token) {
     return (
