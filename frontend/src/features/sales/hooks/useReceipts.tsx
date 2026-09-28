@@ -18,25 +18,32 @@ function errorMessage(body: unknown, fallback: string): string {
   return fallback;
 }
 
+export class DocumentNotReadyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DocumentNotReadyError";
+  }
+}
+
 const fetchReceipt = async (saleId: string) => {
   const response = await fetch(
     `/api/v1/org/stores/sales/receipts?sale_id=${encodeURIComponent(saleId)}`,
     { credentials: "include", headers: { Accept: "application/json" } },
   );
 
+  if (response.status === 404) {
+    const error = await response.json().catch(() => ({}));
+    throw new DocumentNotReadyError(
+      errorMessage(error, "Document not ready yet — try again in a moment"),
+    );
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    const msg = errorMessage(
-      error,
-      response.status === 404
-        ? "Document not ready yet — try again in a moment"
-        : "Failed to fetch receipt",
-    );
-    throw new Error(msg);
+    throw new Error(errorMessage(error, "Failed to fetch receipt"));
   }
 
   const body = await response.json();
-  // Support both bare snapshot and { data: snapshot } envelopes
   if (body && typeof body === "object" && body.data && !body.seller) {
     return body.data;
   }
@@ -48,15 +55,19 @@ export const useReceipt = (saleId: string | null | undefined) => {
     queryKey: receiptKeys.bySaleId(saleId!),
     queryFn: () => fetchReceipt(saleId!),
     enabled: !!saleId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30_000,
     gcTime: 10 * 60 * 1000,
-    // Document may still be generating right after checkout
     retry: (count, err) => {
-      if (count >= 4) return false;
-      const m = err instanceof Error ? err.message : "";
-      return /not ready|404|queued/i.test(m) || count < 2;
+      if (err instanceof DocumentNotReadyError) return count < 12;
+      return count < 2;
     },
-    retryDelay: (n) => Math.min(1000 * 2 ** n, 8000),
-    refetchOnWindowFocus: false,
+    retryDelay: (n) => Math.min(800 * 2 ** n, 5000),
+    // Keep polling while document is still generating
+    refetchInterval: (query) => {
+      if (query.state.data) return false;
+      if (query.state.error instanceof DocumentNotReadyError) return 2000;
+      return false;
+    },
+    refetchOnWindowFocus: true,
   });
 };

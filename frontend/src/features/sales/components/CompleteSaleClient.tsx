@@ -212,6 +212,9 @@ export default function CompleteSaleClient({
             {method} · {cust} · {formatMoney(total, currency)}
             {credit ? " · collect later" : ""}
           </p>
+          <p className="mt-2 text-xs text-muted">
+            Your {credit ? "invoice" : "receipt"} is being prepared — open it when you are ready.
+          </p>
         </div>
 
         {/* Detail card */}
