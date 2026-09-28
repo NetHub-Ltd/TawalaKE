@@ -5,6 +5,7 @@
  */
 import React from "react";
 import type { DocumentModel } from "@/features/documents/lib/documentModel";
+import { printHtmlDocument } from "@/features/documents/lib/documentModel";
 
 function escapeHtml(s: string) {
   return String(s)
@@ -95,16 +96,7 @@ export function buildThermalPrintHtml(m: DocumentModel): string {
 }
 
 export function printThermalReceipt(m: DocumentModel) {
-  const html = buildThermalPrintHtml(m);
-  const w = window.open("", "_blank", "noopener,noreferrer,width=420,height=720");
-  if (!w) throw new Error("Pop-up blocked — allow pop-ups to print");
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  setTimeout(() => {
-    w.print();
-  }, 250);
+  printHtmlDocument(buildThermalPrintHtml(m));
 }
 
 export async function downloadThermalReceiptPdf(m: DocumentModel) {

@@ -36,9 +36,14 @@ export function PlatformJobsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
+    <div className="mx-auto max-w-5xl space-y-4 p-4 sm:p-6">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Background jobs</h1>
+        <div>
+          <h1 className="text-lg font-semibold">Background jobs</h1>
+          <p className="text-sm text-muted">
+            Read-only view of job history across the platform.
+          </p>
+        </div>
         <button
           type="button"
           className="text-xs text-muted hover:underline"
@@ -53,8 +58,12 @@ export function PlatformJobsPage() {
       <JobsPanel
         statusPath="/api/v1/platform/jobs/status"
         replayPath="/api/v1/platform/jobs/replay"
+        historyPath="/api/v1/platform/jobs/history"
+        streamPath="/api/v1/platform/jobs/stream"
         authHeaders={headers}
-        title="Celery cluster"
+        title="Platform jobs"
+        allowRetry={false}
+        allowReplay={false}
       />
     </div>
   );

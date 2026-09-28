@@ -10,7 +10,7 @@ from uuid import UUID
 
 import secrets
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlmodel import select
 
 from app.api.deps import SessionDep, get_redis, AsyncRedis
@@ -1044,3 +1044,94 @@ async def platform_jobs_replay(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     return {"message": "queued", "data": result}
+
+
+@router.get("/jobs/history")
+async def platform_jobs_history(
+    db: SessionDep,
+    _user=Depends(require_platform_permissions(PlatformPermission.JOBS_RUN)),
+    status_filter: Optional[str] = None,
+    organization_id: Optional[UUID] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Platform-wide historical jobs (read-only)."""
+    from sqlmodel import col, select
+    from app.models.models import BackgroundJob
+
+    q = select(BackgroundJob)
+    if organization_id:
+        q = q.where(BackgroundJob.organization_id == organization_id)
+    if status_filter:
+        q = q.where(BackgroundJob.status == status_filter.upper())
+    q = q.order_by(col(BackgroundJob.created_at).desc()).offset(max(0, offset)).limit(min(200, max(1, limit)))
+    rows = (await db.exec(q)).all()
+
+    def _job(j):
+        return {
+            "id": str(j.id),
+            "celery_task_id": j.celery_task_id,
+            "name": j.name,
+            "status": j.status,
+            "organization_id": str(j.organization_id) if j.organization_id else None,
+            "business_id": str(j.business_id) if j.business_id else None,
+            "sale_id": str(j.sale_id) if j.sale_id else None,
+            "triggered_by_email": j.triggered_by_email,
+            "triggered_by_role": j.triggered_by_role,
+            "args_summary": j.args_summary or {},
+            "error_message": j.error_message,
+            "result_preview": j.result_preview,
+            "retries": j.retries,
+            "started_at": j.started_at.isoformat() if j.started_at else None,
+            "finished_at": j.finished_at.isoformat() if j.finished_at else None,
+            "created_at": j.created_at.isoformat() if j.created_at else None,
+        }
+
+    return {"message": "ok", "data": {"items": [_job(r) for r in rows], "limit": limit, "offset": offset}}
+
+
+@router.get("/jobs/stream")
+async def platform_jobs_stream(
+    request: Request,
+    _user=Depends(require_platform_permissions(PlatformPermission.JOBS_RUN)),
+):
+    """SSE stream of all job updates (platform operators, read-only)."""
+    import asyncio
+    import json
+    from datetime import datetime
+    from fastapi.responses import StreamingResponse
+    from app.services.background_jobs import REDIS_JOBS_CHANNEL
+    from app.utils.logging import logger
+
+    async def event_generator():
+        yield f"data: {json.dumps({'type': 'connected', 'scope': 'platform'})}\n\n"
+        try:
+            from app.core.redis_client import redis_manager
+            client = redis_manager.get_async_client()
+            pubsub = client.pubsub()
+            await pubsub.subscribe(REDIS_JOBS_CHANNEL)
+            try:
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    if msg and msg.get("type") == "message":
+                        raw = msg.get("data")
+                        if isinstance(raw, bytes):
+                            raw = raw.decode("utf-8", errors="replace")
+                        yield f"data: {raw}\n\n"
+                    else:
+                        yield f": heartbeat {datetime.utcnow().isoformat()}\n\n"
+                        await asyncio.sleep(0.05)
+            finally:
+                await pubsub.unsubscribe(REDIS_JOBS_CHANNEL)
+                await pubsub.close()
+        except Exception as e:
+            logger.warning("platform jobs SSE error: {}", e)
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
