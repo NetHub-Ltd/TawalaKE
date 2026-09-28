@@ -1,4 +1,4 @@
-"""Unit tests for Celery task helpers (enqueue + org lookup), without running workers."""
+"""Unit tests for document/dashboard task helpers (BackgroundTasks + optional Celery)."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -74,30 +74,102 @@ def test_org_for_business_error():
         assert dbt._org_for_business(str(uuid4())) is None
 
 
-def test_enqueue_document_generation_records_pending():
+def test_schedule_document_generation_records_pending_and_adds_task():
     from app.tasks import document_tasks as dt
 
     sale_id = uuid4()
-    async_result = MagicMock()
-    async_result.id = "enq-1"
-    with patch.object(dt.generate_financial_document, "delay", return_value=async_result):
-        with patch.object(dt, "_org_for_sale", return_value=(uuid4(), uuid4())):
-            with patch(
-                "app.services.background_jobs.record_job_event_sync", return_value=uuid4()
-            ) as rec:
-                tid = dt.enqueue_document_generation(sale_id)
-    assert tid == "enq-1"
+    bg = MagicMock()
+    with patch.object(dt, "_org_for_sale", return_value=(uuid4(), uuid4())):
+        with patch(
+            "app.services.background_jobs.record_job_event_sync", return_value=uuid4()
+        ) as rec:
+            tid = dt.schedule_document_generation(bg, sale_id)
+    assert tid is not None and len(tid) > 8
     rec.assert_called()
     assert rec.call_args.kwargs["status"] == "PENDING"
+    bg.add_task.assert_called_once()
+    assert bg.add_task.call_args.args[0] is dt.run_document_generation_job
 
 
-def test_enqueue_document_generation_returns_none_on_broker_failure():
+def test_enqueue_document_generation_thread_path_returns_job_id():
+    """Legacy path without BackgroundTasks still returns a correlation id."""
     from app.tasks import document_tasks as dt
 
-    with patch.object(
-        dt.generate_financial_document, "delay", side_effect=RuntimeError("broker")
-    ):
-        assert dt.enqueue_document_generation(uuid4()) is None
+    sale_id = uuid4()
+    with patch.object(dt, "_org_for_sale", return_value=(None, None)):
+        with patch(
+            "app.services.background_jobs.record_job_event_sync", return_value=None
+        ) as rec:
+            with patch("threading.Thread") as Thread:
+                instance = MagicMock()
+                Thread.return_value = instance
+                tid = dt.enqueue_document_generation(sale_id)
+    assert tid is not None
+    rec.assert_called()
+    assert rec.call_args.kwargs["status"] == "PENDING"
+    instance.start.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_run_document_generation_job_success():
+    from app.tasks import document_tasks as dt
+
+    sale_id = uuid4()
+    job_id = uuid4()
+    session = AsyncMock()
+    exec_result = MagicMock()
+    exec_result.one_or_none.return_value = SimpleNamespace(
+        organization_id=uuid4(), business_id=uuid4()
+    )
+    session.exec = AsyncMock(return_value=exec_result)
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("app.core.session.AsyncSessionLocal", return_value=cm):
+        with patch(
+            "app.services.background_jobs.record_job_event",
+            new_callable=AsyncMock,
+        ) as rec:
+            with patch(
+                "app.tasks.worker.async_process_document_generation",
+                new_callable=AsyncMock,
+                return_value="snapshot-ok",
+            ):
+                result = await dt.run_document_generation_job(sale_id, job_id=job_id)
+    assert result == "snapshot-ok"
+    statuses = [c.kwargs.get("status") for c in rec.call_args_list]
+    assert "STARTED" in statuses
+    assert "SUCCESS" in statuses
+
+
+@pytest.mark.asyncio
+async def test_run_document_generation_job_failure_records_and_raises():
+    from app.tasks import document_tasks as dt
+
+    sale_id = uuid4()
+    session = AsyncMock()
+    exec_result = MagicMock()
+    exec_result.one_or_none.return_value = None
+    session.exec = AsyncMock(return_value=exec_result)
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=None)
+
+    with patch("app.core.session.AsyncSessionLocal", return_value=cm):
+        with patch(
+            "app.services.background_jobs.record_job_event",
+            new_callable=AsyncMock,
+        ) as rec:
+            with patch(
+                "app.tasks.worker.async_process_document_generation",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("gen failed"),
+            ):
+                with pytest.raises(RuntimeError, match="gen failed"):
+                    await dt.run_document_generation_job(sale_id)
+    statuses = [c.kwargs.get("status") for c in rec.call_args_list]
+    assert "FAILURE" in statuses
 
 
 def test_enqueue_dashboard_backfill_success():
@@ -132,51 +204,3 @@ def test_enqueue_dashboard_backfill_failure():
         assert dbt.enqueue_dashboard_backfill(uuid4()) is None
 
 
-def test_generate_financial_document_success_path():
-    from app.tasks import document_tasks as dt
-
-    sale_id = str(uuid4())
-    request = SimpleNamespace(id="celery-ok", retries=0)
-    task_self = SimpleNamespace(request=request, retry=MagicMock())
-
-    with patch.object(dt, "_org_for_sale", return_value=(uuid4(), uuid4())):
-        with patch(
-            "app.services.background_jobs.record_job_event_sync", return_value=None
-        ) as rec:
-            with patch(
-                "app.tasks.worker.async_process_document_generation",
-                return_value="snapshot-ok",
-            ):
-                with patch("asyncio.run", side_effect=lambda c: "snapshot-ok"):
-                    # generate_financial_document is a celery task; call underlying run
-                    result = dt.generate_financial_document.run(sale_id)
-    assert result == "snapshot-ok"
-    # STARTED + SUCCESS recorded
-    assert rec.call_count >= 2
-    statuses = [c.kwargs.get("status") for c in rec.call_args_list]
-    assert "SUCCESS" in statuses
-
-
-def test_generate_financial_document_retries_on_failure():
-    from app.tasks import document_tasks as dt
-
-    sale_id = str(uuid4())
-    retry_exc = Exception("retry-me")
-
-    def _retry(exc=None):
-        raise retry_exc
-
-    request = SimpleNamespace(id="celery-fail", retries=0)
-    # Bind-style: use .run but patch self.retry via task
-    with patch.object(dt, "_org_for_sale", return_value=(None, None)):
-        with patch(
-            "app.services.background_jobs.record_job_event_sync", return_value=None
-        ) as rec:
-            with patch(
-                "asyncio.run",
-                side_effect=RuntimeError("gen failed"),
-            ):
-                with pytest.raises(Exception):
-                    dt.generate_financial_document.run(sale_id)
-    statuses = [c.kwargs.get("status") for c in rec.call_args_list]
-    assert "FAILURE" in statuses or "STARTED" in statuses
