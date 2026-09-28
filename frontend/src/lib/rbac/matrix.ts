@@ -24,9 +24,11 @@ export const ROLE_PERMISSIONS: Record<StaffRoleName, readonly PermissionKey[]> =
     Permission.EXPENSES_WRITE,
     Permission.DOCUMENTS_READ,
     Permission.REPORTS_READ,
+    Permission.JOBS_MANAGE,
   ],
   MANAGER: [
     Permission.ORG_READ,
+    Permission.JOBS_MANAGE,
     Permission.STORE_READ,
     Permission.CATALOG_READ,
     Permission.CATALOG_WRITE,
