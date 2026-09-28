@@ -35,6 +35,7 @@ class Permission(str, Enum):
     EXPENSES_WRITE = "expenses:write"
     DOCUMENTS_READ = "documents:read"
     REPORTS_READ = "reports:read"
+    JOBS_MANAGE = "jobs:manage"
 
 
 class OverrideEffect(str, Enum):
@@ -66,6 +67,7 @@ ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
             Permission.EXPENSES_WRITE,
             Permission.DOCUMENTS_READ,
             Permission.REPORTS_READ,
+            Permission.JOBS_MANAGE,
         }
     ),
     StaffRole.MANAGER: frozenset(
@@ -82,6 +84,7 @@ ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
             Permission.SALES_READ_BUSINESS,
             Permission.CUSTOMERS_READ,
             Permission.CUSTOMERS_WRITE,
+            Permission.JOBS_MANAGE,
             Permission.CUSTOMERS_DELETE,
             Permission.EXPENSES_READ,
             Permission.EXPENSES_WRITE,
@@ -172,6 +175,9 @@ PERMISSION_CATALOG: list[dict] = [
     {"code": Permission.REPORTS_READ.value, "group": "Reports", "label": "View branch reports",
      "description": "Branch-wide dashboards and analytics.",
      "resources": ["Overview", "Analytics"]},
+    {"code": Permission.JOBS_MANAGE.value, "group": "System", "label": "Background jobs",
+     "description": "See Celery workers and queues; replay receipt generation and dashboard backfill for this organization. Owner, Admin, Manager.",
+     "resources": ["Jobs dashboard", "Task replay"]},
 ]
 
 

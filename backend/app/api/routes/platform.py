@@ -997,3 +997,50 @@ async def list_platform_audit_events(
     return PlatformAuditEventList(
         items=items, total=total_n, limit=limit, offset=offset
     )
+
+
+# --- Celery / background jobs (platform operators) ---
+from app.services import celery_ops
+from app.core.platform_rbac import PlatformPermission
+from pydantic import BaseModel, Field
+from typing import Optional
+from uuid import UUID
+
+
+class PlatformReplayBody(BaseModel):
+    task: str
+    sale_id: Optional[UUID] = None
+    business_id: Optional[UUID] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+
+@router.get("/jobs/status")
+async def platform_jobs_status(
+    _user=Depends(require_platform_permissions(PlatformPermission.JOBS_RUN)),
+):
+    """Cluster-wide Celery workers, queues, and in-flight tasks."""
+    data = celery_ops.inspect_cluster()
+    return {"message": "ok", "data": data}
+
+
+@router.post("/jobs/replay")
+async def platform_jobs_replay(
+    body: PlatformReplayBody,
+    _user=Depends(require_platform_permissions(PlatformPermission.JOBS_RUN)),
+):
+    """Re-queue a known task (any org — platform only)."""
+    kwargs = {}
+    if body.sale_id:
+        kwargs["sale_id"] = str(body.sale_id)
+    if body.business_id:
+        kwargs["business_id"] = str(body.business_id)
+    if body.start_date:
+        kwargs["start_date"] = body.start_date
+    if body.end_date:
+        kwargs["end_date"] = body.end_date
+    try:
+        result = celery_ops.replay_task(body.task, kwargs)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    return {"message": "queued", "data": result}
