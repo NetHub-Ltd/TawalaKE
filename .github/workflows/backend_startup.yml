@@ -1,17 +1,25 @@
-# Proves production-like start path: single alembic head → migrate → boot → live probes.
-# Catches failures unit tests miss (multiple heads, import errors, missing env, Redis/DB).
-name: Backend Startup & Readiness
+# Independent production-path confirmation:
+# Docker build → temporary Postgres + Redis → entrypoint (migrate + start) → /health + /ready
+#
+# Runs on main (required), PRs that touch backend, and manual workflow_dispatch.
+name: Backend Startup (Docker)
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main, master, dev]
+    branches: [main, master]
     paths:
       - "backend/**"
       - ".github/workflows/backend_startup.yml"
   pull_request:
+    branches: [main, master, dev]
     paths:
       - "backend/**"
       - ".github/workflows/backend_startup.yml"
+
+concurrency:
+  group: backend-startup-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   alembic-heads:
@@ -25,16 +33,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Assert single alembic head
+      - name: Assert exactly one alembic head
         run: |
           set -euo pipefail
-          # Script does not need DB — graph is local to alembic/versions
-          HEADS=$(python - <<'PY'
-          import re
+          python - <<'PY'
+          import re, sys
           from pathlib import Path
           down_map = {}
           for f in Path("alembic/versions").glob("*.py"):
@@ -49,164 +52,77 @@ jobs:
               down_map[rev] = parents
           all_parents = {p for parents in down_map.values() for p in parents}
           heads = sorted(r for r in down_map if r not in all_parents)
-          print("\n".join(heads))
+          print("heads:", heads)
+          if len(heads) != 1:
+              print("::error::Expected 1 alembic head, found", len(heads), heads)
+              sys.exit(1)
+          print("OK", heads[0])
           PY
-          )
-          echo "Alembic heads:"
-          echo "$HEADS"
-          COUNT=$(echo "$HEADS" | grep -c . || true)
-          if [ "$COUNT" -ne 1 ]; then
-            echo "::error::Expected exactly 1 alembic head, found $COUNT. Merge migrations before deploy."
-            echo "$HEADS"
-            exit 1
-          fi
-          echo "OK single head: $HEADS"
 
-  startup-readiness:
-    name: Migrate, start app, probe /health and /ready
+  docker-startup:
+    name: Docker migrate + start + live probes
     runs-on: ubuntu-latest
     needs: [alembic-heads]
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: tawala
-          POSTGRES_PASSWORD: tawala
-          POSTGRES_DB: tawala
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U tawala -d tawala"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-
     defaults:
       run:
         working-directory: backend
-
-    env:
-      APP_NAME: TawalaCI
-      APP_VERSION: "0.0.1"
-      ENVIRONMENT: development
-      DATABASE_NAME: tawala
-      DATABASE_USER: tawala
-      DATABASE_HOST: localhost
-      DATABASE_PORT: "5432"
-      DATABASE_PASSWORD: tawala
-      SECRET_KEY: ci-secret-key-32-characters-min!!
-      ALGORITHM: HS256
-      ISSUER: tawala-ci
-      AUDIENCE: tawala-ci
-      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
-      REFRESH_TOKEN_EXPIRE_DAYS: "7"
-      PIN_TOKEN_EXPIRE_HOURS: "8"
-      ADMIN_NAME: CI Admin
-      ADMIN_EMAIL: ci-admin@example.com
-      ADMIN_PASSWORD: ci-admin-pass-123
-      RESOURCE_SERVER: http://localhost:8000
-      ALLOWED_ORIGINS: http://localhost:3000
-      RESEND_API_KEY: re_ci_dummy
-      REDIS_URL: redis://localhost:6379/0
-      FRONTEND_URL: http://localhost:3000
-
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Wait for Postgres & Redis
+      - name: Build API image
         run: |
           set -euo pipefail
-          for i in $(seq 1 30); do
-            pg_isready -h localhost -p 5432 -U tawala && break
-            sleep 1
+          docker compose -f docker-compose.ci.yml build api
+
+      - name: Start Postgres, Redis, API (entrypoint runs migrations)
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.ci.yml up -d postgres redis
+          # Wait for DB/Redis health
+          for i in $(seq 1 40); do
+            pg=$(docker compose -f docker-compose.ci.yml ps postgres --format json 2>/dev/null | head -1 || true)
+            docker compose -f docker-compose.ci.yml exec -T postgres pg_isready -U tawala -d tawala && \
+            docker compose -f docker-compose.ci.yml exec -T redis redis-cli ping | grep -q PONG && break
+            sleep 2
           done
-          python - <<'PY'
-          import redis, time
-          for _ in range(30):
-              try:
-                  r = redis.from_url("redis://localhost:6379/0")
-                  if r.ping():
-                      print("redis ok")
-                      break
-              except Exception:
-                  time.sleep(1)
-          else:
-              raise SystemExit("redis not ready")
-          PY
+          docker compose -f docker-compose.ci.yml up -d api
+          echo "Containers:"
+          docker compose -f docker-compose.ci.yml ps
 
-      - name: Run migrations (alembic upgrade head)
+      - name: Wait until /health and /ready succeed
         run: |
           set -euo pipefail
-          alembic upgrade head
-          echo "Migrations applied."
-
-      - name: Start API
-        run: |
-          set -euo pipefail
-          # Match production entry shape without docker: ASGI on :8000
-          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/tawala-api.log 2>&1 &
-          echo $! > /tmp/tawala-api.pid
-          echo "API pid $(cat /tmp/tawala-api.pid)"
-
-      - name: Probe /health (liveness) and /ready (readiness)
-        run: |
-          set -euo pipefail
-          for i in $(seq 1 60); do
-            if curl -sf http://127.0.0.1:8000/health >/tmp/health.json; then
-              echo "health responded at attempt $i"
-              cat /tmp/health.json
-              break
-            fi
-            sleep 1
-            if [ "$i" -eq 60 ]; then
-              echo "::error::/health never became available"
-              tail -n 200 /tmp/tawala-api.log || true
-              exit 1
-            fi
-          done
-          # Ready must succeed with 200 and status ready
-          for i in $(seq 1 30); do
-            code=$(curl -s -o /tmp/ready.json -w "%{http_code}" http://127.0.0.1:8000/ready || echo 000)
-            echo "ready attempt $i → HTTP $code"
-            cat /tmp/ready.json || true
-            if [ "$code" = "200" ]; then
-              python - <<'PY'
-          import json
-          body = json.load(open("/tmp/ready.json"))
-          assert body.get("status") == "ready", body
-          assert body.get("checks", {}).get("database") == "ok", body
-          assert body.get("checks", {}).get("redis") == "ok", body
-          print("readiness OK", body)
+          for i in $(seq 1 90); do
+            code_h=$(curl -s -o /tmp/health.json -w "%{http_code}" http://127.0.0.1:8000/health || echo 000)
+            code_r=$(curl -s -o /tmp/ready.json -w "%{http_code}" http://127.0.0.1:8000/ready || echo 000)
+            echo "attempt $i  health=$code_h  ready=$code_r"
+            if [ "$code_h" = "200" ] && [ "$code_r" = "200" ]; then
+              echo "=== /health ===" && cat /tmp/health.json
+              echo "=== /ready ===" && cat /tmp/ready.json
+              python3 - <<'PY'
+          import json, sys
+          h = json.load(open("/tmp/health.json"))
+          r = json.load(open("/tmp/ready.json"))
+          assert h.get("status") == "healthy", h
+          assert r.get("status") == "ready", r
+          assert r.get("checks", {}).get("database") == "ok", r
+          assert r.get("checks", {}).get("redis") == "ok", r
+          print("CONFIRMATION OK: app started, migrations applied, live endpoints ready")
           PY
               exit 0
             fi
-            sleep 1
+            # Surface migration/start failures early
+            if [ "$i" -eq 15 ] || [ "$i" -eq 45 ] || [ "$i" -eq 75 ]; then
+              docker compose -f docker-compose.ci.yml logs --tail=80 api || true
+            fi
+            sleep 2
           done
-          echo "::error::/ready did not return 200"
-          tail -n 200 /tmp/tawala-api.log || true
+          echo "::error::Timed out waiting for /health and /ready"
+          docker compose -f docker-compose.ci.yml logs --tail=200 api || true
+          docker compose -f docker-compose.ci.yml logs --tail=50 postgres redis || true
           exit 1
 
-      - name: Stop API
+      - name: Tear down
         if: always()
         run: |
-          if [ -f /tmp/tawala-api.pid ]; then
-            kill "$(cat /tmp/tawala-api.pid)" 2>/dev/null || true
-          fi
+          docker compose -f docker-compose.ci.yml down -v --remove-orphans || true
