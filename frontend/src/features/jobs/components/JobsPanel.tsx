@@ -124,8 +124,11 @@ export function JobsPanel({
   const [businessId, setBusinessId] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [live, setLive] = useState(false);
+  const [streamState, setStreamState] = useState<"connecting" | "live" | "offline">(
+    "connecting",
+  );
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const esRef = useRef<EventSource | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const loadStatus = useCallback(async () => {
     setLoading(true);
@@ -173,57 +176,103 @@ export function JobsPanel({
     void loadHistory();
   }, [loadStatus, loadHistory]);
 
-  // SSE — prefer EventSource; fall back to manual refresh if headers needed (platform Bearer)
+  // Live SSE via fetch (supports cookie session + Bearer; auto-reconnect, no polling)
   useEffect(() => {
-    const hasAuthHeader = Object.keys(authHeaders || {}).length > 0;
-    if (hasAuthHeader) {
-      // EventSource cannot set Authorization; poll history lightly for platform
-      setLive(false);
-      const t = setInterval(() => void loadHistory(), 20_000);
-      return () => clearInterval(t);
-    }
+    let cancelled = false;
+    let attempt = 0;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    let closed = false;
-    try {
-      const es = new EventSource(streamPath, { withCredentials: true });
-      esRef.current = es;
-      es.onopen = () => {
-        if (!closed) setLive(true);
-      };
-      es.onerror = () => {
-        setLive(false);
-      };
-      es.onmessage = (ev) => {
-        try {
-          const payload = JSON.parse(ev.data);
-          if (payload?.type === "job_updated" && payload.job) {
-            const row = payload.job as JobRow;
-            setJobs((prev) => {
-              const idx = prev.findIndex((j) => j.id === row.id);
-              if (idx >= 0) {
-                const next = [...prev];
-                next[idx] = { ...next[idx], ...row };
-                return next;
-              }
-              return [row, ...prev].slice(0, 100);
-            });
-          }
-        } catch {
-          /* ignore non-json heartbeats */
+    const applyJobUpdate = (row: JobRow) => {
+      setJobs((prev) => {
+        const idx = prev.findIndex((j) => j.id === row.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...row };
+          return next;
         }
-      };
-      return () => {
-        closed = true;
-        es.close();
-        esRef.current = null;
-        setLive(false);
-      };
-    } catch {
+        return [row, ...prev].slice(0, 100);
+      });
+    };
+
+    const consumeSse = async (signal: AbortSignal) => {
+      setStreamState("connecting");
+      const res = await fetch(streamPath, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "text/event-stream",
+          ...authHeaders,
+        },
+        cache: "no-store",
+        signal,
+      });
+      if (!res.ok || !res.body) {
+        throw new Error(`SSE HTTP ${res.status}`);
+      }
+      setStreamState("live");
+      setLive(true);
+      attempt = 0;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (!cancelled) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() || "";
+        for (const chunk of chunks) {
+          const dataLine = chunk
+            .split("\n")
+            .map((l) => l.trim())
+            .find((l) => l.startsWith("data:"));
+          if (!dataLine) continue;
+          const raw = dataLine.replace(/^data:\s?/, "");
+          if (!raw || raw === ": heartbeat" || raw.startsWith(":")) continue;
+          try {
+            const payload = JSON.parse(raw);
+            if (payload?.type === "job_updated" && payload.job) {
+              applyJobUpdate(payload.job as JobRow);
+            }
+          } catch {
+            /* ignore heartbeats / non-json */
+          }
+        }
+      }
+      throw new Error("SSE stream closed");
+    };
+
+    const loop = async () => {
+      while (!cancelled) {
+        const ac = new AbortController();
+        abortRef.current = ac;
+        try {
+          await consumeSse(ac.signal);
+        } catch {
+          if (cancelled) return;
+          setLive(false);
+          setStreamState("offline");
+          attempt += 1;
+          const delay = Math.min(30_000, 1_000 * 2 ** Math.min(attempt, 5));
+          await new Promise<void>((resolve) => {
+            reconnectTimer = setTimeout(resolve, delay);
+          });
+        }
+      }
+    };
+
+    void loop();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      abortRef.current?.abort();
+      abortRef.current = null;
       setLive(false);
-      const t = setInterval(() => void loadHistory(), 20_000);
-      return () => clearInterval(t);
-    }
-  }, [streamPath, authHeaders, loadHistory]);
+      setStreamState("offline");
+    };
+  }, [streamPath, authHeaders]);
 
   const replay = async (task: string, body: Record<string, unknown>) => {
     setBusy(task);
@@ -274,15 +323,18 @@ export function JobsPanel({
         <div>
           <h2 className="text-base font-semibold text-foreground">{title}</h2>
           <p className="text-xs text-muted">
-            Job history for this workspace. Live updates{" "}
-            {live ? (
+            Job history for this workspace.{" "}
+            {streamState === "live" || live ? (
               <span className="inline-flex items-center gap-1 text-emerald-600">
-                <Radio className="h-3 w-3" /> on
+                <Radio className="h-3 w-3" /> Live
+              </span>
+            ) : streamState === "connecting" ? (
+              <span className="inline-flex items-center gap-1 text-amber-600">
+                <Radio className="h-3 w-3 animate-pulse" /> Connecting…
               </span>
             ) : (
-              <span className="text-muted">via refresh</span>
+              <span className="text-muted">Reconnecting…</span>
             )}
-            .
           </p>
         </div>
         <div className="flex items-center gap-2">
