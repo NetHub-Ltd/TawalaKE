@@ -12,7 +12,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlmodel import col, select
 
-from app.api.deps import SessionDep
+from app.api.deps import SessionDep, get_current_user, get_redis
+from app.core.session import AsyncSessionLocal
+from app.api.rbac_deps import _cached_perm_values
+from app.core.security import oauth2_scheme
 from app.api.rbac_deps import require_permissions
 from app.core.rbac import Permission
 from app.models.models import BackgroundJob, Business, Sale, Staff
@@ -230,14 +233,33 @@ async def jobs_retry(
 @router.get("/stream")
 async def jobs_stream(
     request: Request,
-    db: SessionDep,
-    user: Staff = Depends(require_permissions(Permission.JOBS_MANAGE)),
+    credentials: Optional[str] = Depends(oauth2_scheme),
 ):
-    """SSE stream of job status updates for the caller's organization."""
-    org_id = getattr(user, "organization_id", None) or getattr(user, "tenant_id", None)
-    if not org_id:
-        raise HTTPException(status_code=403, detail="No organization context")
-    org_str = str(org_id)
+    """
+    SSE stream of job status updates for the caller's organization.
+
+    Auth + RBAC run inside a short-lived DB session that is closed *before*
+    StreamingResponse starts. Holding SessionDep for the life of the SSE was
+    exhausting Postgres (pool 20+10) and cascading into Redis "too many connections".
+    """
+    redis = await get_redis()
+    async with AsyncSessionLocal() as db:
+        user = await get_current_user(db=db, redis=redis, credentials=credentials)
+        effective = await _cached_perm_values(redis, user, db)
+        if Permission.JOBS_MANAGE.value not in set(effective):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "RBAC_DENIED",
+                    "message": "Insufficient permissions",
+                    "permissions": [Permission.JOBS_MANAGE.value],
+                },
+            )
+        org_id = getattr(user, "organization_id", None) or getattr(user, "tenant_id", None)
+        if not org_id:
+            raise HTTPException(status_code=403, detail="No organization context")
+        org_str = str(org_id)
+    # session closed — stream uses Redis pub/sub only
 
     async def event_generator() -> AsyncIterator[str]:
         yield f"data: {json.dumps({'type': 'connected', 'organization_id': org_str})}\n\n"
@@ -252,7 +274,7 @@ async def jobs_stream(
                     if await request.is_disconnected():
                         break
                     msg = await pubsub.get_message(
-                        ignore_subscribe_messages=True, timeout=1.0
+                        ignore_subscribe_messages=True, timeout=15.0
                     )
                     if msg and msg.get("type") == "message":
                         raw = msg.get("data")
@@ -268,12 +290,14 @@ async def jobs_stream(
                         except Exception:  # noqa: BLE001
                             pass
                     else:
-                        # heartbeat keeps proxies from closing idle streams
+                        # sparse heartbeat (not every 50ms — that burned CPU/Redis)
                         yield f": heartbeat {datetime.utcnow().isoformat()}\n\n"
-                        await asyncio.sleep(0.05)
             finally:
-                await pubsub.unsubscribe(REDIS_JOBS_CHANNEL)
-                await pubsub.close()
+                try:
+                    await pubsub.unsubscribe(REDIS_JOBS_CHANNEL)
+                    await pubsub.close()
+                except Exception:  # noqa: BLE001
+                    pass
         except Exception as e:  # noqa: BLE001
             logger.warning("jobs SSE error: {}", e)
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
