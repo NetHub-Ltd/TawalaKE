@@ -21,6 +21,7 @@ export const Permission = {
   EXPENSES_WRITE: "expenses:write",
   DOCUMENTS_READ: "documents:read",
   REPORTS_READ: "reports:read",
+  JOBS_MANAGE: "jobs:manage",
 } as const;
 
 export type PermissionKey = (typeof Permission)[keyof typeof Permission];

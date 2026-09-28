@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Users,
   Settings,
+  Cpu,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -85,6 +86,12 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     path: "/expenses",
     anyOf: [Permission.EXPENSES_READ, Permission.REPORTS_READ],
     icon: Wallet,
+  },
+  {
+    label: "Jobs",
+    path: "/jobs",
+    anyOf: [Permission.JOBS_MANAGE],
+    icon: Cpu,
   },
   {
     label: "Settings",

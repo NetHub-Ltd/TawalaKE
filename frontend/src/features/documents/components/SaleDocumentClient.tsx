@@ -1,14 +1,22 @@
 "use client";
 
 /**
- * Sale document hub: thermal CASH RECEIPT + formal A5/A4 INVOICE.
- * Default: receipt when paid in full; invoice when balance due (or ?view=invoice).
+ * Receipt / invoice page after a sale.
+ * Actions: Print · Download PDF · Back to terminal.
  */
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Download, Loader2, Printer, RefreshCw } from "lucide-react";
-import { useReceipt } from "@/features/sales/hooks/useReceipts";
+import {
+  ArrowLeft,
+  Download,
+  Loader2,
+  Printer,
+  RefreshCw,
+} from "lucide-react";
+import {
+  DocumentNotReadyError,
+  useReceipt,
+} from "@/features/sales/hooks/useReceipts";
 import { Spinner } from "@/lib/components/ui";
 import {
   buildDocumentModel,
@@ -22,8 +30,9 @@ import {
 import {
   ThermalReceiptPreview,
   printThermalReceipt,
+  downloadThermalReceiptPdf,
 } from "@/features/documents/components/ThermalReceipt";
-import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export type DocumentViewMode = "receipt" | "invoice";
 
@@ -31,18 +40,21 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const organizationId = String(params?.organizationId || "");
   const routeBusinessId = params?.businessId as string | undefined;
 
   const { data, isLoading, error, isFetching, refetch } = useReceipt(saleId);
   const receipt = data as ReceiptData | undefined;
   const [liveBranch, setLiveBranch] = useState<LiveBranch | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [modeOverride, setModeOverride] = useState<DocumentViewMode | null>(
-    null,
-  );
+  const [busy, setBusy] = useState<"print" | "pdf" | null>(null);
+
 
   const businessId =
     routeBusinessId || receipt?.seller?.business_id || undefined;
+  const terminalHref =
+    organizationId && businessId
+      ? `/org/${organizationId}/${businessId}/terminal`
+      : undefined;
 
   useEffect(() => {
     if (!businessId) return;
@@ -71,25 +83,40 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
   }, [receipt, saleId, liveBranch]);
 
   const queryView = searchParams?.get("view");
+  const balanceDue = Number(model?.balanceDue ?? 0);
   const defaultMode: DocumentViewMode =
     queryView === "invoice"
       ? "invoice"
       : queryView === "receipt"
         ? "receipt"
-        : model?.isInvoicePreferred
+        : balanceDue > 0.001
           ? "invoice"
           : "receipt";
+  const mode: DocumentViewMode = defaultMode;
 
-  const mode: DocumentViewMode = modeOverride ?? defaultMode;
+  const goTerminal = () => {
+    if (terminalHref) router.push(terminalHref);
+    else router.back();
+  };
 
-  if (isLoading) {
+  if (isLoading || (error instanceof DocumentNotReadyError && !receipt)) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-24">
-        <Spinner size="md" label="Loading document" />
-        <p className="text-sm text-muted">
-          Loading document…
-          {isFetching ? " (waiting if still generating)" : ""}
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16">
+        <Spinner size="md" label="Preparing document" />
+        <p className="text-sm font-medium text-foreground">
+          Preparing your {defaultMode === "invoice" ? "invoice" : "receipt"}…
         </p>
+        <p className="max-w-xs text-center text-xs text-muted">
+          This usually takes a few seconds after payment.
+          {isFetching ? " Still generating…" : ""}
+        </p>
+        <button
+          type="button"
+          onClick={goTerminal}
+          className="mt-4 text-sm font-medium text-brand-primary hover:underline"
+        >
+          Back to terminal
+        </button>
       </div>
     );
   }
@@ -101,7 +128,7 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
     return (
       <div className="mx-auto max-w-sm rounded-lg border border-border bg-card px-6 py-12 text-center">
         <p className="text-sm font-semibold text-foreground">
-          Could not load this document
+          Document not ready
         </p>
         <p className="mt-1 text-sm text-muted">{msg}</p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -115,10 +142,10 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
           </button>
           <button
             type="button"
-            onClick={() => router.back()}
-            className="inline-flex h-11 items-center rounded-md border border-border px-4 text-sm font-semibold"
+            onClick={goTerminal}
+            className="inline-flex h-11 items-center rounded-md bg-brand-primary px-4 text-sm font-semibold text-white"
           >
-            Go back
+            Back to terminal
           </button>
         </div>
       </div>
@@ -126,116 +153,90 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
   }
 
   const handlePrint = () => {
-    setBusy(true);
+    setBusy("print");
     try {
       if (mode === "receipt") printThermalReceipt(model);
       else printFormalInvoice(model);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Print failed");
+      toast.error(e instanceof Error ? e.message : "Print failed");
     } finally {
-      setTimeout(() => setBusy(false), 400);
+      setTimeout(() => setBusy(null), 400);
+    }
+  };
+
+  const handleDownload = async () => {
+    setBusy("pdf");
+    try {
+      if (mode === "receipt") {
+        await downloadThermalReceiptPdf(model);
+        toast.success("Receipt downloaded");
+      } else {
+        // Invoice: open print dialog — user can Save as PDF
+        printFormalInvoice(model);
+        toast.message("Use the print dialog → Save as PDF");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    } finally {
+      setBusy(null);
     }
   };
 
   return (
-    <div
-      className={cn(
-        "w-full space-y-4 print:max-w-none",
-        mode === "invoice" ? "max-w-[640px]" : "max-w-[340px]",
-      )}
-    >
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-4 px-4 py-6">
+      {/* Actions — print:hidden */}
       <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
         <button
           type="button"
-          onClick={() => router.back()}
-          className="text-sm text-muted hover:text-foreground"
+          onClick={goTerminal}
+          className="inline-flex h-10 items-center gap-1.5 rounded-md border border-border bg-card px-3 text-sm font-medium text-foreground hover:bg-register"
         >
-          ← Back
+          <ArrowLeft size={16} />
+          Terminal
         </button>
-        <div className="flex flex-wrap items-center gap-2">
-          <div
-            className="inline-flex rounded-md border border-border bg-card p-0.5 text-sm"
-            role="tablist"
-            aria-label="Document layout"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "receipt"}
-              onClick={() => setModeOverride("receipt")}
-              className={cn(
-                "rounded px-3 py-1.5 font-medium transition-colors",
-                mode === "receipt"
-                  ? "bg-brand-primary text-white"
-                  : "text-muted hover:text-foreground",
-              )}
-            >
-              Receipt
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={mode === "invoice"}
-              onClick={() => setModeOverride("invoice")}
-              className={cn(
-                "rounded px-3 py-1.5 font-medium transition-colors",
-                mode === "invoice"
-                  ? "bg-brand-primary text-white"
-                  : "text-muted hover:text-foreground",
-              )}
-            >
-              Invoice
-            </button>
-          </div>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={handlePrint}
-            disabled={busy}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium hover:bg-register disabled:opacity-60"
+            disabled={!!busy}
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-primary px-3.5 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {busy ? (
+            {busy === "print" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Printer className="h-4 w-4" />
             )}
-            Print
+            Print {mode === "invoice" ? "invoice" : "receipt"}
           </button>
           <button
             type="button"
-            onClick={handlePrint}
-            disabled={busy}
-            title="Opens print dialog — choose Save as PDF"
-            className="inline-flex items-center gap-2 rounded-md bg-brand-primary px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+            onClick={handleDownload}
+            disabled={!!busy}
+            className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-card px-3.5 text-sm font-semibold text-foreground hover:bg-register disabled:opacity-60"
           >
-            {busy ? (
+            {busy === "pdf" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Download className="h-4 w-4" />
             )}
-            Save PDF
+            Download {mode === "invoice" ? "invoice" : "receipt"}
           </button>
         </div>
       </div>
 
-      <p className="text-xs text-muted print:hidden">
-        {mode === "receipt"
-          ? "Thermal cash receipt (~80mm) — best for the till."
-          : `${model.paper} formal invoice — share, email, or print.`}
-        {model.isInvoicePreferred && mode === "receipt"
-          ? " This sale has a balance due; invoice layout is recommended."
-          : ""}
-      </p>
 
-      {mode === "receipt" ? (
-        <ThermalReceiptPreview model={model} />
-      ) : (
-        <FormalInvoicePreview model={model} />
-      )}
+
+      <div className="flex justify-center">
+        {mode === "receipt" ? (
+          <ThermalReceiptPreview model={model} />
+        ) : (
+          <FormalInvoicePreview model={model} />
+        )}
+      </div>
     </div>
   );
 }
 
-/** Back-compat export used by older imports */
-export function InvoiceClientView({ saleId }: { saleId: string }) {
-  return <SaleDocumentClient saleId={saleId} />;
-}
+
+/** @deprecated Prefer SaleDocumentClient */
+export const InvoiceClientView = SaleDocumentClient;

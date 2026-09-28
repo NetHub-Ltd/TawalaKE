@@ -258,7 +258,7 @@ export function CheckoutForm({
         { id: toastId },
       );
       router.push(
-        `/org/${organizationId}/${businessId}/sale/${saleId}/preview`,
+        `/org/${organizationId}/${businessId}/complete-sale?saleId=${encodeURIComponent(saleId)}`,
       );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Checkout failed", {

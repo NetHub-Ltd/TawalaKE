@@ -41,6 +41,7 @@ ROLE_PERMISSIONS: dict[PlatformRole, frozenset[PlatformPermission]] = {
             PlatformPermission.PLANS_READ,
             PlatformPermission.BILLING_READ,
             PlatformPermission.AUDIT_READ,
+            PlatformPermission.JOBS_RUN,
         }
     ),
     PlatformRole.BILLING: frozenset(

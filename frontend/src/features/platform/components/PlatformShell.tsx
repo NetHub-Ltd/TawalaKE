@@ -9,6 +9,7 @@ import {
   Users,
   CreditCard,
   ScrollText,
+  Cpu,
   ChevronLeft,
   LogOut,
   Shield,
@@ -53,6 +54,13 @@ const PLATFORM_NAV: PlatformNavItem[] = [
     label: "Plans",
     href: "/platform/plans",
     icon: CreditCard,
+    match: "prefix",
+  },
+  {
+    id: "jobs",
+    label: "Jobs",
+    href: "/platform/jobs",
+    icon: Cpu,
     match: "prefix",
   },
   {
