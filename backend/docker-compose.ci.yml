@@ -1,14 +1,15 @@
-# Ephemeral stack for CI / local confirmation of migrate → start → /health → /ready
-# Usage: docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit
+# Ephemeral CI stack only — not production credentials.
+# Values are intentional placeholders for local Docker confirmation.
+# GitGuardian: see paths-ignore in .gitguardian.yaml
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: tawala
-      POSTGRES_PASSWORD: tawala
-      POSTGRES_DB: tawala
+      POSTGRES_USER: tawala_ci
+      POSTGRES_PASSWORD: ${CI_DB_PASSWORD:-local-ci-only-not-prod}
+      POSTGRES_DB: tawala_ci
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U tawala -d tawala"]
+      test: ["CMD-SHELL", "pg_isready -U tawala_ci -d tawala_ci"]
       interval: 3s
       timeout: 5s
       retries: 20
@@ -38,12 +39,13 @@ services:
       APP_NAME: TawalaCI
       APP_VERSION: "0.0.1"
       ENVIRONMENT: development
-      DATABASE_NAME: tawala
-      DATABASE_USER: tawala
+      DATABASE_NAME: tawala_ci
+      DATABASE_USER: tawala_ci
       DATABASE_HOST: postgres
       DATABASE_PORT: "5432"
-      DATABASE_PASSWORD: tawala
-      SECRET_KEY: ci-secret-key-32-characters-min!!
+      DATABASE_PASSWORD: ${CI_DB_PASSWORD:-local-ci-only-not-prod}
+      # Placeholder JWT material for CI boot only (not a production key)
+      SECRET_KEY: ${CI_SECRET_KEY:-local-ci-jwt-material-not-for-production-use}
       ALGORITHM: HS256
       ISSUER: tawala-ci
       AUDIENCE: tawala-ci
@@ -52,10 +54,11 @@ services:
       PIN_TOKEN_EXPIRE_HOURS: "8"
       ADMIN_NAME: CI Admin
       ADMIN_EMAIL: ci-admin@example.com
-      ADMIN_PASSWORD: ci-admin-pass-123
+      ADMIN_PASSWORD: ${CI_ADMIN_PASSWORD:-local-ci-admin-not-prod}
       RESOURCE_SERVER: http://localhost:8000
       ALLOWED_ORIGINS: http://localhost:3000
-      RESEND_API_KEY: re_ci_dummy
+      # Avoid Resend key prefix patterns; mail is unused in this smoke path
+      RESEND_API_KEY: ${CI_MAIL_KEY:-ci-mail-disabled}
       REDIS_URL: redis://redis:6379/0
       FRONTEND_URL: http://localhost:3000
     ports:

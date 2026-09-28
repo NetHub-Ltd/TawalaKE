@@ -75,13 +75,19 @@ jobs:
           docker compose -f docker-compose.ci.yml build api
 
       - name: Start Postgres, Redis, API (entrypoint runs migrations)
+        env:
+          # Prefer repo secrets if present; otherwise non-secret CI placeholders
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'local-ci-only-not-prod' }}
+          CI_SECRET_KEY: ${{ secrets.CI_SECRET_KEY || 'local-ci-jwt-material-not-for-production-use' }}
+          CI_ADMIN_PASSWORD: ${{ secrets.CI_ADMIN_PASSWORD || 'local-ci-admin-not-prod' }}
+          CI_MAIL_KEY: ${{ secrets.CI_MAIL_KEY || 'ci-mail-disabled' }}
         run: |
           set -euo pipefail
           docker compose -f docker-compose.ci.yml up -d postgres redis
           # Wait for DB/Redis health
           for i in $(seq 1 40); do
             pg=$(docker compose -f docker-compose.ci.yml ps postgres --format json 2>/dev/null | head -1 || true)
-            docker compose -f docker-compose.ci.yml exec -T postgres pg_isready -U tawala -d tawala && \
+            docker compose -f docker-compose.ci.yml exec -T postgres pg_isready -U tawala_ci -d tawala_ci && \
             docker compose -f docker-compose.ci.yml exec -T redis redis-cli ping | grep -q PONG && break
             sleep 2
           done
