@@ -48,9 +48,7 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
   const receipt = data as ReceiptData | undefined;
   const [liveBranch, setLiveBranch] = useState<LiveBranch | null>(null);
   const [busy, setBusy] = useState<"print" | "pdf" | null>(null);
-  const [modeOverride, setModeOverride] = useState<DocumentViewMode | null>(
-    null,
-  );
+
 
   const businessId =
     routeBusinessId || receipt?.seller?.business_id || undefined;
@@ -95,7 +93,7 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
         : balanceDue > 0.001
           ? "invoice"
           : "receipt";
-  const mode: DocumentViewMode = modeOverride ?? defaultMode;
+  const mode: DocumentViewMode = defaultMode;
 
   const goTerminal = () => {
     if (terminalHref) router.push(terminalHref);
@@ -227,43 +225,7 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
         </div>
       </div>
 
-      {balanceDue > 0.001 && (
-        <div
-          className={cn(
-            "print:hidden inline-flex self-start rounded-md border border-border bg-card p-0.5 text-xs",
-          )}
-          role="tablist"
-        >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "receipt"}
-            onClick={() => setModeOverride("receipt")}
-            className={cn(
-              "rounded px-2.5 py-1 font-medium",
-              mode === "receipt"
-                ? "bg-brand-primary text-white"
-                : "text-muted hover:text-foreground",
-            )}
-          >
-            Receipt
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "invoice"}
-            onClick={() => setModeOverride("invoice")}
-            className={cn(
-              "rounded px-2.5 py-1 font-medium",
-              mode === "invoice"
-                ? "bg-brand-primary text-white"
-                : "text-muted hover:text-foreground",
-            )}
-          >
-            Invoice
-          </button>
-        </div>
-      )}
+
 
       <div className="flex justify-center">
         {mode === "receipt" ? (

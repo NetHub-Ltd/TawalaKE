@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * Celery workers / queues / replay — used on platform and org dashboards.
+ * Background jobs — history table (SSE), optional Celery cluster snapshot, retry.
  */
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Button, Input, Label, Spinner } from "@/lib/components/ui";
 import { toast } from "sonner";
-import { RefreshCw, Play } from "lucide-react";
+import { RefreshCw, Play, Radio } from "lucide-react";
 
 export type JobsStatus = {
   ok: boolean;
@@ -32,13 +32,35 @@ export type JobsStatus = {
   >;
 };
 
+export type JobRow = {
+  id: string;
+  celery_task_id?: string | null;
+  name: string;
+  status: string;
+  organization_id?: string | null;
+  business_id?: string | null;
+  sale_id?: string | null;
+  triggered_by_email?: string | null;
+  triggered_by_role?: string | null;
+  args_summary?: Record<string, unknown>;
+  error_message?: string | null;
+  result_preview?: string | null;
+  retries?: number;
+  started_at?: string | null;
+  finished_at?: string | null;
+  created_at?: string | null;
+};
+
 type Props = {
-  /** Absolute path under /api/v1 */
   statusPath: string;
   replayPath: string;
-  /** Extra headers (e.g. platform Bearer) */
+  historyPath: string;
+  streamPath: string;
+  retryPath?: (jobId: string) => string;
   authHeaders?: Record<string, string>;
   title?: string;
+  /** Org UI: allow retry of failed jobs */
+  allowRetry?: boolean;
   /** Org UI: show sale_id / business_id replay forms */
   allowReplay?: boolean;
 };
@@ -53,20 +75,59 @@ async function parseJson(res: Response) {
   return body?.data !== undefined ? body.data : body;
 }
 
+function statusBadge(status: string) {
+  const s = (status || "").toUpperCase();
+  const base =
+    "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide";
+  if (s === "SUCCESS")
+    return `${base} bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200`;
+  if (s === "FAILURE")
+    return `${base} bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200`;
+  if (s === "STARTED" || s === "RETRY")
+    return `${base} bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100`;
+  if (s === "PENDING")
+    return `${base} bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200`;
+  return `${base} bg-muted text-foreground`;
+}
+
+function shortName(name: string) {
+  if (!name) return "—";
+  const parts = name.split(".");
+  return parts.length > 1 ? parts.slice(-1)[0] : name;
+}
+
+function formatWhen(iso?: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString();
+  } catch {
+    return iso;
+  }
+}
+
 export function JobsPanel({
   statusPath,
   replayPath,
+  historyPath,
+  streamPath,
+  retryPath,
   authHeaders = {},
   title = "Background jobs",
+  allowRetry = true,
   allowReplay = true,
 }: Props) {
   const [status, setStatus] = useState<JobsStatus | null>(null);
+  const [jobs, setJobs] = useState<JobRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [saleId, setSaleId] = useState("");
   const [businessId, setBusinessId] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  const [live, setLive] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const esRef = useRef<EventSource | null>(null);
 
-  const load = useCallback(async () => {
+  const loadStatus = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(statusPath, {
@@ -86,13 +147,85 @@ export function JobsPanel({
     }
   }, [statusPath, authHeaders]);
 
-  useEffect(() => {
-    void load();
-    const t = setInterval(() => void load(), 15_000);
-    return () => clearInterval(t);
-  }, [load]);
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const q = statusFilter
+        ? `?status=${encodeURIComponent(statusFilter)}&limit=50`
+        : "?limit=50";
+      const res = await fetch(`${historyPath}${q}`, {
+        credentials: "include",
+        headers: { Accept: "application/json", ...authHeaders },
+        cache: "no-store",
+      });
+      const data = await parseJson(res);
+      setJobs((data?.items as JobRow[]) || []);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to load history");
+      setJobs([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyPath, authHeaders, statusFilter]);
 
-  const replay = async (task: string, extra: Record<string, string>) => {
+  useEffect(() => {
+    void loadStatus();
+    void loadHistory();
+  }, [loadStatus, loadHistory]);
+
+  // SSE — prefer EventSource; fall back to manual refresh if headers needed (platform Bearer)
+  useEffect(() => {
+    const hasAuthHeader = Object.keys(authHeaders || {}).length > 0;
+    if (hasAuthHeader) {
+      // EventSource cannot set Authorization; poll history lightly for platform
+      setLive(false);
+      const t = setInterval(() => void loadHistory(), 20_000);
+      return () => clearInterval(t);
+    }
+
+    let closed = false;
+    try {
+      const es = new EventSource(streamPath, { withCredentials: true });
+      esRef.current = es;
+      es.onopen = () => {
+        if (!closed) setLive(true);
+      };
+      es.onerror = () => {
+        setLive(false);
+      };
+      es.onmessage = (ev) => {
+        try {
+          const payload = JSON.parse(ev.data);
+          if (payload?.type === "job_updated" && payload.job) {
+            const row = payload.job as JobRow;
+            setJobs((prev) => {
+              const idx = prev.findIndex((j) => j.id === row.id);
+              if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = { ...next[idx], ...row };
+                return next;
+              }
+              return [row, ...prev].slice(0, 100);
+            });
+          }
+        } catch {
+          /* ignore non-json heartbeats */
+        }
+      };
+      return () => {
+        closed = true;
+        es.close();
+        esRef.current = null;
+        setLive(false);
+      };
+    } catch {
+      setLive(false);
+      const t = setInterval(() => void loadHistory(), 20_000);
+      return () => clearInterval(t);
+    }
+  }, [streamPath, authHeaders, loadHistory]);
+
+  const replay = async (task: string, body: Record<string, unknown>) => {
     setBusy(task);
     try {
       const res = await fetch(replayPath, {
@@ -103,13 +236,12 @@ export function JobsPanel({
           "Content-Type": "application/json",
           ...authHeaders,
         },
-        body: JSON.stringify({ task, ...extra }),
+        body: JSON.stringify({ task, ...body }),
       });
-      const data = await parseJson(res);
-      toast.success(`Queued ${task}`, {
-        description: data?.task_id ? `Task ${data.task_id}` : undefined,
-      });
-      void load();
+      await parseJson(res);
+      toast.success("Job queued");
+      void loadHistory();
+      void loadStatus();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Replay failed");
     } finally {
@@ -117,148 +249,252 @@ export function JobsPanel({
     }
   };
 
+  const retryJob = async (job: JobRow) => {
+    if (!retryPath || !allowRetry) return;
+    setBusy(job.id);
+    try {
+      const res = await fetch(retryPath(job.id), {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json", ...authHeaders },
+      });
+      await parseJson(res);
+      toast.success("Retry queued");
+      void loadHistory();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Retry failed");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
-    <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
           <p className="text-xs text-muted">
-            Celery workers and queues — refresh every 15s
+            Job history for this workspace. Live updates{" "}
+            {live ? (
+              <span className="inline-flex items-center gap-1 text-emerald-600">
+                <Radio className="h-3 w-3" /> on
+              </span>
+            ) : (
+              <span className="text-muted">via refresh</span>
+            )}
+            .
           </p>
         </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => void load()}
-          disabled={loading}
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <select
+            className="h-9 rounded-md border border-border bg-card px-2 text-xs"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter by status"
+          >
+            <option value="">All statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="STARTED">Started</option>
+            <option value="SUCCESS">Success</option>
+            <option value="FAILURE">Failure</option>
+            <option value="RETRY">Retry</option>
+          </select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void loadHistory();
+              void loadStatus();
+            }}
+          >
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
-      {loading && !status ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-muted">
-          <Spinner size="sm" /> Loading workers…
+      {/* History table */}
+      <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead className="border-b border-border bg-muted/40 text-xs uppercase tracking-wide text-muted">
+              <tr>
+                <th className="px-3 py-2 font-medium">When</th>
+                <th className="px-3 py-2 font-medium">Job</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Who</th>
+                <th className="px-3 py-2 font-medium">Detail</th>
+                {allowRetry ? (
+                  <th className="px-3 py-2 font-medium text-right">Actions</th>
+                ) : null}
+              </tr>
+            </thead>
+            <tbody>
+              {historyLoading && jobs.length === 0 ? (
+                <tr>
+                  <td colSpan={allowRetry ? 6 : 5} className="px-3 py-10 text-center">
+                    <Spinner className="mx-auto" />
+                  </td>
+                </tr>
+              ) : jobs.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={allowRetry ? 6 : 5}
+                    className="px-3 py-10 text-center text-sm text-muted"
+                  >
+                    No jobs yet. They appear here when documents or dashboard
+                    tasks are queued.
+                  </td>
+                </tr>
+              ) : (
+                jobs.map((job) => (
+                  <tr
+                    key={job.id}
+                    className="border-b border-border/60 last:border-0 hover:bg-muted/20"
+                  >
+                    <td className="whitespace-nowrap px-3 py-2.5 text-xs text-muted">
+                      {formatWhen(job.created_at)}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="font-medium text-foreground">
+                        {shortName(job.name)}
+                      </div>
+                      <div className="text-[11px] text-muted">
+                        {job.sale_id
+                          ? `Sale ${job.sale_id.slice(0, 8)}…`
+                          : job.business_id
+                            ? `Store ${job.business_id.slice(0, 8)}…`
+                            : job.celery_task_id
+                              ? job.celery_task_id.slice(0, 10) + "…"
+                              : "—"}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={statusBadge(job.status)}>
+                        {job.status}
+                      </span>
+                      {(job.retries ?? 0) > 0 ? (
+                        <span className="ml-1 text-[11px] text-muted">
+                          ×{job.retries}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-muted">
+                      {job.triggered_by_email ||
+                        job.triggered_by_role ||
+                        "System"}
+                    </td>
+                    <td className="max-w-[220px] truncate px-3 py-2.5 text-xs text-muted">
+                      {job.error_message ||
+                        job.result_preview ||
+                        "—"}
+                    </td>
+                    {allowRetry ? (
+                      <td className="px-3 py-2.5 text-right">
+                        {job.status === "FAILURE" && retryPath ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={busy === job.id}
+                            onClick={() => void retryJob(job)}
+                          >
+                            {busy === job.id ? (
+                              <Spinner className="h-3.5 w-3.5" />
+                            ) : (
+                              <>
+                                <Play className="mr-1 h-3.5 w-3.5" />
+                                Retry
+                              </>
+                            )}
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </td>
+                    ) : null}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      ) : status?.error && !status.ok ? (
-        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {status.error}. If no workers are online, start the Celery worker
-          with queues <code className="text-xs">tawala.default,tawala.documents</code>.
-        </p>
-      ) : (
-        <div className="space-y-4 text-sm">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-md border border-border bg-register px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase text-muted">
-                Workers
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                {status?.worker_count ?? 0}
-              </p>
-              <p className="truncate text-xs text-muted">
-                {(status?.workers || []).join(", ") || "None online"}
-              </p>
-            </div>
-            <div className="rounded-md border border-border bg-register px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase text-muted">
-                Queues
-              </p>
-              <p className="mt-1 text-xs font-medium">
-                {(status?.queues || []).join(" · ") || "—"}
-              </p>
-            </div>
-            <div className="rounded-md border border-border bg-register px-3 py-2">
-              <p className="text-[11px] font-semibold uppercase text-muted">
-                Active / reserved
-              </p>
-              <p className="mt-1 text-lg font-semibold tabular-nums">
-                {(status?.active || []).length} / {(status?.reserved || []).length}
-              </p>
+      </div>
+
+      {/* Manual replay forms (org) */}
+      {allowReplay ? (
+        <div className="grid gap-4 rounded-lg border border-border bg-card p-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="sale-id">Re-queue document for sale</Label>
+            <div className="flex gap-2">
+              <Input
+                id="sale-id"
+                placeholder="Sale UUID"
+                value={saleId}
+                onChange={(e) => setSaleId(e.target.value)}
+              />
+              <Button
+                type="button"
+                disabled={!saleId || busy === "doc"}
+                onClick={() =>
+                  void replay("documents.generate_financial_document", {
+                    sale_id: saleId,
+                  })
+                }
+              >
+                Queue
+              </Button>
             </div>
           </div>
-
-          {(status?.active || []).length > 0 && (
-            <div>
-              <p className="mb-1 text-xs font-semibold text-muted">Running now</p>
-              <ul className="space-y-1 rounded-md border border-border divide-y divide-border">
-                {(status?.active || []).map((t) => (
-                  <li
-                    key={t.id || `${t.name}-${t.worker}`}
-                    className="px-3 py-2 font-mono text-xs"
-                  >
-                    <span className="font-semibold text-foreground">{t.name}</span>
-                    <span className="text-muted"> · {t.worker}</span>
-                    {t.id ? (
-                      <span className="block truncate text-muted">{t.id}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
+          <div className="space-y-2">
+            <Label htmlFor="biz-id">Backfill dashboard for store</Label>
+            <div className="flex gap-2">
+              <Input
+                id="biz-id"
+                placeholder="Business UUID"
+                value={businessId}
+                onChange={(e) => setBusinessId(e.target.value)}
+              />
+              <Button
+                type="button"
+                disabled={!businessId || busy === "dash"}
+                onClick={() =>
+                  void replay("dashboard.backfill_business_days", {
+                    business_id: businessId,
+                  })
+                }
+              >
+                Queue
+              </Button>
             </div>
-          )}
-
-          {allowReplay && (
-            <div className="space-y-3 border-t border-border pt-3">
-              <p className="text-xs font-semibold text-muted">Replay</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2 rounded-md border border-border p-3">
-                  <p className="text-xs font-medium">Receipt / invoice snapshot</p>
-                  <Label htmlFor="job-sale">Sale ID</Label>
-                  <Input
-                    id="job-sale"
-                    value={saleId}
-                    onChange={(e) => setSaleId(e.target.value.trim())}
-                    placeholder="uuid"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={!saleId || busy !== null}
-                    onClick={() =>
-                      void replay("documents.generate_financial_document", {
-                        sale_id: saleId,
-                      })
-                    }
-                  >
-                    <Play size={14} />
-                    {busy === "documents.generate_financial_document"
-                      ? "Queuing…"
-                      : "Replay document"}
-                  </Button>
-                </div>
-                <div className="space-y-2 rounded-md border border-border p-3">
-                  <p className="text-xs font-medium">Dashboard day backfill</p>
-                  <Label htmlFor="job-biz">Business ID</Label>
-                  <Input
-                    id="job-biz"
-                    value={businessId}
-                    onChange={(e) => setBusinessId(e.target.value.trim())}
-                    placeholder="uuid"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={!businessId || busy !== null}
-                    onClick={() =>
-                      void replay("dashboard.backfill_business_days", {
-                        business_id: businessId,
-                      })
-                    }
-                  >
-                    <Play size={14} />
-                    {busy === "dashboard.backfill_business_days"
-                      ? "Queuing…"
-                      : "Replay backfill"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
-      )}
-    </section>
+      ) : null}
+
+      {/* Cluster snapshot */}
+      <details className="rounded-lg border border-border bg-card p-4 text-sm">
+        <summary className="cursor-pointer font-medium text-foreground">
+          Celery workers snapshot
+          {loading ? " (loading…)" : status?.ok ? ` · ${status.worker_count ?? 0} workers` : " · unavailable"}
+        </summary>
+        {status?.error ? (
+          <p className="mt-2 text-xs text-red-600">{status.error}</p>
+        ) : (
+          <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/40 p-2 text-[11px]">
+            {JSON.stringify(
+              {
+                workers: status?.workers,
+                queues: status?.queues,
+                active: status?.active,
+                reserved: status?.reserved,
+              },
+              null,
+              2,
+            )}
+          </pre>
+        )}
+      </details>
+    </div>
   );
 }

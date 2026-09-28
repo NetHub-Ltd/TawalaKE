@@ -1243,6 +1243,74 @@ class DataArchiveJob(BaseMixin, table=True):
     )
 
 
+
+class BackgroundJob(BaseMixin, table=True):
+    """
+    Durable record of Celery background work for org/platform visibility.
+
+    Redis remains the broker + short-lived result backend; this table is the
+    source of truth for history, status, and retry in the product UI.
+    """
+    __tablename__ = "background_jobs"
+    __table_args__ = (
+        Index("ix_background_jobs_org_status_created", "organization_id", "status", "created_at"),
+        Index("ix_background_jobs_celery_task_id", "celery_task_id"),
+    )
+
+    celery_task_id: Optional[str] = Field(default=None, max_length=255, index=True)
+    name: str = Field(max_length=255, index=True, description="Celery task name")
+    status: str = Field(
+        default="PENDING",
+        index=True,
+        description="PENDING | STARTED | SUCCESS | FAILURE | RETRY | REVOKED",
+    )
+
+    organization_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+    business_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="businesses.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+    sale_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="sales.id",
+        index=True,
+        ondelete="SET NULL",
+    )
+
+    triggered_by_id: Optional[UUID] = Field(default=None, index=True)
+    triggered_by_role: str = Field(
+        default="SYSTEM",
+        max_length=32,
+        description="STAFF | PLATFORM_USER | SYSTEM",
+    )
+    triggered_by_email: Optional[str] = Field(default=None, max_length=255)
+
+    args_summary: Dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB),
+        description="Safe, non-secret summary of task args/kwargs",
+    )
+    error_message: Optional[str] = Field(default=None)
+    result_preview: Optional[str] = Field(default=None, max_length=512)
+    retries: int = Field(default=0)
+
+    started_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+    finished_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )
+
+
 # =========================================================
 # 8. AUDITING  (who did what, from → to)
 # =========================================================
