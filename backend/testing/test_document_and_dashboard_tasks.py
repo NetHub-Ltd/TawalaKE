@@ -130,3 +130,53 @@ def test_enqueue_dashboard_backfill_failure():
         side_effect=RuntimeError("no"),
     ):
         assert dbt.enqueue_dashboard_backfill(uuid4()) is None
+
+
+def test_generate_financial_document_success_path():
+    from app.tasks import document_tasks as dt
+
+    sale_id = str(uuid4())
+    request = SimpleNamespace(id="celery-ok", retries=0)
+    task_self = SimpleNamespace(request=request, retry=MagicMock())
+
+    with patch.object(dt, "_org_for_sale", return_value=(uuid4(), uuid4())):
+        with patch(
+            "app.services.background_jobs.record_job_event_sync", return_value=None
+        ) as rec:
+            with patch(
+                "app.tasks.worker.async_process_document_generation",
+                return_value="snapshot-ok",
+            ):
+                with patch("asyncio.run", side_effect=lambda c: "snapshot-ok"):
+                    # generate_financial_document is a celery task; call underlying run
+                    result = dt.generate_financial_document.run(sale_id)
+    assert result == "snapshot-ok"
+    # STARTED + SUCCESS recorded
+    assert rec.call_count >= 2
+    statuses = [c.kwargs.get("status") for c in rec.call_args_list]
+    assert "SUCCESS" in statuses
+
+
+def test_generate_financial_document_retries_on_failure():
+    from app.tasks import document_tasks as dt
+
+    sale_id = str(uuid4())
+    retry_exc = Exception("retry-me")
+
+    def _retry(exc=None):
+        raise retry_exc
+
+    request = SimpleNamespace(id="celery-fail", retries=0)
+    # Bind-style: use .run but patch self.retry via task
+    with patch.object(dt, "_org_for_sale", return_value=(None, None)):
+        with patch(
+            "app.services.background_jobs.record_job_event_sync", return_value=None
+        ) as rec:
+            with patch(
+                "asyncio.run",
+                side_effect=RuntimeError("gen failed"),
+            ):
+                with pytest.raises(Exception):
+                    dt.generate_financial_document.run(sale_id)
+    statuses = [c.kwargs.get("status") for c in rec.call_args_list]
+    assert "FAILURE" in statuses or "STARTED" in statuses

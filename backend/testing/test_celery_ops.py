@@ -145,3 +145,21 @@ def test_job_to_dict_from_routes():
     assert d["status"] == "SUCCESS"
     assert d["result_preview"] == "ok"
     assert d["organization_id"]
+
+
+def test_replay_known_task_without_handler_raises():
+    """Cover final ValueError when task is in KNOWN_TASKS but has no branch."""
+    with patch.dict(
+        mod.KNOWN_TASKS,
+        {"custom.orphan": {"queue": "tawala.default", "args": [], "description": "x"}},
+        clear=False,
+    ):
+        with pytest.raises(ValueError, match="No replay handler"):
+            mod.replay_task("custom.orphan", {})
+
+
+def test_paywall_middleware_module_is_intentionally_empty():
+    """Import covers the disabled middleware module (coverage + import safety)."""
+    import app.middleware.paywall as pw
+
+    assert pw.__doc__

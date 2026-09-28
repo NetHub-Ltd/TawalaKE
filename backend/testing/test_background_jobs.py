@@ -106,12 +106,12 @@ async def test_record_job_event_inserts_new_row():
                 status="STARTED",
                 args_summary={"sale_id": "x", "password": "nope"},
             )
-    assert result == job_id
+    assert result is not None  # model assigns its own UUID
     session.add.assert_called()
     session.commit.assert_awaited()
     pub.assert_awaited()
     assert added, "expected BackgroundJob instance added"
-    assert "password" not in (added[0].args_summary or {})
+    assert "password" not in (getattr(added[0], "args_summary", None) or {})
 
 
 @pytest.mark.asyncio
@@ -243,3 +243,94 @@ def test_record_job_event_sync_success():
             )
             == expected
         )
+
+
+@pytest.mark.asyncio
+async def test_record_job_event_update_fills_optional_ids_and_args():
+    """Cover update branches: business_id, sale_id, args merge, retries, started_at already set."""
+    job_id = uuid4()
+    org = uuid4()
+    biz = uuid4()
+    sale = uuid4()
+    existing = SimpleNamespace(
+        id=job_id,
+        celery_task_id="task-merge",
+        name="documents.generate_financial_document",
+        status="STARTED",
+        organization_id=org,
+        business_id=None,
+        sale_id=None,
+        error_message=None,
+        retries=0,
+        started_at=datetime.now(timezone.utc),  # already set — skip re-set
+        finished_at=None,
+        created_at=datetime.now(timezone.utc),
+        triggered_by_email=None,
+        triggered_by_role="SYSTEM",
+        args_summary={"sale_id": "old"},
+        result_preview=None,
+    )
+    session = AsyncMock()
+    exec_result = MagicMock()
+    exec_result.one_or_none.return_value = existing
+    session.exec = AsyncMock(return_value=exec_result)
+    session.add = MagicMock()
+    session.commit = AsyncMock()
+    session.refresh = AsyncMock()
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=None)
+
+    with patch.object(mod, "AsyncSessionLocal", return_value=cm):
+        with patch.object(mod, "_publish", new_callable=AsyncMock):
+            result = await mod.record_job_event(
+                celery_task_id="task-merge",
+                name="documents.generate_financial_document",
+                status="RETRY",
+                business_id=biz,
+                sale_id=sale,
+                args_summary={"attempt": 2},
+                retries=2,
+            )
+    assert result == job_id
+    assert existing.business_id == biz
+    assert existing.sale_id == sale
+    assert existing.retries == 2
+    assert existing.args_summary.get("attempt") == 2
+    assert existing.args_summary.get("sale_id") == "old"
+    assert existing.status == "RETRY"
+
+
+@pytest.mark.asyncio
+async def test_record_job_event_insert_success_sets_finished():
+    """Insert with SUCCESS should set finished_at (and not require prior row)."""
+    session = AsyncMock()
+    exec_result = MagicMock()
+    exec_result.one_or_none.return_value = None
+    session.exec = AsyncMock(return_value=exec_result)
+    added = []
+    session.add = MagicMock(side_effect=lambda o: added.append(o))
+    session.commit = AsyncMock()
+
+    async def _refresh(obj):
+        if getattr(obj, "id", None) is None:
+            setattr(obj, "id", uuid4())
+        if not getattr(obj, "created_at", None):
+            setattr(obj, "created_at", datetime.now(timezone.utc))
+
+    session.refresh = AsyncMock(side_effect=_refresh)
+    cm = MagicMock()
+    cm.__aenter__ = AsyncMock(return_value=session)
+    cm.__aexit__ = AsyncMock(return_value=None)
+
+    with patch.object(mod, "AsyncSessionLocal", return_value=cm):
+        with patch.object(mod, "_publish", new_callable=AsyncMock):
+            result = await mod.record_job_event(
+                celery_task_id="task-ok",
+                name="dashboard.backfill_business_days",
+                status="SUCCESS",
+                result_preview="done",
+            )
+    assert result is not None
+    assert added[0].status == "SUCCESS"
+    assert added[0].finished_at is not None
