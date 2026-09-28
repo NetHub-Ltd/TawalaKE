@@ -15,7 +15,6 @@ import {
   ChevronLeft,
   Users,
   Settings,
-  Cpu,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -87,12 +86,12 @@ const NAVIGATION_SCHEMA: SidebarLink[] = [
     anyOf: [Permission.EXPENSES_READ, Permission.REPORTS_READ],
     icon: Wallet,
   },
-  {
-    label: "Jobs",
-    path: "/jobs",
-    anyOf: [Permission.JOBS_MANAGE],
-    icon: Cpu,
-  },
+  // Jobs UI temporarily hidden — backend + /jobs routes kept for later
+  // {
+  //   label: "Jobs",
+  //   path: "/jobs",
+  //   anyOf: [Permission.JOBS_MANAGE],
+  // },
   {
     label: "Settings",
     path: "/settings",
