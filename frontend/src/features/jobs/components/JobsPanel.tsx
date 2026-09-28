@@ -207,7 +207,11 @@ export function JobsPanel({
         signal,
       });
       if (!res.ok || !res.body) {
-        throw new Error(`SSE HTTP ${res.status}`);
+        const err = new Error(`SSE HTTP ${res.status}`) as Error & {
+          status?: number;
+        };
+        err.status = res.status;
+        throw err;
       }
       setStreamState("live");
       setLive(true);
@@ -249,12 +253,25 @@ export function JobsPanel({
         abortRef.current = ac;
         try {
           await consumeSse(ac.signal);
-        } catch {
+        } catch (e) {
           if (cancelled) return;
           setLive(false);
           setStreamState("offline");
+          const status =
+            e && typeof e === "object" && "status" in e
+              ? Number((e as { status?: number }).status)
+              : 0;
+          if (status === 401 || status === 403) {
+            attempt = Math.max(attempt, 6);
+          }
           attempt += 1;
-          const delay = Math.min(30_000, 1_000 * 2 ** Math.min(attempt, 5));
+          if (attempt > 20) return; // stop storm until remount
+          const delay = Math.min(
+            60_000,
+            status === 401 || status === 403
+              ? 15_000 * Math.min(attempt, 4)
+              : 2_000 * 2 ** Math.min(attempt, 5),
+          );
           await new Promise<void>((resolve) => {
             reconnectTimer = setTimeout(resolve, delay);
           });

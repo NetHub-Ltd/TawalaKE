@@ -1114,7 +1114,7 @@ async def platform_jobs_stream(
                 while True:
                     if await request.is_disconnected():
                         break
-                    msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                    msg = await pubsub.get_message(ignore_subscribe_messages=True, timeout=15.0)
                     if msg and msg.get("type") == "message":
                         raw = msg.get("data")
                         if isinstance(raw, bytes):
@@ -1122,7 +1122,6 @@ async def platform_jobs_stream(
                         yield f"data: {raw}\n\n"
                     else:
                         yield f": heartbeat {datetime.utcnow().isoformat()}\n\n"
-                        await asyncio.sleep(0.05)
             finally:
                 await pubsub.unsubscribe(REDIS_JOBS_CHANNEL)
                 await pubsub.close()
