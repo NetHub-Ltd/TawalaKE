@@ -33,7 +33,6 @@ import {
   downloadThermalReceiptPdf,
 } from "@/features/documents/components/ThermalReceipt";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 export type DocumentViewMode = "receipt" | "invoice";
 
