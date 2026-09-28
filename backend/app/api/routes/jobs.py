@@ -62,7 +62,7 @@ async def jobs_status(
 ):
     """Workers, queues, active/reserved tasks (cluster-wide snapshot)."""
     data = celery_ops.inspect_cluster()
-    return ApiResponse(message="ok", data=data)
+    return ApiResponse(status=True, status_code=200, message="ok", data=data)
 
 
 @router.get("/history", response_model=ApiResponse[dict])
@@ -84,6 +84,8 @@ async def jobs_history(
     q = q.order_by(col(BackgroundJob.created_at).desc()).offset(offset).limit(limit)
     rows = (await db.exec(q)).all()
     return ApiResponse(
+        status=True,
+        status_code=200,
         message="ok",
         data={"items": [_job_to_dict(r) for r in rows], "limit": limit, "offset": offset},
     )
@@ -166,7 +168,7 @@ async def jobs_replay(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    return ApiResponse(message="queued", data=result)
+    return ApiResponse(status=True, status_code=200, message="queued", data=result)
 
 
 @router.post("/{job_id}/retry", response_model=ApiResponse[dict])
@@ -222,7 +224,7 @@ async def jobs_retry(
         triggered_by_email=getattr(user, "email", None),
         args_summary={**args, "retry_of": str(job.id)},
     )
-    return ApiResponse(message="queued", data=result)
+    return ApiResponse(status=True, status_code=200, message="queued", data=result)
 
 
 @router.get("/stream")
