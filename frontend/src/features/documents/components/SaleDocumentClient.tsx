@@ -275,3 +275,7 @@ export function SaleDocumentClient({ saleId }: { saleId: string }) {
     </div>
   );
 }
+
+
+/** @deprecated Prefer SaleDocumentClient */
+export const InvoiceClientView = SaleDocumentClient;
