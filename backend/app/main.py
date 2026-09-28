@@ -338,12 +338,60 @@ def create_application() -> FastAPI:
     # 5. Standard Health Check Endpoint
     @application.get("/health", tags=["System Operational Infrastructure"])
     async def health_check():
+        """Liveness: process is up. Does not prove DB/Redis/migrations."""
         return {
             "status": "healthy",
             "app_name": settings.app_name,
             "version": settings.app_version,
             "environment": "Production" if is_production else "Development",
         }
+
+    @application.get("/ready", tags=["System Operational Infrastructure"])
+    async def readiness_check():
+        """
+        Readiness: dependencies required to serve traffic.
+        - Postgres: SELECT 1
+        - Redis: ping
+        Returns 503 if any check fails (load balancers should use this).
+        """
+        from fastapi.responses import JSONResponse
+        from sqlmodel.ext.asyncio.session import AsyncSession
+        from sqlalchemy import text
+        from app.core.session import engine
+        from app.core.redis_client import redis_manager
+
+        checks: dict = {"database": "unknown", "redis": "unknown"}
+        ok = True
+
+        try:
+            async with AsyncSession(engine) as session:
+                await session.exec(text("SELECT 1"))
+            checks["database"] = "ok"
+        except Exception as e:
+            ok = False
+            checks["database"] = f"fail: {type(e).__name__}"
+            logger.error("readiness database check failed: {}", e)
+
+        try:
+            client = redis_manager.get_async_client()
+            pong = await client.ping()
+            if not pong:
+                raise RuntimeError("ping returned falsy")
+            checks["redis"] = "ok"
+        except Exception as e:
+            ok = False
+            checks["redis"] = f"fail: {type(e).__name__}"
+            logger.error("readiness redis check failed: {}", e)
+
+        body = {
+            "status": "ready" if ok else "not_ready",
+            "checks": checks,
+            "app_name": settings.app_name,
+            "version": settings.app_version,
+        }
+        if not ok:
+            return JSONResponse(status_code=503, content=body)
+        return body
 
     # 6. Temporary IP debug endpoint (remove after you confirm real IP works)
     @application.get("/debug-ip", tags=["System Operational Infrastructure"])

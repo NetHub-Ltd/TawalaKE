@@ -1,0 +1,71 @@
+# Ephemeral CI stack only — not production credentials.
+# Values are intentional placeholders for local Docker confirmation.
+# GitGuardian: see paths-ignore in .gitguardian.yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tawala_ci
+      POSTGRES_PASSWORD: ${CI_DB_PASSWORD:-local-ci-only-not-prod}
+      POSTGRES_DB: tawala_ci
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tawala_ci -d tawala_ci"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_NAME: TawalaCI
+      APP_VERSION: "0.0.1"
+      ENVIRONMENT: development
+      DATABASE_NAME: tawala_ci
+      DATABASE_USER: tawala_ci
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_PASSWORD: ${CI_DB_PASSWORD:-local-ci-only-not-prod}
+      # Placeholder JWT material for CI boot only (not a production key)
+      SECRET_KEY: ${CI_SECRET_KEY:-local-ci-jwt-material-not-for-production-use}
+      ALGORITHM: HS256
+      ISSUER: tawala-ci
+      AUDIENCE: tawala-ci
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      REFRESH_TOKEN_EXPIRE_DAYS: "7"
+      PIN_TOKEN_EXPIRE_HOURS: "8"
+      ADMIN_NAME: CI Admin
+      ADMIN_EMAIL: ci-admin@example.com
+      ADMIN_PASSWORD: ${CI_ADMIN_PASSWORD:-local-ci-admin-not-prod}
+      RESOURCE_SERVER: http://localhost:8000
+      ALLOWED_ORIGINS: http://localhost:3000
+      # Avoid Resend key prefix patterns; mail is unused in this smoke path
+      RESEND_API_KEY: ${CI_MAIL_KEY:-ci-mail-disabled}
+      REDIS_URL: redis://redis:6379/0
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8000/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 40s

@@ -1,0 +1,20 @@
+# https://docs.gitguardian.com/ggshield-docs/configuration
+version: 2
+
+# CI / template files use deliberate non-production placeholders only.
+paths-ignore:
+  - backend/docker-compose.ci.yml
+  - backend/.env.example
+  - "**/.env.example"
+  - "**/docker-compose.ci.yml"
+
+# Documented test fixtures (never real prod secrets)
+matches-ignore:
+  - name: CI compose placeholders
+    match: local-ci-only-not-prod
+  - name: CI JWT placeholder
+    match: local-ci-jwt-material-not-for-production-use
+  - name: CI admin placeholder
+    match: local-ci-admin-not-prod
+  - name: CI mail disabled
+    match: ci-mail-disabled

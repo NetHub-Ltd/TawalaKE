@@ -1,0 +1,134 @@
+# Independent production-path confirmation:
+# Docker build → temporary Postgres + Redis → entrypoint (migrate + start) → /health + /ready
+#
+# Runs on main (required), PRs that touch backend, and manual workflow_dispatch.
+name: Backend Startup (Docker)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend_startup.yml"
+  pull_request:
+    branches: [main, master, dev]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend_startup.yml"
+
+concurrency:
+  group: backend-startup-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  alembic-heads:
+    name: Alembic single head
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Assert exactly one alembic head
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import re, sys
+          from pathlib import Path
+          down_map = {}
+          for f in Path("alembic/versions").glob("*.py"):
+              t = f.read_text(errors="ignore")
+              m = re.search(r"^revision\s*:?\s*(?:str\s*)?=\s*[\"']([^\"']+)[\"']", t, re.M)
+              if not m:
+                  continue
+              rev = m.group(1)
+              dm = re.search(r"^down_revision\s*:?\s*(?:Union\[.*?\]\s*)?=\s*(.+)$", t, re.M)
+              raw = dm.group(1).strip() if dm else "None"
+              parents = [] if raw in ("None", "none") else re.findall(r"[\"']([a-zA-Z0-9_]+)[\"']", raw)
+              down_map[rev] = parents
+          all_parents = {p for parents in down_map.values() for p in parents}
+          heads = sorted(r for r in down_map if r not in all_parents)
+          print("heads:", heads)
+          if len(heads) != 1:
+              print("::error::Expected 1 alembic head, found", len(heads), heads)
+              sys.exit(1)
+          print("OK", heads[0])
+          PY
+
+  docker-startup:
+    name: Docker migrate + start + live probes
+    runs-on: ubuntu-latest
+    needs: [alembic-heads]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.ci.yml build api
+
+      - name: Start Postgres, Redis, API (entrypoint runs migrations)
+        env:
+          # Prefer repo secrets if present; otherwise non-secret CI placeholders
+          CI_DB_PASSWORD: ${{ secrets.CI_DB_PASSWORD || 'local-ci-only-not-prod' }}
+          CI_SECRET_KEY: ${{ secrets.CI_SECRET_KEY || 'local-ci-jwt-material-not-for-production-use' }}
+          CI_ADMIN_PASSWORD: ${{ secrets.CI_ADMIN_PASSWORD || 'local-ci-admin-not-prod' }}
+          CI_MAIL_KEY: ${{ secrets.CI_MAIL_KEY || 'ci-mail-disabled' }}
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.ci.yml up -d postgres redis
+          # Wait for DB/Redis health
+          for i in $(seq 1 40); do
+            pg=$(docker compose -f docker-compose.ci.yml ps postgres --format json 2>/dev/null | head -1 || true)
+            docker compose -f docker-compose.ci.yml exec -T postgres pg_isready -U tawala_ci -d tawala_ci && \
+            docker compose -f docker-compose.ci.yml exec -T redis redis-cli ping | grep -q PONG && break
+            sleep 2
+          done
+          docker compose -f docker-compose.ci.yml up -d api
+          echo "Containers:"
+          docker compose -f docker-compose.ci.yml ps
+
+      - name: Wait until /health and /ready succeed
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 90); do
+            code_h=$(curl -s -o /tmp/health.json -w "%{http_code}" http://127.0.0.1:8000/health || echo 000)
+            code_r=$(curl -s -o /tmp/ready.json -w "%{http_code}" http://127.0.0.1:8000/ready || echo 000)
+            echo "attempt $i  health=$code_h  ready=$code_r"
+            if [ "$code_h" = "200" ] && [ "$code_r" = "200" ]; then
+              echo "=== /health ===" && cat /tmp/health.json
+              echo "=== /ready ===" && cat /tmp/ready.json
+              python3 - <<'PY'
+          import json, sys
+          h = json.load(open("/tmp/health.json"))
+          r = json.load(open("/tmp/ready.json"))
+          assert h.get("status") == "healthy", h
+          assert r.get("status") == "ready", r
+          assert r.get("checks", {}).get("database") == "ok", r
+          assert r.get("checks", {}).get("redis") == "ok", r
+          print("CONFIRMATION OK: app started, migrations applied, live endpoints ready")
+          PY
+              exit 0
+            fi
+            # Surface migration/start failures early
+            if [ "$i" -eq 15 ] || [ "$i" -eq 45 ] || [ "$i" -eq 75 ]; then
+              docker compose -f docker-compose.ci.yml logs --tail=80 api || true
+            fi
+            sleep 2
+          done
+          echo "::error::Timed out waiting for /health and /ready"
+          docker compose -f docker-compose.ci.yml logs --tail=200 api || true
+          docker compose -f docker-compose.ci.yml logs --tail=50 postgres redis || true
+          exit 1
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -f docker-compose.ci.yml down -v --remove-orphans || true
