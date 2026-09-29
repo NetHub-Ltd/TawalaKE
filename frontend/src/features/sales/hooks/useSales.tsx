@@ -18,7 +18,7 @@ export interface SaleLineItem {
 
 export interface SaleResponse {
   id: string;
-  status: "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED" | string;
+  status: "PENDING_PAYMENT" | "PARTIALLY_PAID" | "COMPLETED" | "CANCELLED" | string;
   subtotal: number;
   discount: number;
   tax_rate?: number;
@@ -173,7 +173,7 @@ export function getSaleBusinessName(sale: SaleResponse): string {
 }
 
 export function isCreditSale(sale: SaleResponse): boolean {
-  return sale.status === "PENDING_PAYMENT";
+  return sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID";
 }
 
 const fetchSalesApi = async ({

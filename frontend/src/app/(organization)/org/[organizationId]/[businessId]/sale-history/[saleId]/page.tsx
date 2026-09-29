@@ -58,6 +58,7 @@ function toNumber(value: unknown) {
 function statusStyles(status: string) {
   switch (status) {
     case "PENDING_PAYMENT":
+    case "PARTIALLY_PAID":
       return "bg-amber-500/10 text-amber-700 border-amber-500/25";
     case "COMPLETED":
       return "bg-emerald-500/10 text-emerald-700 border-emerald-500/25";
@@ -401,7 +402,8 @@ export default function SaleDetailPage() {
               Back to history
             </Link>
             {(sale.status === "COMPLETED" ||
-              sale.status === "PENDING_PAYMENT") && (
+              sale.status === "PENDING_PAYMENT" ||
+              sale.status === "PARTIALLY_PAID") && (
               <button
                 type="button"
                 className="h-11 px-5 rounded-xl bg-brand-primary text-white text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
@@ -412,12 +414,12 @@ export default function SaleDetailPage() {
                 }}
               >
                 <Receipt size={16} />
-                {sale.status === "PENDING_PAYMENT"
+                {sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID"
                   ? "View invoice"
                   : "View receipt"}
               </button>
             )}
-            {sale.status === "PENDING_PAYMENT" && (
+            {sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID" && (
               <button
                 type="button"
                 className="h-11 px-5 rounded-xl bg-brand-secondary text-white text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity"

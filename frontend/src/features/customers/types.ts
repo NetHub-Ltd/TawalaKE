@@ -18,13 +18,15 @@ export type CustomerSaleRow = {
   id: string;
   status: string;
   total_amount: number;
+  /** Remaining to collect (total - payments). Falls back to total_amount when absent. */
+  balance_due?: number;
   created_at?: string | null;
   updated_at?: string | null;
 };
 
 export type CustomerDetail = CustomerRow & {
   recent_sales?: CustomerSaleRow[];
-  /** PENDING_PAYMENT sales for collect-credit UI */
+  /** PENDING_PAYMENT + PARTIALLY_PAID sales for collect-credit UI */
   open_credit_sales?: CustomerSaleRow[];
 };
 

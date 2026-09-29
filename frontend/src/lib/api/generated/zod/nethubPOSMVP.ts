@@ -384,7 +384,7 @@ export const createPendingSaleApiV1BusinessNewSalePostBody = zod.object({
 
 export const createPendingSaleApiV1BusinessNewSalePostResponse = zod.object({
   "id": zod.uuid(),
-  "status": zod.enum(['PENDING_PAYMENT', 'COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED']),
+  "status": zod.enum(['PENDING_PAYMENT', 'PARTIALLY_PAID', 'COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED']),
   "subtotal": zod.number(),
   "discount": zod.number(),
   "tax_rate": zod.number(),
@@ -411,7 +411,7 @@ export const getPendingSalesApiV1BusinessGetSalesBusinessIdGetQueryParams = zod.
 
 export const getPendingSalesApiV1BusinessGetSalesBusinessIdGetResponseItem = zod.object({
   "id": zod.uuid(),
-  "status": zod.enum(['PENDING_PAYMENT', 'COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED']),
+  "status": zod.enum(['PENDING_PAYMENT', 'PARTIALLY_PAID', 'COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED']),
   "subtotal": zod.number(),
   "discount": zod.number(),
   "tax_rate": zod.number(),
@@ -548,7 +548,7 @@ export const fetchReceiptsApiV1BusinessReceiptsSaleIdGetResponse = zod.object({
   "summary": zod.record(zod.string(), zod.unknown()).optional(),
   "dispute_and_audit": zod.object({
   "parent_sale_id": zod.uuid(),
-  "status": zod.enum(['PENDING_PAYMENT', 'COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED']),
+  "status": zod.enum(['PENDING_PAYMENT', 'PARTIALLY_PAID', 'COMPLETED', 'REFUNDED', 'PARTIALLY_REFUNDED', 'DISPUTED']),
   "original_document_hash": zod.union([zod.string(),zod.null()]).optional(),
   "notes": zod.union([zod.string(),zod.null()]).optional()
 })
