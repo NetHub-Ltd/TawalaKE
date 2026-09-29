@@ -38,7 +38,7 @@ from sqlalchemy.orm import selectinload
 from app.schemas.schemas import StaffResponse
 
 from app.tasks.worker import async_update_sales_analytics
-from app.tasks.document_tasks import enqueue_document_generation
+from app.tasks.document_tasks import schedule_document_generation
 
 
 class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
@@ -175,7 +175,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     product_id=product.id,
                     quantity=qty,
                     unit_price=float(product.selling_price),
-                    total_price=item_total,
                     sku=(product.attributes or {}).get("sku", "N/A") or "N/A",
                     name=product.label,
                     subtotal=item_total,
@@ -217,7 +216,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             business_id=payload.business_id,
             cashier_id=current_user.id,
             status=SaleStatus.PENDING_PAYMENT,
-            currency="KES",
+            currency=(
+                (business.config or {}).get("currency")
+                if isinstance(getattr(business, "config", None), dict)
+                else None
+            ) or "KES",
             subtotal=subtotal,
             tax_rate=tax_rate,
             tax_amount=tax_amount,
@@ -352,8 +355,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 or f"TXN-{uuid4().hex[:8].upper()}",
             )
             db.add(payment)
-            sale.status = (
-                SaleStatus.COMPLETED if calc["is_full"] else SaleStatus.PENDING_PAYMENT
+            from app.core.payment_methods import resolve_sale_status_after_payment
+            sale.status = SaleStatus(
+                resolve_sale_status_after_payment(
+                    amount_due_before=calc["amount_due_at_payment"],
+                    amount_applied=calc["amount"],
+                )
             )
             db.add(sale)
 
@@ -421,12 +428,8 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
             await db.commit()
 
-            # Document: invoice for credit (amount_paid=0), receipt for paid
-            task_id = enqueue_document_generation(sale.id)
-            if task_id is None:
-                # Broker unavailable — fall back so checkout still produces a document
-                from app.tasks.worker import async_process_document_generation
-                background_tasks.add_task(async_process_document_generation, sale.id)
+            # Document: FastAPI BackgroundTasks (immediate, in-process) + jobs table
+            schedule_document_generation(background_tasks, sale.id)
 
             # Drain outbox soon after response (best-effort); durable row survives process death
             if sale.status == SaleStatus.COMPLETED:
@@ -480,7 +483,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Sale is already collected/completed.",
             )
-        if sale.status != SaleStatus.PENDING_PAYMENT:
+        if sale.status not in (SaleStatus.PENDING_PAYMENT, SaleStatus.PARTIALLY_PAID):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Sale status {sale.status} cannot be collected.",
@@ -535,8 +538,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             or f"COLLECT-{uuid4().hex[:8].upper()}",
         )
         db.add(payment)
-        sale.status = (
-            SaleStatus.COMPLETED if calc["is_full"] else SaleStatus.PENDING_PAYMENT
+        from app.core.payment_methods import resolve_sale_status_after_payment
+        sale.status = SaleStatus(
+            resolve_sale_status_after_payment(
+                amount_due_before=calc["amount_due_at_payment"],
+                amount_applied=calc["amount"],
+            )
         )
         db.add(sale)
 
@@ -548,7 +555,10 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             organization_id=sale.organization_id,
         )
         await db.commit()
-        background_tasks.add_task(async_update_sales_analytics, sale.id)
+        # Refresh invoice/receipt snapshot + Redis warm so frontend can fetch immediately
+        schedule_document_generation(background_tasks, sale.id)
+        if sale.status == SaleStatus.COMPLETED:
+            background_tasks.add_task(async_update_sales_analytics, sale.id)
 
         new_stmt = (
             select(Sale)

@@ -21,6 +21,7 @@ class PaymentMethod(str, Enum):
 
 class SaleStatus(str, Enum):
     PENDING_PAYMENT = "PENDING_PAYMENT"
+    PARTIALLY_PAID = "PARTIALLY_PAID"
     COMPLETED = "COMPLETED"
     REFUNDED = "REFUNDED"
     PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"
@@ -170,6 +171,8 @@ class BuyerSnapshot(BaseModel):
 
 class FinancialsSnapshot(BaseModel):
     currency: str = "KES"
+    # goods_subtotal = pre-discount goods; subtotal = post-discount net goods (tax base)
+    goods_subtotal: float = 0.0
     subtotal: float
     discount_amount: float
     tax_rate_applied: float

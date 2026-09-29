@@ -122,9 +122,11 @@ async def apply_sale_to_rollups(
             missing_cost_lines += 1
         else:
             total_cogs += _line_cogs(i)
-    gross_profit = float(sale.total_amount or 0) - total_cogs
     subtotal = float(sale.subtotal or 0)
     tax = float(getattr(sale, "tax_amount", 0) or 0)
+    # Gross profit excludes tax (liability, not margin). Services + net goods − COGS.
+    revenue_ex_tax = max(0.0, float(sale.total_amount or 0) - tax)
+    gross_profit = revenue_ex_tax - total_cogs
     # Checkout writes discount_applied; older rows may only have discount
     discount = float(
         getattr(sale, "discount_applied", None)

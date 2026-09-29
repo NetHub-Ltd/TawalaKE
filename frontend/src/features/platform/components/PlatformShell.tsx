@@ -9,7 +9,6 @@ import {
   Users,
   CreditCard,
   ScrollText,
-  Cpu,
   ChevronLeft,
   LogOut,
   Shield,
@@ -56,13 +55,13 @@ const PLATFORM_NAV: PlatformNavItem[] = [
     icon: CreditCard,
     match: "prefix",
   },
-  {
-    id: "jobs",
-    label: "Jobs",
-    href: "/platform/jobs",
-    icon: Cpu,
-    match: "prefix",
-  },
+  // Jobs UI temporarily hidden — backend routes kept
+  // {
+  //   id: "jobs",
+  //   label: "Jobs",
+  //   href: "/platform/jobs",
+  //   icon: //   match: "prefix",
+  // },
   {
     id: "audit",
     label: "Audit",

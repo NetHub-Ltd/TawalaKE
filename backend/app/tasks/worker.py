@@ -81,7 +81,7 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                 for p in (sale.payments or [])
             }
             is_invoice = (
-                sale.status == SaleStatus.PENDING_PAYMENT
+                sale.status in (SaleStatus.PENDING_PAYMENT, SaleStatus.PARTIALLY_PAID)
                 or ("INVOICE" in payment_methods and sale.status != SaleStatus.COMPLETED)
             )
             doc_type = DocumentType.INVOICE if is_invoice else DocumentType.RECEIPT
@@ -188,10 +188,18 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     )
             service_total = round(sum(s["amount"] for s in service_lines), 2)
 
+            discount_val = float(
+                getattr(sale, "discount_applied", None)
+                or getattr(sale, "discount", None)
+                or 0.0
+            )
+            net_sub = round(float(sale.subtotal or 0), 2)
+            goods_sub = round(net_sub + discount_val, 2)
             financials_snap = FinancialsSnapshot(
-                currency=sale.currency,
-                subtotal=round(float(sale.subtotal), 2),
-                discount_amount=round(float(getattr(sale, "discount", 0.0) or 0.0), 2),
+                currency=sale.currency or "KES",
+                goods_subtotal=goods_sub,
+                subtotal=net_sub,
+                discount_amount=round(discount_val, 2),
                 tax_rate_applied=round(float(getattr(sale, "tax_rate", 0.0) or 0.0), 4),
                 tax_amount=round(float(getattr(sale, "tax_amount", 0.0) or 0.0), 2),
                 total_amount=round(float(sale.total_amount), 2),
@@ -266,7 +274,8 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     # Everything that affects the total for print/download
                     "services": service_lines,
                     "service_total": service_total,
-                    "discount_amount": round(float(getattr(sale, "discount", 0.0) or 0.0), 2),
+                    "discount_amount": round(float(getattr(sale, "discount_applied", None) or getattr(sale, "discount", None) or 0.0), 2),
+                    "goods_subtotal": goods_sub,
                     "tax_amount": round(float(getattr(sale, "tax_amount", 0.0) or 0.0), 2),
                     "subtotal": round(float(sale.subtotal), 2),
                     "total_amount": round(float(sale.total_amount), 2),
@@ -282,10 +291,23 @@ async def async_process_document_generation(sale_id: UUID) -> str:
             integrity_hash = hashlib.sha256(serialized_payload.encode("utf-8")).hexdigest()
             snapshot_data.dispute_and_audit.original_document_hash = integrity_hash
 
-            financial_document.document_snapshot = snapshot_data.model_dump(mode="json", exclude_none=True)
+            snap_dict = snapshot_data.model_dump(mode="json", exclude_none=True)
+            financial_document.document_snapshot = snap_dict
+            # Keep column in sync with payments (create path may have set 0 or full total)
+            financial_document.amount_paid = round(float(total_paid), 2)
             db.add(financial_document)
 
             await db.commit()
+
+            # Warm Redis so frontend can fetch immediately after checkout/collect
+            try:
+                from app.core.document_cache import cache_document_snapshot
+                await cache_document_snapshot(sale.id, snap_dict)
+            except Exception as cache_exc:  # noqa: BLE001
+                logger.warning(
+                    "document redis warm failed sale_id=%s err=%s", sale.id, cache_exc
+                )
+
             logger.info(f"✅ Financial document generated successfully for Sale ID: {sale.id}")
             return f"Document generated successfully for Sale ID: {sale.id}"
 

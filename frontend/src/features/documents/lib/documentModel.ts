@@ -33,6 +33,7 @@ export type ReceiptData = {
   } | null;
   financials?: {
     currency?: string;
+    goods_subtotal?: number;
     subtotal?: number;
     discount_amount?: number;
     tax_rate_applied?: number;
@@ -98,6 +99,9 @@ export type DocumentModel = {
   rows: LineRow[];
   paymentFields: PaymentField[];
   tenderLines: PaymentField[];
+  /** Pre-discount goods total (for display). */
+  goodsSubtotal: number;
+  /** Post-discount net goods (tax base). */
   subtotal: number;
   discount: number;
   tax: number;
@@ -209,6 +213,14 @@ export function buildDocumentModel(
   const services = resolveServices(receipt);
   const discount =
     Number(fin.discount_amount ?? receipt.summary?.discount_amount) || 0;
+  const netSubtotal = Number(fin.subtotal) || 0;
+  // Prefer explicit goods_subtotal; recover from net + discount when older snapshots omit it
+  const goodsSubtotal =
+    Number(fin.goods_subtotal) > 0
+      ? Number(fin.goods_subtotal)
+      : discount > 0
+        ? netSubtotal + discount
+        : netSubtotal;
   const tax = Number(fin.tax_amount) || 0;
   const taxRate = Number(fin.tax_rate_applied) || 0;
   const taxRateLabel =
@@ -309,7 +321,8 @@ export function buildDocumentModel(
     rows,
     paymentFields,
     tenderLines,
-    subtotal: Number(fin.subtotal) || 0,
+    goodsSubtotal,
+    subtotal: netSubtotal,
     discount,
     tax,
     taxRateLabel,

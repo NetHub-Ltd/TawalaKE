@@ -443,6 +443,8 @@ export interface CartItem {
   stockMax?: number;
   category: string;
   sku?: string;
+  /** False when product has no cost_price — profit unknown for this line */
+  hasCost?: boolean;
 }
 
 export interface ServiceLine {
@@ -616,6 +618,13 @@ export const useCartStore = create<CartState>()(
                 sku: product.attributes?.sku || "",
                 qty: 1,
                 stockMax: track ? available : undefined,
+                hasCost: (() => {
+                  // ProductResponse has no cost_price; buying cost lives on attributes
+                  const raw =
+                    product.attributes?.buying_price ??
+                    (product as { cost_price?: number | null }).cost_price;
+                  return raw != null && Number.isFinite(Number(raw));
+                })(),
               },
             ],
             isDirty: true,

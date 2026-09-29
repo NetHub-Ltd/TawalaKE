@@ -201,3 +201,25 @@ def compute_payment_amounts(
         "change_due": change,
         "is_full": applied >= due - 0.001,
     }
+
+
+def resolve_sale_status_after_payment(*, amount_due_before: float, amount_applied: float) -> str:
+    """Return SaleStatus value after applying amount_applied toward amount_due_before.
+
+    PENDING_PAYMENT — nothing applied (should not normally be called with applied=0 after a payment).
+    PARTIALLY_PAID — applied > 0 but remaining still outstanding.
+    COMPLETED — applied covers the due amount.
+    """
+    due = max(0.0, round(float(amount_due_before), 2))
+    applied = max(0.0, round(float(amount_applied), 2))
+    remaining = round(due - applied, 2)
+    if remaining <= 0.001:
+        return "COMPLETED"
+    if applied > 0.001:
+        return "PARTIALLY_PAID"
+    return "PENDING_PAYMENT"
+
+
+def sale_remaining_balance(*, total_amount: float, payments_sum: float) -> float:
+    """Outstanding balance on a sale from totals already paid."""
+    return max(0.0, round(float(total_amount or 0) - float(payments_sum or 0), 2))

@@ -508,30 +508,34 @@ async def fetch_receipts(
     if org_id and sale.organization_id and sale.organization_id != org_id:
         raise HTTPException(status_code=403, detail="Not authorized for this document")
 
-    receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
+    # Prefer Redis warm-cache (written right after generation) for immediate post-checkout/collect reads
+    from app.core.document_cache import get_cached_document_snapshot
+
+    receipt = await get_cached_document_snapshot(sale_id)
     if receipt is None:
-        # Worker may be down or queue lag — nudge generation (idempotent in worker)
-        from app.tasks.document_tasks import enqueue_document_generation
-        from app.tasks.worker import async_process_document_generation
+        receipt = await store_crud.get_financial_document_json(db=db, sale_id=sale_id)
+    if receipt is None:
+        # Generate inline so the receipt page is not stuck waiting on a worker
+        from app.tasks.document_tasks import run_document_generation_job
         from app.utils.logging import logger
 
-        task_id = enqueue_document_generation(sale_id)
-        if task_id is None:
-            try:
-                await async_process_document_generation(sale_id)
+        try:
+            await run_document_generation_job(sale_id)
+            receipt = await get_cached_document_snapshot(sale_id)
+            if receipt is None:
                 receipt = await store_crud.get_financial_document_json(
                     db=db, sale_id=sale_id
                 )
-            except Exception as exc:
-                logger.warning(
-                    "inline document generation failed sale_id=%s err=%s",
-                    sale_id,
-                    exc,
-                )
+        except Exception as exc:
+            logger.warning(
+                "inline document generation failed sale_id=%s err=%s",
+                sale_id,
+                exc,
+            )
         if receipt is None:
             raise HTTPException(
                 status_code=404,
-                detail="Document not ready yet — generation may still be queued",
+                detail="Document not ready yet — generation may still be in progress",
             )
     return receipt
 
