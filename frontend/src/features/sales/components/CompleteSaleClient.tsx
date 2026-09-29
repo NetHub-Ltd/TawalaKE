@@ -169,6 +169,12 @@ export default function CompleteSaleClient({
   const credit = isCreditSale(sale);
   const currency = (sale.currency as string) || "KES";
   const total = Number(sale.total_amount) || 0;
+  const paymentsList = (sale as { payments?: Array<{ amount?: number }> }).payments || [];
+  const paidSum = Array.isArray(paymentsList)
+    ? paymentsList.reduce((s, p) => s + (Number(p?.amount) || 0), 0)
+    : 0;
+  const remaining = Math.max(0, total - paidSum);
+  const isPartial = credit && paidSum > 0.001 && remaining > 0.001;
   const items = (sale.items as unknown[]) || [];
   const itemCount = items.length;
   const cust = customerLabel(sale);
@@ -203,7 +209,11 @@ export default function CompleteSaleClient({
             <CheckCircle2 className="h-6 w-6" aria-hidden="true" />
           </div>
           <p className="mt-3 text-xs font-semibold tracking-wide text-muted uppercase">
-            {credit ? "Credit recorded" : "Sale recorded"}
+            {isPartial
+              ? "Partial payment recorded"
+              : credit
+                ? "Credit recorded"
+                : "Sale recorded"}
           </p>
           <h1 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
             {credit ? "Credit sale recorded" : "Payment complete"}
@@ -315,7 +325,9 @@ export default function CompleteSaleClient({
             href={collectHref}
             className="mt-3 block text-center text-xs font-semibold text-brand-primary hover:underline"
           >
-            Collect credit for this customer
+            {isPartial
+              ? `Collect remaining ${currency} ${remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              : "Collect credit for this customer"}
           </Link>
         )}
       </div>

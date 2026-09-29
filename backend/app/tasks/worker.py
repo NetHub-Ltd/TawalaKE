@@ -188,10 +188,18 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     )
             service_total = round(sum(s["amount"] for s in service_lines), 2)
 
+            discount_val = float(
+                getattr(sale, "discount_applied", None)
+                or getattr(sale, "discount", None)
+                or 0.0
+            )
+            net_sub = round(float(sale.subtotal or 0), 2)
+            goods_sub = round(net_sub + discount_val, 2)
             financials_snap = FinancialsSnapshot(
-                currency=sale.currency,
-                subtotal=round(float(sale.subtotal), 2),
-                discount_amount=round(float(getattr(sale, "discount", 0.0) or 0.0), 2),
+                currency=sale.currency or "KES",
+                goods_subtotal=goods_sub,
+                subtotal=net_sub,
+                discount_amount=round(discount_val, 2),
                 tax_rate_applied=round(float(getattr(sale, "tax_rate", 0.0) or 0.0), 4),
                 tax_amount=round(float(getattr(sale, "tax_amount", 0.0) or 0.0), 2),
                 total_amount=round(float(sale.total_amount), 2),
@@ -266,7 +274,8 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     # Everything that affects the total for print/download
                     "services": service_lines,
                     "service_total": service_total,
-                    "discount_amount": round(float(getattr(sale, "discount", 0.0) or 0.0), 2),
+                    "discount_amount": round(float(getattr(sale, "discount_applied", None) or getattr(sale, "discount", None) or 0.0), 2),
+                    "goods_subtotal": goods_sub,
                     "tax_amount": round(float(getattr(sale, "tax_amount", 0.0) or 0.0), 2),
                     "subtotal": round(float(sale.subtotal), 2),
                     "total_amount": round(float(sale.total_amount), 2),
