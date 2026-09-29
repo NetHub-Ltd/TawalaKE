@@ -81,6 +81,8 @@ class CustomerSaleRow(BaseModel):
     id: UUID
     status: str
     total_amount: float
+    # Remaining to collect (total - sum payments). Defaults to total when unknown.
+    balance_due: float = 0.0
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

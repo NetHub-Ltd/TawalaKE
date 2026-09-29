@@ -2,7 +2,7 @@
 
 /**
  * Collect Credit — pick an open PENDING_PAYMENT sale and record CASH/MPESA payment.
- * Uses existing POST /business/sales/{id}/collect (full sale amount).
+ * Uses POST .../sales/{id}/collect. Collects remaining balance (balance_due).
  */
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -55,9 +55,11 @@ export function CollectCreditForm({
       }
       const data = (body.data ?? body) as CustomerDetail;
       setDetail(data);
+      const isOpen = (s: { status: string }) =>
+        s.status === "PENDING_PAYMENT" || s.status === "PARTIALLY_PAID";
       const open =
-        data.open_credit_sales?.filter((s) => s.status === "PENDING_PAYMENT") ||
-        data.recent_sales?.filter((s) => s.status === "PENDING_PAYMENT") ||
+        data.open_credit_sales?.filter(isOpen) ||
+        data.recent_sales?.filter(isOpen) ||
         [];
       setSelectedId((prev) => prev ?? (open[0]?.id ?? null));
     } catch (e) {
@@ -73,13 +75,20 @@ export function CollectCreditForm({
   }, [load]);
 
   const openSales: CustomerSaleRow[] =
-    detail?.open_credit_sales?.filter((s) => s.status === "PENDING_PAYMENT") ||
-    detail?.recent_sales?.filter((s) => s.status === "PENDING_PAYMENT") ||
+    detail?.open_credit_sales?.filter(
+      (s) => s.status === "PENDING_PAYMENT" || s.status === "PARTIALLY_PAID"
+    ) ||
+    detail?.recent_sales?.filter(
+      (s) => s.status === "PENDING_PAYMENT" || s.status === "PARTIALLY_PAID"
+    ) ||
     [];
 
   const selected = openSales.find((s) => s.id === selectedId) || openSales[0];
   const outstanding = detail?.open_credit_total ?? 0;
-  const collectAmount = selected?.total_amount ?? 0;
+  const collectAmount =
+    selected?.balance_due != null && selected.balance_due > 0
+      ? selected.balance_due
+      : (selected?.total_amount ?? 0);
   const after = Math.max(0, outstanding - collectAmount);
 
   async function onSubmit(e: React.FormEvent) {
@@ -97,6 +106,7 @@ export function CollectCreditForm({
           body: JSON.stringify({
             payment_method: method,
             payment_reference: reference.trim() || null,
+            amount_given: collectAmount,
             customer_name: detail?.name ?? null,
             customer_phone: detail?.phone ?? null,
           }),
@@ -195,7 +205,7 @@ export function CollectCreditForm({
         <div className="rounded-md border border-border/50 bg-card px-5 py-10 text-center">
           <p className="text-sm font-semibold text-foreground">No open credit sales</p>
           <p className="mt-1 text-sm text-muted">
-            This customer has no PENDING_PAYMENT invoices to collect.
+            This customer has no open invoices to collect.
           </p>
           <Link
             href={workspacePath}
@@ -242,7 +252,11 @@ export function CollectCreditForm({
                         </span>
                       </span>
                       <span className="font-mono text-sm font-semibold tabular tabular-nums text-foreground">
-                        {formatKES(s.total_amount)}
+                        {formatKES(
+                          s.balance_due != null && s.balance_due > 0
+                            ? s.balance_due
+                            : s.total_amount
+                        )}
                       </span>
                     </label>
                   </li>

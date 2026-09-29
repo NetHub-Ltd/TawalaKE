@@ -44,7 +44,7 @@ function formatMoney(amount: number, currency = "KES") {
 }
 
 function isCreditSale(sale: SaleResponse): boolean {
-  if (sale.status === "PENDING_PAYMENT") return true;
+  if (sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID") return true;
 
   const payments = (
     sale as { payments?: Array<{ method?: string; amount?: number }> }

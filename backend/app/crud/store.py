@@ -352,8 +352,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 or f"TXN-{uuid4().hex[:8].upper()}",
             )
             db.add(payment)
-            sale.status = (
-                SaleStatus.COMPLETED if calc["is_full"] else SaleStatus.PENDING_PAYMENT
+            from app.core.payment_methods import resolve_sale_status_after_payment
+            sale.status = SaleStatus(
+                resolve_sale_status_after_payment(
+                    amount_due_before=calc["amount_due_at_payment"],
+                    amount_applied=calc["amount"],
+                )
             )
             db.add(sale)
 
@@ -476,7 +480,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Sale is already collected/completed.",
             )
-        if sale.status != SaleStatus.PENDING_PAYMENT:
+        if sale.status not in (SaleStatus.PENDING_PAYMENT, SaleStatus.PARTIALLY_PAID):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Sale status {sale.status} cannot be collected.",
@@ -531,8 +535,12 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             or f"COLLECT-{uuid4().hex[:8].upper()}",
         )
         db.add(payment)
-        sale.status = (
-            SaleStatus.COMPLETED if calc["is_full"] else SaleStatus.PENDING_PAYMENT
+        from app.core.payment_methods import resolve_sale_status_after_payment
+        sale.status = SaleStatus(
+            resolve_sale_status_after_payment(
+                amount_due_before=calc["amount_due_at_payment"],
+                amount_applied=calc["amount"],
+            )
         )
         db.add(sale)
 
@@ -544,7 +552,10 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             organization_id=sale.organization_id,
         )
         await db.commit()
-        background_tasks.add_task(async_update_sales_analytics, sale.id)
+        # Refresh invoice/receipt snapshot + Redis warm so frontend can fetch immediately
+        schedule_document_generation(background_tasks, sale.id)
+        if sale.status == SaleStatus.COMPLETED:
+            background_tasks.add_task(async_update_sales_analytics, sale.id)
 
         new_stmt = (
             select(Sale)

@@ -52,6 +52,7 @@ function toNumber(value: unknown) {
 
 function statusLabel(status: string) {
   if (status === "PENDING_PAYMENT") return "Credit · due";
+  if (status === "PARTIALLY_PAID") return "Partially paid";
   if (status === "COMPLETED") return "Completed";
   if (status === "CANCELLED") return "Cancelled";
   return status.replace(/_/g, " ");
@@ -60,6 +61,7 @@ function statusLabel(status: string) {
 function statusStyles(status: string) {
   switch (status) {
     case "PENDING_PAYMENT":
+    case "PARTIALLY_PAID":
       return "bg-amber-500/10 text-amber-700 border-amber-500/25";
     case "COMPLETED":
       return "bg-emerald-500/10 text-emerald-700 border-emerald-500/25";
@@ -245,6 +247,7 @@ export default function SalesHistoryWorkspace() {
             <option value="ALL">All transactions</option>
             <option value="COMPLETED">Completed</option>
             <option value="PENDING_PAYMENT">Credit · due</option>
+            <option value="PARTIALLY_PAID">Partially paid</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
         </div>

@@ -625,14 +625,18 @@ class ReportingCrud:
         *,
         business_id: UUID,
     ) -> dict:
-        """Live sum of PENDING_PAYMENT sales (open credit, not period-scoped)."""
+        """Live sum of open credit sales (PENDING_PAYMENT + PARTIALLY_PAID)."""
         stmt = (
             select(
                 func.coalesce(func.sum(Sale.total_amount), 0.0),
                 func.count(Sale.id),
             )
             .where(Sale.business_id == business_id)
-            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+            .where(
+                Sale.status.in_(
+                    (SaleStatus.PENDING_PAYMENT, SaleStatus.PARTIALLY_PAID)
+                )
+            )
         )
         if hasattr(Sale, "deleted_at"):
             stmt = stmt.where(col(Sale.deleted_at).is_(None))
@@ -666,7 +670,11 @@ class ReportingCrud:
                 func.count(Sale.id),
             )
             .where(Sale.business_id == business_id)
-            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+            .where(
+                Sale.status.in_(
+                    (SaleStatus.PENDING_PAYMENT, SaleStatus.PARTIALLY_PAID)
+                )
+            )
             .where(Sale.created_at >= start)
             .where(Sale.created_at < end)
         )

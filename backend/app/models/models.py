@@ -55,8 +55,15 @@ class ExpenseCategory(str, Enum):
 
 
 class SaleStatus(str, Enum):
+    """Sale lifecycle.
+
+    PENDING_PAYMENT — fully unpaid (pure credit / no applied payments).
+    PARTIALLY_PAID — at least one payment applied; balance still outstanding.
+    COMPLETED — balance settled.
+    """
 
     PENDING_PAYMENT = "PENDING_PAYMENT"
+    PARTIALLY_PAID = "PARTIALLY_PAID"
     COMPLETED = "COMPLETED"
     REFUNDED = "REFUNDED"
     PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED"

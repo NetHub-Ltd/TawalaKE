@@ -51,3 +51,41 @@ def test_compute_partial():
     assert c["amount_given"] == 400
     assert c["change_due"] == 0
     assert c["is_full"] is False
+
+
+def test_resolve_status_full():
+    from app.core.payment_methods import resolve_sale_status_after_payment
+
+    assert (
+        resolve_sale_status_after_payment(amount_due_before=1000, amount_applied=1000)
+        == "COMPLETED"
+    )
+    assert (
+        resolve_sale_status_after_payment(amount_due_before=1000, amount_applied=1000.0004)
+        == "COMPLETED"
+    )
+
+
+def test_resolve_status_partial():
+    from app.core.payment_methods import resolve_sale_status_after_payment
+
+    assert (
+        resolve_sale_status_after_payment(amount_due_before=1000, amount_applied=400)
+        == "PARTIALLY_PAID"
+    )
+
+
+def test_resolve_status_zero_applied():
+    from app.core.payment_methods import resolve_sale_status_after_payment
+
+    assert (
+        resolve_sale_status_after_payment(amount_due_before=1000, amount_applied=0)
+        == "PENDING_PAYMENT"
+    )
+
+
+def test_sale_remaining_balance():
+    from app.core.payment_methods import sale_remaining_balance
+
+    assert sale_remaining_balance(total_amount=1000, payments_sum=250) == 750.0
+    assert sale_remaining_balance(total_amount=1000, payments_sum=1000) == 0.0

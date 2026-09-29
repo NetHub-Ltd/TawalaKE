@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, func, or_, select
+from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 from loguru import logger
 
@@ -31,17 +32,22 @@ class CustomerCRUD:
     async def _aggregates(
         self, db: AsyncSession, customer_id: UUID
     ) -> Tuple[float, int, float, int]:
-        open_stmt = (
-            select(
-                func.coalesce(func.sum(Sale.total_amount), 0.0),
-                func.count(Sale.id),
-            )
+        # Open credit: PENDING_PAYMENT (fully unpaid) + PARTIALLY_PAID (remaining balance)
+        open_statuses = (SaleStatus.PENDING_PAYMENT, SaleStatus.PARTIALLY_PAID)
+        open_sales_stmt = (
+            select(Sale)
             .where(Sale.customer_id == customer_id)
-            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+            .where(Sale.status.in_(open_statuses))
+            .options(selectinload(Sale.payments))
         )
         if hasattr(Sale, "deleted_at"):
-            open_stmt = open_stmt.where(col(Sale.deleted_at).is_(None))
-        open_total, open_count = (await db.exec(open_stmt)).one()
+            open_sales_stmt = open_sales_stmt.where(col(Sale.deleted_at).is_(None))
+        open_sales = list((await db.exec(open_sales_stmt)).all())
+        open_count = len(open_sales)
+        open_total = 0.0
+        for s in open_sales:
+            paid = sum(float(p.amount or 0) for p in (s.payments or []))
+            open_total += max(0.0, round(float(s.total_amount or 0) - paid, 2))
 
         done_stmt = (
             select(
@@ -167,23 +173,33 @@ class CustomerCRUD:
         open_stmt = (
             select(Sale)
             .where(Sale.customer_id == customer_id)
-            .where(Sale.status == SaleStatus.PENDING_PAYMENT)
+            .where(
+                Sale.status.in_(
+                    (SaleStatus.PENDING_PAYMENT, SaleStatus.PARTIALLY_PAID)
+                )
+            )
+            .options(selectinload(Sale.payments))
             .order_by(col(Sale.created_at).desc())
             .limit(50)
         )
         if hasattr(Sale, "deleted_at"):
             open_stmt = open_stmt.where(col(Sale.deleted_at).is_(None))
         open_rows = list((await db.exec(open_stmt)).all())
-        open_credit_sales = [
-            CustomerSaleRow(
-                id=s.id,
-                status=s.status.value if hasattr(s.status, "value") else str(s.status),
-                total_amount=float(s.total_amount or 0),
-                created_at=getattr(s, "created_at", None),
-                updated_at=getattr(s, "updated_at", None),
+        open_credit_sales = []
+        for s in open_rows:
+            paid = sum(float(p.amount or 0) for p in (s.payments or []))
+            total = float(s.total_amount or 0)
+            balance = max(0.0, round(total - paid, 2))
+            open_credit_sales.append(
+                CustomerSaleRow(
+                    id=s.id,
+                    status=s.status.value if hasattr(s.status, "value") else str(s.status),
+                    total_amount=total,
+                    balance_due=balance,
+                    created_at=getattr(s, "created_at", None),
+                    updated_at=getattr(s, "updated_at", None),
+                )
             )
-            for s in open_rows
-        ]
         return CustomerDetailResponse(
             **base.model_dump(),
             recent_sales=recent,
