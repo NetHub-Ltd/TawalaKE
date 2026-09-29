@@ -618,9 +618,13 @@ export const useCartStore = create<CartState>()(
                 sku: product.attributes?.sku || "",
                 qty: 1,
                 stockMax: track ? available : undefined,
-                hasCost:
-                  product.cost_price != null &&
-                  Number.isFinite(Number(product.cost_price)),
+                hasCost: (() => {
+                  // ProductResponse has no cost_price; buying cost lives on attributes
+                  const raw =
+                    product.attributes?.buying_price ??
+                    (product as { cost_price?: number | null }).cost_price;
+                  return raw != null && Number.isFinite(Number(raw));
+                })(),
               },
             ],
             isDirty: true,
