@@ -284,20 +284,22 @@ export function CartFullPage({
               </button>
             </div>
             {(isAddingDiscount || discount > 0) && (
-              <input
-                id={discountId}
-                type="number"
-                inputMode="decimal"
-                min={0}
-                max={goodsSubtotal || undefined}
-                step="any"
-                value={discount || ""}
-                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                className="mb-2 h-11 w-full rounded-md border border-border/60 bg-background px-3 font-mono text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-              />
-              <p className="mb-4 text-xs text-muted">
-                Max discount KES {goodsSubtotal.toLocaleString()} (goods only; services are not discounted)
-              </p>
+              <>
+                <input
+                  id={discountId}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={goodsSubtotal || undefined}
+                  step="any"
+                  value={discount || ""}
+                  onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                  className="mb-2 h-11 w-full rounded-md border border-border/60 bg-background px-3 font-mono text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                />
+                <p className="mb-4 text-xs text-muted">
+                  Max discount KES {goodsSubtotal.toLocaleString()} (goods only; services are not discounted)
+                </p>
+              </>
             )}
             {missingCostCount > 0 ? (
               <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
