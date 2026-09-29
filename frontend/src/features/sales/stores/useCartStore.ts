@@ -443,6 +443,8 @@ export interface CartItem {
   stockMax?: number;
   category: string;
   sku?: string;
+  /** False when product has no cost_price — profit unknown for this line */
+  hasCost?: boolean;
 }
 
 export interface ServiceLine {
@@ -616,6 +618,9 @@ export const useCartStore = create<CartState>()(
                 sku: product.attributes?.sku || "",
                 qty: 1,
                 stockMax: track ? available : undefined,
+                hasCost:
+                  product.cost_price != null &&
+                  Number.isFinite(Number(product.cost_price)),
               },
             ],
             isDirty: true,

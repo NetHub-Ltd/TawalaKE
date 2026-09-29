@@ -38,8 +38,9 @@ export function buildThermalPrintHtml(m: DocumentModel): string {
       )
       .join("");
 
+  const docLabel = m.isInvoicePreferred || m.balanceDue > 0.001 ? "INVOICE" : "RECEIPT";
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<title>Receipt ${escapeHtml(m.docNumber)}</title>
+<title>${docLabel} ${escapeHtml(m.docNumber)}</title>
 <style>
   @page { size: 80mm auto; margin: 3mm; }
   * { box-sizing: border-box; }
@@ -74,13 +75,17 @@ export function buildThermalPrintHtml(m: DocumentModel): string {
     ${m.address ? `<p>${escapeHtml(m.address)}</p>` : ""}
     ${m.phone ? `<p>${escapeHtml(m.phone)}</p>` : ""}
   </div>
-  <div style="text-align:center"><span class="badge">RECEIPT</span></div>
+  <div style="text-align:center"><span class="badge">${docLabel}</span></div>
   <hr class="sep"/>
   ${rows}
   <hr class="sep"/>
   <div class="totals">
-    ${m.discount > 0 ? `<div class="row"><span>Discount</span><span>-${escapeHtml(money(m.discount, m.currency))}</span></div>` : ""}
+    ${m.showDiscount ? `<div class="row"><span>Goods</span><span>${escapeHtml(money(m.goodsSubtotal ?? m.subtotal, m.currency))}</span></div>` : ""}
+    ${m.showDiscount ? `<div class="row"><span>Discount</span><span>-${escapeHtml(money(m.discount, m.currency))}</span></div>` : ""}
+    ${m.showTax ? `<div class="row"><span>Tax</span><span>${escapeHtml(money(m.tax, m.currency))}</span></div>` : ""}
     <div class="row grand"><span>Total</span><span>${escapeHtml(money(m.total, m.currency))}</span></div>
+    ${m.showPaid ? `<div class="row"><span>Paid</span><span>${escapeHtml(money(m.amountPaid, m.currency))}</span></div>` : ""}
+    ${m.showBalance ? `<div class="row"><span>Balance due</span><span>${escapeHtml(money(m.balanceDue, m.currency))}</span></div>` : ""}
   </div>
   <hr class="sep"/>
   ${tenders}
@@ -128,7 +133,8 @@ export async function downloadThermalReceiptPdf(m: DocumentModel) {
   y += 2;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("RECEIPT", mid, y, { align: "center" });
+  const pdfLabel = m.isInvoicePreferred || m.balanceDue > 0.001 ? "INVOICE" : "RECEIPT";
+  doc.text(pdfLabel, mid, y, { align: "center" });
   y += 4;
   doc.setDrawColor(150);
   doc.setLineDashPattern([1, 1], 0);
@@ -156,9 +162,22 @@ export async function downloadThermalReceiptPdf(m: DocumentModel) {
   doc.setFontSize(10);
   doc.text("Total", left, y);
   doc.text(money(m.total, m.currency), right, y, { align: "right" });
-  y += 6;
+  y += 5;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
+  if (m.showPaid) {
+    doc.text("Paid", left, y);
+    doc.text(money(m.amountPaid, m.currency), right, y, { align: "right" });
+    y += 4;
+  }
+  if (m.showBalance) {
+    doc.setFont("helvetica", "bold");
+    doc.text("Balance due", left, y);
+    doc.text(money(m.balanceDue, m.currency), right, y, { align: "right" });
+    y += 4;
+    doc.setFont("helvetica", "normal");
+  }
+  y += 2;
   for (const t of m.tenderLines.length ? m.tenderLines : m.paymentFields) {
     doc.text(`${t.label}${t.value ? `: ${t.value}` : ""}`, left, y);
     y += 4;
@@ -201,7 +220,7 @@ export function ThermalReceiptPreview({ model }: { model: DocumentModel }) {
         <p className="text-[11px] text-neutral-500">{m.phone}</p>
       ) : null}
       <span className="mt-3 inline-block rounded-full border border-neutral-900 px-3 py-0.5 text-[10px] font-bold tracking-widest text-neutral-900">
-        RECEIPT
+        {m.isInvoicePreferred || m.balanceDue > 0.001 ? "INVOICE" : "RECEIPT"}
       </span>
       <div className="my-3 border-t border-dashed border-neutral-300" />
       <ul className="space-y-1.5 text-left text-[12px]">
@@ -217,7 +236,13 @@ export function ThermalReceiptPreview({ model }: { model: DocumentModel }) {
         ))}
       </ul>
       <div className="my-3 border-t border-dashed border-neutral-300" />
-      {m.discount > 0 ? (
+      {m.showDiscount ? (
+        <div className="flex justify-between text-[12px] text-neutral-600">
+          <span>Goods</span>
+          <span className="tabular-nums">{money(m.goodsSubtotal ?? m.subtotal, m.currency)}</span>
+        </div>
+      ) : null}
+      {m.showDiscount ? (
         <div className="flex justify-between text-[12px] text-neutral-600">
           <span>Discount</span>
           <span>-{money(m.discount, m.currency)}</span>
@@ -227,6 +252,18 @@ export function ThermalReceiptPreview({ model }: { model: DocumentModel }) {
         <span>Total</span>
         <span className="tabular-nums">{money(m.total, m.currency)}</span>
       </div>
+      {m.showPaid ? (
+        <div className="flex justify-between text-[12px] text-neutral-600">
+          <span>Paid</span>
+          <span className="tabular-nums">{money(m.amountPaid, m.currency)}</span>
+        </div>
+      ) : null}
+      {m.showBalance ? (
+        <div className="flex justify-between text-[12px] font-semibold text-amber-800">
+          <span>Balance due</span>
+          <span className="tabular-nums">{money(m.balanceDue, m.currency)}</span>
+        </div>
+      ) : null}
       <div className="my-3 border-t border-dashed border-neutral-300" />
       <div className="space-y-0.5 text-left text-[11px] text-neutral-600">
         {(m.tenderLines.length ? m.tenderLines : m.paymentFields).map((t, i) => (

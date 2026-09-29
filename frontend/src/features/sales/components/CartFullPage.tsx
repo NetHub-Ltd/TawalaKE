@@ -93,6 +93,8 @@ export function CartFullPage({
   }
 
   const { goodsSubtotal, taxAmount, grandTotal, servicesTotal } = getFinancials();
+  const missingCostCount = cart.filter((i) => i.hasCost === false).length;
+  const servicesOnly = cart.length === 0 && services.length > 0;
   const terminalHref = `/org/${resolvedOrgId}/${resolvedBusinessId}/terminal`;
   const isEmpty = cart.length === 0 && services.length === 0;
 
@@ -282,16 +284,34 @@ export function CartFullPage({
               </button>
             </div>
             {(isAddingDiscount || discount > 0) && (
-              <input
-                id={discountId}
-                type="number"
-                min={0}
-                step="any"
-                value={discount || ""}
-                onChange={(e) => setDiscount(Number(e.target.value) || 0)}
-                className="mb-4 h-11 w-full rounded-md border border-border/60 bg-background px-3 font-mono text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
-              />
+              <>
+                <input
+                  id={discountId}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={goodsSubtotal || undefined}
+                  step="any"
+                  value={discount || ""}
+                  onChange={(e) => setDiscount(Number(e.target.value) || 0)}
+                  className="mb-2 h-11 w-full rounded-md border border-border/60 bg-background px-3 font-mono text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+                />
+                <p className="mb-4 text-xs text-muted">
+                  Max discount KES {goodsSubtotal.toLocaleString()} (goods only; services are not discounted)
+                </p>
+              </>
             )}
+            {missingCostCount > 0 ? (
+              <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                Profit unknown for {missingCostCount} item
+                {missingCostCount === 1 ? "" : "s"} (no cost price on product).
+              </p>
+            ) : null}
+            {servicesOnly ? (
+              <p className="mb-3 rounded-md border border-border/60 bg-surface px-3 py-2 text-xs text-muted">
+                Services only — no stock items will be deducted.
+              </p>
+            ) : null}
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between text-muted">
                 <dt>Items</dt>

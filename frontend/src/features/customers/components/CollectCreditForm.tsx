@@ -17,6 +17,10 @@ import {
 
 type Method = "CASH" | "MPESA";
 
+function round2(n: number) {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 export function CollectCreditForm({
   organizationId,
   businessId,
@@ -39,6 +43,7 @@ export function CollectCreditForm({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [method, setMethod] = useState<Method>("MPESA");
   const [reference, setReference] = useState("");
+  const [amountGiven, setAmountGiven] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,11 +90,29 @@ export function CollectCreditForm({
 
   const selected = openSales.find((s) => s.id === selectedId) || openSales[0];
   const outstanding = detail?.open_credit_total ?? 0;
-  const collectAmount =
+  const remaining =
     selected?.balance_due != null && selected.balance_due > 0
       ? selected.balance_due
       : (selected?.total_amount ?? 0);
+  const alreadyPaid = Math.max(
+    0,
+    round2((selected?.total_amount ?? 0) - remaining),
+  );
+  // Default amount field to remaining when selection changes
+  const collectAmount = (() => {
+    const n = Number(amountGiven);
+    if (Number.isFinite(n) && n > 0) return Math.min(n, remaining);
+    return remaining;
+  })();
   const after = Math.max(0, outstanding - collectAmount);
+
+  useEffect(() => {
+    if (remaining > 0) {
+      setAmountGiven(remaining.toFixed(2));
+    } else {
+      setAmountGiven("");
+    }
+  }, [selectedId, remaining]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -197,7 +220,10 @@ export function CollectCreditForm({
 
       <div className="grid gap-3 sm:grid-cols-3">
         <SummaryCard label="Outstanding" value={formatKES(outstanding)} tone="warn" />
-        <SummaryCard label="Collecting" value={formatKES(collectAmount)} tone="ok" />
+        <SummaryCard label="Invoice total" value={formatKES(selected?.total_amount ?? 0)} />
+        <SummaryCard label="Already paid" value={formatKES(alreadyPaid)} tone="ok" />
+        <SummaryCard label="Remaining" value={formatKES(remaining)} tone="warn" />
+        <SummaryCard label="Collecting now" value={formatKES(collectAmount)} tone="ok" />
         <SummaryCard label="After" value={formatKES(after)} />
       </div>
 
@@ -290,6 +316,28 @@ export function CollectCreditForm({
               ))}
             </div>
           </fieldset>
+
+          <div>
+            <label htmlFor="amt" className="mb-1 block text-xs font-medium text-muted">
+              Amount to collect (max {formatKES(remaining)})
+            </label>
+            <input
+              id="amt"
+              type="number"
+              inputMode="decimal"
+              min={0.01}
+              step="0.01"
+              max={remaining || undefined}
+              value={amountGiven}
+              onChange={(e) => setAmountGiven(e.target.value)}
+              className="h-11 w-full rounded-md border border-border/60 px-3 text-sm outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/20"
+            />
+            {Number(amountGiven) > 0 && Number(amountGiven) < remaining - 0.001 ? (
+              <p className="mt-1.5 text-sm text-amber-700">
+                Partial collection — {formatKES(remaining - Number(amountGiven))} will stay due
+              </p>
+            ) : null}
+          </div>
 
           <div>
             <label htmlFor="ref" className="mb-1 block text-xs font-medium text-muted">

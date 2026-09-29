@@ -259,9 +259,10 @@ export function FormalInvoicePreview({ model }: { model: DocumentModel }) {
         </div>
         <div className="w-full max-w-[210px] text-sm tabular-nums">
           <div className="flex justify-between py-1 text-neutral-700">
-            <span>Subtotal</span>
+            <span>{m.showDiscount ? "Goods" : "Subtotal"}</span>
             <span>
-              {m.currency} {money(m.subtotal)}
+              {m.currency}{" "}
+              {money(m.showDiscount ? (m.goodsSubtotal ?? m.subtotal) : m.subtotal)}
             </span>
           </div>
           {m.showDiscount ? (

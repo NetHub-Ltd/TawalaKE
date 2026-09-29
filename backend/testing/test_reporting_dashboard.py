@@ -53,8 +53,13 @@ async def test_dashboard_from_rollups(mock_session):
     rollup_result = MagicMock()
     rollup_result.all.return_value = [row]
 
+    # credit_outstanding: remaining balances (1000+1000+500=2500) across 3 open sales
     credit_result = MagicMock()
-    credit_result.one.return_value = (2500.0, 3)
+    credit_result.all.return_value = [
+        MagicMock(total_amount=1000.0, payments=[]),
+        MagicMock(total_amount=1000.0, payments=[]),
+        MagicMock(total_amount=800.0, payments=[MagicMock(amount=300.0)]),
+    ]
 
     # credit_period_metrics: open issued, collected-issued, invoice-issued, collected payments
     issued_open = MagicMock()
@@ -129,7 +134,7 @@ async def test_dashboard_provisional_profit_and_expense_failure(mock_session):
     rollup_result = MagicMock()
     rollup_result.all.return_value = [row]
     credit_result = MagicMock()
-    credit_result.one.return_value = (0.0, 0)
+    credit_result.all.return_value = []
     z = _period_credit_zero()
 
     calls = {"n": 0}

@@ -175,7 +175,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     product_id=product.id,
                     quantity=qty,
                     unit_price=float(product.selling_price),
-                    total_price=item_total,
                     sku=(product.attributes or {}).get("sku", "N/A") or "N/A",
                     name=product.label,
                     subtotal=item_total,
@@ -217,7 +216,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             business_id=payload.business_id,
             cashier_id=current_user.id,
             status=SaleStatus.PENDING_PAYMENT,
-            currency="KES",
+            currency=(
+                (business.config or {}).get("currency")
+                if isinstance(getattr(business, "config", None), dict)
+                else None
+            ) or "KES",
             subtotal=subtotal,
             tax_rate=tax_rate,
             tax_amount=tax_amount,
