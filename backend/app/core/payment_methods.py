@@ -223,3 +223,30 @@ def resolve_sale_status_after_payment(*, amount_due_before: float, amount_applie
 def sale_remaining_balance(*, total_amount: float, payments_sum: float) -> float:
     """Outstanding balance on a sale from totals already paid."""
     return max(0.0, round(float(total_amount or 0) - float(payments_sum or 0), 2))
+
+
+def sync_sale_payment_columns(sale, payments) -> None:
+    """Write denormalized amount_paid / balance_due onto the sale.
+
+    Payments remain the ledger; these columns power list/detail without joins.
+    Safe for empty payments (unpaid credit).
+    """
+    paid = 0.0
+    for p in payments or []:
+        if p is None:
+            continue
+        if isinstance(p, dict):
+            paid += float(p.get("amount") or 0)
+        else:
+            paid += float(getattr(p, "amount", None) or 0)
+    paid = round(paid, 2)
+    total = round(float(getattr(sale, "total_amount", None) or 0), 2)
+    status_val = getattr(sale, "status", None)
+    if hasattr(status_val, "value"):
+        status_val = status_val.value
+    status_val = str(status_val or "")
+    sale.amount_paid = paid
+    if status_val == "COMPLETED":
+        sale.balance_due = 0.0
+    else:
+        sale.balance_due = round(max(0.0, total - paid), 2)

@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { ArrowLeft, Banknote, Loader2 } from "lucide-react";
 import {
@@ -31,6 +31,8 @@ export function CollectCreditForm({
   customerId: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const presetSaleId = searchParams?.get("saleId") || searchParams?.get("sale_id") || null;
   const workspacePath = `/org/${organizationId}/${businessId}/customers/${customerId}`;
   const listPath = `/org/${organizationId}/${businessId}/customers`;
 
@@ -66,14 +68,20 @@ export function CollectCreditForm({
         data.open_credit_sales?.filter(isOpen) ||
         data.recent_sales?.filter(isOpen) ||
         [];
-      setSelectedId((prev) => prev ?? (open[0]?.id ?? null));
+      setSelectedId((prev) => {
+        if (prev) return prev;
+        if (presetSaleId && open.some((s) => s.id === presetSaleId)) {
+          return presetSaleId;
+        }
+        return open[0]?.id ?? null;
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
       setDetail(null);
     } finally {
       setLoading(false);
     }
-  }, [businessId, customerId]);
+  }, [businessId, customerId, presetSaleId]);
 
   useEffect(() => {
     void load();

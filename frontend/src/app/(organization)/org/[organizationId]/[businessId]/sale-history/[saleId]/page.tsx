@@ -10,6 +10,8 @@ import {
   getSaleCashierName,
   getSaleBusinessName,
   isCreditSale,
+  getSaleBalanceDue,
+  getSaleAmountPaid,
 } from "@/features/sales/hooks/useSales";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import {
@@ -175,6 +177,8 @@ export default function SaleDetailPage() {
   const cashierName = getSaleCashierName(sale);
   const businessName = getSaleBusinessName(sale);
   const credit = isCreditSale(sale);
+  const balanceDue = getSaleBalanceDue(sale);
+  const amountPaid = getSaleAmountPaid(sale);
   const customerName =
     (sale.customer as { name?: string } | undefined)?.name || null;
   const customerPhone =
@@ -218,10 +222,24 @@ export default function SaleDetailPage() {
         <div className="max-w-3xl mx-auto px-6 py-8 space-y-8">
           {/* Amount hero */}
           <div className="rounded-2xl border border-border/40 bg-card p-6 sm:p-8">
-            <p className="text-sm text-muted mb-1">Net payable</p>
-            <p className="text-3xl sm:text-4xl font-semibold tracking-tight tabular-nums text-foreground">
-              {formatMoney(total, currency)}
+            <p className="text-sm text-muted mb-1">
+              {credit && balanceDue > 0.001 ? "Balance due" : "Net payable"}
             </p>
+            <p
+              className={`text-3xl sm:text-4xl font-semibold tracking-tight tabular-nums ${
+                credit && balanceDue > 0.001 ? "text-rose-700" : "text-foreground"
+              }`}
+            >
+              {formatMoney(credit && balanceDue > 0.001 ? balanceDue : total, currency)}
+            </p>
+            {credit && balanceDue > 0.001 && (
+              <p className="mt-2 text-xs text-muted tabular-nums">
+                Total {formatMoney(total, currency)}
+                {amountPaid > 0.001
+                  ? ` · Paid ${formatMoney(amountPaid, currency)}`
+                  : ""}
+              </p>
+            )}
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <Calendar size={13} className="opacity-50" />
@@ -419,13 +437,20 @@ export default function SaleDetailPage() {
                   : "View receipt"}
               </button>
             )}
-            {sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID" && (
+            {(sale.status === "PENDING_PAYMENT" ||
+              sale.status === "PARTIALLY_PAID") &&
+              ((sale.customer as { id?: string } | null | undefined)?.id ||
+                (sale as { customer_id?: string }).customer_id) && (
               <button
                 type="button"
                 className="h-11 px-5 rounded-xl bg-brand-secondary text-white text-sm font-semibold inline-flex items-center gap-2 hover:opacity-90 transition-opacity"
                 onClick={() => {
+                  const cid =
+                    (sale.customer as { id?: string } | null | undefined)?.id ||
+                    (sale as { customer_id?: string }).customer_id;
+                  if (!cid) return;
                   router.push(
-                    `/org/${organizationId}/${normalizedBusinessId}/sale/${sale.id}/preview?collect=1`,
+                    `/org/${organizationId}/${normalizedBusinessId}/customers/${cid}/collect?saleId=${sale.id}`,
                   );
                 }}
               >

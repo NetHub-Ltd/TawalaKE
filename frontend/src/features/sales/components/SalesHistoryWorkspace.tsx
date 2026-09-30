@@ -158,7 +158,7 @@ function SalesRow({ sale, onClick }: SalesRowProps) {
                   {formatMoney(due, currency)}
                 </div>
                 <div className="mt-0.5 text-[11px] tabular-nums leading-tight text-muted-foreground">
-                  due of {formatMoney(total, currency)}
+                  of {formatMoney(total, currency)}
                 </div>
               </>
             ) : (

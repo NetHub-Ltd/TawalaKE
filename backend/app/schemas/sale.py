@@ -119,6 +119,8 @@ class SaleReadWithRelations(BaseModel):
         if not obj.cashier_name:
             if obj.cashier and obj.cashier.full_name:
                 obj.cashier_name = obj.cashier.full_name
+            elif obj.cashier and obj.cashier.email:
+                obj.cashier_name = str(obj.cashier.email).split("@")[0]
             else:
                 obj.cashier_name = None
 
@@ -135,6 +137,21 @@ class SaleReadWithRelations(BaseModel):
                     total_paid += float(getattr(p, "amount", None) or 0)
             return total_paid
 
+        # Prefer denormalized sale columns when present; fall back to payments/document
+        stored_paid = getattr(obj, "amount_paid", None)
+        stored_due = getattr(obj, "balance_due", None)
+        # Raw ORM may carry columns before validation assigns them
+        if isinstance(data, dict):
+            if stored_paid is None and data.get("amount_paid") is not None:
+                stored_paid = data.get("amount_paid")
+            if stored_due is None and data.get("balance_due") is not None:
+                stored_due = data.get("balance_due")
+        elif not isinstance(data, dict):
+            if stored_paid is None:
+                stored_paid = getattr(data, "amount_paid", None)
+            if stored_due is None:
+                stored_due = getattr(data, "balance_due", None)
+
         paid = _sum_payments(obj.payments)
         if paid <= 0:
             paid = _sum_payments(raw_payments)
@@ -143,17 +160,21 @@ class SaleReadWithRelations(BaseModel):
                 paid = float(raw_doc.get("amount_paid") or 0)
             else:
                 paid = float(getattr(raw_doc, "amount_paid", None) or 0)
+        if paid <= 0 and stored_paid is not None:
+            paid = float(stored_paid or 0)
 
         total = float(obj.total_amount or 0)
-        # Always recompute for list/detail honesty
-        obj.amount_paid = round(paid, 2)
+        obj.amount_paid = round(float(paid), 2)
         status_val = (
             obj.status.value if hasattr(obj.status, "value") else str(obj.status)
         )
         if status_val == "COMPLETED":
             obj.balance_due = 0.0
+        elif stored_due is not None and paid == float(stored_paid or 0):
+            # Trust stored due when it matches stored paid projection
+            obj.balance_due = round(max(0.0, float(stored_due)), 2)
         else:
-            obj.balance_due = round(max(0.0, total - paid), 2)
+            obj.balance_due = round(max(0.0, total - float(paid)), 2)
         # Coerce payment method enums to str for JSON
         if obj.payments:
             fixed = []
