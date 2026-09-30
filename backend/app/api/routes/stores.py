@@ -389,12 +389,17 @@ async def get_sales(
             (total_count + page_size - 1) // page_size if total_count > 0 else 0
         )
 
+        # Always go through SaleReadWithRelations so list UI gets
+        # item_count, cashier_name, amount_paid, balance_due, payments.
+        items = [
+            SaleReadWithRelations.model_validate(s) for s in sales
+        ]
         return ApiResponse(
             status=True,
             status_code=200,
             message="Sales retrieved successfully.",
             data=PaginatedData(
-                items=sales,
+                items=items,
                 meta=PaginationMeta(
                     total=total_count,
                     page=page,

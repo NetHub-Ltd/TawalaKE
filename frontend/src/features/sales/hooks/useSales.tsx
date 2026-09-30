@@ -33,9 +33,12 @@ export interface SaleResponse {
   cashier?: { id: string; full_name?: string | null; email?: string | null } | null;
   customer?: { id: string; name: string; phone?: string | null } | null;
   items?: SaleLineItem[] | null;
+  payments?: Array<{ amount?: number; method?: string; reference?: string | null }> | null;
   /** Server-computed helpers (additive) */
   item_count?: number | null;
   cashier_name?: string | null;
+  amount_paid?: number | null;
+  balance_due?: number | null;
   [key: string]: unknown;
 }
 
@@ -176,8 +179,11 @@ export function isCreditSale(sale: SaleResponse): boolean {
   return sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID";
 }
 
-/** Sum of payment.amount when payments are present on the sale payload. */
+/** Sum paid toward the sale (server amount_paid preferred). */
 export function getSaleAmountPaid(sale: SaleResponse): number {
+  if (sale.amount_paid != null && Number.isFinite(Number(sale.amount_paid))) {
+    return Number(sale.amount_paid);
+  }
   const payments = sale.payments;
   if (!Array.isArray(payments)) return 0;
   return payments.reduce((sum, p) => {
@@ -187,15 +193,17 @@ export function getSaleAmountPaid(sale: SaleResponse): number {
   }, 0);
 }
 
-/** Remaining balance for open credit / partial sales. */
+/** Remaining balance (server balance_due preferred). */
 export function getSaleBalanceDue(sale: SaleResponse): number {
+  if (sale.status === "COMPLETED") return 0;
+  if (sale.balance_due != null && Number.isFinite(Number(sale.balance_due))) {
+    return Math.max(0, Number(sale.balance_due));
+  }
   const total = Number(sale.total_amount) || 0;
   const paid = getSaleAmountPaid(sale);
-  if (sale.status === "COMPLETED") return 0;
   if (sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID") {
     return Math.max(0, Math.round((total - paid) * 100) / 100);
   }
-  // Fallback: if payments exist but status is other
   if (paid > 0) return Math.max(0, Math.round((total - paid) * 100) / 100);
   return 0;
 }
