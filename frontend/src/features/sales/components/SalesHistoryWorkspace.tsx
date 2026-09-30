@@ -8,7 +8,6 @@ import {
   getSaleItemCount,
   getSaleCashierName,
   getSaleBalanceDue,
-  getSaleAmountPaid,
 } from "@/features/sales/hooks/useSales";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import {
@@ -89,7 +88,6 @@ function SalesRow({ sale, onClick }: SalesRowProps) {
   const timestamp =
     (sale.updated_at as string | undefined) || sale.created_at;
   const due = getSaleBalanceDue(sale);
-  const paid = getSaleAmountPaid(sale);
 
   return (
     <tr
@@ -152,19 +150,22 @@ function SalesRow({ sale, onClick }: SalesRowProps) {
 
       <td className="py-3.5 px-4 sm:px-5 w-[22%] text-right">
         <div className="flex items-center justify-end gap-2">
-          <div className="min-w-[7.5rem] text-right">
-            <div className="font-mono font-bold text-[13px] text-foreground tabular-nums leading-tight">
-              {formatMoney(total, currency)}
-            </div>
+          <div className="min-w-[8.5rem] text-right">
             {due > 0.001 ? (
-              <div className="mt-0.5 font-mono text-[11px] font-semibold tabular-nums text-rose-700 leading-tight">
-                Due {formatMoney(due, currency)}
+              <>
+                {/* Open balance is primary; total is secondary context only */}
+                <div className="font-mono text-[13px] font-bold tabular-nums leading-tight text-rose-700">
+                  {formatMoney(due, currency)}
+                </div>
+                <div className="mt-0.5 text-[11px] tabular-nums leading-tight text-muted-foreground">
+                  due of {formatMoney(total, currency)}
+                </div>
+              </>
+            ) : (
+              <div className="font-mono text-[13px] font-bold tabular-nums leading-tight text-foreground">
+                {formatMoney(total, currency)}
               </div>
-            ) : paid > 0.001 && String(sale.status) === "COMPLETED" ? (
-              <div className="mt-0.5 text-[11px] font-medium text-emerald-700 leading-tight">
-                Settled
-              </div>
-            ) : null}
+            )}
           </div>
           <RowChevron
             size={16}
