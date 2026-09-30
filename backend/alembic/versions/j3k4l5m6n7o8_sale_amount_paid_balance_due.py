@@ -5,6 +5,8 @@ Revises: i2j3k4l5m6n7
 Create Date: 2026-09-30
 
 Additive only. Backfills from payments; COMPLETED → balance_due=0.
+
+Note: Postgres ROUND(x, n) requires numeric — not double precision.
 """
 from typing import Sequence, Union
 
@@ -28,36 +30,49 @@ def upgrade() -> None:
         sa.Column("balance_due", sa.Float(), nullable=False, server_default="0"),
     )
 
-    # Backfill from payments; completed sales force balance_due=0
+    # Backfill from payments. Cast to numeric so ROUND(_, 2) is valid on Postgres.
     op.execute(
         """
-        UPDATE sales s
+        UPDATE sales AS s
         SET
-            amount_paid = COALESCE(p.paid, 0),
+            amount_paid = CAST(COALESCE(p.paid, 0) AS double precision),
             balance_due = CASE
-                WHEN s.status = 'COMPLETED' THEN 0
-                ELSE GREATEST(0, ROUND(CAST(s.total_amount AS numeric) - COALESCE(p.paid, 0), 2))
+                WHEN s.status::text = 'COMPLETED' THEN 0
+                ELSE CAST(
+                    GREATEST(
+                        0,
+                        ROUND(
+                            CAST(s.total_amount AS numeric)
+                            - CAST(COALESCE(p.paid, 0) AS numeric),
+                            2
+                        )
+                    ) AS double precision
+                )
             END
         FROM (
-            SELECT sale_id, COALESCE(SUM(amount), 0) AS paid
+            SELECT
+                sale_id,
+                COALESCE(SUM(CAST(amount AS numeric)), 0) AS paid
             FROM payments
             GROUP BY sale_id
-        ) p
+        ) AS p
         WHERE s.id = p.sale_id
         """
     )
-    # Sales with no payment rows: unpaid → full balance (unless COMPLETED)
+    # Sales with no payment rows
     op.execute(
         """
-        UPDATE sales s
+        UPDATE sales AS s
         SET
             amount_paid = 0,
             balance_due = CASE
-                WHEN s.status = 'COMPLETED' THEN 0
-                ELSE ROUND(CAST(s.total_amount AS numeric), 2)
+                WHEN s.status::text = 'COMPLETED' THEN 0
+                ELSE CAST(
+                    ROUND(CAST(s.total_amount AS numeric), 2) AS double precision
+                )
             END
         WHERE NOT EXISTS (
-            SELECT 1 FROM payments p WHERE p.sale_id = s.id
+            SELECT 1 FROM payments AS p WHERE p.sale_id = s.id
         )
         """
     )
