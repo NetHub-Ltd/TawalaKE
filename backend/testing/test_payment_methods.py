@@ -89,3 +89,73 @@ def test_sale_remaining_balance():
 
     assert sale_remaining_balance(total_amount=1000, payments_sum=250) == 750.0
     assert sale_remaining_balance(total_amount=1000, payments_sum=1000) == 0.0
+
+
+def test_compute_exact_pay_no_change():
+    c = compute_payment_amounts(amount_due=1000, amount_given=1000)
+    assert c["amount"] == 1000
+    assert c["change_due"] == 0
+    assert c["is_full"] is True
+
+
+def test_compute_overpay_change():
+    c = compute_payment_amounts(amount_due=8370, amount_given=10000)
+    assert c["amount"] == 8370
+    assert c["change_due"] == 1630
+    assert c["is_full"] is True
+
+
+def test_compute_zero_given():
+    c = compute_payment_amounts(amount_due=500, amount_given=0)
+    assert c["amount"] == 0
+    assert c["is_full"] is False
+
+
+def test_compute_negative_inputs_clamped():
+    c = compute_payment_amounts(amount_due=-10, amount_given=-5)
+    assert c["amount_due_at_payment"] == 0
+    assert c["amount"] == 0
+
+
+def test_multi_step_remaining_sequence():
+    """Unpaid → partial → partial → complete using remaining helper."""
+    from app.core.payment_methods import (
+        resolve_sale_status_after_payment,
+        sale_remaining_balance,
+    )
+    total = 48_370.0
+    paid = 0.0
+    assert sale_remaining_balance(total_amount=total, payments_sum=paid) == 48_370.0
+
+    step1 = compute_payment_amounts(amount_due=48_370.0, amount_given=20_000.0)
+    paid += step1["amount"]
+    assert resolve_sale_status_after_payment(
+        amount_due_before=48_370.0, amount_applied=step1["amount"]
+    ) == "PARTIALLY_PAID"
+    rem = sale_remaining_balance(total_amount=total, payments_sum=paid)
+    assert rem == 28_370.0
+
+    step2 = compute_payment_amounts(amount_due=rem, amount_given=20_000.0)
+    paid += step2["amount"]
+    rem = sale_remaining_balance(total_amount=total, payments_sum=paid)
+    assert rem == 8_370.0
+    assert resolve_sale_status_after_payment(
+        amount_due_before=28_370.0, amount_applied=step2["amount"]
+    ) == "PARTIALLY_PAID"
+
+    step3 = compute_payment_amounts(amount_due=rem, amount_given=8_370.0)
+    paid += step3["amount"]
+    rem = sale_remaining_balance(total_amount=total, payments_sum=paid)
+    assert rem == 0.0
+    assert resolve_sale_status_after_payment(
+        amount_due_before=8_370.0, amount_applied=step3["amount"]
+    ) == "COMPLETED"
+
+
+def test_penny_rounding_remaining():
+    """Floating pennies must not leave phantom 0.01 due."""
+    from app.core.payment_methods import sale_remaining_balance
+    total = 100.0
+    paid = 99.995
+    rem = sale_remaining_balance(total_amount=total, payments_sum=paid)
+    assert rem == 0.0 or rem <= 0.01

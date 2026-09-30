@@ -132,3 +132,172 @@ def test_completed_sale_balance_due_zero():
     out = SaleReadWithRelations.model_validate(sale)
     assert out.balance_due == 0.0
     assert out.amount_paid == pytest.approx(100.0)
+
+
+def test_unpaid_full_balance_due():
+    """PENDING_PAYMENT with no payments → due = total."""
+    sale = SimpleNamespace(
+        id=uuid4(),
+        business_id=uuid4(),
+        cashier_id=uuid4(),
+        customer_id=None,
+        currency="KES",
+        status=SaleStatus.PENDING_PAYMENT,
+        subtotal=72_000.0,
+        discount=0,
+        tax_amount=0.0,
+        total_amount=72_000.0,
+        created_at=_now(),
+        updated_at=_now(),
+        service_amount=None,
+        business=None,
+        cashier=None,
+        customer=None,
+        items=[
+            SimpleNamespace(
+                name="X", unit_price=72_000.0, quantity=1, subtotal=72_000.0, cost_price_at_sale=None
+            )
+        ],
+        payments=[],
+        document=None,
+        item_count=None,
+        cashier_name=None,
+        amount_paid=None,
+        balance_due=None,
+    )
+    out = SaleReadWithRelations.model_validate(sale)
+    assert out.amount_paid == 0.0
+    assert out.balance_due == pytest.approx(72_000.0)
+    assert out.item_count == 1
+
+
+def test_multiple_payments_sum():
+    """Two partials sum into amount_paid."""
+    pays = [
+        SimpleNamespace(amount=20_000.0, method=PaymentMethod.CASH, reference="A"),
+        SimpleNamespace(amount=20_000.0, method=PaymentMethod.MPESA, reference="B"),
+    ]
+    sale = SimpleNamespace(
+        id=uuid4(),
+        business_id=uuid4(),
+        cashier_id=uuid4(),
+        customer_id=None,
+        currency="KES",
+        status=SaleStatus.PARTIALLY_PAID,
+        subtotal=48_370.0,
+        discount=0,
+        tax_amount=0.0,
+        total_amount=48_370.0,
+        created_at=_now(),
+        updated_at=_now(),
+        service_amount=None,
+        business=None,
+        cashier=None,
+        customer=None,
+        items=[],
+        payments=pays,
+        document=None,
+        item_count=None,
+        cashier_name=None,
+        amount_paid=None,
+        balance_due=None,
+    )
+    out = SaleReadWithRelations.model_validate(sale)
+    assert out.amount_paid == pytest.approx(40_000.0)
+    assert out.balance_due == pytest.approx(8_370.0)
+
+
+def test_overpay_does_not_negative_balance():
+    pays = [SimpleNamespace(amount=150.0, method=PaymentMethod.CASH, reference=None)]
+    sale = SimpleNamespace(
+        id=uuid4(),
+        business_id=uuid4(),
+        cashier_id=uuid4(),
+        customer_id=None,
+        currency="KES",
+        status=SaleStatus.COMPLETED,
+        subtotal=100.0,
+        discount=0,
+        tax_amount=0.0,
+        total_amount=100.0,
+        created_at=_now(),
+        updated_at=_now(),
+        service_amount=None,
+        business=None,
+        cashier=None,
+        customer=None,
+        items=[],
+        payments=pays,
+        document=None,
+        item_count=None,
+        cashier_name=None,
+        amount_paid=None,
+        balance_due=None,
+    )
+    out = SaleReadWithRelations.model_validate(sale)
+    assert out.balance_due == 0.0
+    assert out.amount_paid == pytest.approx(150.0)
+
+
+def test_service_only_item_count():
+    sale = SimpleNamespace(
+        id=uuid4(),
+        business_id=uuid4(),
+        cashier_id=uuid4(),
+        customer_id=None,
+        currency="KES",
+        status=SaleStatus.COMPLETED,
+        subtotal=0.0,
+        discount=0,
+        tax_amount=0.0,
+        total_amount=370.0,
+        created_at=_now(),
+        updated_at=_now(),
+        service_amount=[{"description": "Lamination", "amount": 370.0}],
+        business=None,
+        cashier=None,
+        customer=None,
+        items=[],
+        payments=[SimpleNamespace(amount=370.0, method=PaymentMethod.CASH, reference=None)],
+        document=None,
+        item_count=None,
+        cashier_name=None,
+        amount_paid=None,
+        balance_due=None,
+    )
+    out = SaleReadWithRelations.model_validate(sale)
+    assert out.item_count == 1
+    assert out.balance_due == 0.0
+
+
+def test_invoice_zero_payment_does_not_reduce_due():
+    """INVOICE method residual of 0 must not look like a real collection."""
+    pays = [SimpleNamespace(amount=0.0, method=PaymentMethod.INVOICE, reference=None)]
+    sale = SimpleNamespace(
+        id=uuid4(),
+        business_id=uuid4(),
+        cashier_id=uuid4(),
+        customer_id=None,
+        currency="KES",
+        status=SaleStatus.PENDING_PAYMENT,
+        subtotal=1000.0,
+        discount=0,
+        tax_amount=0.0,
+        total_amount=1000.0,
+        created_at=_now(),
+        updated_at=_now(),
+        service_amount=None,
+        business=None,
+        cashier=None,
+        customer=None,
+        items=[],
+        payments=pays,
+        document=None,
+        item_count=None,
+        cashier_name=None,
+        amount_paid=None,
+        balance_due=None,
+    )
+    out = SaleReadWithRelations.model_validate(sale)
+    assert out.amount_paid == 0.0
+    assert out.balance_due == pytest.approx(1000.0)
