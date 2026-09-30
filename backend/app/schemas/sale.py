@@ -137,10 +137,13 @@ class SaleReadWithRelations(BaseModel):
                     total_paid += float(getattr(p, "amount", None) or 0)
             return total_paid
 
-        # Prefer denormalized sale columns when present; fall back to payments/document
+        # Money truth order:
+        # 1) sum(payments) when any payment rows are present
+        # 2) document.amount_paid
+        # 3) denormalized sale.amount_paid / sale.balance_due
+        # Never let a stale denormalized 0/full-total override real payment rows.
         stored_paid = getattr(obj, "amount_paid", None)
         stored_due = getattr(obj, "balance_due", None)
-        # Raw ORM may carry columns before validation assigns them
         if isinstance(data, dict):
             if stored_paid is None and data.get("amount_paid") is not None:
                 stored_paid = data.get("amount_paid")
@@ -152,16 +155,22 @@ class SaleReadWithRelations(BaseModel):
             if stored_due is None:
                 stored_due = getattr(data, "balance_due", None)
 
-        paid = _sum_payments(obj.payments)
-        if paid <= 0:
-            paid = _sum_payments(raw_payments)
-        if paid <= 0 and raw_doc is not None:
-            if isinstance(raw_doc, dict):
-                paid = float(raw_doc.get("amount_paid") or 0)
-            else:
-                paid = float(getattr(raw_doc, "amount_paid", None) or 0)
-        if paid <= 0 and stored_paid is not None:
-            paid = float(stored_paid or 0)
+        pay_sum = _sum_payments(obj.payments)
+        if pay_sum <= 0:
+            pay_sum = _sum_payments(raw_payments)
+        has_payment_rows = bool(obj.payments) or bool(raw_payments)
+
+        if has_payment_rows:
+            paid = float(pay_sum)
+        else:
+            paid = 0.0
+            if raw_doc is not None:
+                if isinstance(raw_doc, dict):
+                    paid = float(raw_doc.get("amount_paid") or 0)
+                else:
+                    paid = float(getattr(raw_doc, "amount_paid", None) or 0)
+            if paid <= 0 and stored_paid is not None:
+                paid = float(stored_paid or 0)
 
         total = float(obj.total_amount or 0)
         obj.amount_paid = round(float(paid), 2)
@@ -170,10 +179,8 @@ class SaleReadWithRelations(BaseModel):
         )
         if status_val == "COMPLETED":
             obj.balance_due = 0.0
-        elif stored_due is not None and paid == float(stored_paid or 0):
-            # Trust stored due when it matches stored paid projection
-            obj.balance_due = round(max(0.0, float(stored_due)), 2)
         else:
+            # Always derive due from paid when we know paid; ignore stale stored due
             obj.balance_due = round(max(0.0, total - float(paid)), 2)
         # Coerce payment method enums to str for JSON
         if obj.payments:
