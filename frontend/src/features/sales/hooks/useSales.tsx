@@ -194,13 +194,10 @@ export function isCreditSale(sale: SaleResponse): boolean {
   return sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID";
 }
 
-/** Sum paid toward the sale (server amount_paid preferred). */
-export function getSaleAmountPaid(sale: SaleResponse): number {
-  if (sale.amount_paid != null && Number.isFinite(Number(sale.amount_paid))) {
-    return Number(sale.amount_paid);
-  }
+/** Sum of payment rows (ledger). */
+function sumPaymentRows(sale: SaleResponse): number {
   const payments = sale.payments;
-  if (!Array.isArray(payments)) return 0;
+  if (!Array.isArray(payments) || payments.length === 0) return 0;
   return payments.reduce((sum, p) => {
     if (!p || typeof p !== "object") return sum;
     const amt = Number((p as { amount?: number }).amount);
@@ -208,13 +205,27 @@ export function getSaleAmountPaid(sale: SaleResponse): number {
   }, 0);
 }
 
-/** Remaining balance (server balance_due preferred). */
+/** Sum paid toward the sale. Payment rows win over denormalized amount_paid. */
+export function getSaleAmountPaid(sale: SaleResponse): number {
+  const fromRows = sumPaymentRows(sale);
+  if (fromRows > 0.001) return Math.round(fromRows * 100) / 100;
+  if (sale.amount_paid != null && Number.isFinite(Number(sale.amount_paid))) {
+    return Number(sale.amount_paid);
+  }
+  return 0;
+}
+
+/** Remaining balance. Never trust stale balance_due when payments exist. */
 export function getSaleBalanceDue(sale: SaleResponse): number {
   if (sale.status === "COMPLETED") return 0;
+  const total = Number(sale.total_amount) || 0;
+  const fromRows = sumPaymentRows(sale);
+  if (fromRows > 0.001 || (Array.isArray(sale.payments) && sale.payments.length > 0)) {
+    return Math.max(0, Math.round((total - fromRows) * 100) / 100);
+  }
   if (sale.balance_due != null && Number.isFinite(Number(sale.balance_due))) {
     return Math.max(0, Number(sale.balance_due));
   }
-  const total = Number(sale.total_amount) || 0;
   const paid = getSaleAmountPaid(sale);
   if (sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID") {
     return Math.max(0, Math.round((total - paid) * 100) / 100);

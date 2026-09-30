@@ -461,6 +461,13 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 )
             )
             new_sale = (await db.exec(new_stmt)).first()
+            # Re-sync denormalized money columns from persisted payment rows
+            if new_sale is not None:
+                from app.core.payment_methods import sync_sale_payment_columns
+                sync_sale_payment_columns(new_sale, list(new_sale.payments or []))
+                db.add(new_sale)
+                await db.commit()
+                await db.refresh(new_sale)
             return new_sale
         except IntegrityError as e:
             await db.rollback()
