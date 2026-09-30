@@ -95,15 +95,30 @@ function normalizeOneSale(raw: Record<string, unknown>): SaleResponse {
   const lineSource =
     raw.items ?? raw.sale_items ?? raw.line_items ?? raw.saleItems;
   const items = normalizeLineItems(lineSource);
+  const itemCount =
+    typeof raw.item_count === "number" && Number.isFinite(raw.item_count)
+      ? raw.item_count
+      : items.length > 0
+        ? items.length
+        : 0;
+  const amountPaid =
+    raw.amount_paid != null && Number.isFinite(Number(raw.amount_paid))
+      ? Number(raw.amount_paid)
+      : null;
+  const balanceDue =
+    raw.balance_due != null && Number.isFinite(Number(raw.balance_due))
+      ? Number(raw.balance_due)
+      : null;
   return {
     ...(raw as SaleResponse),
     items,
-    item_count:
-      typeof raw.item_count === "number"
-        ? raw.item_count
-        : items.length > 0
-          ? items.length
-          : (raw.item_count as number | null | undefined) ?? items.length,
+    item_count: itemCount,
+    cashier_name:
+      (raw.cashier_name as string | null | undefined) ??
+      ((raw.cashier as { full_name?: string } | null | undefined)?.full_name ??
+        null),
+    amount_paid: amountPaid,
+    balance_due: balanceDue,
   };
 }
 

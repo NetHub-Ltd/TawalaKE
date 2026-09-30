@@ -181,16 +181,25 @@ export function CheckoutForm({
     const t = setTimeout(async () => {
       setSearchingCustomers(true);
       try {
-        const res = await fetch(
-          `/api/v1/org/customers?business_id=${encodeURIComponent(businessId)}&q=${encodeURIComponent(q)}`,
-          { credentials: "include" },
-        );
+        // Case-insensitive search from 2 chars via backend ilike (name/phone/email)
+        const params = new URLSearchParams({
+          businessId,
+          q,
+          limit: "8",
+        });
+        const res = await fetch(`/api/v1/customers?${params.toString()}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
         const body = await res.json().catch(() => ({}));
-        const list = Array.isArray(body)
-          ? body
-          : Array.isArray(body?.data)
-            ? body.data
-            : [];
+        const data = body?.data ?? body;
+        const list = Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data)
+            ? data
+            : Array.isArray(body?.items)
+              ? body.items
+              : [];
         if (!cancelled) {
           setCustomerHits(
             list.slice(0, 8).map((c: CustomerHit) => ({

@@ -940,6 +940,9 @@ class Sale(BaseMixin, table=True):
     tax_amount: float = Field(default=0.0)
     discount_applied: float = Field(default=0.0)
     total_amount: float = Field(default=0.0)
+    # Denormalized payment projection (source of truth remains payments rows)
+    amount_paid: float = Field(default=0.0)
+    balance_due: float = Field(default=0.0)
     service_amount: Optional[Dict[str, Any]] = Field(
             default=None,
             sa_column=Column(JSONB, nullable=True),
