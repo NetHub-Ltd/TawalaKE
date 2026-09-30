@@ -86,6 +86,16 @@ class SaleReadWithRelations(BaseModel):
     @classmethod
     def _populate_list_helpers(cls, data: Any, handler):
         """Fill list helpers from relations when not provided."""
+        # Capture relations from raw ORM before handler may drop unknown fields
+        raw_payments = None
+        raw_doc = None
+        if isinstance(data, dict):
+            raw_payments = data.get("payments")
+            raw_doc = data.get("document")
+        else:
+            raw_payments = getattr(data, "payments", None)
+            raw_doc = getattr(data, "document", None)
+
         obj = handler(data)
         product_lines = len(obj.items) if obj.items else 0
         # Count service lines so UI is not "0 items" for service-heavy sales
@@ -111,18 +121,39 @@ class SaleReadWithRelations(BaseModel):
                 obj.cashier_name = obj.cashier.full_name
             else:
                 obj.cashier_name = None
-        paid = sum(float(p.amount or 0) for p in (obj.payments or []))
-        total = float(obj.total_amount or 0)
-        if obj.amount_paid is None:
-            obj.amount_paid = round(paid, 2)
-        if obj.balance_due is None:
-            status_val = (
-                obj.status.value if hasattr(obj.status, "value") else str(obj.status)
-            )
-            if status_val == "COMPLETED":
-                obj.balance_due = 0.0
+
+        def _sum_payments(rows) -> float:
+            if not rows:
+                return 0.0
+            total_paid = 0.0
+            for p in rows:
+                if p is None:
+                    continue
+                if isinstance(p, dict):
+                    total_paid += float(p.get("amount") or 0)
+                else:
+                    total_paid += float(getattr(p, "amount", None) or 0)
+            return total_paid
+
+        paid = _sum_payments(obj.payments)
+        if paid <= 0:
+            paid = _sum_payments(raw_payments)
+        if paid <= 0 and raw_doc is not None:
+            if isinstance(raw_doc, dict):
+                paid = float(raw_doc.get("amount_paid") or 0)
             else:
-                obj.balance_due = round(max(0.0, total - paid), 2)
+                paid = float(getattr(raw_doc, "amount_paid", None) or 0)
+
+        total = float(obj.total_amount or 0)
+        # Always recompute for list/detail honesty
+        obj.amount_paid = round(paid, 2)
+        status_val = (
+            obj.status.value if hasattr(obj.status, "value") else str(obj.status)
+        )
+        if status_val == "COMPLETED":
+            obj.balance_due = 0.0
+        else:
+            obj.balance_due = round(max(0.0, total - paid), 2)
         # Coerce payment method enums to str for JSON
         if obj.payments:
             fixed = []

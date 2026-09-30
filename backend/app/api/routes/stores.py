@@ -306,6 +306,7 @@ async def create_pending_sale(
     record_sale = await store_crud.initialize_checkout(db=db, payload=payload_data, current_user=user)
     await db.commit()
     await purge_cache_namespace(redis_client, namespace="sales")
+    await purge_cache_namespace(redis_client, namespace="sales_v2")
     await record_audit(
         db,
         actor=user,
@@ -321,7 +322,7 @@ async def create_pending_sale(
 
 @router.get("/sales/{business_id}", response_model=ApiResponse[PaginatedData[SaleReadWithRelations]], status_code=status.HTTP_200_OK,)
 @limiter.limit("100/minute")
-@cache(expire=CACHE_TTL_SEC, namespace="sales", key_builder=universal_key_builder)
+@cache(expire=CACHE_TTL_SEC, namespace="sales_v2", key_builder=universal_key_builder)
 async def get_sales(
     request: Request,
     business_id: UUID,
@@ -435,6 +436,7 @@ async def checkout_sale(
         background_tasks=background_tasks,
     )
     await purge_cache_namespace(redis_client, namespace="sales")
+    await purge_cache_namespace(redis_client, namespace="sales_v2")
     await record_audit(
         db,
         actor=user,
@@ -481,6 +483,7 @@ async def collect_credit_sale(
         background_tasks=background_tasks,
     )
     await purge_cache_namespace(redis_client, namespace="sales")
+    await purge_cache_namespace(redis_client, namespace="sales_v2")
     await purge_cache_namespace(redis_client, namespace="analytics")
     await record_audit(
         db,
@@ -636,6 +639,7 @@ async def cancel_staged_sale(
         db, sale_id=sale_id, business_id=business_id
     )
     await purge_cache_namespace(redis_client, namespace="sales")
+    await purge_cache_namespace(redis_client, namespace="sales_v2")
     await record_audit(
         db,
         actor=user,
