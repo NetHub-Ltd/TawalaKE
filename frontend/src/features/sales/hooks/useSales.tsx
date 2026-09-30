@@ -176,6 +176,32 @@ export function isCreditSale(sale: SaleResponse): boolean {
   return sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID";
 }
 
+/** Sum of payment.amount when payments are present on the sale payload. */
+export function getSaleAmountPaid(sale: SaleResponse): number {
+  const payments = sale.payments;
+  if (!Array.isArray(payments)) return 0;
+  return payments.reduce((sum, p) => {
+    if (!p || typeof p !== "object") return sum;
+    const amt = Number((p as { amount?: number }).amount);
+    return sum + (Number.isFinite(amt) ? amt : 0);
+  }, 0);
+}
+
+/** Remaining balance for open credit / partial sales. */
+export function getSaleBalanceDue(sale: SaleResponse): number {
+  const total = Number(sale.total_amount) || 0;
+  const paid = getSaleAmountPaid(sale);
+  if (sale.status === "COMPLETED") return 0;
+  if (sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID") {
+    return Math.max(0, Math.round((total - paid) * 100) / 100);
+  }
+  // Fallback: if payments exist but status is other
+  if (paid > 0) return Math.max(0, Math.round((total - paid) * 100) / 100);
+  return 0;
+}
+
+
+
 const fetchSalesApi = async ({
   businessId,
   saleId,

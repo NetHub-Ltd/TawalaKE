@@ -7,7 +7,8 @@ import {
   SaleResponse,
   getSaleItemCount,
   getSaleCashierName,
-  isCreditSale,
+  getSaleBalanceDue,
+  getSaleAmountPaid,
 } from "@/features/sales/hooks/useSales";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import {
@@ -51,9 +52,9 @@ function toNumber(value: unknown) {
 }
 
 function statusLabel(status: string) {
-  if (status === "PENDING_PAYMENT") return "Credit · due";
+  if (status === "PENDING_PAYMENT") return "Unpaid";
   if (status === "PARTIALLY_PAID") return "Partially paid";
-  if (status === "COMPLETED") return "Completed";
+  if (status === "COMPLETED") return "Paid";
   if (status === "CANCELLED") return "Cancelled";
   return status.replace(/_/g, " ");
 }
@@ -75,10 +76,10 @@ function statusStyles(status: string) {
 interface SalesRowProps {
   sale: SaleResponse;
   onClick: () => void;
-  previewHref: string;
+  previewHref?: string;
 }
 
-function SalesRow({ sale, onClick, previewHref }: SalesRowProps) {
+function SalesRow({ sale, onClick }: SalesRowProps) {
   const currency = (sale.currency as string) || "KES";
   const total = toNumber(sale.total_amount);
   const itemCount = getSaleItemCount(sale);
@@ -87,7 +88,8 @@ function SalesRow({ sale, onClick, previewHref }: SalesRowProps) {
     (sale.customer as { name?: string } | null | undefined)?.name || null;
   const timestamp =
     (sale.updated_at as string | undefined) || sale.created_at;
-  const credit = isCreditSale(sale);
+  const due = getSaleBalanceDue(sale);
+  const paid = getSaleAmountPaid(sale);
 
   return (
     <tr
@@ -148,20 +150,22 @@ function SalesRow({ sale, onClick, previewHref }: SalesRowProps) {
         </span>
       </td>
 
-      <td className="py-3.5 px-4 sm:px-5 w-[20%]">
+      <td className="py-3.5 px-4 sm:px-5 w-[22%] text-right">
         <div className="flex items-center justify-end gap-2">
-          <span className="font-mono font-bold text-[13px] text-foreground tabular-nums">
-            {formatMoney(total, currency)}
-          </span>
-          {credit && (
-            <a
-              href={previewHref}
-              onClick={(e) => e.stopPropagation()}
-              className="shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 hover:bg-amber-500 hover:text-white transition-colors"
-            >
-              Invoice
-            </a>
-          )}
+          <div className="min-w-[7.5rem] text-right">
+            <div className="font-mono font-bold text-[13px] text-foreground tabular-nums leading-tight">
+              {formatMoney(total, currency)}
+            </div>
+            {due > 0.001 ? (
+              <div className="mt-0.5 font-mono text-[11px] font-semibold tabular-nums text-rose-700 leading-tight">
+                Due {formatMoney(due, currency)}
+              </div>
+            ) : paid > 0.001 && String(sale.status) === "COMPLETED" ? (
+              <div className="mt-0.5 text-[11px] font-medium text-emerald-700 leading-tight">
+                Settled
+              </div>
+            ) : null}
+          </div>
           <RowChevron
             size={16}
             className="text-muted/40 group-hover:text-brand-primary group-hover:translate-x-0.5 transition-all duration-150 shrink-0"
@@ -245,8 +249,8 @@ export default function SalesHistoryWorkspace() {
             aria-label="Filter by status"
           >
             <option value="ALL">All transactions</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="PENDING_PAYMENT">Credit · due</option>
+            <option value="COMPLETED">Paid</option>
+            <option value="PENDING_PAYMENT">Unpaid</option>
             <option value="PARTIALLY_PAID">Partially paid</option>
             <option value="CANCELLED">Cancelled</option>
           </select>
