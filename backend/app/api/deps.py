@@ -55,16 +55,29 @@ def universal_key_builder(func, namespace: str = "", *, request: Request = None,
 async def purge_cache_namespace(redis_client: AsyncRedis, namespace: str, **identifiers):
     """
     Purges targeted cache matrices cleanly across any namespace.
-    Usage: await purge_cache_namespace(redis_client, "products", business_id=business_id)
+    Usage:
+      await purge_cache_namespace(redis_client, "products", business_id=business_id)
+      await purge_cache_namespace(redis_client, "sales_v2")  # whole namespace
+    When no identifiers are passed, every key under the namespace is deleted.
+    (Previously the empty-identifier path was a silent no-op — sales list stayed stale.)
     """
     try:
-        for key, value in identifiers.items():
-            scan_pattern = f"fastapi-cache:{namespace}:*{key}={value}*"
-            
+        deleted = 0
+        if not identifiers:
+            scan_pattern = f"fastapi-cache:{namespace}:*"
             async for match_key in redis_client.scan_iter(match=scan_pattern):
                 await redis_client.delete(match_key)
-                
-        logger.info(f"Evicted stale entries for namespace: {namespace}")
+                deleted += 1
+        else:
+            for key, value in identifiers.items():
+                scan_pattern = f"fastapi-cache:{namespace}:*{key}={value}*"
+                async for match_key in redis_client.scan_iter(match=scan_pattern):
+                    await redis_client.delete(match_key)
+                    deleted += 1
+        logger.info(
+            f"Evicted stale entries for namespace={namespace} deleted={deleted} "
+            f"filter={identifiers or 'ALL'}"
+        )
     except Exception as e:
         logger.error(f"Cache eviction failed: {str(e)}")
 

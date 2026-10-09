@@ -33,9 +33,12 @@ export interface SaleResponse {
   cashier?: { id: string; full_name?: string | null; email?: string | null } | null;
   customer?: { id: string; name: string; phone?: string | null } | null;
   items?: SaleLineItem[] | null;
+  payments?: Array<{ amount?: number; method?: string; reference?: string | null }> | null;
   /** Server-computed helpers (additive) */
   item_count?: number | null;
   cashier_name?: string | null;
+  amount_paid?: number | null;
+  balance_due?: number | null;
   [key: string]: unknown;
 }
 
@@ -92,15 +95,30 @@ function normalizeOneSale(raw: Record<string, unknown>): SaleResponse {
   const lineSource =
     raw.items ?? raw.sale_items ?? raw.line_items ?? raw.saleItems;
   const items = normalizeLineItems(lineSource);
+  const itemCount =
+    typeof raw.item_count === "number" && Number.isFinite(raw.item_count)
+      ? raw.item_count
+      : items.length > 0
+        ? items.length
+        : 0;
+  const amountPaid =
+    raw.amount_paid != null && Number.isFinite(Number(raw.amount_paid))
+      ? Number(raw.amount_paid)
+      : null;
+  const balanceDue =
+    raw.balance_due != null && Number.isFinite(Number(raw.balance_due))
+      ? Number(raw.balance_due)
+      : null;
   return {
     ...(raw as SaleResponse),
     items,
-    item_count:
-      typeof raw.item_count === "number"
-        ? raw.item_count
-        : items.length > 0
-          ? items.length
-          : (raw.item_count as number | null | undefined) ?? items.length,
+    item_count: itemCount,
+    cashier_name:
+      (raw.cashier_name as string | null | undefined) ??
+      ((raw.cashier as { full_name?: string } | null | undefined)?.full_name ??
+        null),
+    amount_paid: amountPaid,
+    balance_due: balanceDue,
   };
 }
 
@@ -175,6 +193,48 @@ export function getSaleBusinessName(sale: SaleResponse): string {
 export function isCreditSale(sale: SaleResponse): boolean {
   return sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID";
 }
+
+/** Sum of payment rows (ledger). */
+function sumPaymentRows(sale: SaleResponse): number {
+  const payments = sale.payments;
+  if (!Array.isArray(payments) || payments.length === 0) return 0;
+  return payments.reduce((sum, p) => {
+    if (!p || typeof p !== "object") return sum;
+    const amt = Number((p as { amount?: number }).amount);
+    return sum + (Number.isFinite(amt) ? amt : 0);
+  }, 0);
+}
+
+/** Sum paid toward the sale. Payment rows win over denormalized amount_paid. */
+export function getSaleAmountPaid(sale: SaleResponse): number {
+  const fromRows = sumPaymentRows(sale);
+  if (fromRows > 0.001) return Math.round(fromRows * 100) / 100;
+  if (sale.amount_paid != null && Number.isFinite(Number(sale.amount_paid))) {
+    return Number(sale.amount_paid);
+  }
+  return 0;
+}
+
+/** Remaining balance. Never trust stale balance_due when payments exist. */
+export function getSaleBalanceDue(sale: SaleResponse): number {
+  if (sale.status === "COMPLETED") return 0;
+  const total = Number(sale.total_amount) || 0;
+  const fromRows = sumPaymentRows(sale);
+  if (fromRows > 0.001 || (Array.isArray(sale.payments) && sale.payments.length > 0)) {
+    return Math.max(0, Math.round((total - fromRows) * 100) / 100);
+  }
+  if (sale.balance_due != null && Number.isFinite(Number(sale.balance_due))) {
+    return Math.max(0, Number(sale.balance_due));
+  }
+  const paid = getSaleAmountPaid(sale);
+  if (sale.status === "PENDING_PAYMENT" || sale.status === "PARTIALLY_PAID") {
+    return Math.max(0, Math.round((total - paid) * 100) / 100);
+  }
+  if (paid > 0) return Math.max(0, Math.round((total - paid) * 100) / 100);
+  return 0;
+}
+
+
 
 const fetchSalesApi = async ({
   businessId,

@@ -355,13 +355,23 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 or f"TXN-{uuid4().hex[:8].upper()}",
             )
             db.add(payment)
-            from app.core.payment_methods import resolve_sale_status_after_payment
+            from app.core.payment_methods import (
+                resolve_sale_status_after_payment,
+                sync_sale_payment_columns,
+            )
             sale.status = SaleStatus(
                 resolve_sale_status_after_payment(
                     amount_due_before=calc["amount_due_at_payment"],
                     amount_applied=calc["amount"],
                 )
             )
+            # Include this payment in the denormalized columns (prior payments empty at finalize)
+            sync_sale_payment_columns(sale, [payment])
+            db.add(sale)
+
+        if is_credit:
+            from app.core.payment_methods import sync_sale_payment_columns
+            sync_sale_payment_columns(sale, [])
             db.add(sale)
 
         # 4. Customer: reuse by phone within business when possible; never pass removed sale_id
@@ -392,6 +402,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
         if customer is not None:
             sale.customer_id = customer.id
             db.add(sale)
+        if sale.customer_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Customer is required. Provide customer name and phone to complete the sale.",
+            )
 
         # 5. Stock deduction — ALWAYS for cash and credit: customer walked out with goods.
         # 4. Stock deduction ALWAYS (paid or credit) via stock_crud.
@@ -446,6 +461,13 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 )
             )
             new_sale = (await db.exec(new_stmt)).first()
+            # Re-sync denormalized money columns from persisted payment rows
+            if new_sale is not None:
+                from app.core.payment_methods import sync_sale_payment_columns
+                sync_sale_payment_columns(new_sale, list(new_sale.payments or []))
+                db.add(new_sale)
+                await db.commit()
+                await db.refresh(new_sale)
             return new_sale
         except IntegrityError as e:
             await db.rollback()
@@ -538,13 +560,18 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             or f"COLLECT-{uuid4().hex[:8].upper()}",
         )
         db.add(payment)
-        from app.core.payment_methods import resolve_sale_status_after_payment
+        from app.core.payment_methods import (
+            resolve_sale_status_after_payment,
+            sync_sale_payment_columns,
+        )
         sale.status = SaleStatus(
             resolve_sale_status_after_payment(
                 amount_due_before=calc["amount_due_at_payment"],
                 amount_applied=calc["amount"],
             )
         )
+        prior = list(sale.payments or [])
+        sync_sale_payment_columns(sale, prior + [payment])
         db.add(sale)
 
         from app.services.analytics_outbox import enqueue_analytics_outbox

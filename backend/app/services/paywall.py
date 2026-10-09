@@ -187,6 +187,18 @@ class Entitlements:
 
     @classmethod
     def from_cache_dict(cls, data: Dict[str, Any]) -> "Entitlements":
+        """Restore full entitlements including access_phase / grace_end_date.
+
+        Dropping access_phase used to reintroduce false SUBSCRIPTION_EXPIRED
+        during grace (phase defaulted to none while end_date was past).
+        """
+        phase = data.get("access_phase")
+        if phase not in ("active", "grace", "locked", "none"):
+            # Legacy cache rows without phase: derive conservatively
+            if bool(data.get("active")):
+                phase = "active"
+            else:
+                phase = "none"
         return cls(
             organization_id=str(data["organization_id"]),
             subscription_id=data.get("subscription_id"),
@@ -197,6 +209,8 @@ class Entitlements:
             trial=bool(data.get("trial")),
             start_date=data.get("start_date"),
             end_date=data.get("end_date"),
+            access_phase=str(phase),
+            grace_end_date=data.get("grace_end_date"),
             limits=dict(data.get("limits") or {}),
             features=dict(data.get("features") or {}),
             usage={k: int(v) for k, v in (data.get("usage") or {}).items()},
@@ -549,25 +563,61 @@ class PaywallService:
     # Enforcement
     # ------------------------------------------------------------------
     def require_active(self, ent: Entitlements) -> Entitlements:
-        if not ent.active:
+        """Allow active and grace; block locked / none / inactive with 402 + clear CTA.
+
+        Grace is intentional full access after plan end_date until grace_end_date.
+        Do not treat past end_date as expired when access_phase is grace.
+        """
+        phase = getattr(ent, "access_phase", None) or (
+            "active" if ent.active else "none"
+        )
+
+        # Full access during paid period or post-trial grace
+        if phase in ("active", "grace"):
+            return ent
+
+        if phase == "locked":
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail=_paywall_detail(
-                    "SUBSCRIPTION_INACTIVE",
-                    "No active subscription. Start a trial or choose a plan to continue.",
+                    "SUBSCRIPTION_LOCKED",
+                    "Your organization's access is locked because the trial and grace "
+                    "period have ended. The organization owner can complete payment on "
+                    "Billing, or contact Tawala support for a short extension.",
+                    access_phase=phase,
                     plan_code=ent.plan_code,
+                    action="billing",
                 ),
             )
+
+        # phase none / inactive / unknown
+        if not ent.active:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=_paywall_detail(
+                    "SUBSCRIPTION_INACTIVE",
+                    "This organization has no active plan. Start a trial or choose a "
+                    "plan on Billing to continue.",
+                    access_phase=phase,
+                    plan_code=ent.plan_code,
+                    action="billing",
+                ),
+            )
+
+        # Stale cache: active flag true but end_date past and phase not grace
         if ent.end_date:
             try:
                 end = datetime.fromisoformat(ent.end_date)
                 if _is_expired(end):
                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
+                        status_code=status.HTTP_402_PAYMENT_REQUIRED,
                         detail=_paywall_detail(
                             "SUBSCRIPTION_EXPIRED",
-                            "Your subscription has expired. Renew or upgrade to continue.",
+                            "Your subscription period has ended. Renew or upgrade on "
+                            "Billing to restore access for your team.",
+                            access_phase=phase,
                             plan_code=ent.plan_code,
+                            action="billing",
                         ),
                     )
             except HTTPException:
@@ -580,13 +630,14 @@ class PaywallService:
         self.require_active(ent)
         if not ent.has_feature(feature_key):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail=_paywall_detail(
                     "FEATURE_NOT_AVAILABLE",
-                    f"'{feature_key}' is not included in your current plan ({ent.plan_name}). "
-                    "Upgrade to unlock it.",
+                    f"“{feature_key}” is not included in your current plan "
+                    f"({ent.plan_name}). Upgrade on Billing to unlock it.",
                     feature=feature_key,
                     plan_code=ent.plan_code,
+                    action="billing",
                 ),
             )
         return ent
@@ -602,12 +653,14 @@ class PaywallService:
         if mode == "any":
             if not any(ent.has_feature(k) for k in keys):
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
+                    status_code=status.HTTP_402_PAYMENT_REQUIRED,
                     detail=_paywall_detail(
                         "FEATURE_NOT_AVAILABLE",
-                        f"None of {keys} are included in plan {ent.plan_name}.",
+                        f"None of {keys} are included in plan {ent.plan_name}. "
+                        "Upgrade on Billing to unlock the features you need.",
                         feature=keys[0],
                         plan_code=ent.plan_code,
+                        action="billing",
                     ),
                 )
             return ent
@@ -635,31 +688,36 @@ class PaywallService:
                 detail=_paywall_detail(
                     "PLAN_LIMIT_REACHED",
                     f"Plan limit reached for {label} ({cur}/{maximum}). "
-                    f"Upgrade from {ent.plan_name} to add more.",
+                    f"Upgrade from {ent.plan_name} on Billing to add more capacity.",
                     limit_key=limit_key,
                     current=cur,
                     maximum=maximum,
                     plan_code=ent.plan_code,
+                    action="billing",
                 ),
             )
         return ent
 
-
     def require_writable(self, ent: Entitlements) -> Entitlements:
-        """Block mutations when subscription is locked or missing."""
-        phase = getattr(ent, "access_phase", None) or ("active" if ent.active else "none")
-        if phase == "locked" or (not ent.active and phase != "grace"):
-            if phase == "locked" or not ent.active:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=_paywall_detail(
-                        "SUBSCRIPTION_LOCKED",
-                        "Your organization's access is locked. The owner must complete payment, "
-                        "or contact support to extend the grace period.",
-                        access_phase=phase,
-                        plan_code=ent.plan_code,
-                    ),
-                )
+        """Block mutations when subscription is locked or missing (grace allowed)."""
+        phase = getattr(ent, "access_phase", None) or (
+            "active" if ent.active else "none"
+        )
+        if phase in ("active", "grace"):
+            return ent
+        if phase == "locked" or not ent.active:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=_paywall_detail(
+                    "SUBSCRIPTION_LOCKED",
+                    "Your organization's access is locked because the trial and grace "
+                    "period have ended. The organization owner can complete payment on "
+                    "Billing, or contact Tawala support for a short extension.",
+                    access_phase=phase,
+                    plan_code=ent.plan_code,
+                    action="billing",
+                ),
+            )
         return ent
 
     async def enforce_create_business(
