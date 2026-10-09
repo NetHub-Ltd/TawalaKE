@@ -48,7 +48,10 @@ async def require_active_plan(
     db: SessionDep,
     redis: AsyncRedis = Depends(get_redis),
 ) -> Entitlements:
-    """Endpoint/router gate: subscription must be active and not expired."""
+    """Endpoint/router gate: subscription in active or grace phase (full access).
+
+    Locked / inactive / none raise 402 with action-oriented detail.
+    """
     org_id = _org_id_from_user(user)
     ent = await paywall.resolve(db, org_id, redis)
     return paywall.require_active(ent)
