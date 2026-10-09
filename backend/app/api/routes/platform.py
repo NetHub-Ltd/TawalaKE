@@ -459,8 +459,13 @@ async def update_platform_user(
     body: PlatformUserUpdate,
     db: SessionDep,
     actor: PlatformAuthUser,
+    background_tasks: BackgroundTasks,
 ) -> PlatformUserRead:
-    """Update platform user fields. Soft constraints on SUPER_ADMIN elevation."""
+    """Update platform user fields. Soft constraints on SUPER_ADMIN elevation.
+
+    force_password_change: always generate a complex temporary password, hash it,
+    set must_change_password, and email it (never return plaintext in the response).
+    """
     target = (
         await db.exec(
             select(PlatformUser).where(
@@ -489,17 +494,32 @@ async def update_platform_user(
     if "active" in data and data["active"] is not None:
         target.active = data["active"]
 
-    # Password reset: prefer server-side generation (force_password_change).
-    # Never log or return plaintext. Client-supplied password remains supported
-    # for compatibility but is not used by the platform UI.
+    # Password reset: always server-generate when force_password_change (issue #487).
+    # Never log or return plaintext. Email is the only delivery channel.
     force_reset = bool(data.get("force_password_change"))
     supplied_password = data.get("password")
+    emailed_reset = False
     if force_reset:
         temporary_password = secrets.token_urlsafe(18)
         target.hashed_password = security.hash_password(temporary_password)
         target.must_change_password = True
-        # temporary_password intentionally discarded — operator coordinates out-of-band
-        # or user uses forgot/reset flows; plaintext must not leave this scope.
+
+        frontend = (settings.frontend_url or "").rstrip("/")
+        if frontend and not frontend.startswith("http"):
+            frontend = f"https://{frontend}"
+        login_url = f"{frontend}/platform/login" if frontend else "/platform/login"
+
+        background_tasks.add_task(
+            mailer.send_platform_password_reset,
+            to_email=target.email,
+            temporary_password=temporary_password,
+            login_url=login_url,
+            user_name=target.full_name,
+            reset_by_name=getattr(actor, "full_name", None)
+            or getattr(actor, "email", None),
+        )
+        emailed_reset = True
+        # plaintext must not leave this scope after scheduling the email task
         del temporary_password
     elif supplied_password:
         target.hashed_password = security.hash_password(supplied_password)
@@ -520,7 +540,10 @@ async def update_platform_user(
         outcome="success",
         resource_type="platform_user",
         resource_id=target.id,
-        meta={"fields": audit_fields},
+        meta={
+            "fields": audit_fields,
+            "password_reset_emailed": emailed_reset,
+        },
         request_id=request.headers.get("x-request-id"),
     )
     return PlatformUserRead.model_validate(target)
