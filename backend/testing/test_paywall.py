@@ -104,7 +104,7 @@ async def test_require_feature_denied():
     ent = await svc.resolve_from_db(db, sub.organization_id)
     with pytest.raises(HTTPException) as exc:
         svc.require_feature(ent, "full_inventory")
-    assert exc.value.status_code == 403
+    assert exc.value.status_code == 402
     assert exc.value.detail["code"] == "FEATURE_NOT_AVAILABLE"
 
 
@@ -268,7 +268,7 @@ def _db_with_sub_plan(sub, plan, *, biz=0, staff=0, products=0, extra_product_co
 
 
 def test_require_active_expired():
-    """Expired end_date on an otherwise active Entitlements (e.g. stale cache)."""
+    """Past end_date without grace phase (e.g. stale cache) → 402 SUBSCRIPTION_EXPIRED."""
     svc = PaywallService()
     past = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
     ent = Entitlements(
@@ -281,11 +281,62 @@ def test_require_active_expired():
         trial=False,
         start_date=None,
         end_date=past,
+        access_phase="none",  # not grace — treat as expired
     )
     with pytest.raises(HTTPException) as exc:
         svc.require_active(ent)
-    assert exc.value.status_code == 403
+    assert exc.value.status_code == 402
     assert _detail_code(exc.value) == "SUBSCRIPTION_EXPIRED"
+    assert "Billing" in (exc.value.detail.get("message") or "")
+
+
+def test_require_active_allows_grace():
+    """Grace period is full access even when end_date is in the past (#485)."""
+    svc = PaywallService()
+    past = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+    grace_end = (datetime.now(timezone.utc) + timedelta(days=5)).isoformat()
+    ent = Entitlements(
+        organization_id=str(uuid4()),
+        subscription_id=str(uuid4()),
+        plan_id=str(uuid4()),
+        plan_code="NDOVU",
+        plan_name="Ndovu",
+        active=True,
+        trial=True,
+        start_date=None,
+        end_date=past,
+        access_phase="grace",
+        grace_end_date=grace_end,
+        limits={"max_products": 100},
+        features={"pos_and_sales": True},
+        usage={},
+    )
+    assert svc.require_active(ent) is ent
+    assert svc.require_feature(ent, "pos_and_sales") is ent
+
+
+def test_require_active_locked():
+    svc = PaywallService()
+    ent = Entitlements(
+        organization_id=str(uuid4()),
+        subscription_id=str(uuid4()),
+        plan_id=None,
+        plan_code="EXPIRED",
+        plan_name="Expired",
+        active=False,
+        trial=True,
+        start_date=None,
+        end_date=None,
+        access_phase="locked",
+        limits={},
+        features={},
+        usage={},
+    )
+    with pytest.raises(HTTPException) as exc:
+        svc.require_active(ent)
+    assert exc.value.status_code == 402
+    assert _detail_code(exc.value) == "SUBSCRIPTION_LOCKED"
+    assert exc.value.detail.get("action") == "billing"
 
 
 def test_require_active_inactive_entitlements():
@@ -300,9 +351,11 @@ def test_require_active_inactive_entitlements():
         trial=False,
         start_date=None,
         end_date=None,
+        access_phase="none",
     )
     with pytest.raises(HTTPException) as exc:
         svc.require_active(ent)
+    assert exc.value.status_code == 402
     assert _detail_code(exc.value) == "SUBSCRIPTION_INACTIVE"
 
 
@@ -537,7 +590,7 @@ async def test_module_wrappers_delegate():
 
     with pytest.raises(HTTPException) as exc:
         await paywall_mod.require_active_subscription(db, org)
-    assert exc.value.status_code == 403
+    assert exc.value.status_code == 402
 
 
 def test_entitlements_limit_helpers():
@@ -665,7 +718,7 @@ def test_require_writable_blocks_locked():
     )
     with pytest.raises(HTTPException) as exc:
         svc.require_writable(ent)
-    assert exc.value.status_code == 403
+    assert exc.value.status_code == 402
     assert exc.value.detail["code"] == "SUBSCRIPTION_LOCKED"
 
 

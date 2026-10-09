@@ -476,6 +476,53 @@ class EmailService:
         )
 
     @classmethod
+    def send_platform_password_reset(
+        cls,
+        to_email: str,
+        *,
+        temporary_password: str,
+        login_url: str,
+        user_name: Optional[str] = None,
+        reset_by_name: Optional[str] = None,
+    ) -> None:
+        """Platform operator recovery — always server-generated password, emailed once."""
+        name = (user_name or "").strip() or "there"
+        reset_by = (reset_by_name or "").strip() or "A platform administrator"
+        body = (
+            cls._p(f"Hello {name},")
+            + cls._p(
+                f"{reset_by} reset your password for the "
+                f"<strong>Tawala platform</strong> operator console."
+            )
+            + cls._p(
+                "Use the temporary password below to sign in. "
+                "You will be asked to change it before continuing."
+            )
+            + cls._p(
+                f'<span style="font-size:16px;font-family:ui-monospace,monospace;'
+                f'letter-spacing:1px;"><strong>{temporary_password}</strong></span>'
+            )
+            + cls._cta(login_url, "Sign in to platform")
+            + cls._muted(
+                "If you did not expect this reset, contact a platform administrator "
+                "immediately and do not use this password."
+            )
+            + cls._raw_link(login_url)
+        )
+        html = cls.render_shell(
+            title="Your Tawala platform password was reset",
+            preheader="Temporary password for platform sign-in",
+            eyebrow="Security",
+            body_html=body,
+        )
+        cls.send_transactional_email(
+            sender=settings.email_from_security,
+            to_addresses=[to_email],
+            subject="Your Tawala platform password was reset",
+            html_content=html,
+        )
+
+    @classmethod
     def send_password_reset(
         cls,
         to_email: str,

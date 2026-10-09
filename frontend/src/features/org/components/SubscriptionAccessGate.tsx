@@ -114,9 +114,9 @@ export function SubscriptionAccessGate({
           </h2>
           <p className="text-sm leading-relaxed text-muted">
             Your organization&apos;s trial and grace period have ended. You can still
-            sign in, but workspaces are locked until payment is completed.
-            Contact your organization owner or Tawala support if you need a short
-            extension.
+            sign in, but workspaces stay locked until payment is completed.
+            The organization owner should open Billing to pay, or contact Tawala
+            support if you need a short extension.
           </p>
           <Link
             href={`/org/${organizationId}/billing`}
