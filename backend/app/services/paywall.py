@@ -187,6 +187,18 @@ class Entitlements:
 
     @classmethod
     def from_cache_dict(cls, data: Dict[str, Any]) -> "Entitlements":
+        """Restore full entitlements including access_phase / grace_end_date.
+
+        Dropping access_phase used to reintroduce false SUBSCRIPTION_EXPIRED
+        during grace (phase defaulted to none while end_date was past).
+        """
+        phase = data.get("access_phase")
+        if phase not in ("active", "grace", "locked", "none"):
+            # Legacy cache rows without phase: derive conservatively
+            if bool(data.get("active")):
+                phase = "active"
+            else:
+                phase = "none"
         return cls(
             organization_id=str(data["organization_id"]),
             subscription_id=data.get("subscription_id"),
@@ -197,6 +209,8 @@ class Entitlements:
             trial=bool(data.get("trial")),
             start_date=data.get("start_date"),
             end_date=data.get("end_date"),
+            access_phase=str(phase),
+            grace_end_date=data.get("grace_end_date"),
             limits=dict(data.get("limits") or {}),
             features=dict(data.get("features") or {}),
             usage={k: int(v) for k, v in (data.get("usage") or {}).items()},
