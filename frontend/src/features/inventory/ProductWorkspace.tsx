@@ -593,10 +593,14 @@ function ProductSettingsForm({
   );
   const [sku, setSku] = useState(String(attrs.sku ?? ""));
   const [trackStock, setTrackStock] = useState(Boolean(product.track_stock));
+  const [itemType, setItemType] = useState<"PRODUCT" | "SERVICE">(
+    product.item_type === "SERVICE" ? "SERVICE" : "PRODUCT"
+  );
   const [active, setActive] = useState(product.active !== false);
   const [minStock, setMinStock] = useState(String(product.min_stock_level ?? 10));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const isService = itemType === "SERVICE";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -609,11 +613,27 @@ function ProductSettingsForm({
         setSaving(false);
         return;
       }
-      // On-hand quantity stays on Receive / Count / Adjust — not here.
+      if (
+        product.item_type !== itemType &&
+        itemType === "SERVICE" &&
+        product.track_stock &&
+        (product.stock || 0) > 0
+      ) {
+        const ok = window.confirm(
+          `Convert “${product.label}” to a service?\n\n` +
+            `Services do not track their own stock. Current on-hand (${product.stock}) will no longer be managed on this item. ` +
+            `You can still attach material products (e.g. paper, blank tees) for stock to decrease when this service is sold.`
+        );
+        if (!ok) {
+          setSaving(false);
+          return;
+        }
+      }
       await onSave({
         label: label.trim(),
         category,
-        track_stock: trackStock,
+        item_type: itemType,
+        track_stock: isService ? false : trackStock,
         active,
         min_stock_level: Number(minStock) || 0,
         cost_price: buyingPrice === "" ? undefined : Number(buyingPrice),
@@ -638,8 +658,28 @@ function ProductSettingsForm({
     <form onSubmit={submit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block space-y-1.5 sm:col-span-2">
-          <span className="text-sm font-medium text-foreground">Product name *</span>
+          <span className="text-sm font-medium text-foreground">Name *</span>
           <input className={field} value={label} onChange={(e) => setLabel(e.target.value)} required />
+        </label>
+        <label className="block space-y-1.5 sm:col-span-2">
+          <span className="text-sm font-medium text-foreground">Type</span>
+          <select
+            className={field}
+            value={itemType}
+            onChange={(e) => {
+              const v = e.target.value === "SERVICE" ? "SERVICE" : "PRODUCT";
+              setItemType(v);
+              if (v === "SERVICE") setTrackStock(false);
+            }}
+          >
+            <option value="PRODUCT">Product (can hold stock)</option>
+            <option value="SERVICE">Service (no self-stock; optional materials)</option>
+          </select>
+          <span className="block text-xs text-muted">
+            {isService
+              ? "No on-hand for this item. Attach material products if the service uses goods (paper, blank shirts). Different sizes = different products."
+              : "Physical goods. You can convert to a service anytime."}
+          </span>
         </label>
         <label className="block space-y-1.5">
           <span className="text-sm font-medium text-foreground">Category</span>

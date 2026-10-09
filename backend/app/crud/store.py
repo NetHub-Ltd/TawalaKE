@@ -149,7 +149,16 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="Quantity must be greater than zero.",
                 )
-            if product.track_stock and float(product.stock or 0) < qty:
+            from app.models.models import ItemType
+            from app.crud.product_materials import (
+                check_material_stock,
+                recipe_unit_cogs,
+            )
+
+            is_service = getattr(product, "item_type", None) == ItemType.SERVICE
+            if is_service:
+                await check_material_stock(db, service=product, service_qty=qty)
+            elif product.track_stock and float(product.stock or 0) < qty:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
                     detail=(
@@ -162,12 +171,16 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             item_total = float(product.selling_price) * qty
             subtotal += item_total
 
-            # Honest cost: null stays null (do not invent selling_price as COGS)
-            cost_at_sale = (
-                float(product.cost_price)
-                if product.cost_price is not None
-                else None
-            )
+            # Honest cost: service COGS from material recipe when available
+            cost_at_sale = None
+            if is_service:
+                unit_cogs = await recipe_unit_cogs(db, product.id)
+                if unit_cogs is not None:
+                    cost_at_sale = unit_cogs
+                elif product.cost_price is not None:
+                    cost_at_sale = float(product.cost_price)
+            elif product.cost_price is not None:
+                cost_at_sale = float(product.cost_price)
 
             sale_items.append(
                 SaleItem(
@@ -408,14 +421,28 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 detail="Customer is required. Provide customer name and phone to complete the sale.",
             )
 
-        # 5. Stock deduction — ALWAYS for cash and credit: customer walked out with goods.
-        # 4. Stock deduction ALWAYS (paid or credit) via stock_crud.
+        # 5. Stock deduction — products reduce self-stock; services reduce materials.
+        from app.models.models import ItemType
+        from app.crud.product_materials import deduct_materials_for_sale
+
         for item in sale.items:
             prod_stmt = select(Product).where(Product.id == item.product_id).with_for_update()
             prod_res = await db.exec(prod_stmt)
             product = prod_res.one_or_none()
+            if not product:
+                continue
 
-            if product and product.track_stock:
+            if getattr(product, "item_type", None) == ItemType.SERVICE:
+                await deduct_materials_for_sale(
+                    db,
+                    service=product,
+                    service_qty=float(item.quantity),
+                    business_id=sale.business_id,
+                    performed_by=sale.cashier_id,
+                    sale_id=sale.id,
+                    commit=False,
+                )
+            elif product.track_stock:
                 await stock_crud.apply_sale_item_deduction(
                     db,
                     product=product,

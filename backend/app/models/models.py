@@ -567,6 +567,49 @@ class Product(BaseMixin, table=True):
 
     transactions: List["StockHistory"] = Relationship(back_populates="product")
 
+    def is_service(self) -> bool:
+        return self.item_type == ItemType.SERVICE
+
+
+class ProductMaterial(BaseMixin, table=True):
+    """
+    Fixed recipe: one unit of a SERVICE consumes `quantity` of a PRODUCT material.
+    Size/colour differences are separate products — no attribute formulas.
+    """
+    __tablename__ = "product_materials"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "service_id", "material_id", name="uq_product_materials_service_material"
+        ),
+    )
+
+    organization_id: Optional[UUID] = Field(
+        foreign_key="organizations.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    business_id: UUID = Field(
+        foreign_key="businesses.id",
+        index=True,
+        ondelete="CASCADE",
+    )
+    service_id: UUID = Field(
+        foreign_key="products.id",
+        index=True,
+        ondelete="CASCADE",
+        description="Catalog item with item_type=SERVICE.",
+    )
+    material_id: UUID = Field(
+        foreign_key="products.id",
+        index=True,
+        ondelete="CASCADE",
+        description="Catalog item with item_type=PRODUCT that is consumed.",
+    )
+    quantity: float = Field(
+        default=1.0,
+        description="Units of material consumed per 1 unit of service sold.",
+    )
+
 
 class StockHistory(BaseMixin, table=True):
     """
