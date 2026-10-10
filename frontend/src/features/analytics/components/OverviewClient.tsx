@@ -21,7 +21,6 @@ import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { PermissionChecking } from "@/features/auth/components/PermissionChecking";
 import { Permission } from "@/lib/rbac";
 import { MyShiftOverview } from "@/features/analytics/components/MyShiftOverview";
-import { Spinner } from "@/lib/components/ui";
 
 export function OverviewClient({
   organizationId,
