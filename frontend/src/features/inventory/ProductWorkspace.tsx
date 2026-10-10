@@ -731,6 +731,22 @@ function ProductSettingsForm({
           return;
         }
       }
+      // Materials only when already a service (or converting to service with empty recipe first).
+      // If converting PRODUCT → SERVICE, save type first; user adds materials on the next save.
+      const persistedService = product.item_type === "SERVICE";
+      const convertingToService = !persistedService && itemType === "SERVICE";
+      const materialsPayload =
+        itemType === "SERVICE" && persistedService
+          ? materials.map((m) => ({
+              material_id: m.material_id,
+              quantity: Number(m.quantity) || 1,
+            }))
+          : itemType === "SERVICE" && convertingToService
+            ? []
+            : itemType === "PRODUCT"
+              ? []
+              : undefined;
+
       await onSave({
         label: label.trim(),
         category,
@@ -740,12 +756,7 @@ function ProductSettingsForm({
         min_stock_level: Number(minStock) || 0,
         cost_price: buyingPrice === "" ? undefined : Number(buyingPrice),
         selling_price: sellingPrice === "" ? undefined : sell,
-        materials: isService
-          ? materials.map((m) => ({
-              material_id: m.material_id,
-              quantity: Number(m.quantity) || 1,
-            }))
-          : [],
+        ...(materialsPayload !== undefined ? { materials: materialsPayload } : {}),
         attributes: {
           unit_of_measure: uom || null,
           buying_price: buyingPrice === "" ? null : Number(buyingPrice),
@@ -871,15 +882,16 @@ function ProductSettingsForm({
         </label>
       </div>
 
-      {isService && (
-        <ServiceMaterialsEditor
-          businessId={businessId}
-          excludeProductId={product.id}
-          value={materials}
-          onChange={setMaterials}
-          disabled={saving || isPending}
-        />
-      )}
+      {/* Materials only after the row is persisted as SERVICE — not on type toggle alone */}
+      <ServiceMaterialsEditor
+        businessId={businessId}
+        excludeProductId={product.id}
+        value={materials}
+        onChange={setMaterials}
+        disabled={saving || isPending}
+        serviceReady={product.item_type === "SERVICE"}
+        serviceCategory={product.category || category}
+      />
 
       <div className="flex flex-wrap gap-6">
         {!isService && (
