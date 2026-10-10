@@ -25,14 +25,28 @@ export function ProductComposerWrapper({ businessId, productId }: ProductCompose
 
   const handleUpdate = async (values: ProductCreate): Promise<void> => {
     const safeCategory = values.category === null ? undefined : (values.category as string);
+    // ProductResponse.track_stock is boolean; ProductCreate allows null — normalize for the mutation type.
+    const trackStock =
+      values.track_stock === null || values.track_stock === undefined
+        ? values.item_type === "SERVICE"
+          ? false
+          : true
+        : Boolean(values.track_stock);
 
     return new Promise((resolve, reject) => {
       updateProduct.mutate(
-        { 
-          id: productId, 
-          ...values,
-          category: safeCategory
-        }, 
+        {
+          id: productId,
+          label: values.label,
+          selling_price: values.selling_price,
+          stock: values.stock,
+          category: safeCategory,
+          attributes: values.attributes,
+          item_type: values.item_type === "SERVICE" ? "SERVICE" : "PRODUCT",
+          track_stock: trackStock,
+          cost_price: values.cost_price ?? undefined,
+          materials: values.materials ?? undefined,
+        },
         {
           onSuccess: () => {
             router.push(`/org/${organizationId}/${businessId}/inventory`);
@@ -41,7 +55,7 @@ export function ProductComposerWrapper({ businessId, productId }: ProductCompose
           },
           onError: (error) => {
             reject(error);
-          }
+          },
         }
       );
     });
@@ -75,10 +89,13 @@ export function ProductComposerWrapper({ businessId, productId }: ProductCompose
     selling_price: product?.selling_price || 0,
     stock: product?.stock || 0,
     category: product?.category || "other",
+    item_type: product?.item_type === "SERVICE" ? "SERVICE" : "PRODUCT",
+    track_stock: product?.item_type === "SERVICE" ? false : Boolean(product?.track_stock ?? true),
+    materials: product?.materials || [],
     attributes: {
       unit_of_measure: product?.attributes?.unit_of_measure || "pcs",
       buying_price: product?.attributes?.buying_price || 0,
-      sku: product?.attributes.sku || "",
+      sku: product?.attributes?.sku || "",
     },
   };
 

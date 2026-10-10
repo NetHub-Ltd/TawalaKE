@@ -172,8 +172,17 @@ async def get_product_detail(
     db_obj = await product_crud.get(db, product_id)
     if not db_obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-        
-    return ApiResponse(status=True, status_code=200, message="Success", data=db_obj)
+
+    from app.models.models import ItemType
+    from app.crud.product_materials import materials_payload
+
+    data = ProductResponse.model_validate(db_obj)
+    data.item_type = getattr(db_obj.item_type, "value", str(db_obj.item_type or "PRODUCT"))
+    if db_obj.item_type == ItemType.SERVICE:
+        data.materials = await materials_payload(db, db_obj.id)
+    else:
+        data.materials = []
+    return ApiResponse(status=True, status_code=200, message="Success", data=data)
 
 
 @router.post("/new", response_model=ApiResponse[ProductResponse], operation_id="createProduct")
@@ -225,22 +234,56 @@ async def create_product(
     await paywall_service.enforce_create_product(db, org_id, redis=redis_client)
 
     try:
+        from app.models.models import ItemType
+        from app.crud.product_materials import (
+            _normalize_item_type,
+            materials_payload,
+            replace_materials,
+        )
+
         create_data = payload.model_dump(exclude_unset=True)
+        materials_in = create_data.pop("materials", None)
+        item_type = _normalize_item_type(create_data.pop("item_type", None))
+        create_data["item_type"] = item_type
         create_data["organization_id"] = org_id
         create_data["business_id"] = payload.business_id
+        if item_type == ItemType.SERVICE:
+            create_data["track_stock"] = False
+            create_data["stock"] = float(create_data.get("stock") or 0)
+        elif create_data.get("track_stock") is None:
+            create_data["track_stock"] = True
+
         db_obj = await product_crud.create(db, obj_in=create_data)
+        if item_type == ItemType.SERVICE and materials_in:
+            await replace_materials(
+                db,
+                service=db_obj,
+                materials=materials_in,
+                organization_id=org_id,
+            )
         await paywall_service.bump_usage(db, org_id, LIMIT_PRODUCTS, redis=redis_client)
         await db.commit()
-        logger.info(f"Product created: {db_obj}")
-        
-        # Micro-targeted namespace eviction via your generic shared utility
+        await db.refresh(db_obj)
+        logger.info(f"Product created: {db_obj.id} type={item_type}")
+
         await purge_cache_namespace(redis_client, namespace="products", business_id=db_obj.business_id)
-        
+
+        resp = ProductResponse.model_validate(db_obj)
+        resp.item_type = getattr(item_type, "value", str(item_type))
+        resp.materials = (
+            await materials_payload(db, db_obj.id)
+            if item_type == ItemType.SERVICE
+            else []
+        )
         return ApiResponse(
             status=True,
             status_code=status.HTTP_201_CREATED,
-            message="Product created successfully",
-            data=db_obj
+            message=(
+                "Service created successfully"
+                if item_type == ItemType.SERVICE
+                else "Product created successfully"
+            ),
+            data=resp,
         )
     except ValidationError as err:
         logger.error("Validation breakdown on creation sequence: {}", str(err))
@@ -276,16 +319,29 @@ async def update_product(
         )
 
     new_obj = await product_crud.update_product(product_id=product_id, payload=payload, db=db)
-    
-    # Drops targeted arrays matching both specific IDs and parent business matrices cleanly
+
     await purge_cache_namespace(redis_client, namespace="products", product_id=product_id)
     await purge_cache_namespace(redis_client, namespace="products", business_id=new_obj.business_id)
-    
+
+    from app.models.models import ItemType
+    from app.crud.product_materials import materials_payload
+
+    data = ProductResponse.model_validate(new_obj)
+    data.item_type = getattr(new_obj.item_type, "value", str(new_obj.item_type or "PRODUCT"))
+    data.materials = (
+        await materials_payload(db, new_obj.id)
+        if new_obj.item_type == ItemType.SERVICE
+        else []
+    )
     return ApiResponse(
-        status=True, 
-        status_code=status.HTTP_200_OK, 
-        message="Product updated successfully",
-        data=new_obj
+        status=True,
+        status_code=status.HTTP_200_OK,
+        message=(
+            "Service updated successfully"
+            if new_obj.item_type == ItemType.SERVICE
+            else "Product updated successfully"
+        ),
+        data=data,
     )
 
 

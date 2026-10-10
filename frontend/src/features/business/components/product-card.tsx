@@ -211,10 +211,11 @@ export const ProductCard = forwardRef<HTMLButtonElement, ProductCardProps>(
     const isCard = viewMode === "card";
     const stock = product.stock;
     
-    // Core Logic Flags
-    const isOutOfStock = product.track_stock && stock <= 0;
-    const isModerateStock = product.track_stock && stock >= 5 && stock <= 10;
-    const isCriticalStock = product.track_stock && stock > 0 && stock < 5;
+    // Core Logic Flags — services never "out of stock" on themselves
+    const isService = product.item_type === "SERVICE";
+    const isOutOfStock = !isService && product.track_stock && stock <= 0;
+    const isModerateStock = !isService && product.track_stock && stock >= 5 && stock <= 10;
+    const isCriticalStock = !isService && product.track_stock && stock > 0 && stock < 5;
     const isInactive = !product.active;
 
     // Safe Attribute Extraction (No 'any' type)
@@ -234,8 +235,8 @@ export const ProductCard = forwardRef<HTMLButtonElement, ProductCardProps>(
         type="button"
         onClick={(e) => onInteract(product, e)}
         aria-disabled={isOutOfStock || isInactive}
-        aria-label={`${product.label}. Price: KES ${formattedPrice}. Stock: ${
-          product.track_stock ? stock : "Unlimited"
+        aria-label={`${product.label}${isService ? " (service)" : ""}. Price: KES ${formattedPrice}. ${
+          isService ? "Service — no self-stock." : `Stock: ${product.track_stock ? stock : "Unlimited"}`
         }. Hold Ctrl and click to remove from cart.`}
         className={cn(
           "group relative flex w-full text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/50",

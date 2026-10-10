@@ -87,24 +87,71 @@ class ProductCrud(BaseCRUD[Product, ProductCreate, ProductUpdate]):
         """
         Modifies an existing product utilizing the runtime validation pipeline.
         Maintains structural production constraints and commits cleanly.
+        Supports item_type convert + material recipe replace (Phases A/B).
         """
+        from app.models.models import ItemType
+        from app.crud.product_materials import _normalize_item_type, replace_materials
+
         prod_obj = await self.get(db=db, id=product_id)
         if prod_obj is None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Product not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found",
             )
-        
-        updated = await self.update(db=db, db_obj=prod_obj, obj_in=payload)
+
+        data = payload.model_dump(exclude_unset=True)
+        materials_in = data.pop("materials", None)
+        if "item_type" in data and data["item_type"] is not None:
+            data["item_type"] = _normalize_item_type(data["item_type"])
+            if data["item_type"] == ItemType.SERVICE:
+                data["track_stock"] = False
+
+        # Convert product → service: force no self-stock
+        target_type = data.get("item_type", prod_obj.item_type)
+        if target_type == ItemType.SERVICE:
+            data["track_stock"] = False
+
+        updated = await self.update(db=db, db_obj=prod_obj, obj_in=data)
+
+        if materials_in is not None or (
+            "item_type" in data and data.get("item_type") == ItemType.PRODUCT
+        ):
+            from datetime import datetime, timezone
+            from sqlmodel import select
+            from app.models.models import ProductMaterial
+
+            if updated.item_type == ItemType.SERVICE and materials_in is not None:
+                await replace_materials(
+                    db,
+                    service=updated,
+                    materials=materials_in,
+                    organization_id=updated.organization_id,
+                )
+            elif updated.item_type == ItemType.PRODUCT:
+                # Converting to product clears any recipe
+                rows = (
+                    await db.exec(
+                        select(ProductMaterial).where(
+                            ProductMaterial.service_id == updated.id,
+                            ProductMaterial.deleted_at.is_(None),  # type: ignore[attr-defined]
+                        )
+                    )
+                ).all()
+                now = datetime.now(timezone.utc)
+                for row in rows:
+                    row.deleted_at = now
+                    db.add(row)
+
         try:
             await db.commit()
+            await db.refresh(updated)
             return updated
         except SQLAlchemyError as e:
             await db.rollback()
             logger.error("Failed to commit product updates for ID {}: {}", product_id, str(e))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Could not finalize product updates transaction."
+                detail="Could not finalize product updates transaction.",
             )
 
     async def fetch_business_products(
