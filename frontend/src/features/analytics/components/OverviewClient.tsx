@@ -8,13 +8,11 @@ import { PeriodPills } from "./PeriodPills";
 import { SalesPanel } from "./SalesPanel";
 import { ProductsPanel } from "./ProductsPanel";
 import { StaffPanel } from "./StaffPanel";
-import { InsightsStrip } from "./InsightsStrip";
 import {
   useSalesDashboard,
   useHourlyReport,
   useProductsReport,
   useStaffReport,
-  useInsightsReport,
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
@@ -68,13 +66,6 @@ export function OverviewClient({
     canReports && tab === "staff",
     dateArg
   );
-  const insights = useInsightsReport(
-    normalizedBusinessId,
-    period,
-    canReports && tab === "sales",
-    dateArg
-  );
-
   const anyError =
     dash.isError || hourly.isError || products.isError || staff.isError;
   const errorMessage = useMemo(() => {
@@ -139,7 +130,6 @@ export function OverviewClient({
               hourly.refetch();
               products.refetch();
               staff.refetch();
-              insights.refetch();
             }}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
