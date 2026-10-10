@@ -4,16 +4,12 @@ function generateSkuSuffix() {
   return Date.now().toString();
 }
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { ProductCreate } from "@/lib/api/generated/models/productCreate";
 import { Loader2 } from "lucide-react";
 import { useCatalogOptions } from "@/features/catalog/useCatalogOptions";
-import {
-  ServiceMaterialsEditor,
-  type MaterialLine,
-} from "@/features/inventory/ServiceMaterialsEditor";
 
 export type ProductCategory = ProductCreate["category"];
 
@@ -111,13 +107,6 @@ export function AssetComposer({
 
   const itemType = watch("item_type") || "PRODUCT";
   const isService = itemType === "SERVICE";
-  const [materials, setMaterials] = useState<MaterialLine[]>(() =>
-    (initialData?.materials || []).map((m) => ({
-      material_id: m.material_id,
-      quantity: Number(m.quantity) || 1,
-      material_label: (m as MaterialLine).material_label,
-    }))
-  );
 
   const onFormSubmit = async (data: ProductForm) => {
     const trimmedLabel = data.label?.trim();
@@ -136,13 +125,8 @@ export function AssetComposer({
       category: data.category,
       item_type: kind,
       track_stock: kind === "SERVICE" ? false : true,
-      materials:
-        kind === "SERVICE"
-          ? materials.map((m) => ({
-              material_id: m.material_id,
-              quantity: Number(m.quantity) || 1,
-            }))
-          : undefined,
+      // Materials only after the service exists (Settings on the product workspace).
+      materials: undefined,
       attributes: {
         unit_of_measure: data.attributes?.unit_of_measure || "pcs",
         buying_price: Number(data.attributes?.buying_price) || 0,
@@ -328,14 +312,15 @@ export function AssetComposer({
               </div>
               )}
 
-              {isService && businessIdString && (
-                <div className="sm:col-span-2">
-                  <ServiceMaterialsEditor
-                    businessId={businessIdString}
-                    value={materials}
-                    onChange={setMaterials}
-                    disabled={isLoading}
-                  />
+              {isService && (
+                <div className="sm:col-span-2 space-y-2 rounded-xl border border-dashed border-border/80 bg-background/40 p-4">
+                  <p className="text-sm font-semibold text-foreground">Materials</p>
+                  <p className="text-xs leading-relaxed text-muted">
+                    Create this item as a <strong className="text-foreground">service</strong> first.
+                    After it saves, open it under inventory Settings to attach products it consumes
+                    (paper, blank tees, …). Physically different goods are separate products on the
+                    same service recipe.
+                  </p>
                 </div>
               )}
 

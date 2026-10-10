@@ -144,6 +144,9 @@ async def replace_materials(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"'{mat.label}' is a service. Materials must be products (separate SKUs for size/colour).",
             )
+        # Foundation for same-category hardening (not enforced yet):
+        # UI filters by category; a future flag can require mat.category == service.category
+        # or allow multiple material category groups on one service (tees + paper).
         db.add(
             ProductMaterial(
                 organization_id=organization_id or service.organization_id,
