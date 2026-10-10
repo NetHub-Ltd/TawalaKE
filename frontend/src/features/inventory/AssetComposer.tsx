@@ -80,6 +80,9 @@ export function AssetComposer({
       selling_price: initialData?.selling_price ?? 0,
       stock: initialData?.stock ?? 0,
       category: initialData?.category || "other",
+      item_type: initialData?.item_type || "PRODUCT",
+      track_stock: initialData?.track_stock ?? true,
+      materials: initialData?.materials || [],
       attributes: {
         unit_of_measure: initialData?.attributes?.unit_of_measure || "pcs",
         buying_price: initialData?.attributes?.buying_price ?? 0,
@@ -92,14 +95,18 @@ export function AssetComposer({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting, isValid },
   } = useForm<ProductForm>({
-    values: formValues, // Direct sync with React Hook Form's native reactive values API
+    values: formValues,
     resetOptions: {
-      keepDefaultValues: true, // Prevents overwriting user inputs mid-edit when props re-render
+      keepDefaultValues: true,
     },
     mode: "onChange",
   });
+
+  const itemType = watch("item_type") || "PRODUCT";
+  const isService = itemType === "SERVICE";
 
   const onFormSubmit = async (data: ProductForm) => {
     const trimmedLabel = data.label?.trim();
@@ -109,12 +116,17 @@ export function AssetComposer({
       data.attributes?.sku?.trim() ||
       `TWL-AUTO-${businessIdString.slice(0, 8).toUpperCase()}-${generateSkuSuffix()}`;
 
+    const kind = data.item_type === "SERVICE" ? "SERVICE" : "PRODUCT";
     const payload: ProductForm = {
       business_id: businessIdString,
       label: trimmedLabel,
       selling_price: Number(data.selling_price) || 0,
-      stock: Number(data.stock) || 0,
+      stock: kind === "SERVICE" ? 0 : Number(data.stock) || 0,
       category: data.category,
+      item_type: kind,
+      track_stock: kind === "SERVICE" ? false : true,
+      // Materials only after the service exists (Settings on the product workspace).
+      materials: undefined,
       attributes: {
         unit_of_measure: data.attributes?.unit_of_measure || "pcs",
         buying_price: Number(data.attributes?.buying_price) || 0,
@@ -247,6 +259,31 @@ export function AssetComposer({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Initial Stock */}
+              <div className="flex flex-col gap-1 sm:col-span-2">
+                <label
+                  htmlFor="asset-item-type"
+                  className="text-xs font-bold uppercase tracking-wider text-muted"
+                >
+                  Type
+                </label>
+                <select
+                  id="asset-item-type"
+                  {...register("item_type")}
+                  className="h-11 px-3 border border-border/60 bg-background rounded-md text-xs font-semibold outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10"
+                >
+                  <option value="PRODUCT">Product (can hold stock)</option>
+                  <option value="SERVICE">
+                    Service (no self-stock; can use materials)
+                  </option>
+                </select>
+                <p className="text-[11px] text-muted leading-relaxed">
+                  {isService
+                    ? "Services do not track their own stock. Size or colour differences should be separate products used as materials."
+                    : "Physical goods you receive and sell. Convert to a service later if needed."}
+                </p>
+              </div>
+
+              {!isService && (
               <div className="flex flex-col gap-1">
                 <label
                   htmlFor="asset-stock"
@@ -273,6 +310,19 @@ export function AssetComposer({
                   </span>
                 )}
               </div>
+              )}
+
+              {isService && (
+                <div className="sm:col-span-2 space-y-2 rounded-xl border border-dashed border-border/80 bg-background/40 p-4">
+                  <p className="text-sm font-semibold text-foreground">Materials</p>
+                  <p className="text-xs leading-relaxed text-muted">
+                    Create this item as a <strong className="text-foreground">service</strong> first.
+                    After it saves, open it under inventory Settings to attach products it consumes
+                    (paper, blank tees, …). Physically different goods are separate products on the
+                    same service recipe.
+                  </p>
+                </div>
+              )}
 
               {/* Unit Cost Price */}
               <div className="flex flex-col gap-1">

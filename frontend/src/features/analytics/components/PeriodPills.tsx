@@ -29,7 +29,7 @@ export function PeriodPills({
     <div
       role="group"
       aria-label="Report period"
-      className="inline-flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-card p-1"
+      className="inline-flex flex-wrap items-center gap-0.5 rounded-full border border-border/40 bg-transparent p-0.5"
     >
       {OPTIONS.map((opt) => {
         const active = value === opt.value;

@@ -196,6 +196,8 @@ class ItemSnapshot(BaseModel):
     discount_amount: float = 0.0
     total_price: float
     cost_price_at_sale: Optional[float] = None
+    item_kind: Optional[str] = "PRODUCT"
+    material_note: Optional[str] = None
 
 class PaymentSnapshot(BaseModel):
     payment_id: UUID

@@ -576,7 +576,9 @@ export const useCartStore = create<CartState>()(
       addToCart: (product) => {
         triggerHaptic("light");
         set((state) => {
-          const track = Boolean(product.track_stock);
+          // Services never use self-stock; material stock is enforced at checkout
+          const isService = product.item_type === "SERVICE";
+          const track = !isService && Boolean(product.track_stock);
           const available =
             track && product.stock != null ? Math.max(0, Number(product.stock)) : Infinity;
           const existing = state.cart.find((item) => item.id === product.id);
@@ -609,10 +611,13 @@ export const useCartStore = create<CartState>()(
               ...state.cart,
               {
                 id: product.id,
-                name: product.label || "Unnamed Product",
+                name: isService
+                  ? `${product.label || "Service"} (Service)`
+                  : product.label || "Unnamed Product",
                 price: product.selling_price || 0,
                 category: String(
-                  (product.attributes as Record<string, unknown> | undefined)?.category ??
+                  product.category ??
+                    (product.attributes as Record<string, unknown> | undefined)?.category ??
                     "General",
                 ),
                 sku: product.attributes?.sku || "",

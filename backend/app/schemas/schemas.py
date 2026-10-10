@@ -122,8 +122,20 @@ class UnitOfMeasureResponse(BaseResponseSchema):
 
 
 # =========================================================
-# PRODUCT SCHEMAS
+# PRODUCT SCHEMAS (catalog: product | service)
 # =========================================================
+class ProductMaterialIn(BaseModel):
+    """Fixed recipe line: material product consumed per 1 unit of service."""
+    material_id: UUID
+    quantity: float = Field(default=1.0, gt=0)
+
+
+class ProductMaterialOut(BaseModel):
+    material_id: UUID
+    quantity: float
+    material_label: Optional[str] = None
+
+
 class ProductBase(BaseModel):
     business_id: UUID
     label: str
@@ -133,15 +145,24 @@ class ProductBase(BaseModel):
     stock: float
     category: Optional[str] = "General"
     attributes: BaseAttributes = Field(default_factory=BaseAttributes)
+    # PRODUCT (default) | SERVICE — physical differences = separate products
+    item_type: Optional[str] = "PRODUCT"
+
 
 class ProductCreate(BaseModel):
     business_id: UUID
     label: str
     selling_price: float
-    stock: float
+    stock: float = 0.0
     popularity_score: Optional[float] = 0.0
     category: Optional[str] = "General"
     attributes: BaseAttributes = Field(default_factory=BaseAttributes)
+    item_type: Optional[str] = "PRODUCT"
+    track_stock: Optional[bool] = None
+    cost_price: Optional[float] = None
+    # Only valid when item_type=SERVICE; materials must be PRODUCT kind
+    materials: Optional[List[ProductMaterialIn]] = None
+
 
 class ProductUpdate(BaseModel):
     label: Optional[str] = None
@@ -153,6 +174,9 @@ class ProductUpdate(BaseModel):
     cost_price: Optional[float] = None
     category: Optional[str] = None
     attributes: Optional[BaseAttributes] = None
+    item_type: Optional[str] = None
+    # When set (including empty list), replaces the full material recipe
+    materials: Optional[List[ProductMaterialIn]] = None
 
 
 class ProductResponse(BaseResponseSchema):
@@ -167,9 +191,8 @@ class ProductResponse(BaseResponseSchema):
     min_stock_level: Optional[float] = None
     cost_price: Optional[float] = None
     attributes: BaseAttributes
-
-    # Optional lightweight embed (avoid deep nesting)
-    # category: Optional["CategoryResponse"] = None
+    item_type: str = "PRODUCT"
+    materials: List[ProductMaterialOut] = Field(default_factory=list)
 
 
 # =========================================================

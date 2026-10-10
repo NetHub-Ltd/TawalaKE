@@ -223,7 +223,7 @@ export default function CompleteSaleClient({
             {credit ? " · collect later" : ""}
           </p>
           <p className="mt-2 text-xs text-muted">
-            Your {credit ? "invoice" : "receipt"} is being prepared — open it when you are ready.
+            Your {credit ? "invoice" : "receipt"} is ready to open. If it is still generating, wait a moment and try again.
           </p>
         </div>
 

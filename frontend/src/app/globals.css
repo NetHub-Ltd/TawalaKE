@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Explicit content roots — ensure utilities are generated under webpack + turbopack */
+@source "../**/*.{js,ts,jsx,tsx,mdx}";
+@source "../../features/**/*.{js,ts,jsx,tsx,mdx}";
+
+
 /* =========================================================
    1. Design Tokens — Modern Retail Operating System
    Source: DESIGN.md (petrol teal + terracotta + forest mint)

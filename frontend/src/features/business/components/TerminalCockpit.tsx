@@ -329,7 +329,7 @@ export default function TerminalCockpit({ businessId }: TerminalCockpitProps) {
 
           {/* --- PRODUCT DISPLAY MATRIX --- */}
           <section
-            aria-label="Product Catalog Matrix"
+            aria-label="Product catalog"
             className="flex-1 overflow-y-auto p-4 lg:p-6 min-h-0"
           >
             <div className="max-w-[1600px] mx-auto min-h-[400px]">

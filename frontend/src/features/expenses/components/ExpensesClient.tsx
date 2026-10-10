@@ -32,6 +32,7 @@ import {
 } from "@/features/expenses/types";
 import { formatKES } from "@/features/analytics/lib/format";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { PermissionChecking } from "@/features/auth/components/PermissionChecking";
 import { Permission } from "@/lib/rbac";
 import { Plus, Receipt } from "lucide-react";
 import { toast } from "sonner";
@@ -161,11 +162,7 @@ export function ExpensesClient({
   };
 
   if (sessionLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center gap-2 p-10 text-muted">
-        <Spinner /> Loading…
-      </div>
-    );
+    return <PermissionChecking className="p-10" />;
   }
 
   if (!canRead && !canWrite) {

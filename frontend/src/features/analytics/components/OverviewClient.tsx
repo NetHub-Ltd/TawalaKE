@@ -8,19 +8,17 @@ import { PeriodPills } from "./PeriodPills";
 import { SalesPanel } from "./SalesPanel";
 import { ProductsPanel } from "./ProductsPanel";
 import { StaffPanel } from "./StaffPanel";
-import { InsightsStrip } from "./InsightsStrip";
 import {
   useSalesDashboard,
   useHourlyReport,
   useProductsReport,
   useStaffReport,
-  useInsightsReport,
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { PermissionChecking } from "@/features/auth/components/PermissionChecking";
 import { Permission } from "@/lib/rbac";
 import { MyShiftOverview } from "@/features/analytics/components/MyShiftOverview";
-import { Spinner } from "@/lib/components/ui";
 
 export function OverviewClient({
   organizationId,
@@ -68,13 +66,6 @@ export function OverviewClient({
     canReports && tab === "staff",
     dateArg
   );
-  const insights = useInsightsReport(
-    normalizedBusinessId,
-    period,
-    canReports && tab === "sales",
-    dateArg
-  );
-
   const anyError =
     dash.isError || hourly.isError || products.isError || staff.isError;
   const errorMessage = useMemo(() => {
@@ -95,11 +86,7 @@ export function OverviewClient({
     tab === "sales";
 
   if (sessionLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center gap-2 p-10 text-muted">
-        <Spinner /> Loading…
-      </div>
-    );
+    return <PermissionChecking className="p-10" />;
   }
 
   if (!canReports && canOwnSales) {
@@ -123,7 +110,7 @@ export function OverviewClient({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-6 pt-2 sm:px-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden px-3 pb-3 pt-1 sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <DashboardTabs value={tab} onChange={setTab} />
         <div className="flex items-center gap-2">
@@ -143,7 +130,6 @@ export function OverviewClient({
               hourly.refetch();
               products.refetch();
               staff.refetch();
-              insights.refetch();
             }}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/60 bg-card text-muted hover:text-foreground"
             aria-label="Refresh"
@@ -205,21 +191,15 @@ export function OverviewClient({
       <div
         role="tabpanel"
         aria-labelledby={`tab-${tab}`}
-        className="min-h-[480px] flex-1"
+        className="min-h-0 flex-1 overflow-y-auto"
       >
         {tab === "sales" && (
-          <div className="space-y-4">
-            <SalesPanel
-              dashboard={dash.data}
-              hourly={hourly.data}
-              period={period}
-              loading={dash.isLoading || (hourlyGrain && hourly.isLoading)}
-            />
-            <InsightsStrip
-              insights={insights.data?.insights}
-              loading={insights.isLoading}
-            />
-          </div>
+          <SalesPanel
+            dashboard={dash.data}
+            hourly={hourly.data}
+            period={period}
+            loading={dash.isLoading || (hourlyGrain && hourly.isLoading)}
+          />
         )}
         {tab === "products" && (
           <ProductsPanel
@@ -237,7 +217,7 @@ export function OverviewClient({
         )}
       </div>
 
-      <div className="flex shrink-0 flex-wrap gap-2 border-t border-border/40 pt-3 text-sm">
+      <div className="flex shrink-0 flex-wrap gap-2 border-t border-border/40 pt-2 text-sm">
         <Link
           href={`/org/${normalizedOrgId}/${normalizedBusinessId}/terminal`}
           className="rounded-lg bg-brand-primary px-3 py-1.5 font-medium text-white hover:opacity-90"

@@ -23,6 +23,8 @@ import { useCartStore } from "@/features/sales/stores/useCartStore";
 import { fetchPosConfig } from "@/features/sales/lib/posConfig";
 import { setStagedSaleId, getStagedSaleId } from "@/features/sales/lib/stagedSale";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
+import { parsePlanLimitError } from "@/lib/paywall/limitError";
+import Link from "next/link";
 
 interface EditableQuantityProps {
   itemId: string;
@@ -130,6 +132,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitErrorBillingHref, setSubmitErrorBillingHref] = useState<string | null>(null);
 
   const amountInputId = useId();
   const descInputId = useId();
@@ -194,8 +197,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
     const cleanDesc = serviceDescInput.trim();
 
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      toast.error("Invalid Amount", {
-        description: "Please enter a valid numeric service fee greater than 0.",
+      toast.error("Invalid amount", {
+        description: "Enter an extra fee amount greater than 0.",
       });
       return;
     }
@@ -215,7 +218,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
             : s,
         ),
       );
-      toast.success("Service updated", {
+      toast.success("Extra fee updated", {
         description: `KES ${parsedAmount.toLocaleString()} — ${cleanDesc}`,
       });
     } else {
@@ -227,7 +230,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
           description: cleanDesc,
         },
       ]);
-      toast.success("Service added", {
+      toast.success("Extra fee added", {
         description: `KES ${parsedAmount.toLocaleString()} for "${cleanDesc}".`,
       });
     }
@@ -254,14 +257,14 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
 
     setIsSubmitting(true);
     setSubmitError(null);
+    setSubmitErrorBillingHref(null);
 
-    const toastId = toast.loading("Staging transaction...", {
-      description: "Creating pending sale with current totals.",
+    const toastId = toast.loading("Preparing sale…", {
+      description: "Saving cart totals so you can take payment.",
     });
 
     const payload = {
       business_id: resolvedBusinessId,
-      // user_id: userId,
       items: cart.map((item) => ({
         product_id: item.id,
         quantity: item.qty,
@@ -281,18 +284,34 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData?.detail || "Failed to establish pending order entry.");
+        const errorData = await response.json().catch(() => ({}));
+        const parsed = parsePlanLimitError(
+          response.status,
+          errorData,
+          resolvedOrgId || undefined,
+        );
+        let msg = parsed.message;
+        if (typeof errorData?.detail === "string") msg = errorData.detail;
+        else if (errorData?.detail && typeof errorData.detail === "object" && errorData.detail.message) {
+          msg = String(errorData.detail.message);
+        }
+        if (response.status === 409) {
+          msg =
+            typeof errorData?.detail === "string"
+              ? errorData.detail
+              : msg || "Not enough stock for an item in this cart.";
+        }
+        setSubmitErrorBillingHref(parsed.billingHref);
+        throw new Error(msg || "Could not prepare this sale. Please try again.");
       }
 
       const pendingSaleData = await response.json();
 
-      toast.success("Order staged successfully", {
+      toast.success("Sale ready for payment", {
         id: toastId,
-        description: `Sale ID: ${pendingSaleData.id.slice(0, 8)} • Total KES ${payableGrandTotal.toLocaleString()}`,
+        description: `Total KES ${payableGrandTotal.toLocaleString()}`,
       });
 
-      // Staged sale is source of truth on checkout — clear local cart fully.
       clearCart();
       if (pendingSaleData?.id && resolvedBusinessId) {
         setStagedSaleId(resolvedBusinessId, pendingSaleData.id);
@@ -302,10 +321,10 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
       console.error("Checkout Submission Error:", error);
       const fallbackMsg =
         (error instanceof Error ? error.message : null) ||
-        "Operational pipeline error. Please try again.";
+        "Could not prepare this sale. Please try again.";
       setSubmitError(fallbackMsg);
 
-      toast.error("Checkout staging failed", {
+      toast.error("Could not prepare sale", {
         id: toastId,
         description: fallbackMsg,
       });
@@ -342,7 +361,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
             onClick={handleExpand}
             title="Expand Tray View"
             aria-label="Expand Cart View"
-            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md text-muted/70 hover:text-foreground hover:bg-surface/50 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+            className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-muted/70 hover:text-foreground hover:bg-surface/50 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30"
           >
             <Maximize2 size={15} aria-hidden="true" />
           </button>
@@ -353,7 +372,7 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
               onClick={handleClearCartWithFeedback}
               title="Clear Tray items"
               aria-label="Clear All Cart Items"
-              className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center rounded-md text-muted/70 hover:text-brand-accent hover:bg-brand-accent/10 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
+              className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-md text-muted/70 hover:text-brand-accent hover:bg-brand-accent/10 transition-colors active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent/30"
             >
               <Trash2 size={15} aria-hidden="true" />
             </button>
@@ -407,9 +426,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   disabled={isSubmitting}
                   onClick={() => updateQty(item.id, -1)}
                   aria-label={`Decrease quantity for ${item.name}`}
-                  className="h-6 w-6 flex items-center justify-center bg-background/80 border border-border/10 text-muted/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
+                  className="min-h-[40px] min-w-[40px] h-10 w-10 flex items-center justify-center bg-background/80 border border-border/10 text-muted/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30"
                 >
-                  <Minus size={11} strokeWidth={2} aria-hidden="true" />
+                  <Minus size={14} strokeWidth={2} aria-hidden="true" />
                 </button>
 
                 <EditableQuantity
@@ -424,9 +443,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   disabled={isSubmitting}
                   onClick={() => updateQty(item.id, 1)}
                   aria-label={`Increase quantity for ${item.name}`}
-                  className="h-6 w-6 flex items-center justify-center bg-background/80 border border-border/10 text-muted/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
+                  className="min-h-[40px] min-w-[40px] h-10 w-10 flex items-center justify-center bg-background/80 border border-border/10 text-muted/80 hover:text-foreground rounded-md transition-all active:scale-95 cursor-pointer disabled:opacity-30 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30"
                 >
-                  <Plus size={11} strokeWidth={2} aria-hidden="true" />
+                  <Plus size={14} strokeWidth={2} aria-hidden="true" />
                 </button>
               </div>
 
@@ -552,8 +571,8 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                 <Wrench size={11} strokeWidth={2} aria-hidden="true" className="shrink-0" />
                 <span className="truncate">
                   {services.length
-                    ? `${services.length} service${services.length === 1 ? "" : "s"} · +KES ${servicesTotal.toLocaleString()}`
-                    : "Add service"}
+                    ? `${services.length} extra fee${services.length === 1 ? "" : "s"} · +KES ${servicesTotal.toLocaleString()}`
+                    : "Add extra fee"}
                 </span>
               </button>
               {services.length > 0 && !isSubmitting && (
@@ -561,11 +580,11 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   type="button"
                   onClick={() => {
                     setServices([]);
-                    toast.info("Service Fee Removed");
+                    toast.info("Extra fees removed");
                   }}
-                  className="text-muted/50 hover:text-brand-accent cursor-pointer px-0.5 shrink-0"
-                  title="Remove Service Fee"
-                  aria-label="Remove Service Fee"
+                  className="text-muted/50 hover:text-brand-accent cursor-pointer px-0.5 shrink-0 min-h-[40px] min-w-[40px] flex items-center justify-center"
+                  title="Remove extra fees"
+                  aria-label="Remove extra fees"
                 >
                   <X size={11} aria-hidden="true" />
                 </button>
@@ -642,9 +661,22 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
         </div>
 
         {submitError && (
-          <div className="p-2.5 text-xs bg-brand-accent/10 border border-brand-accent/20 rounded-md text-brand-accent font-semibold text-center flex items-center justify-center gap-1.5">
-            <AlertCircle size={13} className="shrink-0" aria-hidden="true" />
-            <span>{submitError}</span>
+          <div
+            role="alert"
+            className="p-3 text-xs bg-[var(--error-container)] border border-[var(--error)]/25 rounded-md text-[var(--error)] font-semibold flex flex-col gap-2"
+          >
+            <div className="flex items-start gap-1.5">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+              <span className="text-left leading-snug">{submitError}</span>
+            </div>
+            {submitErrorBillingHref && (
+              <Link
+                href={submitErrorBillingHref}
+                className="inline-flex min-h-[40px] items-center justify-center rounded-md bg-brand-primary px-3 text-xs font-semibold text-white"
+              >
+                Open billing
+              </Link>
+            )}
           </div>
         )}
 
@@ -652,12 +684,12 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
           type="button"
           disabled={isCartEmpty || isSubmitting}
           onClick={handleCheckoutRedirect}
-          className="group w-full min-h-[44px] rounded-md bg-brand-accent text-background font-semibold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all shadow-2xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+          className="group w-full min-h-[44px] rounded-md bg-brand-accent text-background font-semibold uppercase tracking-wider text-xs flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.99] transition-all shadow-2xs disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30"
         >
           {isSubmitting ? (
             <>
               <Loader2 size={15} className="animate-spin" aria-hidden="true" />
-              <span>Staging Order...</span>
+              <span>Preparing sale…</span>
             </>
           ) : (
             <>
@@ -686,14 +718,14 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   <Wrench size={14} aria-hidden="true" />
                 </div>
                 <h3 id="service-modal-title" className="text-xs font-bold uppercase tracking-wider text-foreground">
-                  {editingServiceId ? "Edit service" : "Add service"}
+                  {editingServiceId ? "Edit extra fee" : "Add extra fee"}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setIsServiceModalOpen(false)}
-                className="p-1 text-muted/60 hover:text-foreground rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary/20"
-                aria-label="Close Service Modal"
+                className="min-h-[40px] min-w-[40px] flex items-center justify-center text-muted/60 hover:text-foreground rounded-md transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30"
+                aria-label="Close extra fee dialog"
               >
                 <X size={15} aria-hidden="true" />
               </button>
