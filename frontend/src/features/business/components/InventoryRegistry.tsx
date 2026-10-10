@@ -183,7 +183,7 @@ export function InventoryRegistry() {
       </header>
 
       {/* Database Viewport Frame */}
-      <section aria-label="Inventory Records Matrix" className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <section aria-label="Inventory list" className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <div className="bg-card border border-border rounded-xl shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
           
           {/* Integrated Header Controls (Decoupled Search Component & Page Size Selector) */}

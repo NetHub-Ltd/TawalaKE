@@ -272,7 +272,7 @@ export const ProductCard = forwardRef<HTMLButtonElement, ProductCardProps>(
                 </span>
               )}
               {isService ? (
-                <span className="px-2 py-0.5 rounded-md bg-brand-primary/10 text-brand-primary border border-brand-primary/20 text-[10px] font-bold uppercase tracking-wide">
+                <span className="px-2 py-0.5 rounded-md bg-brand-accent/15 text-brand-accent border border-brand-accent/35 text-[10px] font-bold uppercase tracking-wide shadow-xs">
                   Service
                 </span>
               ) : (
