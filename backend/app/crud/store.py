@@ -173,12 +173,29 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
 
             # Honest cost: service COGS from material recipe when available
             cost_at_sale = None
+            line_name = product.label
             if is_service:
+                from app.crud.product_materials import list_materials
+
                 unit_cogs = await recipe_unit_cogs(db, product.id)
                 if unit_cogs is not None:
                     cost_at_sale = unit_cogs
                 elif product.cost_price is not None:
                     cost_at_sale = float(product.cost_price)
+                # Receipt/invoice: show service clearly + material consumed
+                mat_pairs = await list_materials(db, product.id)
+                if mat_pairs:
+                    binding, mat = mat_pairs[0]
+                    mat_label = mat.label if mat is not None else "material"
+                    need = float(binding.quantity) * qty
+                    need_s = (
+                        str(int(need))
+                        if need == int(need)
+                        else f"{need:g}"
+                    )
+                    line_name = f"{product.label} (Service · uses {need_s}× {mat_label})"
+                else:
+                    line_name = f"{product.label} (Service)"
             elif product.cost_price is not None:
                 cost_at_sale = float(product.cost_price)
 
@@ -189,7 +206,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     quantity=qty,
                     unit_price=float(product.selling_price),
                     sku=(product.attributes or {}).get("sku", "N/A") or "N/A",
-                    name=product.label,
+                    name=line_name[:150],
                     subtotal=item_total,
                     tax_rate=tax_rate,
                     cost_price_at_sale=cost_at_sale,

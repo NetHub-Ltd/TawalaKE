@@ -77,6 +77,20 @@ async def materials_payload(
     return result
 
 
+def _norm_category(raw: Optional[str]) -> str:
+    s = (raw or "").strip() or "General"
+    return s
+
+
+def _categories_compatible(service_cat: str, material_cat: str) -> bool:
+    """Same catalogue category (case-insensitive). General/other are unrestricted."""
+    sc = service_cat.strip().lower()
+    mc = material_cat.strip().lower()
+    if sc in ("", "general", "other", "other / miscellaneous", "services", "services & labor"):
+        return True
+    return sc == mc
+
+
 async def replace_materials(
     db: AsyncSession,
     *,
@@ -84,7 +98,11 @@ async def replace_materials(
     materials: Sequence[dict],
     organization_id: Optional[UUID],
 ) -> None:
-    """Replace full recipe. materials items: material_id, quantity."""
+    """
+    Replace full recipe. At most **one** material product per service.
+    Material must be a PRODUCT; category must match the service when the service
+    has a meaningful category (not General/other).
+    """
     if service.item_type != ItemType.SERVICE:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -107,7 +125,8 @@ async def replace_materials(
         row.deleted_at = now
         db.add(row)
 
-    seen = set()
+    # Normalize payload → at most one binding
+    normalized: list[tuple[UUID, float]] = []
     for raw in materials:
         mid = raw.get("material_id") if isinstance(raw, dict) else getattr(raw, "material_id", None)
         qty = raw.get("quantity") if isinstance(raw, dict) else getattr(raw, "quantity", 1.0)
@@ -120,9 +139,19 @@ async def replace_materials(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Material quantity must be greater than zero.",
             )
-        if mid in seen:
-            continue
-        seen.add(mid)
+        normalized.append((mid, qty_f))
+
+    if len(normalized) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "A service may bind only one material product. "
+                "Different sizes or colours are separate products — pick one SKU, "
+                "or create separate services for different materials."
+            ),
+        )
+
+    for mid, qty_f in normalized:
         if mid == service.id:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -144,9 +173,17 @@ async def replace_materials(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=f"'{mat.label}' is a service. Materials must be products (separate SKUs for size/colour).",
             )
-        # Foundation for same-category hardening (not enforced yet):
-        # UI filters by category; a future flag can require mat.category == service.category
-        # or allow multiple material category groups on one service (tees + paper).
+        svc_cat = _norm_category(getattr(service, "category", None))
+        mat_cat = _norm_category(getattr(mat, "category", None))
+        if not _categories_compatible(svc_cat, mat_cat):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Material '{mat.label}' is in category '{mat_cat}', but this service is "
+                    f"'{svc_cat}'. Use a product in the same category (or set the service "
+                    f"category to General)."
+                ),
+            )
         db.add(
             ProductMaterial(
                 organization_id=organization_id or service.organization_id,

@@ -218,6 +218,16 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                 item_tax = round(float(getattr(item, 'subtotal', 0.0)) * float(getattr(item, 'tax_rate', 0.0) or 0.0), 2)
                 item_total = round(float(getattr(item, 'subtotal', 0.0)) + item_tax, 2)
 
+                # Infer catalog kind from immutable line name snapshot (set at checkout)
+                raw_name = str(item.name or "")
+                is_svc_line = "(Service" in raw_name or raw_name.endswith(" (Service)")
+                material_note = None
+                if "uses " in raw_name and "(Service" in raw_name:
+                    try:
+                        material_note = raw_name.split("uses ", 1)[1].rstrip(")")
+                    except Exception:
+                        material_note = None
+
                 items_snap.append(ItemSnapshot(
                     item_id=item.id,
                     product_id=item.product_id,
@@ -229,7 +239,9 @@ async def async_process_document_generation(sale_id: UUID) -> str:
                     tax_amount=item_tax,
                     discount_amount=round(float(getattr(item, 'discount', 0.0)), 2),
                     total_price=item_total,
-                    cost_price_at_sale=getattr(item, 'cost_price_at_sale', None)
+                    cost_price_at_sale=getattr(item, 'cost_price_at_sale', None),
+                    item_kind="SERVICE" if is_svc_line else "PRODUCT",
+                    material_note=material_note,
                 ))
                 total_quantity += float(item.quantity)
                 total_item_tax += item_tax

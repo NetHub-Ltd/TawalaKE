@@ -737,7 +737,7 @@ function ProductSettingsForm({
       const convertingToService = !persistedService && itemType === "SERVICE";
       const materialsPayload =
         itemType === "SERVICE" && persistedService
-          ? materials.map((m) => ({
+          ? materials.slice(0, 1).map((m) => ({
               material_id: m.material_id,
               quantity: Number(m.quantity) || 1,
             }))
