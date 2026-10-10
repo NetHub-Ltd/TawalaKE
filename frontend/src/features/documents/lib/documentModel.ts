@@ -242,6 +242,11 @@ export function buildDocumentModel(
     const name = (item.name || item.sku || "Item").trim() || "Item";
     const descriptionWithQty =
       qty !== 1 ? `${name} x${qty % 1 === 0 ? qty : qty}` : name;
+    const kindFromSnap =
+      (item as { item_kind?: string }).item_kind === "SERVICE" ||
+      /\(Service/i.test(name)
+        ? "service"
+        : "product";
     rows.push({
       no: n++,
       description: name,
@@ -249,7 +254,7 @@ export function buildDocumentModel(
       quantity: qty,
       unitPrice: unit,
       total: lineTotal,
-      kind: "product",
+      kind: kindFromSnap,
     });
   }
   for (const s of services) {

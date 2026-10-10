@@ -1,13 +1,9 @@
 "use client";
 
 /**
- * Fixed recipe editor: service → product materials + qty per 1 unit of service.
- *
- * Rules:
- * - Only usable after the catalogue item is persisted as SERVICE.
- * - Multiple physically different products may belong to one service (e.g. paper + tee).
- * - Each line is one product SKU (size/colour = separate products).
- * - Category filter lays foundation for tighter same-category constraints later.
+ * Service material binding: at most **one** product per service.
+ * Size/colour = separate products (pick one SKU).
+ * Category must match the service when the service has a real category.
  */
 import React, { useMemo, useState } from "react";
 import { Plus, Trash2, Package, Search } from "lucide-react";
@@ -23,24 +19,13 @@ export type MaterialLine = ProductMaterialIn & {
 
 type Props = {
   businessId: string;
-  /** Current service id — excluded from material candidates */
   excludeProductId?: string | null;
   value: MaterialLine[];
   onChange: (next: MaterialLine[]) => void;
   disabled?: boolean;
   className?: string;
-  /**
-   * When false, editor is locked: convert/save as service first.
-   * Default true for callers that already gate visibility.
-   */
   serviceReady?: boolean;
-  /** Service catalogue category — used as default filter (foundation for same-category rules). */
   serviceCategory?: string | null;
-  /**
-   * Foundation: when true, only products in `categoryFilter` (or serviceCategory) can be added.
-   * Soft default false until we harden; UI still offers category filtering.
-   */
-  requireCategoryMatch?: boolean;
 };
 
 function isProductKind(p: ProductResponse): boolean {
@@ -49,6 +34,18 @@ function isProductKind(p: ProductResponse): boolean {
 
 function productCategory(p: ProductResponse): string {
   return (p.category || "General").trim() || "General";
+}
+
+function categoryUnrestricted(cat: string | null | undefined): boolean {
+  const c = (cat || "").trim().toLowerCase();
+  return (
+    !c ||
+    c === "general" ||
+    c === "other" ||
+    c === "other / miscellaneous" ||
+    c === "services" ||
+    c === "services & labor"
+  );
 }
 
 export function ServiceMaterialsEditor({
@@ -60,30 +57,16 @@ export function ServiceMaterialsEditor({
   className,
   serviceReady = true,
   serviceCategory = null,
-  requireCategoryMatch = false,
 }: Props) {
   const { products = [], isLoading } = useProducts(businessId);
   const [query, setQuery] = useState("");
   const [pickId, setPickId] = useState("");
   const [pickQty, setPickQty] = useState("1");
   const [localError, setLocalError] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<string>(() =>
-    serviceCategory && serviceCategory !== "other" && serviceCategory !== "General"
-      ? serviceCategory
-      : "ALL"
-  );
 
   const locked = disabled || !serviceReady;
-
-  const categoryOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const p of products as ProductResponse[]) {
-      if (!isProductKind(p) || p.active === false) continue;
-      if (p.id === excludeProductId) continue;
-      set.add(productCategory(p));
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [products, excludeProductId]);
+  const hasBinding = value.length > 0;
+  const enforceCat = !categoryUnrestricted(serviceCategory);
 
   const candidates = useMemo(() => {
     const taken = new Set(value.map((v) => v.material_id));
@@ -93,13 +76,8 @@ export function ServiceMaterialsEditor({
       .filter((p) => p.id !== excludeProductId)
       .filter((p) => !taken.has(p.id))
       .filter((p) => {
-        if (categoryFilter === "ALL") {
-          if (requireCategoryMatch && serviceCategory) {
-            return productCategory(p) === serviceCategory;
-          }
-          return true;
-        }
-        return productCategory(p) === categoryFilter;
+        if (!enforceCat || !serviceCategory) return true;
+        return productCategory(p).toLowerCase() === serviceCategory.trim().toLowerCase();
       })
       .filter((p) => {
         if (!query.trim()) return true;
@@ -108,15 +86,7 @@ export function ServiceMaterialsEditor({
         return p.label.toLowerCase().includes(q) || sku.includes(q);
       })
       .slice(0, 80);
-  }, [
-    products,
-    value,
-    excludeProductId,
-    query,
-    categoryFilter,
-    requireCategoryMatch,
-    serviceCategory,
-  ]);
+  }, [products, value, excludeProductId, query, enforceCat, serviceCategory]);
 
   const labelFor = (id: string, fallback?: string | null) => {
     const fromList = (products as ProductResponse[]).find((p) => p.id === id);
@@ -130,19 +100,14 @@ export function ServiceMaterialsEditor({
     return String(p.stock ?? 0);
   };
 
-  const categoryFor = (id: string) => {
-    const p = (products as ProductResponse[]).find((x) => x.id === id);
-    return p ? productCategory(p) : null;
-  };
-
-  const addLine = () => {
+  const addOrReplace = () => {
     setLocalError(null);
     if (!serviceReady) {
-      setLocalError("Save this item as a service first, then add materials.");
+      setLocalError("Save this item as a service first, then add a material.");
       return;
     }
     if (!pickId) {
-      setLocalError("Choose a product to use as a material.");
+      setLocalError("Choose a product to use as the material.");
       return;
     }
     const qty = Number(pickQty);
@@ -150,26 +115,20 @@ export function ServiceMaterialsEditor({
       setLocalError("Quantity must be greater than zero.");
       return;
     }
-    if (value.some((v) => v.material_id === pickId)) {
-      setLocalError("That product is already in the recipe.");
-      return;
-    }
     const p = (products as ProductResponse[]).find((x) => x.id === pickId);
     if (!p || !isProductKind(p)) {
       setLocalError("Materials must be products, not services.");
       return;
     }
-    // Foundation for same-category hardening (soft when requireCategoryMatch)
-    if (requireCategoryMatch && serviceCategory) {
-      if (productCategory(p) !== serviceCategory) {
+    if (enforceCat && serviceCategory) {
+      if (productCategory(p).toLowerCase() !== serviceCategory.trim().toLowerCase()) {
         setLocalError(
-          `Only products in category “${serviceCategory}” can be added to this service for now.`
+          `Only products in category "${serviceCategory}" can be bound to this service.`
         );
         return;
       }
     }
     onChange([
-      ...value,
       {
         material_id: pickId,
         quantity: qty,
@@ -185,7 +144,7 @@ export function ServiceMaterialsEditor({
   const updateQty = (materialId: string, raw: string) => {
     const qty = Number(raw);
     onChange(
-      value.map((v) =>
+      value.slice(0, 1).map((v) =>
         v.material_id === materialId
           ? { ...v, quantity: Number.isFinite(qty) && qty > 0 ? qty : v.quantity }
           : v
@@ -193,9 +152,7 @@ export function ServiceMaterialsEditor({
     );
   };
 
-  const removeLine = (materialId: string) => {
-    onChange(value.filter((v) => v.material_id !== materialId));
-  };
+  const removeLine = () => onChange([]);
 
   if (!serviceReady) {
     return (
@@ -208,16 +165,19 @@ export function ServiceMaterialsEditor({
       >
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Package className="h-4 w-4 text-muted" aria-hidden />
-          Materials used
+          Material used
         </h3>
         <p className="text-sm text-muted leading-relaxed">
-          Save this item as a <strong className="text-foreground">service</strong> first. After it
-          is a service, you can attach one or more products it consumes (e.g. different tee sizes,
-          paper types). Physically different goods stay separate products in the recipe.
+          Save this item as a <strong className="text-foreground">service</strong> first. Then bind{" "}
+          <strong className="text-foreground">one</strong> product it consumes (e.g. one tee size or
+          one paper type). Different sizes are different products — pick the SKU you need, or create
+          separate services.
         </p>
       </div>
     );
   }
+
+  const line = value[0];
 
   return (
     <div
@@ -229,108 +189,79 @@ export function ServiceMaterialsEditor({
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <Package className="h-4 w-4 text-brand-primary" aria-hidden />
-          Materials used
+          Material used
         </h3>
         <p className="text-xs leading-relaxed text-muted">
-          One service can use several products (paper, blank tee M, blank tee L, …). Each line is
-          one SKU — size and colour are different products, not attributes. Filter by category to
-          narrow the list (foundation for stricter same-category rules later).
+          One material product per service. When sold, that product&apos;s stock decreases by qty ×
+          line quantity. Size and colour are separate products — choose one SKU.
+          {enforceCat && serviceCategory
+            ? ` Only products in category "${serviceCategory}" can be bound.`
+            : " Set a specific service category to restrict materials to that category."}
         </p>
       </div>
 
-      {value.length === 0 ? (
+      {!line ? (
         <p
           className="rounded-lg border border-dashed border-border/80 bg-card/50 px-3 py-4 text-center text-xs text-muted"
           role="status"
         >
-          No materials yet. The service can still be sold; nothing leaves stock until you add
-          products here.
+          No material bound yet. The service can still be sold; nothing leaves stock until you bind a
+          product.
         </p>
       ) : (
-        <ul className="space-y-2" aria-label="Material recipe">
-          {value.map((line) => (
-            <li
-              key={line.material_id}
-              className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2.5"
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {labelFor(line.material_id, line.material_label)}
-                </p>
-                <p className="text-[11px] text-muted">
-                  On hand: {stockFor(line.material_id) ?? "—"}
-                  {(line.material_category || categoryFor(line.material_id)) && (
-                    <>
-                      {" "}
-                      · {line.material_category || categoryFor(line.material_id)}
-                    </>
-                  )}
-                </p>
-              </div>
-              <label className="flex items-center gap-1.5 text-xs text-muted">
-                <span className="sr-only">Quantity per service</span>
-                <span aria-hidden>Qty</span>
-                <input
-                  type="number"
-                  min={0.01}
-                  step="any"
-                  disabled={locked}
-                  value={line.quantity}
-                  onChange={(e) => updateQty(line.material_id, e.target.value)}
-                  className="h-9 w-20 rounded-md border border-border bg-background px-2 text-sm font-mono tabular-nums text-foreground outline-none focus:ring-2 focus:ring-brand-primary/25"
-                />
-              </label>
-              <button
-                type="button"
-                disabled={locked}
-                onClick={() => removeLine(line.material_id)}
-                className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-red-500/40 hover:text-[var(--error)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 disabled:opacity-50"
-                aria-label={`Remove ${labelFor(line.material_id, line.material_label)}`}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-card px-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              {labelFor(line.material_id, line.material_label)}
+            </p>
+            <p className="text-[11px] text-muted">
+              On hand: {stockFor(line.material_id) ?? "—"}
+              {line.material_category ? ` · ${line.material_category}` : ""}
+            </p>
+          </div>
+          <label className="flex items-center gap-1.5 text-xs text-muted">
+            <span className="sr-only">Quantity per service</span>
+            <span aria-hidden>Qty</span>
+            <input
+              type="number"
+              min={0.01}
+              step="any"
+              disabled={locked}
+              value={line.quantity}
+              onChange={(e) => updateQty(line.material_id, e.target.value)}
+              className="h-9 w-20 rounded-md border border-border bg-background px-2 text-sm font-mono tabular-nums text-foreground outline-none focus:ring-2 focus:ring-brand-primary/25"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={locked}
+            onClick={removeLine}
+            className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-red-500/40 hover:text-[var(--error)] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 disabled:opacity-50"
+            aria-label="Remove material"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
       )}
 
       <div className="space-y-2 border-t border-border/60 pt-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted">Add material</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <label className="block space-y-1">
-            <span className="text-xs text-muted">Category filter</span>
-            <select
-              value={categoryFilter}
-              disabled={locked}
-              onChange={(e) => {
-                setCategoryFilter(e.target.value);
-                setPickId("");
-              }}
-              className="h-10 w-full rounded-md border border-border bg-card px-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand-primary/25 disabled:opacity-60"
-            >
-              <option value="ALL">All product categories</option>
-              {categoryOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="relative self-end">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted"
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={query}
-              disabled={locked}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search name or SKU…"
-              className="h-10 w-full rounded-md border border-border bg-card pl-9 pr-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand-primary/25 disabled:opacity-60"
-              aria-label="Search products to add as materials"
-            />
-          </div>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+          {hasBinding ? "Replace material" : "Bind material"}
+        </p>
+        <div className="relative">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted"
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={query}
+            disabled={locked}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search name or SKU…"
+            className="h-10 w-full rounded-md border border-border bg-card pl-9 pr-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand-primary/25 disabled:opacity-60"
+            aria-label="Search products"
+          />
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <label className="block min-w-0 flex-1 space-y-1">
@@ -368,11 +299,11 @@ export function ServiceMaterialsEditor({
           <button
             type="button"
             disabled={locked || isLoading}
-            onClick={addLine}
+            onClick={addOrReplace}
             className="inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-md bg-brand-primary px-4 text-sm font-semibold text-white transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/40 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" aria-hidden />
-            Add
+            {hasBinding ? "Replace" : "Bind"}
           </button>
         </div>
         {localError && (
@@ -382,9 +313,9 @@ export function ServiceMaterialsEditor({
         )}
         {!isLoading && candidates.length === 0 && (
           <p className="text-xs text-muted">
-            {query.trim() || categoryFilter !== "ALL"
-              ? "No matching products in this filter. Try another category or search, or create the material product first."
-              : "No product candidates left. Create stocked products first, then attach them here."}
+            {enforceCat
+              ? `No products in category "${serviceCategory}". Create one, or change the service category.`
+              : "No product candidates. Create a stocked product first."}
           </p>
         )}
       </div>
