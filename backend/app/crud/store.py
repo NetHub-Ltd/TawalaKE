@@ -167,7 +167,7 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     ),
                 )
 
-            logger.info(f"Product data: {product.attributes.get('sku', 'N/A')} ")
+            logger.info(f"Product data: {(product.attributes or {}).get('sku', 'N/A')} ")
             item_total = float(product.selling_price) * qty
             subtotal += item_total
 
