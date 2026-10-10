@@ -57,3 +57,10 @@ def test_unpack_material_row_tuple_and_row():
     assert b2 is pm and m2 is prod
     b3, m3 = _unpack_material_row(pm)
     assert b3 is pm and m3 is None
+
+
+def test_categories_compatible_imported():
+    from app.crud.product_materials import _categories_compatible
+
+    assert _categories_compatible("General", "Anything") is True
+    assert _categories_compatible("Clothing", "Paper") is False
