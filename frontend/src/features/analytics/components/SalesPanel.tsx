@@ -292,10 +292,10 @@ export function SalesPanel({
   const grossLabel = profitProvisional ? "Gross (est.)" : "Gross profit";
 
   return (
-    <div className="space-y-5">
+    <div className="flex min-h-0 flex-col gap-2.5">
       {/* Primary pulse — one landing number */}
       <section
-        className="rounded-xl border border-border/40 bg-card px-4 py-5 shadow-card sm:px-6"
+        className="shrink-0 rounded-lg border border-border/40 bg-card px-3 py-3 shadow-card sm:px-4"
         aria-labelledby="overview-hero-label"
       >
         <p
@@ -304,7 +304,7 @@ export function SalesPanel({
         >
           Net revenue
         </p>
-        <p className="mt-1 font-mono text-3xl font-semibold tracking-tight text-foreground tabular-nums sm:text-4xl">
+        <p className="mt-0.5 font-mono text-2xl font-semibold tracking-tight text-foreground tabular-nums sm:text-3xl">
           {formatKES(rev)}
         </p>
         {revDelta ? (
@@ -323,7 +323,7 @@ export function SalesPanel({
           <p className="mt-1.5 text-sm text-muted">Completed sales this period</p>
         )}
 
-        <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-border/40 pt-4 text-sm">
+        <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-border/40 pt-2.5 text-sm">
           <div className="flex items-baseline gap-1.5">
             <dt className="text-muted">Orders</dt>
             <dd className="font-mono font-semibold tabular-nums text-foreground">
@@ -350,7 +350,7 @@ export function SalesPanel({
         </dl>
 
         {expensesAvailable === true ? (
-          <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-background/80 px-3 py-2.5">
+          <div className="mt-2.5 flex flex-wrap items-baseline justify-between gap-2 rounded-md bg-background/80 px-2.5 py-1.5">
             <div className="text-sm">
               <span className="text-muted">After expenses</span>
               <span
@@ -383,7 +383,7 @@ export function SalesPanel({
         outstanding={credit}
       />
 
-      <div className="rounded-md border border-border/50 bg-card p-4 shadow-card">
+      <div className="min-h-0 flex-1 rounded-md border border-border/50 bg-card p-3 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold tracking-wide text-muted">
             Trend
@@ -433,15 +433,15 @@ export function SalesPanel({
           {metric === "all" ? (
             <MultiSeriesTrendChart
               points={multiSeriesPoints}
-              height={220}
+              height={140}
               emptyLabel="No completed sales in this period"
               moneyFormatter={(n) => formatKES(n)}
             />
           ) : (
-            <div className="min-h-[220px]">
+            <div className="min-h-[140px]">
               <MetricLineChart
                 points={chartPoints}
-                height={220}
+                height={140}
                 emptyLabel="No completed sales in this period"
                 deltaPct={chartDeltaPct}
                 valueFormatter={
@@ -480,7 +480,7 @@ function CashCreditSection({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 sm:px-5"
+        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 sm:px-4"
         aria-expanded={open}
       >
         <div>
@@ -518,10 +518,10 @@ function CashCreditSection({
 
 function PanelSkeleton() {
   return (
-    <div className="space-y-5 animate-pulse">
-      <div className="min-h-[160px] rounded-xl bg-border/40" />
+    <div className="flex flex-col gap-2.5 animate-pulse">
+      <div className="min-h-[120px] rounded-lg bg-border/40" />
       <div className="h-14 rounded-xl bg-border/40" />
-      <div className="min-h-[280px] rounded-md bg-border/40" />
+      <div className="min-h-[140px] rounded-md bg-border/40" />
     </div>
   );
 }
