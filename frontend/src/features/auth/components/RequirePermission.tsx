@@ -3,6 +3,7 @@
 import React from "react";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
 import { PermissionKey } from "@/lib/rbac";
+import { PermissionChecking } from "@/features/auth/components/PermissionChecking";
 
 export function RequirePermission({
   permission,
@@ -16,13 +17,9 @@ export function RequirePermission({
   children: React.ReactNode;
 }) {
   const { can, canAny, isLoading } = usePermissions();
-  // Avoid blank/deny flash while NextAuth session hydrates (slow networks).
+  // Never flash deny while session/role is still hydrating.
   if (isLoading) {
-    return (
-      <div className="flex min-h-[8rem] items-center justify-center text-sm text-muted">
-        Checking permissions…
-      </div>
-    );
+    return <PermissionChecking />;
   }
   const ok = permission
     ? can(permission)

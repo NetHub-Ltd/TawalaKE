@@ -13,7 +13,7 @@ const plusJakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   subsets: ["latin"],
   display: "swap",
-  weight: ["500", "600", "700"],
+  // Variable font — avoid weight[] (Turbopack next/font multi-query resolve bug)
 });
 
 const jetBrainsMono = JetBrains_Mono({
