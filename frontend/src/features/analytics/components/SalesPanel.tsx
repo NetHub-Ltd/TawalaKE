@@ -99,9 +99,6 @@ export function SalesPanel({
   const orders = s?.total_completed_orders_count ?? 0;
   const prevOrders = p?.total_completed_orders_count ?? 0;
   const aov = s?.average_order_value ?? (orders ? rev / orders : 0);
-  const prevAov =
-    p?.average_order_value ??
-    (prevOrders ? (p?.net_revenue_collected ?? 0) / prevOrders : 0);
   const gp = s?.gross_profit ?? 0;
   const prevGp = p?.gross_profit ?? 0;
   const missingCosts = s?.missing_cost_line_count ?? 0;
