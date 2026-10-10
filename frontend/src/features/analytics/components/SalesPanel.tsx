@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { clsx } from "clsx";
-import { KpiCard, KpiRow } from "./KpiCard";
+import { ChevronDown } from "lucide-react";
 import { MetricLineChart, MultiSeriesTrendChart } from "./charts/SimpleCharts";
 import { formatKES, formatPct, pctChange } from "@/features/analytics/lib/format";
 import type {
@@ -131,10 +131,15 @@ export function SalesPanel({
     return pctChange(disc, prevDisc);
   })();
 
-  const delta = (cur: number, prev: number) => {
+  /** Suppress noisy % on near-zero baselines (e.g. first sale of the day). */
+  const quietDelta = (cur: number, prev: number) => {
+    if (prev <= 0 && cur <= 0) return null;
+    if (prev <= 0 && cur > 0) return { label: "vs prior period", tone: "muted" as const };
     const c = pctChange(cur, prev);
+    if (!Number.isFinite(c)) return null;
+    if (Math.abs(c) < 0.5) return null; // under 0.5% not worth the noise
     return {
-      delta: formatPct(c),
+      label: formatPct(c),
       tone: (c >= 0 ? "good" : "bad") as "good" | "bad",
     };
   };
@@ -278,117 +283,105 @@ export function SalesPanel({
     return <PanelSkeleton />;
   }
 
-  const profitProps =
-    profitProvisional
-      ? {
-          value: formatKES(gp),
-          ...(gp !== 0 ? delta(gp, prevGp) : {}),
-          hint:
-            missingCosts > 0
-              ? `Estimated · ${missingCosts} line${missingCosts === 1 ? "" : "s"} missing cost`
-              : "Estimated (provisional)",
-          tone: "warn" as const,
-        }
-      : rev > 0 && gp === 0
-        ? {
-            value: formatKES(0),
-            hint: "No margin recorded",
-            tone: "muted" as const,
-          }
-        : {
-            value: formatKES(gp),
-            ...delta(gp, prevGp),
-            hint: rev > 0 ? `margin ${((gp / rev) * 100).toFixed(0)}%` : undefined,
-          };
+  const revDelta = quietDelta(rev, prevRev);
+  const netAfter =
+    profitAfterExpenses !== undefined && profitAfterExpenses !== null
+      ? profitAfterExpenses
+      : gp - expensesTotal;
+  const marginPct = rev > 0 ? Math.round((gp / rev) * 100) : null;
+  const grossLabel = profitProvisional ? "Gross (est.)" : "Gross profit";
 
   return (
-    <div className="space-y-4">
-      <KpiRow className="lg:grid-cols-4">
-        <KpiCard
-          label="Net revenue"
-          value={formatKES(rev)}
-          {...delta(rev, prevRev)}
-          hint="Completed sales · includes tax"
-          emphasis
-        />
-        <KpiCard
-          label="Orders"
-          value={orders.toLocaleString()}
-          {...delta(orders, prevOrders)}
-        />
-        <KpiCard
-          label="Avg ticket"
-          value={formatKES(aov)}
-          {...delta(aov, prevAov)}
-        />
-        <KpiCard
-          label={profitProvisional ? "Gross profit (est.)" : "Gross profit"}
-          {...profitProps}
-        />
-      </KpiRow>
-
-      {expensesAvailable === true ? (
-        <KpiRow className="lg:grid-cols-3">
-          <KpiCard
-            label="Expenses"
-            value={formatKES(expensesTotal)}
-            hint={
-              expensesCount > 0
-                ? `${expensesCount} entr${expensesCount === 1 ? "y" : "ies"} this period`
-                : "No expenses recorded this period"
-            }
-            tone={expensesTotal > 0 ? "default" : "muted"}
-          />
-          <KpiCard
-            label={profitProvisional ? "Gross profit (est.)" : "Gross profit"}
-            value={formatKES(gp)}
-            hint="Before operating expenses"
-          />
-          <KpiCard
-            label="Profit after expenses"
-            value={formatKES(
-              profitAfterExpenses !== undefined && profitAfterExpenses !== null
-                ? profitAfterExpenses
-                : gp - expensesTotal
-            )}
-            hint="Gross profit − period expenses"
-            tone={
-              (profitAfterExpenses ?? gp - expensesTotal) < 0 ? "bad" : "good"
-            }
-            emphasis
-          />
-        </KpiRow>
-      ) : expensesAvailable === false ? (
-        <p
-          className="rounded-md border border-border/40 bg-background px-3 py-2 text-xs text-muted"
-          role="note"
-        >
-          Operating expenses are not available for this window yet. Profit above
-          is gross margin from sales only — not profit after shop costs.
-        </p>
-      ) : null}
-
-      <p
-        className="rounded-md border border-border/40 bg-background px-3 py-2 text-xs text-muted"
-        role="note"
+    <div className="space-y-5">
+      {/* Primary pulse — one landing number */}
+      <section
+        className="rounded-xl border border-border/40 bg-card px-4 py-5 shadow-card sm:px-6"
+        aria-labelledby="overview-hero-label"
       >
-        Completed sales only · amounts include tax · open credit is live (all
-        open balances), not limited to this period.
-      </p>
+        <p
+          id="overview-hero-label"
+          className="text-xs font-medium uppercase tracking-wide text-muted"
+        >
+          Net revenue
+        </p>
+        <p className="mt-1 font-mono text-3xl font-semibold tracking-tight text-foreground tabular-nums sm:text-4xl">
+          {formatKES(rev)}
+        </p>
+        {revDelta ? (
+          <p
+            className={clsx(
+              "mt-1.5 text-sm",
+              revDelta.tone === "good" && "text-brand-accent",
+              revDelta.tone === "bad" && "text-[color:var(--error)]",
+              revDelta.tone === "muted" && "text-muted",
+            )}
+          >
+            {revDelta.label}
+            {revDelta.tone !== "muted" ? " vs prior period" : ""}
+          </p>
+        ) : (
+          <p className="mt-1.5 text-sm text-muted">Completed sales this period</p>
+        )}
 
-      <div className="grid gap-3 lg:grid-cols-2">
-        <MoneyBlock
-          title="Settled this period"
-          subtitle="Cash collected in the selected window"
-          rows={settledRows}
-          emptyNote="No settled tender in this period"
-        />
-        <MoneyBlock
-          title="Credit"
-          subtitle="Issued & collected are period · outstanding is live"
-          rows={creditRows}
-        />
-      </div>
+        <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-border/40 pt-4 text-sm">
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-muted">Orders</dt>
+            <dd className="font-mono font-semibold tabular-nums text-foreground">
+              {orders.toLocaleString()}
+            </dd>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-muted">Avg ticket</dt>
+            <dd className="font-mono font-semibold tabular-nums text-foreground">
+              {formatKES(aov)}
+            </dd>
+          </div>
+          <div className="flex items-baseline gap-1.5">
+            <dt className="text-muted">{grossLabel}</dt>
+            <dd className="font-mono font-semibold tabular-nums text-foreground">
+              {formatKES(gp)}
+              {marginPct != null && !profitProvisional ? (
+                <span className="ml-1 text-xs font-normal text-muted">
+                  · {marginPct}%
+                </span>
+              ) : null}
+            </dd>
+          </div>
+        </dl>
+
+        {expensesAvailable === true ? (
+          <div className="mt-4 flex flex-wrap items-baseline justify-between gap-2 rounded-lg bg-background/80 px-3 py-2.5">
+            <div className="text-sm">
+              <span className="text-muted">After expenses</span>
+              <span
+                className={clsx(
+                  "ml-2 font-mono text-base font-semibold tabular-nums",
+                  netAfter < 0
+                    ? "text-[color:var(--error)]"
+                    : "text-foreground",
+                )}
+              >
+                {formatKES(netAfter)}
+              </span>
+            </div>
+            <p className="text-xs text-muted">
+              Expenses {formatKES(expensesTotal)}
+              {expensesCount > 0 ? ` · ${expensesCount}` : ""}
+            </p>
+          </div>
+        ) : expensesAvailable === false ? (
+          <p className="mt-3 text-xs text-muted" role="note">
+            Shop expenses not in this window yet — figure above is sales margin
+            only.
+          </p>
+        ) : null}
+      </section>
+
+      <CashCreditSection
+        settledRows={settledRows}
+        creditRows={creditRows}
+        outstanding={credit}
+      />
 
       <div className="rounded-md border border-border/50 bg-card p-4 shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -465,19 +458,69 @@ export function SalesPanel({
   );
 }
 
+function CashCreditSection({
+  settledRows,
+  creditRows,
+  outstanding,
+}: {
+  settledRows: MoneyCell[];
+  creditRows: MoneyCell[];
+  outstanding: number;
+}) {
+  const [open, setOpen] = useState(false);
+  const summary =
+    outstanding > 0
+      ? `Outstanding credit ${formatKES(outstanding)}`
+      : settledRows.length
+        ? "Settled collections this period"
+        : "Cash & credit";
+
+  return (
+    <div className="rounded-xl border border-border/40 bg-card shadow-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30 sm:px-5"
+        aria-expanded={open}
+      >
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted">
+            Cash & credit
+          </p>
+          <p className="mt-0.5 text-sm text-foreground">{summary}</p>
+        </div>
+        <ChevronDown
+          className={clsx(
+            "h-4 w-4 shrink-0 text-muted transition-transform",
+            open && "rotate-180",
+          )}
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <div className="grid gap-3 border-t border-border/40 px-4 py-3 sm:px-5 lg:grid-cols-2">
+          <MoneyBlock
+            title="Settled this period"
+            subtitle="In the selected window"
+            rows={settledRows}
+            emptyNote="No settled tender in this period"
+          />
+          <MoneyBlock
+            title="Credit"
+            subtitle="Outstanding is live across open balances"
+            rows={creditRows}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function PanelSkeleton() {
   return (
-    <div className="space-y-4 animate-pulse">
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="min-h-[88px] rounded-md bg-border/40" />
-        ))}
-      </div>
-      <div className="h-10 rounded-md bg-border/40" />
-      <div className="grid gap-3 lg:grid-cols-2">
-        <div className="h-24 rounded-md bg-border/40" />
-        <div className="h-24 rounded-md bg-border/40" />
-      </div>
+    <div className="space-y-5 animate-pulse">
+      <div className="min-h-[160px] rounded-xl bg-border/40" />
+      <div className="h-14 rounded-xl bg-border/40" />
       <div className="min-h-[280px] rounded-md bg-border/40" />
     </div>
   );
