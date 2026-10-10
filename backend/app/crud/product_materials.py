@@ -20,6 +20,31 @@ def _normalize_item_type(raw: Optional[str]) -> ItemType:
     return ItemType.PRODUCT
 
 
+def _unpack_material_row(row: object) -> Tuple[ProductMaterial, Optional[Product]]:
+    """
+    SQLAlchemy/SQLModel may return Row, tuple, or a single entity depending on version.
+    Always return (ProductMaterial, Optional[Product]).
+
+    Bug fixed: Row is not a tuple subclass, so treating the whole Row as ProductMaterial
+    caused AttributeError: material_id on PATCH /products/{id}.
+    """
+    if isinstance(row, ProductMaterial):
+        return row, None
+    if isinstance(row, (tuple, list)):
+        binding = row[0]
+        mat = row[1] if len(row) > 1 else None
+        return binding, mat  # type: ignore[return-value]
+    # SQLAlchemy Row: supports __getitem__/__len__ but is not a tuple
+    try:
+        binding = row[0]  # type: ignore[index]
+        mat = row[1] if len(row) > 1 else None  # type: ignore[arg-type]
+        if isinstance(binding, ProductMaterial):
+            return binding, mat if (mat is None or isinstance(mat, Product)) else None
+    except (TypeError, KeyError, IndexError, AttributeError):
+        pass
+    raise TypeError(f"Unexpected material row type: {type(row)!r}")
+
+
 async def list_materials(
     db: AsyncSession, service_id: UUID
 ) -> List[Tuple[ProductMaterial, Optional[Product]]]:
@@ -33,13 +58,7 @@ async def list_materials(
         .order_by(ProductMaterial.created_at)
     )
     rows = list(await db.exec(stmt))
-    out: List[Tuple[ProductMaterial, Optional[Product]]] = []
-    for row in rows:
-        if isinstance(row, (tuple, list)):
-            out.append((row[0], row[1] if len(row) > 1 else None))
-        else:
-            out.append((row, None))
-    return out
+    return [_unpack_material_row(row) for row in rows]
 
 
 async def materials_payload(
@@ -51,7 +70,7 @@ async def materials_payload(
         result.append(
             {
                 "material_id": binding.material_id,
-                "quantity": float(binding.quantity),
+                "quantity": float(binding.quantity or 0),
                 "material_label": mat.label if mat is not None else None,
             }
         )
