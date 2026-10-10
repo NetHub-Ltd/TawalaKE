@@ -528,3 +528,38 @@ def test_line_name_length_bounded():
     need_s = "12"
     name = f"{label} (Service · uses {need_s}× {mat})"[:150]
     assert len(name) <= 150
+
+
+@pytest.mark.asyncio
+async def test_replace_revives_soft_deleted_same_material(mock_session):
+    """Unique(service_id, material_id) — re-bind must revive, not insert."""
+    s = _service(category="General")
+    mid = uuid4()
+    prior = MagicMock()
+    prior.material_id = mid
+    prior.deleted_at = __import__("datetime").datetime.now(__import__("datetime").timezone.utc)
+    prior.quantity = 1.0
+    prior.organization_id = s.organization_id
+    prior.business_id = s.business_id
+
+    mat = MagicMock()
+    mat.id = mid
+    mat.deleted_at = None
+    mat.business_id = s.business_id
+    mat.item_type = ItemType.PRODUCT
+    mat.category = "General"
+    mat.label = "Paper"
+
+    mock_session.exec = AsyncMock(return_value=MagicMock(all=lambda: [prior]))
+    mock_session.get = AsyncMock(return_value=mat)
+    mock_session.add = MagicMock()
+
+    await replace_materials(
+        mock_session,
+        service=s,
+        materials=[{"material_id": mid, "quantity": 3}],
+        organization_id=s.organization_id,
+    )
+    assert prior.deleted_at is None
+    assert prior.quantity == 3.0
+    mock_session.add.assert_any_call(prior)

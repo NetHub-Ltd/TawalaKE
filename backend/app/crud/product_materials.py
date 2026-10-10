@@ -109,21 +109,9 @@ async def replace_materials(
             detail="Material bindings are only allowed on services. Convert this item to a service first.",
         )
 
-    # Soft-delete existing bindings
-    existing = (
-        await db.exec(
-            select(ProductMaterial).where(
-                ProductMaterial.service_id == service.id,
-                ProductMaterial.deleted_at.is_(None),  # type: ignore[attr-defined]
-            )
-        )
-    ).all()
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
-    for row in existing:
-        row.deleted_at = now
-        db.add(row)
 
     # Normalize payload → at most one binding
     normalized: list[tuple[UUID, float]] = []
@@ -150,6 +138,23 @@ async def replace_materials(
                 "or create separate services for different materials."
             ),
         )
+
+    target_mid = normalized[0][0] if normalized else None
+
+    # All rows for this service (active + soft-deleted) — unique(service_id, material_id)
+    # forbids a second insert after soft-delete; we must revive instead.
+    all_rows = (
+        await db.exec(
+            select(ProductMaterial).where(ProductMaterial.service_id == service.id)
+        )
+    ).all()
+
+    for row in all_rows:
+        if target_mid is not None and row.material_id == target_mid:
+            continue  # may revive below
+        if row.deleted_at is None:
+            row.deleted_at = now
+            db.add(row)
 
     for mid, qty_f in normalized:
         if mid == service.id:
@@ -184,15 +189,25 @@ async def replace_materials(
                     f"category to General)."
                 ),
             )
-        db.add(
-            ProductMaterial(
-                organization_id=organization_id or service.organization_id,
-                business_id=service.business_id,
-                service_id=service.id,
-                material_id=mid,
-                quantity=qty_f,
+
+        prior = next((r for r in all_rows if r.material_id == mid), None)
+        if prior is not None:
+            prior.deleted_at = None
+            prior.quantity = qty_f
+            prior.organization_id = organization_id or service.organization_id
+            prior.business_id = service.business_id
+            prior.updated_at = now
+            db.add(prior)
+        else:
+            db.add(
+                ProductMaterial(
+                    organization_id=organization_id or service.organization_id,
+                    business_id=service.business_id,
+                    service_id=service.id,
+                    material_id=mid,
+                    quantity=qty_f,
+                )
             )
-        )
 
 
 async def recipe_unit_cogs(db: AsyncSession, service_id: UUID) -> Optional[float]:
