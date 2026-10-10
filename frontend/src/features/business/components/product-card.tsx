@@ -271,7 +271,15 @@ export const ProductCard = forwardRef<HTMLButtonElement, ProductCardProps>(
                   {Math.round(popularity)}
                 </span>
               )}
-              {product.track_stock && <StockIndicator stock={stock} status={{ isOutOfStock, isCriticalStock, isModerateStock }} />}
+              {isService ? (
+                <span className="px-2 py-0.5 rounded-md bg-brand-primary/10 text-brand-primary border border-brand-primary/20 text-[10px] font-bold uppercase tracking-wide">
+                  Service
+                </span>
+              ) : (
+                product.track_stock && (
+                  <StockIndicator stock={stock} status={{ isOutOfStock, isCriticalStock, isModerateStock }} />
+                )
+              )}
             </div>
           </div>
 
