@@ -18,6 +18,7 @@ import {
 } from "@/features/analytics/hooks/useDashboardData";
 import type { AnalyticsRange } from "@/features/analytics/lib/fetchReport";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { PermissionChecking } from "@/features/auth/components/PermissionChecking";
 import { Permission } from "@/lib/rbac";
 import { MyShiftOverview } from "@/features/analytics/components/MyShiftOverview";
 import { Spinner } from "@/lib/components/ui";
@@ -95,11 +96,7 @@ export function OverviewClient({
     tab === "sales";
 
   if (sessionLoading) {
-    return (
-      <div className="flex flex-1 items-center justify-center gap-2 p-10 text-muted">
-        <Spinner /> Loading…
-      </div>
-    );
+    return <PermissionChecking className="p-10" />;
   }
 
   if (!canReports && canOwnSales) {

@@ -8,6 +8,7 @@ import {
   StaffMember,
 } from "@/features/staff/hooks/useStaff";
 import { usePermissions } from "@/features/auth/hooks/usePermissions";
+import { PermissionChecking } from "@/features/auth/components/PermissionChecking";
 import { Permission, STAFF_ROLES, StaffRoleName } from "@/lib/rbac";
 import {
   UserPlus,
@@ -130,12 +131,7 @@ export default function TeamDirectory({
   // paint has status=loading / role=null, which previously flashed a false deny
   // ("Signed in as unknown") even for OWNER/ADMIN.
   if (sessionLoading) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-12 text-muted">
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-        <p className="text-sm">Checking permissions…</p>
-      </div>
-    );
+    return <PermissionChecking className="p-12" />;
   }
 
   if (!isAuthenticated) {
