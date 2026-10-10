@@ -571,6 +571,8 @@ function ProductSettingsForm({
     attributes?: { unit_of_measure?: string | null; buying_price?: number | null; sku?: string | null; category?: string | null };
     min_stock_level?: number | null;
     cost_price?: number | null;
+    /** PRODUCT | SERVICE — optional until list payloads always include it */
+    item_type?: "PRODUCT" | "SERVICE" | null;
   };
   isPending: boolean;
   onSave: (values: Record<string, unknown>) => Promise<void>;
