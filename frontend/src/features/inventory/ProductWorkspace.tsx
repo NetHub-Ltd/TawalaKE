@@ -22,6 +22,10 @@ import { useProducts } from "@/features/business/hooks/useProducts";
 import { useBusinessContext } from "@/features/business/hooks/useBusiness";
 import { cn } from "@/lib/utils";
 import { useCatalogOptions } from "@/features/catalog/useCatalogOptions";
+import {
+  ServiceMaterialsEditor,
+  type MaterialLine,
+} from "@/features/inventory/ServiceMaterialsEditor";
 
 type Tab = "overview" | "history" | "settings";
 type Action = "receive" | "count" | "adjust" | null;
@@ -262,11 +266,24 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       </div>
 
       <header className="space-y-1">
-        <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
-          {product.label}
-        </h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
+            {product.label}
+          </h1>
+          {product.item_type === "SERVICE" ? (
+            <span className="rounded-full border border-brand-primary/30 bg-brand-primary/10 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand-primary">
+              Service
+            </span>
+          ) : (
+            <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-muted">
+              Product
+            </span>
+          )}
+        </div>
         <p className="text-sm text-muted">
-          View levels, run stock actions, and see history. Change name, selling price, cost, and SKU in Settings. Change on-hand quantity with Receive, Count, or Adjust.
+          {product.item_type === "SERVICE"
+            ? "This is a service — it has no stock of its own. Materials (if any) decrease when it is sold. Edit type, price, and materials in Settings."
+            : "View levels, run stock actions, and see history. Change name, price, and type in Settings. Change on-hand with Receive, Count, or Adjust."}
         </p>
       </header>
 
@@ -310,33 +327,53 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
       {tab === "overview" && !action && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            <Metric label="On hand" value={`${onHand}`} />
+            {product.item_type === "SERVICE" ? (
+              <>
+                <Metric label="Type" value="Service" />
+                <Metric
+                  label="Materials"
+                  value={`${(product.materials || []).length}`}
+                />
+              </>
+            ) : (
+              <Metric label="On hand" value={`${onHand}`} />
+            )}
             <Metric
-              label="Value (KES)"
-              value={formatKes(value)}
-            />
-            <Metric
-              label="Selling price"
+              label={product.item_type === "SERVICE" ? "Sell price" : "Value (KES)"}
               value={
-                product.selling_price == null
-                  ? "—"
-                  : formatKes(Number(product.selling_price))
+                product.item_type === "SERVICE"
+                  ? product.selling_price == null
+                    ? "—"
+                    : formatKes(Number(product.selling_price))
+                  : formatKes(value)
               }
             />
+            {product.item_type !== "SERVICE" && (
+              <Metric
+                label="Selling price"
+                value={
+                  product.selling_price == null
+                    ? "—"
+                    : formatKes(Number(product.selling_price))
+                }
+              />
+            )}
             <Metric label="Category" value={product.category || "—"} />
             <Metric
               label="Stock status"
               value={
-                !product.track_stock
-                  ? "Not tracked"
-                  : onHand <= 0
-                    ? "Out of stock"
-                    : onHand <= 10
-                      ? "Low"
-                      : "In stock"
+                product.item_type === "SERVICE"
+                  ? "Uses materials"
+                  : !product.track_stock
+                    ? "Not tracked"
+                    : onHand <= 0
+                      ? "Out of stock"
+                      : onHand <= 10
+                        ? "Low"
+                        : "In stock"
               }
               tone={
-                !product.track_stock
+                product.item_type === "SERVICE" || !product.track_stock
                   ? undefined
                   : onHand <= 0
                     ? "warn"
@@ -345,16 +382,45 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                       : "ok"
               }
             />
-            <Metric
-              label="Last count"
-              value={
-                product.last_stock_take
-                  ? new Date(product.last_stock_take).toLocaleDateString()
-                  : "Never"
-              }
-              tone={!product.last_stock_take && product.track_stock ? "warn" : undefined}
-            />
+            {product.item_type !== "SERVICE" && (
+              <Metric
+                label="Last count"
+                value={
+                  product.last_stock_take
+                    ? new Date(product.last_stock_take).toLocaleDateString()
+                    : "Never"
+                }
+                tone={!product.last_stock_take && product.track_stock ? "warn" : undefined}
+              />
+            )}
           </div>
+
+          {product.item_type === "SERVICE" && (
+            <section className="rounded-md border border-border/60 bg-card p-4 shadow-sm">
+              <h2 className="mb-2 text-sm font-semibold text-foreground">Material recipe</h2>
+              {(product.materials || []).length === 0 ? (
+                <p className="text-sm text-muted">
+                  No materials bound. Open Settings to attach products this service consumes when sold.
+                </p>
+              ) : (
+                <ul className="divide-y divide-border/60">
+                  {(product.materials || []).map((m) => (
+                    <li
+                      key={m.material_id}
+                      className="flex items-center justify-between gap-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-foreground">
+                        {m.material_label || m.material_id.slice(0, 8)}
+                      </span>
+                      <span className="tabular-nums text-muted">
+                        × {m.quantity} per unit
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
 
           <div className="grid gap-6 lg:grid-cols-[1fr_220px]">
             <section className="rounded-md border border-border/60 bg-card p-4 shadow-sm">
@@ -363,12 +429,24 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                 rows={recent}
                 loading={movementsLoading}
                 error={movementsError}
-                emptyText="No stock movements yet for this product."
+                emptyText={
+                  product.item_type === "SERVICE"
+                    ? "No movements on this service row. Material stock moves show on each material product."
+                    : "No stock movements yet for this product."
+                }
               />
             </section>
 
             <aside className="space-y-2 rounded-md border border-border/60 bg-card p-4 shadow-sm">
               <h2 className="mb-2 text-sm font-semibold text-foreground">Quick actions</h2>
+              {product.item_type === "SERVICE" ? (
+                <p className="text-xs leading-relaxed text-muted">
+                  Stock is not held on this service. Receive, count, and adjust on the{" "}
+                  <strong className="text-foreground">material products</strong> instead — or edit the
+                  recipe under Settings.
+                </p>
+              ) : (
+                <>
               <ActionButton
                 icon={Plus}
                 label="Receive stock"
@@ -384,6 +462,15 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
                 label="Adjust stock"
                 onClick={() => selectAction("adjust")}
               />
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => selectTab("settings")}
+                className="mt-2 inline-flex min-h-[40px] w-full items-center justify-center rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary/30"
+              >
+                Open settings
+              </button>
             </aside>
           </div>
         </div>
@@ -507,8 +594,8 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
           <div>
             <h2 className="text-base font-semibold text-foreground">Catalogue settings</h2>
             <p className="mt-1 text-sm text-muted">
-              Name, selling price, cost, SKU, and tracking. On-hand quantity is not edited here —
-              use Receive, Count, or Adjust for stock levels.
+              Name, type, price, and SKU. For products, change on-hand with Receive, Count, or Adjust.
+              For services, attach materials here — stock moves on those products when the service is sold.
             </p>
           </div>
           <ProductSettingsForm
@@ -541,7 +628,11 @@ export function ProductWorkspace({ businessId, productId }: ProductWorkspaceProp
               }}
               className="mt-4 inline-flex min-h-[44px] items-center rounded-md border border-red-500/40 bg-[var(--error-container)]0/10 px-4 text-sm font-semibold text-[var(--error)] transition-colors hover:bg-[var(--error-container)]0/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/40 disabled:opacity-60 dark:text-red-400"
             >
-              {deleteProduct.isPending ? "Deleting…" : "Delete product"}
+              {deleteProduct.isPending
+                ? "Deleting…"
+                : product.item_type === "SERVICE"
+                  ? "Delete service"
+                  : "Delete product"}
             </button>
           </div>
         </div>
@@ -561,6 +652,7 @@ function ProductSettingsForm({
 }: {
   businessId: string;
   product: {
+    id?: string;
     label: string;
     selling_price: number;
     stock: number;
@@ -573,6 +665,7 @@ function ProductSettingsForm({
     cost_price?: number | null;
     /** PRODUCT | SERVICE — optional until list payloads always include it */
     item_type?: "PRODUCT" | "SERVICE" | null;
+    materials?: MaterialLine[] | null;
   };
   isPending: boolean;
   onSave: (values: Record<string, unknown>) => Promise<void>;
@@ -597,6 +690,13 @@ function ProductSettingsForm({
   const [trackStock, setTrackStock] = useState(Boolean(product.track_stock));
   const [itemType, setItemType] = useState<"PRODUCT" | "SERVICE">(
     product.item_type === "SERVICE" ? "SERVICE" : "PRODUCT"
+  );
+  const [materials, setMaterials] = useState<MaterialLine[]>(() =>
+    (product.materials || []).map((m) => ({
+      material_id: m.material_id,
+      quantity: Number(m.quantity) || 1,
+      material_label: m.material_label,
+    }))
   );
   const [active, setActive] = useState(product.active !== false);
   const [minStock, setMinStock] = useState(String(product.min_stock_level ?? 10));
@@ -640,6 +740,12 @@ function ProductSettingsForm({
         min_stock_level: Number(minStock) || 0,
         cost_price: buyingPrice === "" ? undefined : Number(buyingPrice),
         selling_price: sellingPrice === "" ? undefined : sell,
+        materials: isService
+          ? materials.map((m) => ({
+              material_id: m.material_id,
+              quantity: Number(m.quantity) || 1,
+            }))
+          : [],
         attributes: {
           unit_of_measure: uom || null,
           buying_price: buyingPrice === "" ? null : Number(buyingPrice),
@@ -765,16 +871,28 @@ function ProductSettingsForm({
         </label>
       </div>
 
+      {isService && (
+        <ServiceMaterialsEditor
+          businessId={businessId}
+          excludeProductId={product.id}
+          value={materials}
+          onChange={setMaterials}
+          disabled={saving || isPending}
+        />
+      )}
+
       <div className="flex flex-wrap gap-6">
-        <label className="inline-flex items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
-            checked={trackStock}
-            onChange={(e) => setTrackStock(e.target.checked)}
-            className="h-4 w-4 rounded border-border"
-          />
-          Track stock for this product
-        </label>
+        {!isService && (
+          <label className="inline-flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={trackStock}
+              onChange={(e) => setTrackStock(e.target.checked)}
+              className="h-4 w-4 rounded border-border"
+            />
+            Track stock for this product
+          </label>
+        )}
         <label className="inline-flex items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
