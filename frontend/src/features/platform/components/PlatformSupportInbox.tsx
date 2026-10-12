@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getPlatformAccessToken } from "@/lib/platform/auth";
 import { Button, Spinner } from "@/lib/components/ui";
 
@@ -24,6 +25,8 @@ type Msg = {
 };
 
 export function PlatformSupportInbox() {
+  const router = useRouter();
+  const [token, setToken] = useState<string | null>(null);
   const [items, setItems] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,17 +35,27 @@ export function PlatformSupportInbox() {
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
 
-  const authHeader = useCallback(() => {
-    const token = getPlatformAccessToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }, []);
+  useEffect(() => {
+    const t = getPlatformAccessToken();
+    if (!t) {
+      router.replace("/platform/login");
+      return;
+    }
+    setToken(t);
+  }, [router]);
+
+  const headers = useMemo((): Record<string, string> => {
+    if (!token) return {};
+    return { Authorization: `Bearer ${token}` };
+  }, [token]);
 
   const loadList = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/v1/platform/support", {
-        headers: { ...authHeader() },
+        headers,
         cache: "no-store",
       });
       const data = await res.json().catch(() => ({}));
@@ -57,12 +70,13 @@ export function PlatformSupportInbox() {
     } finally {
       setLoading(false);
     }
-  }, [authHeader]);
+  }, [token, headers]);
 
   const loadThread = useCallback(
     async (id: string) => {
+      if (!token) return;
       const res = await fetch(`/api/v1/platform/support/${id}`, {
-        headers: { ...authHeader() },
+        headers,
         cache: "no-store",
       });
       const data = await res.json().catch(() => ({}));
@@ -73,7 +87,7 @@ export function PlatformSupportInbox() {
       setSelected(id);
       setMessages((data as { messages?: Msg[] }).messages || []);
     },
-    [authHeader]
+    [token, headers]
   );
 
   useEffect(() => {
@@ -82,14 +96,14 @@ export function PlatformSupportInbox() {
 
   async function sendReply(e: React.FormEvent) {
     e.preventDefault();
-    if (!selected || !reply.trim()) return;
+    if (!selected || !reply.trim() || !token) return;
     setSending(true);
     try {
       const res = await fetch(`/api/v1/platform/support/${selected}/messages`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...authHeader(),
+          ...headers,
         },
         body: JSON.stringify({ body: reply.trim(), claim: true }),
       });
@@ -103,6 +117,14 @@ export function PlatformSupportInbox() {
     } finally {
       setSending(false);
     }
+  }
+
+  if (!token) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner />
+      </div>
+    );
   }
 
   return (
