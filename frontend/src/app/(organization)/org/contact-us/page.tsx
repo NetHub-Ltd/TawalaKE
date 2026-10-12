@@ -22,15 +22,38 @@ export default function OrgContactUsPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.message.trim()) return;
+    setError(null);
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const res = await fetch("/api/v1/org/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          subject: formData.organization?.trim() || null,
+          message: formData.message.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = (data as { detail?: unknown }).detail;
+        setError(
+          (typeof detail === "string" && detail) ||
+            "Could not send support message. You may need permission to start support conversations."
+        );
+        return;
+      }
       setIsSuccess(true);
-    }, 900);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -103,6 +126,9 @@ export default function OrgContactUsPage() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                {error ? (
+                  <p className="text-sm text-destructive" role="alert">{error}</p>
+                ) : null}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-foreground" htmlFor="name">
                     Your name

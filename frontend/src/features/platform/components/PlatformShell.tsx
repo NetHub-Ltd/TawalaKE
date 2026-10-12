@@ -9,6 +9,7 @@ import {
   Users,
   CreditCard,
   ScrollText,
+  MessageSquare,
   ChevronLeft,
   LogOut,
   Shield,
@@ -62,6 +63,13 @@ const PLATFORM_NAV: PlatformNavItem[] = [
   //   href: "/platform/jobs",
   //   icon: //   match: "prefix",
   // },
+  {
+    id: "support",
+    label: "Support",
+    href: "/platform/support",
+    icon: MessageSquare,
+    match: "prefix",
+  },
   {
     id: "audit",
     label: "Audit",

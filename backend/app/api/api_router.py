@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers, platform, catalog, org_permissions, jobs
+from app.api.routes import organization, products, sales, payments, staff, auth, management, stores, stock, reports, ws_dashboard, expenses, customers, platform, catalog, org_permissions, jobs, messaging
 from app.core.config import settings
 
 from app.utils.logging import logger
@@ -109,3 +109,8 @@ api_router.include_router(
 )
 
 api_router.include_router(jobs.router, prefix="/jobs", tags=["Background Jobs"])
+
+api_router.include_router(
+    messaging.router,
+    tags=["Support & Messaging"],
+)
