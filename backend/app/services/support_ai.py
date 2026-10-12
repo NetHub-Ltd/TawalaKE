@@ -260,7 +260,7 @@ async def run_support_ai_for_conversation(conversation_id: UUID) -> None:
 
             escalate = bool(
                 re.search(
-                    r"(escalat|human agent|support agent will)",
+                    r"\b(escalat|human agent|support agent will)\b",
                     text,
                     re.IGNORECASE,
                 )
