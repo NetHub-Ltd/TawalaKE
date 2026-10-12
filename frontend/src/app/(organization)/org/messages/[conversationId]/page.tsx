@@ -3,23 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import {
+  subscribeSupportConversation,
+  type SupportWsMessage,
+} from "@/lib/support-ws";
 
-type Msg = {
-  id: string;
-  body: string;
-  author_display_name?: string | null;
-  author_type: string;
-  created_at?: string | null;
-};
+type Msg = SupportWsMessage;
 
 export default function OrgMessageThreadPage() {
   const params = useParams();
   const id = String(params?.conversationId || "");
+  const { data: session } = useSession();
+  const token = (session as { accessToken?: string } | null)?.accessToken;
   const [subject, setSubject] = useState<string | null>(null);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [reply, setReply] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [live, setLive] = useState("");
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -37,6 +39,19 @@ export default function OrgMessageThreadPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!id || !token) return;
+    return subscribeSupportConversation(
+      `/ws/support/org/${id}?token=${encodeURIComponent(token)}`,
+      (msg) => {
+        setMessages((prev) =>
+          prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+        );
+      },
+      (s) => setLive(s)
+    );
+  }, [id, token]);
+
   async function onReply(e: React.FormEvent) {
     e.preventDefault();
     if (!reply.trim()) return;
@@ -53,8 +68,13 @@ export default function OrgMessageThreadPage() {
         setError("Could not send");
         return;
       }
+      const created = (await res.json().catch(() => null)) as Msg | null;
+      if (created?.id) {
+        setMessages((prev) =>
+          prev.some((m) => m.id === created.id) ? prev : [...prev, created]
+        );
+      }
       setReply("");
-      await load();
     } finally {
       setSending(false);
     }
@@ -65,7 +85,12 @@ export default function OrgMessageThreadPage() {
       <Link href="/org/messages" className="text-sm text-muted underline-offset-2 hover:underline">
         ← Messages
       </Link>
-      <h1 className="mt-2 text-xl font-semibold">{subject || "Conversation"}</h1>
+      <h1 className="mt-2 text-xl font-semibold">
+        {subject || "Conversation"}
+        {live === "open" ? (
+          <span className="ml-2 text-xs font-normal text-brand-accent">Live</span>
+        ) : null}
+      </h1>
       {error ? (
         <p className="mt-3 text-sm text-destructive" role="alert">
           {error}

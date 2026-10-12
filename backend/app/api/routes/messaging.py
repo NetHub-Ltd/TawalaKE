@@ -46,6 +46,7 @@ from app.schemas.messaging import (
 )
 from app.services.support_ai import schedule_support_ai
 from app.services.messaging import (
+    publish_conversation_event,
     add_participants,
     append_message,
     conversation_to_dict,
@@ -156,6 +157,14 @@ async def reply_public_support(
     )
     await db.commit()
     await db.refresh(msg)
+    await publish_conversation_event(
+        conv.id,
+        {
+            "type": "support.message",
+            "conversation_id": str(conv.id),
+            "message": _msg_read(msg).model_dump(mode="json"),
+        },
+    )
     schedule_support_ai(background_tasks, conv.id)
     return _msg_read(msg)
 
@@ -289,6 +298,14 @@ async def reply_org_support(
     )
     await db.commit()
     await db.refresh(msg)
+    await publish_conversation_event(
+        conv.id,
+        {
+            "type": "support.message",
+            "conversation_id": str(conv.id),
+            "message": _msg_read(msg).model_dump(mode="json"),
+        },
+    )
     schedule_support_ai(background_tasks, conv.id)
     return _msg_read(msg)
 
@@ -428,6 +445,14 @@ async def reply_internal_message(
     )
     await db.commit()
     await db.refresh(msg)
+    await publish_conversation_event(
+        conv.id,
+        {
+            "type": "support.message",
+            "conversation_id": str(conv.id),
+            "message": _msg_read(msg).model_dump(mode="json"),
+        },
+    )
     return _msg_read(msg)
 
 
@@ -525,6 +550,14 @@ async def platform_reply_support(
     )
     await db.commit()
     await db.refresh(msg)
+    await publish_conversation_event(
+        conv.id,
+        {
+            "type": "support.message",
+            "conversation_id": str(conv.id),
+            "message": _msg_read(msg).model_dump(mode="json"),
+        },
+    )
 
     # Email only for public channel — need raw token which we don't store; skip link regeneration
     # Store plaintext token only once at create. For reply email use support page fallback.

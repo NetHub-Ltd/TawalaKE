@@ -1,11 +1,16 @@
 """Phase B: Gemini first-response for PUBLIC_SUPPORT and ORG_SUPPORT.
 
 Every AI reply is persisted (SupportMessage author_type=AI_AGENT) for monitoring.
+
+Escalation policy:
+- Do NOT escalate only because the user asked for a human.
+- Escalate when the model cannot produce a reply (failure), or the topic is
+  outside AI authorization (billing disputes, account deletion, security incidents).
+- Knowledge base / docs grounding will refine answers later; structure is ready.
 """
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from typing import Any, List, Optional
 from uuid import UUID
 
@@ -22,25 +27,28 @@ from app.models.models import (
     SupportConversation,
     SupportMessage,
 )
-from app.services.messaging import append_message, notify_public_reply
+from app.services.messaging import append_message, publish_conversation_event
 from app.utils.logging import logger
 
-# User phrases that force human handoff
-_ESCALATE_PATTERNS = [
-    r"\b(human|agent|person|representative|someone real)\b",
-    r"\b(speak|talk)\s+to\s+(a\s+)?(human|agent|person)\b",
-    r"\b(billing|refund|chargeback|invoice dispute)\b",
-    r"\b(delete my (account|data)|gdpr|lawyer|legal)\b",
-    r"\b(security breach|hacked|unauthorized access)\b",
-]
-
-_ESCALATE_RE = re.compile("|".join(_ESCALATE_PATTERNS), re.IGNORECASE)
+# Topics AI is not authorized to resolve — escalate (not mere "I want a human")
+_UNAUTHORIZED_TOPIC_RE = re.compile(
+    r"("
+    r"\b(refund|chargeback|billing dispute|dispute (this |my )?charge)\b|"
+    r"\b(delete my (account|data)|erase my data|gdpr (erasure|deletion))\b|"
+    r"\b(security breach|hacked|unauthorized access|data leak)\b|"
+    r"\b(lawyer|legal action|sue you)\b"
+    r")",
+    re.IGNORECASE,
+)
 
 _SYSTEM = """You are Tawala support assistant for a multi-tenant retail/POS platform used in Kenya and similar markets.
 Be concise, practical, and polite. Use plain language.
 You do NOT have access to the customer's live POS, stock, or payment data.
-If you are unsure, or the user needs account-specific changes, billing disputes, refunds, data deletion, or security issues, say you are escalating to a human agent and keep the reply short.
-Do not invent product features. Prefer pointing them to in-app Help or waiting for a human when needed.
+If the user asks to speak to a human, acknowledge the request, keep helping with what you can,
+and explain that a human can join if the issue cannot be resolved here — do not stop assisting only because they asked.
+Only when the issue is outside your authorization (billing disputes, refunds/chargebacks, account/data deletion, security incidents)
+or you truly cannot help, say clearly that you are escalating to a human agent and keep that reply short.
+Do not invent product features. Prefer in-app Help when relevant.
 Reply in the same language the user is using when practical (English or Swahili mix is fine).
 """
 
@@ -64,8 +72,9 @@ def should_run_ai(conv: SupportConversation) -> bool:
     return True
 
 
-def wants_human(text: str) -> bool:
-    return bool(_ESCALATE_RE.search(text or ""))
+def is_unauthorized_topic(text: str) -> bool:
+    """True when the user message is outside AI authorization."""
+    return bool(_UNAUTHORIZED_TOPIC_RE.search(text or ""))
 
 
 async def generate_gemini_reply(
@@ -74,10 +83,7 @@ async def generate_gemini_reply(
     channel: str,
     subject: Optional[str],
 ) -> tuple[Optional[str], dict[str, Any]]:
-    """
-    Call Gemini generateContent. Returns (text, metadata).
-    text is None on failure.
-    """
+    """Call Gemini generateContent. Returns (text, metadata). text is None on failure."""
     api_key = (getattr(settings, "gemini_apikey", None) or "").strip()
     model = (getattr(settings, "gemini_model", None) or "gemini-2.0-flash").strip()
     meta: dict[str, Any] = {
@@ -99,23 +105,22 @@ async def generate_gemini_reply(
         meta["error"] = "empty_history"
         return None, meta
 
+    system_text = _SYSTEM
+    if subject:
+        system_text += f"\nConversation subject: {subject}\nChannel: {channel}\n"
+
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:generateContent"
     )
     payload = {
-        "systemInstruction": {"parts": [{"text": _SYSTEM}]},
+        "systemInstruction": {"parts": [{"text": system_text}]},
         "contents": contents,
         "generationConfig": {
             "temperature": 0.4,
             "maxOutputTokens": 1024,
         },
     }
-    # Channel hint as last user context (not a fake user message if we already have one)
-    if subject:
-        payload["systemInstruction"]["parts"][0]["text"] += (
-            f"\nConversation subject: {subject}\nChannel: {channel}\n"
-        )
 
     try:
         async with httpx.AsyncClient(timeout=45.0) as client:
@@ -186,8 +191,29 @@ async def _load_history(db, conversation_id: UUID) -> List[dict[str, str]]:
     return history
 
 
+def _message_event_payload(msg: SupportMessage, conversation_id: UUID) -> dict:
+    return {
+        "type": "support.message",
+        "conversation_id": str(conversation_id),
+        "message": {
+            "id": str(msg.id),
+            "conversation_id": str(msg.conversation_id),
+            "body": msg.body,
+            "author_type": str(
+                msg.author_type.value
+                if hasattr(msg.author_type, "value")
+                else msg.author_type
+            ),
+            "author_display_name": msg.author_display_name,
+            "author_email": msg.author_email,
+            "is_internal": bool(msg.is_internal),
+            "created_at": msg.created_at.isoformat() if msg.created_at else None,
+        },
+    }
+
+
 async def run_support_ai_for_conversation(conversation_id: UUID) -> None:
-    """Background entry: open session, maybe reply or escalate, always persist outcomes."""
+    """Background entry: reply or escalate only when unable / unauthorized."""
     try:
         async with AsyncSessionLocal() as db:
             conv = (
@@ -208,74 +234,84 @@ async def run_support_ai_for_conversation(conversation_id: UUID) -> None:
                     last_user = turn["text"]
                     break
 
-            if wants_human(last_user):
+            # Unauthorized topics only (not "please get me a human")
+            if is_unauthorized_topic(last_user):
                 conv.status = ConversationStatus.ESCALATED
                 conv.assignee_type = AssigneeType.NONE
-                conv.escalation_reason = "USER_REQUEST"
-                conv.ai_enabled = False
+                conv.escalation_reason = "UNAUTHORIZED_TOPIC"
                 db.add(conv)
-                await append_message(
+                msg = await append_message(
                     db,
                     conversation=conv,
                     body=(
-                        "I'm connecting you with a human support agent. "
-                        "They will continue on this conversation shortly."
+                        "This request needs a human agent (billing dispute, account/data "
+                        "deletion, or security). I've escalated it — someone will continue here."
                     ),
                     author_type=MessageAuthorType.AI_AGENT,
                     author_display_name="Tawala Assistant",
                     ai_metadata={
                         "model_id": "policy",
                         "provider": "policy",
-                        "escalation": "USER_REQUEST",
+                        "escalation": "UNAUTHORIZED_TOPIC",
                     },
                 )
                 await db.commit()
+                await publish_conversation_event(
+                    conversation_id, _message_event_payload(msg, conversation_id)
+                )
                 return
 
             text, meta = await generate_gemini_reply(
                 history=history,
                 channel=str(
-                    conv.channel.value if hasattr(conv.channel, "value") else conv.channel
+                    conv.channel.value
+                    if hasattr(conv.channel, "value")
+                    else conv.channel
                 ),
                 subject=conv.subject,
             )
 
             if text is None:
+                # Cannot solve / provider failure → human
                 conv.status = ConversationStatus.ESCALATED
                 conv.escalation_reason = "AI_FAILURE"
                 db.add(conv)
-                await append_message(
+                msg = await append_message(
                     db,
                     conversation=conv,
                     body=(
-                        "Thanks — I've flagged this for a human agent because I couldn't "
-                        "complete an automated reply. Someone will follow up here."
+                        "I wasn't able to complete a reliable answer just now, so I've "
+                        "flagged this for a human agent. They'll follow up on this thread."
                     ),
                     author_type=MessageAuthorType.AI_AGENT,
                     author_display_name="Tawala Assistant",
                     ai_metadata={**meta, "escalation": "AI_FAILURE"},
                 )
                 await db.commit()
+                await publish_conversation_event(
+                    conversation_id, _message_event_payload(msg, conversation_id)
+                )
                 return
 
-            escalate = bool(
+            # Model may still choose to escalate unauthorized cases in wording
+            model_escalated = bool(
                 re.search(
-                    r"\b(escalat|human agent|support agent will)\b",
+                    r"\b(escalat(?:e|ing|ed)|hand(?:ing)?\s+off)\b.*\b(human|agent)\b|"
+                    r"\b(human|agent)\b.*\b(will (continue|follow|contact)|take over)\b",
                     text,
                     re.IGNORECASE,
                 )
             )
-            conv.status = (
-                ConversationStatus.ESCALATED
-                if escalate
-                else ConversationStatus.AI_ACTIVE
-            )
-            conv.assignee_type = AssigneeType.AI
-            if escalate:
-                conv.escalation_reason = conv.escalation_reason or "MODEL_HANDOFF"
-                meta = {**meta, "escalation": "MODEL_HANDOFF"}
+            if model_escalated:
+                conv.status = ConversationStatus.ESCALATED
+                conv.assignee_type = AssigneeType.NONE
+                conv.escalation_reason = conv.escalation_reason or "MODEL_UNAUTHORIZED"
+                meta = {**meta, "escalation": "MODEL_UNAUTHORIZED"}
+            else:
+                conv.status = ConversationStatus.AI_ACTIVE
+                conv.assignee_type = AssigneeType.AI
             db.add(conv)
-            await append_message(
+            msg = await append_message(
                 db,
                 conversation=conv,
                 body=text,
@@ -284,6 +320,9 @@ async def run_support_ai_for_conversation(conversation_id: UUID) -> None:
                 ai_metadata=meta,
             )
             await db.commit()
+            await publish_conversation_event(
+                conversation_id, _message_event_payload(msg, conversation_id)
+            )
 
             if (
                 conv.channel == MessagingChannel.PUBLIC_SUPPORT

@@ -3,14 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import {
+  subscribeSupportConversation,
+  type SupportWsMessage,
+} from "@/lib/support-ws";
 
-type Msg = {
-  id: string;
-  body: string;
-  author_type: string;
-  author_display_name?: string | null;
-  created_at?: string | null;
-};
+type Msg = SupportWsMessage;
 
 type Detail = {
   id: string;
@@ -26,6 +24,7 @@ export default function PublicSupportThreadPage() {
   const [error, setError] = useState<string | null>(null);
   const [reply, setReply] = useState("");
   const [sending, setSending] = useState(false);
+  const [live, setLive] = useState<string>("");
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -48,6 +47,21 @@ export default function PublicSupportThreadPage() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!token) return;
+    return subscribeSupportConversation(
+      `/ws/support/public/${encodeURIComponent(token)}`,
+      (msg) => {
+        setData((prev) => {
+          if (!prev) return prev;
+          if (prev.messages.some((m) => m.id === msg.id)) return prev;
+          return { ...prev, messages: [...prev.messages, msg] };
+        });
+      },
+      (s) => setLive(s)
+    );
+  }, [token]);
+
   async function sendReply(e: React.FormEvent) {
     e.preventDefault();
     if (!reply.trim() || !token) return;
@@ -65,8 +79,15 @@ export default function PublicSupportThreadPage() {
         setError("Could not send reply.");
         return;
       }
+      const created = (await res.json().catch(() => null)) as Msg | null;
+      if (created?.id) {
+        setData((prev) => {
+          if (!prev) return prev;
+          if (prev.messages.some((m) => m.id === created.id)) return prev;
+          return { ...prev, messages: [...prev.messages, created] };
+        });
+      }
       setReply("");
-      await load();
     } finally {
       setSending(false);
     }
@@ -78,6 +99,9 @@ export default function PublicSupportThreadPage() {
         <Link href="/support" className="underline-offset-2 hover:underline">
           Support
         </Link>
+        {live === "open" ? (
+          <span className="ml-2 text-xs text-brand-accent">· Live</span>
+        ) : null}
       </p>
       <h1 className="text-2xl font-semibold tracking-tight">
         {data?.subject || "Your support conversation"}
