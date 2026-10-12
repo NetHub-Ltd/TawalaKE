@@ -81,6 +81,10 @@ class Settings(BaseSettings):
 
     # Email Configuration
     resend_api_key: str
+
+    # Support AI (Phase B). Optional — missing key escalates to human.
+    gemini_apikey: str | None = None  # env: GEMINI_APIKEY
+    gemini_model: str = "gemini-2.0-flash"
     email_from_security: str = "NetHub Security <security@nethub.co.ke>"
     email_from_billing: str = "NetHub Billing <billing@nethub.co.ke>"
     email_from_support: str = "NetHub Support <support@nethub.co.ke>"

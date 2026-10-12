@@ -80,6 +80,7 @@ async def append_message(
     author_display_name: Optional[str] = None,
     author_email: Optional[str] = None,
     is_internal: bool = False,
+    ai_metadata: Optional[dict] = None,
 ) -> SupportMessage:
     msg = SupportMessage(
         conversation_id=conversation.id,
@@ -90,6 +91,7 @@ async def append_message(
         author_display_name=author_display_name,
         author_email=author_email,
         is_internal=is_internal,
+        ai_metadata=ai_metadata,
     )
     conversation.last_message_at = datetime.now(timezone.utc)
     conversation.updated_at = datetime.now(timezone.utc)
