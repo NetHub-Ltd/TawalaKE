@@ -44,6 +44,7 @@ from app.schemas.messaging import (
     PublicConversationCreated,
     PublicSupportCreate,
 )
+from app.services.support_ai import schedule_support_ai
 from app.services.messaging import (
     add_participants,
     append_message,
@@ -116,6 +117,7 @@ async def create_public_support(
         token,
         conv.subject,
     )
+    schedule_support_ai(background_tasks, conv.id)
     return PublicConversationCreated(id=conv.id, status=conv.status)
 
 
@@ -138,6 +140,7 @@ async def reply_public_support(
     request: Request,
     token: str,
     body: MessageCreate,
+    background_tasks: BackgroundTasks,
     db: SessionDep,
 ) -> MessageRead:
     conv = await _public_conv_by_token(db, token)
@@ -153,6 +156,7 @@ async def reply_public_support(
     )
     await db.commit()
     await db.refresh(msg)
+    schedule_support_ai(background_tasks, conv.id)
     return _msg_read(msg)
 
 
@@ -192,6 +196,7 @@ async def _list_messages(db, conversation_id: UUID, include_internal: bool) -> L
 @router.post("/org/support", response_model=ConversationRead, status_code=201)
 async def create_org_support(
     body: OrgSupportCreate,
+    background_tasks: BackgroundTasks,
     db: SessionDep,
     user: Staff = Depends(require_permissions(Permission.SUPPORT_INITIATE)),
 ) -> ConversationRead:
@@ -221,6 +226,7 @@ async def create_org_support(
     )
     await db.commit()
     await db.refresh(conv)
+    schedule_support_ai(background_tasks, conv.id)
     return await _conv_read(db, conv)
 
 
@@ -265,6 +271,7 @@ async def get_org_support(
 async def reply_org_support(
     conversation_id: UUID,
     body: MessageCreate,
+    background_tasks: BackgroundTasks,
     db: SessionDep,
     user: Staff = Depends(require_permissions(Permission.SUPPORT_PARTICIPATE)),
 ) -> MessageRead:
@@ -282,6 +289,7 @@ async def reply_org_support(
     )
     await db.commit()
     await db.refresh(msg)
+    schedule_support_ai(background_tasks, conv.id)
     return _msg_read(msg)
 
 
