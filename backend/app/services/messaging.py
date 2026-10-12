@@ -165,3 +165,21 @@ def conversation_to_dict(
         "updated_at": conv.updated_at,
         "participant_staff_ids": list(participant_staff_ids or []),
     }
+
+
+SUPPORT_REDIS_PREFIX = "support:conv:"
+
+
+def support_channel(conversation_id: UUID) -> str:
+    return f"{SUPPORT_REDIS_PREFIX}{conversation_id}"
+
+
+async def publish_conversation_event(conversation_id: UUID, payload: dict) -> None:
+    """Publish a JSON event to Redis for support conversation WebSocket subscribers."""
+    import json
+    try:
+        from app.core.redis_client import redis_manager
+        client = redis_manager.get_async_client()
+        await client.publish(support_channel(conversation_id), json.dumps(payload, default=str))
+    except Exception as e:
+        logger.error(f"support ws publish failed conversation_id={conversation_id}: {e}")
