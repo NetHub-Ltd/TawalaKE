@@ -1,27 +1,20 @@
-/** Build WebSocket URL for support conversation live updates. */
+/**
+ * Support conversation live updates via same-origin WebSocket.
+ * Browser never sees BACKEND_URL — connects to this Next host; next.config
+ * rewrites /api/v1/ws/* to the server-only BACKEND_URL (BFF).
+ */
 
 export function supportWsUrl(path: string): string {
-  const p = path.startsWith("/") ? path : `/${path}`;
-  const explicit = (process.env.NEXT_PUBLIC_WS_URL || "").replace(/\/$/, "");
-  if (explicit) {
-    return `${explicit}${p.startsWith("/api") ? p : `/api/v1${p}`}`;
-  }
-  const backend = (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
-  if (backend) {
-    const wsBase = backend
-      .replace(/^http:/i, "ws:")
-      .replace(/^https:/i, "wss:");
-    if (wsBase.endsWith("/api/v1")) {
-      return `${wsBase}${p.replace(/^\/api\/v1/, "") || p}`;
-    }
-    return `${wsBase}/api/v1${p.replace(/^\/api\/v1/, "")}`;
-  }
-  // Same-origin fallback (requires reverse-proxy WS upgrade to API)
-  if (typeof window !== "undefined") {
-    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${proto}//${window.location.host}/api/v1${p.replace(/^\/api\/v1/, "")}`;
-  }
-  return "";
+  if (typeof window === "undefined") return "";
+  const raw = path.startsWith("/") ? path : `/${path}`;
+  // Normalize to /api/v1/ws/...
+  const apiPath = raw.startsWith("/api/v1/")
+    ? raw
+    : raw.startsWith("/ws/")
+      ? `/api/v1${raw}`
+      : `/api/v1${raw.startsWith("/") ? raw : `/${raw}`}`;
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${proto}//${window.location.host}${apiPath}`;
 }
 
 export type SupportWsMessage = {
