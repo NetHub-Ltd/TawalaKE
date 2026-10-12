@@ -147,6 +147,43 @@ class PlatformRole(str, Enum):
     AUDITOR = "AUDITOR"
 
 
+class MessagingChannel(str, Enum):
+    """Support & messaging channels (Phase A)."""
+    PUBLIC_SUPPORT = "PUBLIC_SUPPORT"
+    ORG_SUPPORT = "ORG_SUPPORT"
+    ORG_INTERNAL = "ORG_INTERNAL"
+
+
+class ConversationStatus(str, Enum):
+    OPEN = "OPEN"
+    AI_ACTIVE = "AI_ACTIVE"
+    WAITING_ON_USER = "WAITING_ON_USER"
+    ESCALATED = "ESCALATED"
+    HUMAN_ACTIVE = "HUMAN_ACTIVE"
+    RESOLVED = "RESOLVED"
+    CLOSED = "CLOSED"
+
+
+class AssigneeType(str, Enum):
+    NONE = "NONE"
+    AI = "AI"
+    HUMAN = "HUMAN"
+
+
+class VisibilityScope(str, Enum):
+    ORG_WIDE = "ORG_WIDE"
+    PARTICIPANTS_ONLY = "PARTICIPANTS_ONLY"
+
+
+class MessageAuthorType(str, Enum):
+    PUBLIC_CONTACT = "PUBLIC_CONTACT"
+    ORG_STAFF = "ORG_STAFF"
+    PLATFORM_USER = "PLATFORM_USER"
+    AI_AGENT = "AI_AGENT"
+    SYSTEM = "SYSTEM"
+
+
+
 # =========================================================
 # 1. ORGANIZATION & TENANCY
 # =========================================================
@@ -1428,4 +1465,111 @@ class AuditLog(BaseMixin, table=True):
         sa_column=Column(JSONB),
         default_factory=dict,
         description="Any additional context (request id, correlation id, etc.)."
+    )
+
+# =========================================================
+# SUPPORT & MESSAGING (Phase A)
+# =========================================================
+
+class SupportConversation(BaseMixin, table=True):
+    """
+    Unified conversation for:
+    - PUBLIC_SUPPORT (public → platform)
+    - ORG_SUPPORT (org staff → platform)
+    - ORG_INTERNAL (staff ↔ staff)
+    """
+    __tablename__ = "support_conversations"
+    __table_args__ = (
+        Index("ix_support_conv_channel_status", "channel", "status"),
+        Index("ix_support_conv_org_channel", "organization_id", "channel"),
+        Index("ix_support_conv_updated", "updated_at"),
+    )
+
+    channel: MessagingChannel = Field(
+        sa_column=Column(SAEnum(MessagingChannel, name="messaging_channel_enum"), nullable=False, index=True)
+    )
+    status: ConversationStatus = Field(
+        sa_column=Column(SAEnum(ConversationStatus, name="conversation_status_enum"), nullable=False, index=True),
+        default=ConversationStatus.OPEN,
+    )
+    assignee_type: AssigneeType = Field(
+        sa_column=Column(SAEnum(AssigneeType, name="assignee_type_enum"), nullable=False),
+        default=AssigneeType.NONE,
+    )
+    visibility_scope: VisibilityScope = Field(
+        sa_column=Column(SAEnum(VisibilityScope, name="visibility_scope_enum"), nullable=False),
+        default=VisibilityScope.ORG_WIDE,
+    )
+
+    organization_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="organizations.id",
+        index=True,
+    )
+    subject: Optional[str] = Field(default=None, max_length=200)
+
+    # Public contact (PUBLIC_SUPPORT)
+    public_name: Optional[str] = Field(default=None, max_length=120)
+    public_email: Optional[str] = Field(default=None, max_length=255, index=True)
+    public_access_token_hash: Optional[str] = Field(default=None, max_length=128, index=True)
+
+    initiated_by_staff_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="staff.id",
+        index=True,
+    )
+    assigned_platform_user_id: Optional[UUID] = Field(
+        default=None,
+        foreign_key="platform_users.id",
+        index=True,
+    )
+
+    ai_enabled: bool = Field(default=True)
+    escalation_reason: Optional[str] = Field(default=None, max_length=80)
+
+    last_message_at: Optional[datetime] = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True, index=True),
+    )
+
+
+class SupportConversationParticipant(BaseMixin, table=True):
+    """Participant membership (required for ORG_INTERNAL; optional elsewhere)."""
+    __tablename__ = "support_conversation_participants"
+    __table_args__ = (
+        Index(
+            "uq_support_conv_participant",
+            "conversation_id",
+            "staff_id",
+            unique=True,
+        ),
+    )
+
+    conversation_id: UUID = Field(foreign_key="support_conversations.id", index=True)
+    staff_id: UUID = Field(foreign_key="staff.id", index=True)
+
+
+class SupportMessage(BaseMixin, table=True):
+    """Text-only message body. No attachments in Phase A."""
+    __tablename__ = "support_messages"
+    __table_args__ = (
+        Index("ix_support_msg_conversation_created", "conversation_id", "created_at"),
+    )
+
+    conversation_id: UUID = Field(foreign_key="support_conversations.id", index=True)
+    body: str = Field(sa_column=Column(sa.Text, nullable=False))
+    author_type: MessageAuthorType = Field(
+        sa_column=Column(SAEnum(MessageAuthorType, name="message_author_type_enum"), nullable=False, index=True)
+    )
+    author_staff_id: Optional[UUID] = Field(default=None, foreign_key="staff.id", index=True)
+    author_platform_user_id: Optional[UUID] = Field(
+        default=None, foreign_key="platform_users.id", index=True
+    )
+    author_display_name: Optional[str] = Field(default=None, max_length=120)
+    author_email: Optional[str] = Field(default=None, max_length=255)
+    is_internal: bool = Field(default=False)
+    # Optional AI metadata (Phase B); stored now for readiness
+    ai_metadata: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True),
     )

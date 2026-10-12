@@ -36,6 +36,9 @@ class Permission(str, Enum):
     DOCUMENTS_READ = "documents:read"
     REPORTS_READ = "reports:read"
     JOBS_MANAGE = "jobs:manage"
+    SUPPORT_INITIATE = "support:initiate"
+    SUPPORT_PARTICIPATE = "support:participate"
+    ORG_MESSAGING = "org:messaging"
 
 
 class OverrideEffect(str, Enum):
@@ -68,6 +71,9 @@ ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
             Permission.DOCUMENTS_READ,
             Permission.REPORTS_READ,
             Permission.JOBS_MANAGE,
+            Permission.SUPPORT_INITIATE,
+            Permission.SUPPORT_PARTICIPATE,
+            Permission.ORG_MESSAGING,
         }
     ),
     StaffRole.MANAGER: frozenset(
@@ -90,6 +96,8 @@ ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
             Permission.EXPENSES_WRITE,
             Permission.DOCUMENTS_READ,
             Permission.REPORTS_READ,
+            Permission.SUPPORT_PARTICIPATE,
+            Permission.ORG_MESSAGING,
         }
     ),
     StaffRole.CASHIER: frozenset(
@@ -106,6 +114,7 @@ ROLE_PERMISSIONS: dict[StaffRole, frozenset[Permission]] = {
             Permission.EXPENSES_READ,
             Permission.EXPENSES_WRITE,
             Permission.DOCUMENTS_READ,
+            Permission.ORG_MESSAGING,
         }
     ),
 }
