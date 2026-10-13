@@ -114,6 +114,75 @@ async def org_support_ws(websocket: WebSocket, conversation_id: UUID):
     await _relay(websocket, conversation_id)
 
 
+
+
+async def _platform_user_from_token(token: str):
+    """Validate platform JWT (kind=platform). Returns PlatformUser or None."""
+    try:
+        from app.core.security import security
+        from app.models.models import PlatformUser
+        # verify_token is async and may need redis — decode claims only for WS
+        payload = jwt.decode(
+            token,
+            settings.secret_key,
+            algorithms=[settings.algorithm],
+            audience=settings.audience,
+            issuer=settings.issuer,
+        )
+        if payload.get("kind") != "platform":
+            return None
+        sub = payload.get("sub")
+        if not sub:
+            return None
+        async with AsyncSessionLocal() as db:
+            user = (
+                await db.exec(
+                    select(PlatformUser).where(
+                        PlatformUser.id == UUID(str(sub)),
+                        PlatformUser.deleted_at.is_(None),
+                    )
+                )
+            ).one_or_none()
+            if not user or not user.active:
+                return None
+            return user
+    except (JWTError, ValueError, Exception) as e:
+        logger.debug("support ws platform auth failed: {}", e)
+        return None
+
+
+@router.websocket("/ws/support/platform/{conversation_id}")
+async def platform_support_ws(websocket: WebSocket, conversation_id: UUID):
+    """Platform operator: JWT ?token= with kind=platform; PUBLIC or ORG_SUPPORT only."""
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    user = await _platform_user_from_token(token)
+    if not user:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    async with AsyncSessionLocal() as db:
+        conv = (
+            await db.exec(
+                select(SupportConversation).where(
+                    SupportConversation.id == conversation_id,
+                    SupportConversation.deleted_at.is_(None),
+                    SupportConversation.channel.in_(
+                        [
+                            MessagingChannel.PUBLIC_SUPPORT,
+                            MessagingChannel.ORG_SUPPORT,
+                        ]
+                    ),
+                )
+            )
+        ).first()
+        if not conv:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    await websocket.accept()
+    await _relay(websocket, conversation_id)
+
 async def _relay(websocket: WebSocket, conversation_id: UUID) -> None:
     channel = support_channel(conversation_id)
     client = redis_manager.get_async_client()
