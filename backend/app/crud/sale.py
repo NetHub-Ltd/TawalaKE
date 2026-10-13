@@ -56,9 +56,20 @@ class FinalizeCheckoutIn(BaseModel):
 # =========================================================
 
 class SaleService:
-    
+    """LEGACY — do not use. Live POS is app.crud.store.store_crud (services + materials)."""
+
+    _DISABLED = True
+
     @staticmethod
     def initialize_checkout(db: Session, payload: InitializeCheckout) -> Sale:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail=(
+                "Legacy SaleService is disabled. Use store checkout APIs "
+                "(supports catalog services and material stock)."
+            ),
+        )
+        # unreachable legacy body kept for reference
         """
         Step 1: Re-calculates and creates a server-verified draft checkout record.
         Validates stock availability and forces pricing snapshots from the DB.
@@ -128,6 +139,10 @@ class SaleService:
 
     @staticmethod
     def finalize_checkout(db: Session, sale_id: UUID, payload: FinalizeCheckoutIn) -> FinancialDocument:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Legacy SaleService is disabled. Use store checkout APIs.",
+        )
         """
         Step 2: Locks product inventory records using a database row-level block,
         deducts quantities safely, triggers daily rolling updates, and yields financial papers.

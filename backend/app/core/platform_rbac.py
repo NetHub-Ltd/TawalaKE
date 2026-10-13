@@ -26,6 +26,8 @@ class PlatformPermission(str, Enum):
     AUDIT_READ = "platform:audit:read"
     JOBS_RUN = "platform:jobs:run"
     SYSTEM_CONFIG = "platform:system:config"
+    SUPPORT_INBOX_READ = "platform:support:read"
+    SUPPORT_INBOX_WRITE = "platform:support:write"
 
 
 # Full set for SUPER_ADMIN
@@ -42,6 +44,8 @@ ROLE_PERMISSIONS: dict[PlatformRole, frozenset[PlatformPermission]] = {
             PlatformPermission.BILLING_READ,
             PlatformPermission.AUDIT_READ,
             PlatformPermission.JOBS_RUN,
+            PlatformPermission.SUPPORT_INBOX_READ,
+            PlatformPermission.SUPPORT_INBOX_WRITE,
         }
     ),
     PlatformRole.BILLING: frozenset(

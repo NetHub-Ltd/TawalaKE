@@ -655,3 +655,50 @@ async def cancel_staged_sale(
         message="Staged sale cancelled",
         data=None,
     )
+
+
+@router.post(
+    "/sales/{sale_id}/void-finalized",
+    status_code=status.HTTP_200_OK,
+    response_model=ApiResponse[None],
+)
+async def void_finalized_sale(
+    sale_id: UUID,
+    db: SessionDep,
+    business_id: UUID = Query(..., description="Business that owns the sale"),
+    reason: str | None = Query(None, max_length=200),
+    redis_client: AsyncRedis = Depends(get_redis),
+    user: Staff = Depends(require_permissions(Permission.SALES_WRITE)),
+):
+    """
+    Void a finalized sale and restore product/material stock (QA P0).
+
+    Use for full cancellation after stock was cut. Marks sale REFUNDED.
+    """
+    await store_crud.void_finalized_sale(
+        db,
+        sale_id=sale_id,
+        business_id=business_id,
+        performed_by=user.id,
+        reason=reason,
+    )
+    await purge_cache_namespace(redis_client, namespace="sales")
+    await purge_cache_namespace(redis_client, namespace="sales_v2")
+    await purge_cache_namespace(redis_client, namespace="products")
+    await record_audit(
+        db,
+        actor=user,
+        action="sale.void_finalized",
+        outcome="success",
+        resource_type="sale",
+        resource_id=sale_id,
+        business_id=business_id,
+        meta={"reason": reason},
+    )
+    return ApiResponse(
+        status=True,
+        status_code=200,
+        message="Sale voided; stock restored where applicable.",
+        data=None,
+    )
+

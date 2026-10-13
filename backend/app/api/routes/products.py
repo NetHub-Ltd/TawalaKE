@@ -249,7 +249,7 @@ async def create_product(
         create_data["business_id"] = payload.business_id
         if item_type == ItemType.SERVICE:
             create_data["track_stock"] = False
-            create_data["stock"] = float(create_data.get("stock") or 0)
+            create_data["stock"] = 0
         elif create_data.get("track_stock") is None:
             create_data["track_stock"] = True
 

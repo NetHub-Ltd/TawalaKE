@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SupportContactForm } from "./SupportContactForm";
 import {
   MessageCircle,
   Mail,
@@ -93,7 +94,15 @@ export default function SupportPage() {
             );
           })}
         </div>
-      </section>
+      
+        <div className="mt-8">
+          <h3 className="text-lg font-semibold mb-3">Send a message</h3>
+          <p className="text-sm text-muted mb-4">
+            Prefer writing? Leave a message and we&apos;ll reply by email with a secure link.
+          </p>
+          <SupportContactForm />
+        </div>
+</section>
 
       <section className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <h2 className="mb-4 flex items-center gap-2 text-h2">

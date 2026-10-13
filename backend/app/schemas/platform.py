@@ -89,6 +89,12 @@ class PlatformMeResponse(BaseModel):
     permissions: list[str]
 
 
+class PlatformEmergencyResetRequest(BaseModel):
+    """Ops-only emergency reset. Gated by env; never exposed in UI."""
+
+    email: EmailStr
+
+
 class PlatformChangePasswordRequest(BaseModel):
     current_password: str = Field(min_length=8, max_length=128)
     new_password: str = Field(min_length=12, max_length=128)
