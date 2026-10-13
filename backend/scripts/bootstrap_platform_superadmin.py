@@ -5,6 +5,8 @@ Preferred path: set PLATFORM_BOOTSTRAP_EMAIL (+ optional NAME) in backend/.env;
 the API runs ensure_platform_superadmin() on startup (idempotent).
 
 This script calls the same helper for one-off runs without restarting the API.
+
+Run with: uv run python scripts/bootstrap_platform_superadmin.py
 """
 from __future__ import annotations
 
