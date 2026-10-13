@@ -47,6 +47,7 @@ from app.schemas.platform import (
     PlatformOrgUpdate,
     PlatformTokenResponse,
     PlatformChangePasswordRequest,
+    PlatformEmergencyResetRequest,
     PlatformUserCreate,
     PlatformUserRead,
     PlatformUserUpdate,
@@ -252,6 +253,122 @@ async def platform_change_password(
         user=PlatformUserRead.model_validate(actor),
         permissions=[p.value for p in permissions_for(actor)],
     )
+
+
+
+@router.post("/auth/emergency-reset", status_code=status.HTTP_200_OK)
+@limiter.limit("5/hour")
+async def platform_emergency_reset(
+    request: Request,
+    body: PlatformEmergencyResetRequest,
+    background_tasks: BackgroundTasks,
+    db: SessionDep,
+) -> dict:
+    """
+    Curl-only emergency platform password reset (no UI).
+
+    Disabled unless PLATFORM_EMERGENCY_RESET_ENABLED=true and
+    PLATFORM_EMERGENCY_RESET_SECRET is a long random string.
+    Requires header: X-Platform-Emergency-Secret: <secret>
+
+    Always emails a temporary password; never returns plaintext.
+    Turn the flag off again after recovery.
+    """
+    enabled = bool(getattr(settings, "platform_emergency_reset_enabled", False))
+    expected = (getattr(settings, "platform_emergency_reset_secret", None) or "").strip()
+    # Not configured → pretend the route does not exist (no enablement signal)
+    if not enabled or len(expected) < 24:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    provided = (request.headers.get("x-platform-emergency-secret") or "").strip()
+    if not provided or not secrets.compare_digest(provided, expected):
+        await record_platform_audit(
+            db,
+            actor=None,
+            action="platform.auth.emergency_reset",
+            outcome="denied",
+            resource_type="platform_user",
+            meta={"reason": "bad_secret"},
+            request_id=request.headers.get("x-request-id"),
+            independent=True,
+        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
+
+    email = str(body.email).strip().lower()
+    rows = list(
+        await db.exec(select(PlatformUser).where(PlatformUser.deleted_at.is_(None)))
+    )
+    user = next(
+        (u for u in rows if (u.email or "").strip().lower() == email),
+        None,
+    )
+    if not user:
+        await record_platform_audit(
+            db,
+            actor=None,
+            action="platform.auth.emergency_reset",
+            outcome="denied",
+            resource_type="platform_user",
+            meta={"email": email, "reason": "not_found"},
+            request_id=request.headers.get("x-request-id"),
+            independent=True,
+        )
+        # Informative for the operator who holds the secret
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Platform user not found",
+        )
+    if not user.active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Platform user is inactive; activate before reset",
+        )
+
+    temporary_password = secrets.token_urlsafe(18)
+    user.hashed_password = security.hash_password(temporary_password)
+    user.must_change_password = True
+    db.add(user)
+    await db.commit()
+
+    try:
+        login_url = f"{settings.frontend_origin}/platform/login"
+    except Exception:
+        frontend = (getattr(settings, "frontend_url", None) or "").rstrip("/")
+        if frontend and not frontend.startswith("http"):
+            frontend = f"https://{frontend}"
+        login_url = f"{frontend}/platform/login" if frontend else "/platform/login"
+
+    background_tasks.add_task(
+        mailer.send_platform_password_reset,
+        to_email=user.email,
+        temporary_password=temporary_password,
+        login_url=login_url,
+        user_name=user.full_name,
+        reset_by_name="Emergency reset endpoint",
+    )
+
+    await record_platform_audit(
+        db,
+        actor=None,
+        action="platform.auth.emergency_reset",
+        outcome="success",
+        resource_type="platform_user",
+        resource_id=user.id,
+        meta={"email": email},
+        request_id=request.headers.get("x-request-id"),
+        independent=True,
+    )
+    logger.warning(
+        "platform emergency password reset triggered for email=%s id=%s",
+        email,
+        user.id,
+    )
+    return {
+        "ok": True,
+        "email_hint": _email_hint(user.email),
+        "detail": "Temporary password emailed if mailer is configured. Sign in and change password.",
+        "must_change_password": True,
+    }
 
 
 @router.post("/auth/resend-code", response_model=PlatformMfaChallengeResponse)
