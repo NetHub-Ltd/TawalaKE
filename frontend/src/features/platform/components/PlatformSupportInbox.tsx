@@ -73,7 +73,7 @@ export function PlatformSupportInbox() {
         setItems([]);
         return;
       }
-      let list = (data as { items?: Conversation[] }).items || [];
+      const list = (data as { items?: Conversation[] }).items || [];
       if (filter === "ai") {
         // Also surface escalated/open threads that may have AI history
         const res2 = await fetch(`/api/v1/platform/support?limit=50`, {
