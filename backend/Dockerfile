@@ -35,8 +35,11 @@ COPY app/ ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY entrypoint.sh ./
+COPY scripts/ ./scripts/
 
-RUN chmod +x entrypoint.sh
+# Ops scripts (password reset, bootstrap) must be executable in-cluster
+RUN chmod +x entrypoint.sh \
+    && chmod +x scripts/*.py scripts/*.sh 2>/dev/null || true
 
 EXPOSE 8000
 
