@@ -71,6 +71,13 @@ class Settings(BaseSettings):
     platform_bootstrap_email: str | None = None
     platform_bootstrap_name: str = "Platform Super Admin"
 
+    # Emergency platform password reset via curl (no UI). Default OFF.
+    # When enabled, POST /api/v1/platform/auth/emergency-reset with header
+    # X-Platform-Emergency-Secret matching platform_emergency_reset_secret.
+    # Env: PLATFORM_EMERGENCY_RESET_ENABLED, PLATFORM_EMERGENCY_RESET_SECRET
+    platform_emergency_reset_enabled: bool = False
+    platform_emergency_reset_secret: str | None = None
+
     # Soft-delete retention archive pipeline (purge/email off until ready)
     archive_enabled: bool = False
     archive_signed_url_ttl_days: int = 7
