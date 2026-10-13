@@ -106,10 +106,12 @@ class ProductCrud(BaseCRUD[Product, ProductCreate, ProductUpdate]):
             if data["item_type"] == ItemType.SERVICE:
                 data["track_stock"] = False
 
-        # Convert product → service: force no self-stock
+        # Convert product → service: force no self-stock and clear residual qty
+        # so inventory valuation does not count orphaned units on a non-tracked row.
         target_type = data.get("item_type", prod_obj.item_type)
         if target_type == ItemType.SERVICE:
             data["track_stock"] = False
+            data["stock"] = 0
 
         updated = await self.update(db=db, db_obj=prod_obj, obj_in=data)
 
