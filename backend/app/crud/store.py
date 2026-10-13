@@ -716,8 +716,6 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=500, detail="Failed to cancel staged sale."
             ) from e
 
-    @staticmethod
-
     async def void_finalized_sale(
         self,
         db: AsyncSession,
@@ -819,7 +817,8 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                 status_code=500, detail="Failed to void sale and restore stock."
             )
 
-    def _normalize_service_lines(self, raw: Any) -> list:
+    @staticmethod
+    def _normalize_service_lines(raw: Any) -> list:
         """Array preferred; legacy single {description, amount} supported."""
         lines = []
         if isinstance(raw, list):
