@@ -731,21 +731,16 @@ function ProductSettingsForm({
           return;
         }
       }
-      // Materials only when already a service (or converting to service with empty recipe first).
-      // If converting PRODUCT → SERVICE, save type first; user adds materials on the next save.
-      const persistedService = product.item_type === "SERVICE";
-      const convertingToService = !persistedService && itemType === "SERVICE";
+      // Materials when saving as SERVICE (including PRODUCT→SERVICE in one save).
       const materialsPayload =
-        itemType === "SERVICE" && persistedService
+        itemType === "SERVICE"
           ? materials.slice(0, 1).map((m) => ({
               material_id: m.material_id,
               quantity: Number(m.quantity) || 1,
             }))
-          : itemType === "SERVICE" && convertingToService
+          : itemType === "PRODUCT"
             ? []
-            : itemType === "PRODUCT"
-              ? []
-              : undefined;
+            : undefined;
 
       await onSave({
         label: label.trim(),
@@ -792,7 +787,7 @@ function ProductSettingsForm({
             }}
           >
             <option value="PRODUCT">Product (can hold stock)</option>
-            <option value="SERVICE">Service (no self-stock; optional materials)</option>
+            <option value="SERVICE">Catalog service (uses optional material stock)</option>
           </select>
           <span className="block text-xs text-muted">
             {isService
@@ -889,7 +884,7 @@ function ProductSettingsForm({
         value={materials}
         onChange={setMaterials}
         disabled={saving || isPending}
-        serviceReady={product.item_type === "SERVICE"}
+        serviceReady={itemType === "SERVICE"}
         serviceCategory={product.category || category}
       />
 

@@ -373,10 +373,12 @@ class StockCrud:
         unit_price: Optional[float],
         notes: str,
         commit: bool = False,
+        reference_id: Optional[UUID] = None,
+        bump_popularity: bool = True,
     ) -> Tuple[Product, StockHistory]:
         """
         Deduct stock for one sale line. Caller owns the transaction (commit=False typical).
-        Product should already be loaded; will re-lock if needed by using current instance.
+        Pass reference_id=sale_id so history is reversible and auditable.
         """
         if not product.track_stock:
             return product, None  # type: ignore[return-value]
@@ -400,15 +402,52 @@ class StockCrud:
             business_id=business_id,
             notes=notes,
             reference_type="SALE",
+            reference_id=reference_id,
             selling_price=unit_price,
             commit=commit,
             touch_last_stock_take=False,
         )
-        if product.popularity_score is None:
-            product.popularity_score = 0.1
-        else:
-            product.popularity_score += 0.1
-        db.add(product)
+        if bump_popularity:
+            if product.popularity_score is None:
+                product.popularity_score = 0.1
+            else:
+                product.popularity_score += 0.1
+            db.add(product)
+        return product, history
+
+    async def apply_sale_item_restore(
+        self,
+        db: AsyncSession,
+        *,
+        product: Product,
+        quantity: float,
+        business_id: UUID,
+        performed_by: Optional[UUID],
+        notes: str,
+        reference_id: Optional[UUID] = None,
+        commit: bool = False,
+    ) -> Tuple[Product, StockHistory]:
+        """Restore stock for a voided/refunded sale line (material or product)."""
+        if not product.track_stock:
+            return product, None  # type: ignore[return-value]
+        qty = float(quantity)
+        if qty <= 0:
+            return product, None  # type: ignore[return-value]
+        product, history, _b, _a = await self.apply_movement(
+            db,
+            product=product,
+            delta=qty,
+            movement_type=StockMovementType.ADJUSTMENT,
+            performed_by=performed_by,
+            organization_id=product.organization_id,
+            business_id=business_id,
+            notes=notes,
+            reference_type="SALE_REFUND",
+            reference_id=reference_id,
+            reason_code="SALE_VOID_RESTORE",
+            commit=commit,
+            touch_last_stock_take=False,
+        )
         return product, history
 
     async def list_movements(

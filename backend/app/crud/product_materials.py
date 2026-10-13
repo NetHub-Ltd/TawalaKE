@@ -285,4 +285,44 @@ async def deduct_materials_for_sale(
             unit_price=None,
             notes=f"Material for service '{service.label}' (sale {sale_id})",
             commit=commit,
+            reference_id=sale_id,
+            bump_popularity=False,
+        )
+
+
+
+async def restore_materials_for_sale(
+    db: AsyncSession,
+    *,
+    service: Product,
+    service_qty: float,
+    business_id: UUID,
+    performed_by: Optional[UUID],
+    sale_id: UUID,
+    commit: bool = False,
+) -> None:
+    """Reverse material consumption after sale void/refund."""
+    from app.crud.stock import stock_crud
+
+    pairs = await list_materials(db, service.id)
+    for binding, mat in pairs:
+        if mat is None:
+            continue
+        locked = (
+            await db.exec(
+                select(Product).where(Product.id == mat.id).with_for_update()
+            )
+        ).one_or_none()
+        if locked is None or not locked.track_stock:
+            continue
+        need = float(binding.quantity) * float(service_qty)
+        await stock_crud.apply_sale_item_restore(
+            db,
+            product=locked,
+            quantity=need,
+            business_id=business_id,
+            performed_by=performed_by,
+            notes=f"Restore material for voided service '{service.label}' (sale {sale_id})",
+            reference_id=sale_id,
+            commit=commit,
         )

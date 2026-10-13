@@ -177,14 +177,11 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             if is_service:
                 from app.crud.product_materials import list_materials
 
-                unit_cogs = await recipe_unit_cogs(db, product.id)
-                if unit_cogs is not None:
-                    cost_at_sale = unit_cogs
-                elif product.cost_price is not None:
-                    cost_at_sale = float(product.cost_price)
-                # Receipt/invoice: show service clearly + material consumed
                 mat_pairs = await list_materials(db, product.id)
+                unit_cogs = await recipe_unit_cogs(db, product.id)
                 if mat_pairs:
+                    # Recipe exists: only trust material-derived COGS (never invent from service.cost)
+                    cost_at_sale = unit_cogs  # may be None if material cost missing
                     binding, mat = mat_pairs[0]
                     mat_label = mat.label if mat is not None else "material"
                     need = float(binding.quantity) * qty
@@ -195,6 +192,9 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                     )
                     line_name = f"{product.label} (Service · uses {need_s}× {mat_label})"
                 else:
+                    # Labor-only service: optional explicit service cost_price is OK
+                    if product.cost_price is not None:
+                        cost_at_sale = float(product.cost_price)
                     line_name = f"{product.label} (Service)"
             elif product.cost_price is not None:
                 cost_at_sale = float(product.cost_price)
@@ -472,7 +472,16 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
                         f"for sale ID: {sale.id}"
                     ),
                     commit=False,
+                    reference_id=sale.id,
+                    bump_popularity=True,
                 )
+            # Catalog services: popularity on the service row (materials do not steal score)
+            if getattr(product, "item_type", None) == ItemType.SERVICE:
+                if product.popularity_score is None:
+                    product.popularity_score = 0.1
+                else:
+                    product.popularity_score += 0.1
+                db.add(product)
 
         try:
             # Durable analytics outbox for COMPLETED (collected) sales only
@@ -708,6 +717,108 @@ class StoreCrud(BaseCRUD[Business, BusinessCreate, BusinessUpdate]):
             ) from e
 
     @staticmethod
+
+    async def void_finalized_sale(
+        self,
+        db: AsyncSession,
+        *,
+        sale_id: UUID,
+        business_id: UUID,
+        performed_by: Optional[UUID],
+        reason: Optional[str] = None,
+    ) -> Sale:
+        """
+        Full void of a finalized sale: restore product/material stock, mark REFUNDED.
+
+        Allowed when status is COMPLETED, PENDING_PAYMENT, or PARTIALLY_PAID
+        (all of which deducted stock on finalize). Idempotent if already REFUNDED.
+        """
+        from app.models.models import ItemType, SaleStatus
+        from app.crud.product_materials import restore_materials_for_sale
+        from app.crud.stock import stock_crud
+        from sqlalchemy.orm import selectinload
+
+        stmt = (
+            select(Sale)
+            .where(Sale.id == sale_id, Sale.business_id == business_id)
+            .options(selectinload(Sale.items))
+        )
+        sale = (await db.exec(stmt)).one_or_none()
+        if not sale:
+            raise HTTPException(status_code=404, detail="Sale not found")
+        if sale.status == SaleStatus.REFUNDED:
+            return sale
+        if sale.status not in (
+            SaleStatus.COMPLETED,
+            SaleStatus.PENDING_PAYMENT,
+            SaleStatus.PARTIALLY_PAID,
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Sale status {sale.status} cannot be voided for stock restore.",
+            )
+
+        prior_status = sale.status
+        for item in sale.items or []:
+            already = float(getattr(item, "quantity_refunded", 0) or 0)
+            qty = float(item.quantity) - already
+            if qty <= 0:
+                continue
+            prod = (
+                await db.exec(
+                    select(Product).where(Product.id == item.product_id).with_for_update()
+                )
+            ).one_or_none()
+            if not prod:
+                continue
+            if getattr(prod, "item_type", None) == ItemType.SERVICE:
+                await restore_materials_for_sale(
+                    db,
+                    service=prod,
+                    service_qty=qty,
+                    business_id=business_id,
+                    performed_by=performed_by,
+                    sale_id=sale.id,
+                    commit=False,
+                )
+            elif prod.track_stock:
+                await stock_crud.apply_sale_item_restore(
+                    db,
+                    product=prod,
+                    quantity=qty,
+                    business_id=business_id,
+                    performed_by=performed_by,
+                    notes=(
+                        f"Void restore for sale {sale.id}"
+                        + (f": {reason}" if reason else "")
+                    ),
+                    reference_id=sale.id,
+                    commit=False,
+                )
+            item.quantity_refunded = float(item.quantity)
+            db.add(item)
+
+        sale.status = SaleStatus.REFUNDED
+        db.add(sale)
+
+        if prior_status == SaleStatus.COMPLETED:
+            try:
+                from app.services.analytics_rollup import apply_refund_to_rollups
+                await apply_refund_to_rollups(db, sale_id=sale.id)
+            except Exception as e:
+                logger.warning("analytics refund rollup failed sale_id=%s: %s", sale.id, e)
+
+        try:
+            await db.commit()
+            await db.refresh(sale)
+            return sale
+        except Exception as e:
+            await db.rollback()
+            logger.error("void_finalized_sale failed: {}", e)
+            raise HTTPException(
+                status_code=500, detail="Failed to void sale and restore stock."
+            )
+
     def _normalize_service_lines(raw: Any) -> list:
         """Array preferred; legacy single {description, amount} supported."""
         lines = []

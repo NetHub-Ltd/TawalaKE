@@ -721,6 +721,9 @@ export const CartSidebar = ({ businessId: explicitBusinessId }: { businessId?: s
                   {editingServiceId ? "Edit extra fee" : "Add extra fee"}
                 </h3>
               </div>
+              <p className="text-[10px] text-muted/70 px-0 pb-0 w-full basis-full">
+                Labor or delivery fee only — not a catalog service and does not consume stock.
+              </p>
               <button
                 type="button"
                 onClick={() => setIsServiceModalOpen(false)}
