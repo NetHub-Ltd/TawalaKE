@@ -4,12 +4,18 @@
 Use when locked out of /platform/login and no other SUPER_ADMIN can force-reset
 from the Operators UI.
 
-  cd backend
-  # DATABASE_*, RESEND / mailer, FRONTEND_URL must be available (same as API)
-  python scripts/reset_platform_user_password.py --email you@example.com
+IMPORTANT: the API container installs deps via uv. Always use `uv run` (same as
+entrypoint.sh), not bare `python` — otherwise imports like sqlmodel fail.
 
-  # If email delivery is broken, secure shell only:
-  python scripts/reset_platform_user_password.py --email you@example.com --print-once
+  # In-cluster (nethub namespace):
+  kubectl exec -it deploy/tawala-backend -n nethub -- \
+    sh -c 'cd /app && uv run python scripts/reset_platform_user_password.py --email you@example.com'
+
+  # Local backend tree:
+  cd backend && uv run python scripts/reset_platform_user_password.py --email you@example.com
+
+  # Email broken — secure shell only:
+  uv run python scripts/reset_platform_user_password.py --email you@example.com --print-once
 
 Behaviour:
   - Generates a temporary password
