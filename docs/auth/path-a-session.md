@@ -37,3 +37,17 @@ nethub_user_id?, org_id?, email?, sub?
 - `app/api/opaque_session_deps.py` — FastAPI deps
 
 Legacy platform MFA JWT path remains default until dual-mode wiring ships.
+
+## Platform establish (PoC)
+
+`POST /api/v1/platform/auth/session/nethub`
+
+- Header: `Authorization: Bearer <IdP access token>`
+- Requires `AUTH_OPAQUE_SESSION_V1=true` and `AUTH_NETHUB_ACCESS_URL`
+- Forwards to `{AUTH_NETHUB_ACCESS_URL}/tawala-platform`
+- Requires NetHub membership `external_user_id` = `platform_users.id`
+- Sets HttpOnly `tawala_session` cookie
+
+`POST /api/v1/platform/auth/session/logout` — clears cookie + Redis.
+
+Platform deps dual-mode: opaque session **or** legacy `kind=platform` JWT.

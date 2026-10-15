@@ -10,7 +10,7 @@ from uuid import UUID
 
 import secrets
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from sqlmodel import select
 
 from app.api.deps import SessionDep, get_redis, AsyncRedis
@@ -454,6 +454,128 @@ async def platform_resend_mfa_code(
         expires_in=ttl,
         email_hint=_email_hint(email),
     )
+
+
+
+@router.post("/auth/session/nethub", response_model=PlatformMeResponse)
+@limiter.limit("20/minute")
+async def platform_session_nethub(
+    request: Request,
+    response: Response,
+    db: SessionDep,
+    redis: AsyncRedis = Depends(get_redis),
+) -> PlatformMeResponse:
+    """
+    Path A: establish opaque platform session via NetHubKe access.
+
+    Forwards IdP Bearer to NetHubKe GET /access/{tawala-platform}. Does not
+    verify IdP JWTs locally. Flag AUTH_OPAQUE_SESSION_V1 must be on.
+    """
+    from app.core.opaque_session import (
+        build_session,
+        opaque_session_enabled,
+        save_session,
+    )
+    from app.services.nethub_access import fetch_product_access
+
+    if not opaque_session_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Opaque session auth is not enabled",
+        )
+
+    auth = request.headers.get("Authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bearer IdP access token required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    idp_token = auth[7:].strip()
+    if not idp_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Bearer IdP access token required",
+        )
+
+    product = getattr(settings, "auth_nethub_platform_product", None) or "tawala-platform"
+    principal = await fetch_product_access(
+        idp_access_token=idp_token,
+        product_slug=product,
+    )
+    if not principal.external_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="NetHub membership missing external_user_id (PlatformUser link)",
+        )
+
+    stmt = select(PlatformUser).where(PlatformUser.id == principal.external_user_id)
+    user = (await db.exec(stmt)).first()
+    if not user or not user.active or user.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform user not found or inactive for membership link",
+        )
+
+    session_id, session = build_session(
+        auth_source="nethub",
+        principal_kind="platform",
+        principal_id=user.id,
+        role=str(user.role.value if hasattr(user.role, "value") else user.role),
+        nethub_user_id=principal.user_id,
+        email=user.email,
+        sub=principal.sub or None,
+    )
+    await save_session(redis, session_id, session)
+
+    cookie_name = getattr(settings, "auth_opaque_session_cookie_name", None) or "tawala_session"
+    max_age = max(60, session.exp - session.iat)
+    response.set_cookie(
+        key=cookie_name,
+        value=session_id,
+        httponly=True,
+        secure=bool(getattr(settings, "is_prod", False)),
+        samesite="lax",
+        max_age=max_age,
+        path="/",
+    )
+
+    user.last_login_at = datetime.now(timezone.utc)
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    await record_platform_audit(
+        db,
+        actor=user,
+        action="platform.auth.session_nethub",
+        resource_type="platform_user",
+        resource_id=str(user.id),
+        meta={"auth_source": "nethub", "nethub_user_id": str(principal.user_id)},
+    )
+
+    return PlatformMeResponse(
+        user=PlatformUserRead.model_validate(user),
+        permissions=[p.value for p in permissions_for(user)],
+    )
+
+
+@router.post("/auth/session/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def platform_session_logout(
+    request: Request,
+    response: Response,
+    redis: AsyncRedis = Depends(get_redis),
+) -> None:
+    """Clear opaque session cookie and Redis entry (Path A)."""
+    from app.core.opaque_session import delete_session, opaque_session_enabled
+    from app.api.opaque_session_deps import extract_session_id
+
+    cookie_name = getattr(settings, "auth_opaque_session_cookie_name", None) or "tawala_session"
+    if opaque_session_enabled():
+        sid = extract_session_id(request)
+        if sid:
+            await delete_session(redis, sid)
+    response.delete_cookie(key=cookie_name, path="/")
 
 
 @router.get("/auth/me", response_model=PlatformMeResponse)
