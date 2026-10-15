@@ -53,6 +53,15 @@ class Settings(BaseSettings):
     auth_hard_jwks_cache_ttl_sec: int = 600
     auth_hard_leeway_sec: int = 10
 
+    # Path A: opaque session after NetHubKe access forward. Default OFF (legacy auth unchanged).
+    auth_opaque_session_v1: bool = False
+    auth_nethub_access_url: str = ""  # e.g. https://api.nethub.co.ke/api/v1/access
+    auth_nethub_access_timeout_sec: float = 8.0
+    auth_opaque_session_ttl_sec: int = 3600
+    auth_opaque_session_cookie_name: str = "tawala_session"
+    # Product slug for platform operator PoC (NetHubKe products.slug)
+    auth_nethub_platform_product: str = "tawala-platform"
+
     # RBAC matrix source (phase 1 dual-read). Default OFF = in-code ROLE_PERMISSIONS.
     auth_rbac_from_db: bool = False
 
