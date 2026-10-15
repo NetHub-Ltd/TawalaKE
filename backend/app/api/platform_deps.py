@@ -24,16 +24,53 @@ from app.utils.logging import logger
 _bearer = HTTPBearer(auto_error=False)
 
 
+async def _load_active_platform_user(db: AsyncSession, user_id: str) -> PlatformUser:
+    stmt = select(PlatformUser).where(PlatformUser.id == user_id)
+    user = (await db.exec(stmt)).first()
+    if not user or not user.active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Platform account inactive or not found",
+        )
+    if user.deleted_at is not None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Platform account inactive or not found",
+        )
+    return user
+
+
 async def get_current_platform_user(
+    request: Request,
     db: SessionDep,
     redis: AsyncRedis = Depends(get_redis),
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> PlatformUser:
     """
-    Authenticate a PlatformUser from a JWT with kind=platform.
+    Authenticate a PlatformUser.
+
+    Dual-mode (Path A):
+    1. If opaque session flag is on and a platform session is present, resolve by
+       session.principal_id (no JWT).
+    2. Else legacy JWT with kind=platform (password + MFA path).
 
     Rejects tenant (staff) tokens and inactive platform accounts.
     """
+    try:
+        from app.core.opaque_session import opaque_session_enabled, load_session
+        from app.api.opaque_session_deps import extract_session_id
+
+        if opaque_session_enabled():
+            sid = extract_session_id(request)
+            if sid:
+                session = await load_session(redis, sid)
+                if session and session.principal_kind == "platform":
+                    return await _load_active_platform_user(db, session.principal_id)
+    except HTTPException:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"Platform opaque session path skipped: {exc}")
+
     if credentials is None or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -60,19 +97,7 @@ async def get_current_platform_user(
             detail="Staff credentials cannot access platform APIs",
         )
 
-    stmt = select(PlatformUser).where(PlatformUser.id == token_data.sub)
-    user = (await db.exec(stmt)).first()
-    if not user or not user.active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Platform account inactive or not found",
-        )
-    if user.deleted_at is not None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Platform account inactive or not found",
-        )
-    return user
+    return await _load_active_platform_user(db, str(token_data.sub))
 
 
 PlatformAuthUser = Annotated[PlatformUser, Depends(get_current_platform_user)]
