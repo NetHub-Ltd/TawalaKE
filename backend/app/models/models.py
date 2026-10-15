@@ -431,6 +431,8 @@ class PlatformUser(BaseMixin, table=True):
         default=None,
         sa_column=Column(DateTime(timezone=True), nullable=True)
     )
+    # Path A: NetHubKe users.id after membership link (nullable until provisioned)
+    nethub_user_id: Optional[UUID] = Field(default=None, index=True)
 
 
 # =========================================================
